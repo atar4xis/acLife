@@ -22,7 +22,8 @@ export default function AppShell() {
   const activeSub =
     user?.type === "online" && user.subscription_status === "active";
 
-  const subRequired = serverMeta?.registration.subscriptionRequired;
+  const subRequired =
+    user?.type === "online" && serverMeta?.registration.subscriptionRequired;
 
   // load calendar events
   useEffect(() => {
