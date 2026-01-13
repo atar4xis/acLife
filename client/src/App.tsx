@@ -7,34 +7,20 @@ import AppShell from "./components/AppShell";
 import { StorageProvider } from "./context/StorageContext";
 import { CalendarProvider } from "./context/CalendarContext";
 import { ApiProvider, useApi } from "./context/ApiContext";
-import UnlockDialog from "./components/login/UnlockDialog";
 import { useEffect } from "react";
-import SubscriptionDialog from "./components/subscription/SubscriptionDialog";
 import { Toaster } from "./components/ui/sonner";
 
 function AuthWrapper({ children }: WithChildren) {
-  const { user, checkLogin, masterKey } = useUser();
-  const { url, serverMeta } = useApi();
+  const { user, checkLogin } = useUser();
+  const { url } = useApi();
 
   useEffect(() => {
     if (!user && url) checkLogin();
   }, [url]);
 
-  const activeSub =
-    user?.type === "online" && user.subscription_status === "active";
+  if (!user) return <LoginDialog />;
 
-  const subRequired = serverMeta?.registration.subscriptionRequired;
-
-  return (
-    <>
-      {!user && <LoginDialog />}
-      {user && !activeSub && subRequired && <SubscriptionDialog />}
-      {user && (activeSub || !subRequired) && masterKey === null && (
-        <UnlockDialog />
-      )}
-      {children}
-    </>
-  );
+  return children;
 }
 
 export default function App() {
