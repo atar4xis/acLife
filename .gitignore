@@ -1,0 +1,5 @@
+# dev scripts
+dev_*.sh
+
+# dev sessions
+dev.*session
