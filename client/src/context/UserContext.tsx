@@ -1,6 +1,6 @@
 import type { WithChildren } from "@/types/Props";
 import type { User } from "@/types/User";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useApi } from "./ApiContext";
 import { deriveMasterKey } from "@/lib/crypt";
 import { uint8ArrayFromBase64 } from "@/lib/utils";
@@ -51,6 +51,11 @@ export function UserProvider({ children }: WithChildren) {
     await post("auth/logout", null);
     checkLogin();
   };
+
+  // invalidate master key if the user is null
+  useEffect(() => {
+    if (user === null) setMasterKey(null);
+  }, [user]);
 
   return (
     <UserContext.Provider
