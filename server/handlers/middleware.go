@@ -204,7 +204,7 @@ func SubscriptionMiddleware() mux.MiddlewareFunc {
 				setSubStatus(subID, status)
 			}
 
-			if status != "active" {
+			if status != "active" && status != "trialing" {
 				denySubscription(w)
 				return
 			}

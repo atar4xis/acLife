@@ -20,7 +20,8 @@ export default function AppShell() {
   const { saving, loadEvents, saveEvents } = useCalendarEvents(user, masterKey);
 
   const activeSub =
-    user?.type === "online" && user.subscription_status === "active";
+    user?.type === "online" &&
+    ["active", "trialing"].includes(user.subscription_status || "");
 
   const subRequired =
     user?.type === "online" && serverMeta?.registration.subscriptionRequired;
