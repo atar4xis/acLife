@@ -34,7 +34,7 @@ export default function LoginDialog() {
 
   useEffect(() => {
     const savedServerURL =
-      localStorage.getItem("serverURL") || "https://ataraxis.codes/";
+      localStorage.getItem("serverURL") || "https://ataraxis.codes/acLife/api/";
 
     setPendingServerURL(savedServerURL);
     setUrl(savedServerURL);
