@@ -27,7 +27,7 @@ export default function UserDropdown() {
       return;
     }
 
-    window.location.href = res.data;
+    window.open(res.data);
   };
 
   return (
