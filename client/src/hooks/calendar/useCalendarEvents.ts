@@ -196,7 +196,6 @@ export const useCalendarEvents = (
         const encrypted = await encryptOfflineEvents(allEvents, masterKey);
 
         storage.set("offlineEvents", encrypted);
-        console.log(encrypted, allEvents);
 
         setSaving(false);
         cb();
