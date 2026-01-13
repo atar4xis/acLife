@@ -7,6 +7,9 @@ import { Field, FieldLabel } from "../ui/field";
 import { Textarea } from "../ui/textarea";
 import { ColorPicker } from "../ui/color-picker";
 import { clamp } from "@/lib/utils";
+import { DateTimePicker } from "./DateTimePicker";
+import { DateTime } from "luxon";
+import { toast } from "sonner";
 
 export default function EventEditor({
   event,
@@ -26,6 +29,8 @@ export default function EventEditor({
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
   const [color, setColor] = useState(event.color || "#2563eb");
+  const [start, setStart] = useState<Date | undefined>(event.start.toJSDate());
+  const [end, setEnd] = useState<Date | undefined>(event.end.toJSDate());
 
   const presetColors = [
     "#2563eb",
@@ -45,8 +50,22 @@ export default function EventEditor({
       title,
       description,
       color,
+      start: DateTime.fromJSDate(start || new Date()),
+      end: DateTime.fromJSDate(end || new Date()),
       timestamp: Date.now(),
     } as CalendarEvent;
+
+    // make sure dates are valid
+    if (newEvent.start > newEvent.end) {
+      toast.warning("An event cannot end before it starts.", {
+        cancel: {
+          label: "OK",
+          onClick: () => {},
+        },
+      });
+      return;
+    }
+
     onSave(newEvent);
   };
 
@@ -95,6 +114,20 @@ export default function EventEditor({
               value={color}
             />
           </div>
+        </Field>
+
+        <Field>
+          <FieldLabel>Start &amp; End Time</FieldLabel>
+          <DateTimePicker
+            value={start}
+            onChange={setStart}
+            defaultTime={originalEvent.current.start.toFormat("HH:mm:ss")}
+          />
+          <DateTimePicker
+            value={end}
+            onChange={setEnd}
+            defaultTime={originalEvent.current.end.toFormat("HH:mm:ss")}
+          />
         </Field>
 
         <Field>
