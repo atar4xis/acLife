@@ -78,7 +78,7 @@ export default function EventEditor({
       <h3 className="text-xl mb-5 font-semibold">Edit Event</h3>
       <div className="flex flex-col gap-5">
         <Field>
-          <FieldLabel>Name &amp; Color</FieldLabel>
+          <FieldLabel>Title &amp; Color</FieldLabel>
           <div className="flex">
             <Input
               type="text"
