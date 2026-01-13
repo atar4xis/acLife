@@ -6,6 +6,7 @@ import { Button } from "../ui/button";
 import { Field, FieldLabel } from "../ui/field";
 import { Textarea } from "../ui/textarea";
 import { ColorPicker } from "../ui/color-picker";
+import { clamp } from "@/lib/utils";
 
 export default function EventEditor({
   event,
@@ -55,9 +56,12 @@ export default function EventEditor({
 
     if (!rect || !myRect) return;
 
+    const newTop = rect.top - myRect.height * 0.25;
+    const newLeft = rect.left + rect.width / 2 - myRect.width / 2;
+
     setPos({
-      top: rect.top - myRect.height * 0.25,
-      left: rect.left + rect.width / 2 - myRect.width / 2,
+      top: clamp(newTop, 0, window.innerHeight - myRect.height),
+      left: clamp(newLeft, 0, window.innerWidth - myRect.width),
     });
   }, [eventRef]);
 

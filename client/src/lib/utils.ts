@@ -80,3 +80,7 @@ export function uint8ArrayFromBase64(b64: string): Uint8Array {
 
   return bytes;
 }
+
+export function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(value, max));
+}
