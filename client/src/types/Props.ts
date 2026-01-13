@@ -10,7 +10,10 @@ export interface CalendarProps {
   events: CalendarEvent[];
   mode: ViewMode;
   setMode: (mode: ViewMode) => void;
-  saveEvents: (changes: EventChange[], cb: () => void) => void;
+  saveEvents: (
+    changes: EventChange[] | CalendarEvent[],
+    cb: () => void,
+  ) => void;
 }
 
 export interface EventBlockProps {

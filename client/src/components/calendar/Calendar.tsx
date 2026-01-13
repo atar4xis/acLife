@@ -43,6 +43,7 @@ import {
 } from "@/lib/calendar/date";
 import { getDayRects } from "@/lib/calendar/dom";
 import { getDayEventStyles } from "@/lib/calendar/event";
+import { useUser } from "@/context/UserContext";
 
 /* -------------------------------------------------------------------------- */
 
@@ -114,10 +115,12 @@ export default function AppCalendar({
 }: CalendarProps) {
   const { currentDate, setCurrentDate } = useCalendar();
   const [calendarEvents, dispatch] = useReducer(calendarReducer, events);
+  const calendarEventsRef = useRef<CalendarEvent[]>(calendarEvents);
   const [isDragging, setIsDragging] = useState(false);
   const [hourHeight, setHourHeight] = useState(60);
   const [now, setNow] = useState(DateTime.now());
   const changesMapRef = useRef<Map<string, EventChange>>(new Map());
+  const { user } = useUser();
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
 
@@ -318,13 +321,14 @@ export default function AppCalendar({
         setIsDragging(false);
 
         // TODO: optimize maybe
-        saveIfChanged();
+        if (user?.type === "online") saveIfChanged();
+        else saveEvents(calendarEventsRef.current, () => {}); // save all events for offline users
 
         window.removeEventListener("pointermove", onGlobalPointerMove);
         window.removeEventListener("pointerup", onGlobalPointerUp);
       }
     },
-    [onGlobalPointerMove],
+    [user, onGlobalPointerMove],
   );
 
   const onPointerDown = useCallback(
@@ -383,6 +387,11 @@ export default function AppCalendar({
     hourHeightRef.current = hourHeight;
   }, [hourHeight]);
 
+  // and for calendar events
+  useEffect(() => {
+    calendarEventsRef.current = calendarEvents;
+  }, [calendarEvents]);
+
   // zoom in with ctrl + mouse wheel
   useEffect(() => {
     const container = gridRef.current;
@@ -419,6 +428,11 @@ export default function AppCalendar({
     }, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // reset events when the defaults change
+  useEffect(() => {
+    dispatch({ type: "set", events });
+  }, [events]);
 
   /* -------------------------------------------------------------------------- */
 

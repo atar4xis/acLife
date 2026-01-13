@@ -121,13 +121,17 @@ export const useCalendarEvents = (
     }
   };
 
-  const saveEvents = async (changes: EventChange[], cb: () => void) => {
+  const saveEvents = async (
+    changes: EventChange[] | CalendarEvent[],
+    cb: () => void,
+  ) => {
     if (!changes || changes.length === 0) return;
 
     setSaving(true);
 
     try {
       if (user?.type === "online") {
+        changes = changes as EventChange[];
         // encrypt only added/updated events
         const toEncrypt = changes
           .filter((c) => c.type !== "deleted")
@@ -167,7 +171,7 @@ export const useCalendarEvents = (
           );
 
           // merge changes
-          for (const c of changes) {
+          for (const c of changes as EventChange[]) {
             if (c.type === "deleted") cachedMap.delete(c.id!);
             else cachedMap.set(c.event!.id, c.event!);
           }
@@ -188,12 +192,11 @@ export const useCalendarEvents = (
         await trySave();
       } else {
         // for offline users just encrypt and store all events locally
-        const allEvents = changes
-          .filter((c) => c.event)
-          .map((c) => c.event!) as CalendarEvent[];
+        const allEvents = changes as CalendarEvent[];
         const encrypted = await encryptOfflineEvents(allEvents, masterKey);
 
         storage.set("offlineEvents", encrypted);
+        console.log(encrypted, allEvents);
 
         setSaving(false);
         cb();
