@@ -6,7 +6,6 @@ import {
   generateSalt,
   type Params,
 } from "@mzattahri/srp";
-import argon2 from "argon2-browser/dist/argon2-bundled.min.js";
 
 export const SRP_PARAMS: Params = {
   name: "DH16-SHA256-CustomKDF",
@@ -43,22 +42,35 @@ export const deriveMasterKey = async (
   salt: Uint8Array,
   exportable: boolean = false,
 ): Promise<CryptoKey> => {
-  const result = await argon2.hash({
-    pass: password,
-    salt,
-    time: 3,
-    mem: 65536,
-    hashLen: 32,
-    parallelism: 1,
-  });
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL("./worker/argon.ts", import.meta.url));
 
-  return crypto.subtle.importKey(
-    "raw",
-    result.hash,
-    { name: "AES-GCM" },
-    exportable,
-    ["encrypt", "decrypt"],
-  );
+    worker.onmessage = async (e) => {
+      if (e.data.error) {
+        reject(new Error(e.data.error));
+      } else {
+        const hash = new Uint8Array(e.data.hash);
+        const key = await crypto.subtle.importKey(
+          "raw",
+          hash,
+          { name: "AES-GCM" },
+          exportable,
+          ["encrypt", "decrypt"],
+        );
+        resolve(key);
+      }
+      worker.terminate();
+    };
+
+    worker.postMessage({
+      password,
+      salt: Array.from(salt),
+      time: 3,
+      mem: 65536,
+      hashLen: 32,
+      parallelism: 1,
+    });
+  });
 };
 
 export const randomBytes = (len: number): Uint8Array => {
