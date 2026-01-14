@@ -44,6 +44,7 @@ import {
 import { getDayRects } from "@/lib/calendar/dom";
 import { getDayEventStyles } from "@/lib/calendar/event";
 import { useUser } from "@/context/UserContext";
+import useTapInteraction from "@/hooks/useTapInteraction";
 
 /* -------------------------------------------------------------------------- */
 
@@ -66,13 +67,13 @@ function GridCell({
   children,
   className,
   day,
-  onPointerDown,
+  ...handlers
 }: CellProps & { day: number }) {
   return (
     <div
       className={cn("relative border-b border-r", className)}
       data-day-index={day}
-      onPointerDown={onPointerDown}
+      {...handlers}
     >
       {children}
     </div>
@@ -157,14 +158,11 @@ export default function AppCalendar({
 
   /* -------------------------------------------------------------------------- */
 
-  const onCellPointerDown = (e: React.PointerEvent, dayIndex: number) => {
-    if (e.button !== 0) return; // left click only
-
+  const startNewEvent = (e: React.PointerEvent, dayIndex: number) => {
     const container = gridRef.current;
     if (!container) return;
 
     e.preventDefault();
-    e.stopPropagation();
 
     const rect = container.getBoundingClientRect();
     const startY = e.clientY + container.scrollTop;
@@ -187,8 +185,6 @@ export default function AppCalendar({
       timestamp: Date.now(),
     } as CalendarEvent;
 
-    setIsDragging(true);
-
     dispatch({
       type: "add",
       event: newEvent,
@@ -199,23 +195,29 @@ export default function AppCalendar({
       event: newEvent,
     });
 
-    dragRef.current = {
-      pointerId: e.pointerId,
-      type: "resize_end",
-      startY,
-      x: e.clientX,
-      y: e.clientY,
-      event: newEvent,
-      originalDay: dayIndex,
-      originalStart: start,
-      originalEnd: start,
-      label: "new event",
-      dayRects: getDayRects(),
-    };
+    if (e.pointerType !== "touch") {
+      setIsDragging(true);
+
+      dragRef.current = {
+        pointerId: e.pointerId,
+        type: "resize_end",
+        startY,
+        x: e.clientX,
+        y: e.clientY,
+        event: newEvent,
+        originalDay: dayIndex,
+        originalStart: start,
+        originalEnd: start,
+        label: "new event",
+        dayRects: getDayRects(),
+      };
+    }
 
     window.addEventListener("pointermove", onGlobalPointerMove);
     window.addEventListener("pointerup", onGlobalPointerUp);
   };
+
+  /* -------------------------------------------------------------------------- */
 
   const onGlobalPointerMove = useCallback(
     (e: PointerEvent) => {
@@ -329,13 +331,18 @@ export default function AppCalendar({
     [user, onGlobalPointerMove],
   );
 
-  const onPointerDown = useCallback(
+  const onEventPointerDown = useCallback(
     (
       e: React.PointerEvent,
       type: "move" | "resize_start" | "resize_end",
       event: CalendarEvent,
       dayIndex: number,
     ) => {
+      if (e.pointerType === "touch") {
+        e.stopPropagation();
+        return;
+      }
+
       const container = gridRef.current;
       if (!container) return;
 
@@ -495,12 +502,12 @@ export default function AppCalendar({
         const dayEvents = eventMap.get(d.date.toISODate()!) || [];
         const styles = stylesMap.get(d.date.toISODate()!) || {};
 
+        const { handlers: tapHandlers } = useTapInteraction({
+          onTap: (e) => startNewEvent(e, dayIndex),
+        });
+
         return (
-          <GridCell
-            key={`${d.label}-${hour}`}
-            day={dayIndex}
-            onPointerDown={(e) => onCellPointerDown(e, dayIndex)}
-          >
+          <GridCell key={`${d.label}-${hour}`} day={dayIndex} {...tapHandlers}>
             {hour === 0 && (
               <div className="relative h-full">
                 <div style={{ height: hourHeight * 24 }} />
@@ -526,7 +533,7 @@ export default function AppCalendar({
                     event={event}
                     day={dayIndex}
                     style={styles[event.id]}
-                    onPointerDown={onPointerDown}
+                    onPointerDown={onEventPointerDown}
                     onEventEdit={onEventEdit}
                     onEventDelete={() => {
                       dispatch({

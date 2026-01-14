@@ -10,6 +10,7 @@ import {
   ContextMenuTrigger,
 } from "../ui/context-menu";
 import { Clipboard, Trash2 } from "lucide-react";
+import useTapInteraction from "@/hooks/useTapInteraction";
 
 export default memo(function EventBlock({
   event,
@@ -52,6 +53,10 @@ export default memo(function EventBlock({
     navigator.clipboard.writeText(event.id);
   };
 
+  const { handlers: tapHandlers } = useTapInteraction({
+    onTap: () => setTimeout(() => setEditing(true), 50),
+  });
+
   return (
     <>
       {/* hidden measurement container */}
@@ -69,7 +74,11 @@ export default memo(function EventBlock({
       </div>
 
       <ContextMenu>
-        <ContextMenuTrigger>
+        <ContextMenuTrigger
+          onPointerDown={(e) => {
+            if (e.pointerType === "touch") e.preventDefault();
+          }}
+        >
           {/* visible event block */}
           <div
             className={`absolute left-0 right-0 z-10 ${mini ? "p-0" : "p-1"} text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_3px_rgba(0,0,0,0.35)]`}
@@ -80,7 +89,11 @@ export default memo(function EventBlock({
               width: style.width + "%",
               backgroundColor: eventColor,
             }}
-            onPointerDown={(e) => onPointerDown(e, "move", event, day)}
+            onPointerDown={(e) => {
+              if (e.pointerType === "touch") tapHandlers.onPointerDown(e);
+              onPointerDown(e, "move", event, day);
+            }}
+            onPointerUp={tapHandlers.onPointerUp}
             onDoubleClick={() => setEditing(true)}
             ref={eventRef}
           >
