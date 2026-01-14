@@ -11,24 +11,30 @@ export const getDayEventStyles = (
   hourHeight: number,
 ): Record<string, EventStyle> => {
   const dayStart = day.startOf("day");
+  const dayEnd = day.endOf("day");
 
   // map events to positions
   const positioned: PositionedEvent[] = events
-    .map(
-      (ev) =>
-        ({
-          id: ev.id,
-          start: ev.start,
-          end: ev.end,
-          top: Math.max(
-            0,
-            (ev.start.diff(dayStart, "minutes").minutes / 60) * hourHeight,
-          ),
-          height: (ev.end.diff(ev.start, "minutes").minutes / 60) * hourHeight,
-          col: -1,
-          maxCols: 1,
-        }) as PositionedEvent,
-    )
+    .map((ev) => {
+      const start = ev.start < dayStart ? dayStart : ev.start;
+      const end = ev.end > dayEnd ? dayEnd : ev.end;
+
+      return {
+        id: ev.id,
+        start: ev.start,
+        end: ev.end,
+        top: Math.max(
+          0,
+          (start.diff(dayStart, "minutes").minutes / 60) * hourHeight,
+        ),
+        height: Math.max(
+          0,
+          (end.diff(start, "minutes").minutes / 60) * hourHeight,
+        ),
+        col: -1,
+        maxCols: 1,
+      } as PositionedEvent;
+    })
     .sort((a, b) => a.start.toMillis() - b.start.toMillis());
 
   const columns: PositionedEvent[][] = [];
