@@ -122,16 +122,8 @@ export default function EventEditor({
 
         <Field>
           <FieldLabel>Start &amp; End Time</FieldLabel>
-          <DateTimePicker
-            value={start}
-            onChange={setStart}
-            defaultTime={originalEvent.current.start.toFormat("HH:mm:ss")}
-          />
-          <DateTimePicker
-            value={end}
-            onChange={setEnd}
-            defaultTime={originalEvent.current.end.toFormat("HH:mm:ss")}
-          />
+          <DateTimePicker value={start} onChange={setStart} />
+          <DateTimePicker value={end} onChange={setEnd} />
         </Field>
 
         <Field>

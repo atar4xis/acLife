@@ -9,14 +9,9 @@ import { Calendar } from "../ui/calendar";
 type DateTimePickerProps = {
   value: Date | undefined;
   onChange: Dispatch<SetStateAction<Date | undefined>>;
-  defaultTime: string;
 };
 
-export function DateTimePicker({
-  value,
-  onChange,
-  defaultTime,
-}: DateTimePickerProps) {
+export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -60,7 +55,6 @@ export function DateTimePicker({
       <Input
         type="time"
         step="60"
-        defaultValue={defaultTime.slice(0, 5)} // "HH:mm"
         value={value ? DateTime.fromJSDate(value).toFormat("HH:mm") : ""}
         onChange={(e) => {
           if (!value) return;
