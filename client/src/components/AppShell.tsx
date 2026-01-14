@@ -12,7 +12,9 @@ import UnlockDialog from "./login/UnlockDialog";
 import SubscriptionDialog from "./subscription/SubscriptionDialog";
 
 export default function AppShell() {
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    window.innerWidth < 768 ? "day" : "week",
+  );
   const [calEvents, setCalEvents] = useState<CalendarEvent[] | null>(null);
   const { masterKey, user } = useUser();
   const { serverMeta } = useApi();
