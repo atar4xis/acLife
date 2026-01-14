@@ -53,7 +53,7 @@ function HeaderCell({ children, className }: CellProps) {
   return (
     <div
       className={cn(
-        "sticky top-0 z-5 border-b border-r flex items-center justify-center bg-background",
+        "sticky top-0 z-11 border-b border-r flex items-center justify-center bg-background",
         className,
       )}
     >
