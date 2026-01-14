@@ -75,20 +75,32 @@ export default function EventEditor({
   };
 
   useLayoutEffect(() => {
-    const rect = eventRef.current?.getBoundingClientRect();
-    const myRect = editorRef.current?.getBoundingClientRect();
+    const editor = editorRef.current;
+    const anchor = eventRef.current;
 
-    if (!rect || !myRect) return;
+    if (!editor || !anchor) return;
 
-    const newTop = isMobile ? 0 : rect.top - myRect.height * 0.25;
-    const newLeft = isMobile
-      ? window.innerWidth / 2 - myRect.width / 2
-      : rect.left + rect.width / 2 - myRect.width / 2;
+    const updatePosition = () => {
+      const rect = anchor.getBoundingClientRect();
+      const myRect = editor.getBoundingClientRect();
 
-    setPos({
-      top: clamp(newTop, 0, window.innerHeight - myRect.height),
-      left: clamp(newLeft, 0, window.innerWidth - myRect.width),
-    });
+      const top = isMobile ? 0 : rect.top - myRect.height * 0.25;
+      const left = isMobile
+        ? window.innerWidth / 2 - myRect.width / 2
+        : rect.left + rect.width / 2 - myRect.width / 2;
+
+      setPos({
+        top: clamp(top, 0, window.innerHeight - myRect.height),
+        left: clamp(left, 0, window.innerWidth - myRect.width),
+      });
+    };
+
+    updatePosition();
+
+    const ro = new ResizeObserver(updatePosition);
+    ro.observe(editor);
+
+    return () => ro.disconnect();
   }, [isMobile, eventRef]);
 
   return (
