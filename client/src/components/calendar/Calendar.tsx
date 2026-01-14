@@ -67,13 +67,22 @@ function GridCell({
   children,
   className,
   day,
+  onCellTap,
   ...handlers
-}: CellProps & { day: number }) {
+}: CellProps & {
+  day: number;
+  onCellTap: (e: React.PointerEvent, day: number) => void;
+}) {
+  const { handlers: tapHandlers } = useTapInteraction({
+    onTap: (e) => onCellTap(e, day),
+  });
+
   return (
     <div
       className={cn("relative border-b border-r", className)}
       data-day-index={day}
       {...handlers}
+      {...tapHandlers}
     >
       {children}
     </div>
@@ -502,12 +511,12 @@ export default function AppCalendar({
         const dayEvents = eventMap.get(d.date.toISODate()!) || [];
         const styles = stylesMap.get(d.date.toISODate()!) || {};
 
-        const { handlers: tapHandlers } = useTapInteraction({
-          onTap: (e) => startNewEvent(e, dayIndex),
-        });
-
         return (
-          <GridCell key={`${d.label}-${hour}`} day={dayIndex} {...tapHandlers}>
+          <GridCell
+            key={`${d.label}-${hour}`}
+            day={dayIndex}
+            onCellTap={startNewEvent}
+          >
             {hour === 0 && (
               <div className="relative h-full">
                 <div style={{ height: hourHeight * 24 }} />
