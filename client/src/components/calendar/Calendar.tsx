@@ -241,9 +241,7 @@ export default function AppCalendar({
         SNAP_MINS,
       );
 
-      const dayDelta = dayDate
-        .startOf("day")
-        .diff(state.originalStart.startOf("day"), "days").days;
+      const dayDelta = dayIndex - state.originalDay;
 
       let newStart = state.originalStart;
       let newEnd = state.originalEnd;
