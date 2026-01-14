@@ -11,7 +11,7 @@ import { DateTimePicker } from "./DateTimePicker";
 import { DateTime } from "luxon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Trash2Icon } from "lucide-react";
+import { Trash2Icon, XIcon } from "lucide-react";
 
 export default function EventEditor({
   event,
@@ -103,11 +103,11 @@ export default function EventEditor({
     >
       <div className="flex justify-between mb-5 items-center">
         <h3 className="text-xl font-semibold">Edit Event</h3>
-        <Button size="icon" variant="secondary" onClick={onDelete}>
-          <Trash2Icon />{" "}
+        <Button variant="ghost" size="icon" onClick={onCancel}>
+          <XIcon />
         </Button>
       </div>
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 my-3">
         <Field>
           <FieldLabel>Title &amp; Color</FieldLabel>
           <div className="flex">
@@ -144,10 +144,15 @@ export default function EventEditor({
         </Field>
       </div>
       <div className="flex flex-wrap items-end justify-between mt-5">
-        <Button variant="outline" onClick={onCancel}>
-          Cancel
+        <Button size="icon" variant="secondary" onClick={onDelete}>
+          <Trash2Icon />
         </Button>
-        <Button onClick={handleSave}>Save</Button>
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>Save</Button>
+        </div>
       </div>
     </div>
   );
