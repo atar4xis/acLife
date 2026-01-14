@@ -3,7 +3,7 @@ import type { DateTime } from "luxon";
 export const isSameDate = (a: DateTime, b: DateTime) => a.hasSame(b, "day");
 
 export const getDay = (date: DateTime) => [
-  { date, label: date.toFormat("EEE d") },
+  { date: date.startOf("day"), label: date.toFormat("EEE d") },
 ];
 
 export const getWeekDays = (date: DateTime) => {
