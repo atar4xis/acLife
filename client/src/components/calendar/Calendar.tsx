@@ -352,6 +352,8 @@ export default function AppCalendar({
         return;
       }
 
+      if (e.button !== 0) return;
+
       const container = gridRef.current;
       if (!container) return;
 
