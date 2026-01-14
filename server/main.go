@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -86,6 +87,6 @@ func main() {
 	handler := c.Handler(r)
 
 	// Bind to port
-	log.Print("Running on port " + os.Getenv("PORT"))
+	fmt.Println("Running on port " + os.Getenv("PORT"))
 	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), handler))
 }
