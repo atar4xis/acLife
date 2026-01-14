@@ -556,7 +556,7 @@ export default function AppCalendar({
       <nav className="flex items-center justify-between border-b p-3">
         <SidebarTrigger className="md:hidden" />
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 hidden md:flex">
           <Button
             variant="outline"
             onClick={() => setCurrentDate(DateTime.now())}
@@ -574,8 +574,12 @@ export default function AppCalendar({
           </h2>
         </div>
 
+        <h2 className="flex-1 text-xl ml-6 md:hidden">
+          {getDateRangeString(mode, currentDate)}
+        </h2>
+
         <Select value={mode} onValueChange={setMode}>
-          <SelectTrigger>
+          <SelectTrigger className="mr-4 md:mr-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -587,7 +591,7 @@ export default function AppCalendar({
         {/* TODO: implement search function */}
         <div className="flex items-center gap-2">
           <SearchIcon />
-          <Input className="hidden md:block" placeholder="Search events..." />
+          <Input className="hidden lg:block" placeholder="Search events..." />
         </div>
       </nav>
 

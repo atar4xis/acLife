@@ -10,6 +10,7 @@ import { clamp } from "@/lib/utils";
 import { DateTimePicker } from "./DateTimePicker";
 import { DateTime } from "luxon";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function EventEditor({
   event,
@@ -31,6 +32,7 @@ export default function EventEditor({
   const [color, setColor] = useState(event.color || "#2563eb");
   const [start, setStart] = useState<Date | undefined>(event.start.toJSDate());
   const [end, setEnd] = useState<Date | undefined>(event.end.toJSDate());
+  const isMobile = useIsMobile();
 
   const presetColors = [
     "#2563eb",
@@ -75,18 +77,20 @@ export default function EventEditor({
 
     if (!rect || !myRect) return;
 
-    const newTop = rect.top - myRect.height * 0.25;
-    const newLeft = rect.left + rect.width / 2 - myRect.width / 2;
+    const newTop = isMobile ? 0 : rect.top - myRect.height * 0.25;
+    const newLeft = isMobile
+      ? window.innerWidth / 2 - myRect.width / 2
+      : rect.left + rect.width / 2 - myRect.width / 2;
 
     setPos({
       top: clamp(newTop, 0, window.innerHeight - myRect.height),
       left: clamp(newLeft, 0, window.innerWidth - myRect.width),
     });
-  }, [eventRef]);
+  }, [isMobile, eventRef]);
 
   return (
     <div
-      className="fixed z-20 left-0 top-0 bg-card/98 backdrop-blur p-3 shadow-lg border rounded-lg"
+      className="fixed z-20 left-0 top-0 flex flex-col items-center justify-center md:block bg-card/98 backdrop-blur p-3 shadow-lg border md:rounded-lg w-full h-full md:w-auto md:h-auto"
       style={{
         top: pos.top,
         left: pos.left,
