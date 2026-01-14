@@ -150,6 +150,7 @@ export default memo(function EventBlock({
             onEventEdit(newEvent);
             setEditing(false);
           }}
+          onDelete={onEventDelete}
           onCancel={() => setEditing(false)}
         />
       )}

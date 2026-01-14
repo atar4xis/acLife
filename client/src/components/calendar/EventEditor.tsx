@@ -11,15 +11,18 @@ import { DateTimePicker } from "./DateTimePicker";
 import { DateTime } from "luxon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Trash2Icon } from "lucide-react";
 
 export default function EventEditor({
   event,
   eventRef,
   onSave,
+  onDelete,
   onCancel,
 }: Partial<EventBlockProps> & {
   eventRef: RefObject<HTMLDivElement | null>;
   onSave: (event: CalendarEvent) => void;
+  onDelete: () => void;
   onCancel: () => void;
 }) {
   if (!event) throw new Error("invalid instance of EventEditor");
@@ -90,7 +93,7 @@ export default function EventEditor({
 
   return (
     <div
-      className="fixed z-20 left-0 top-0 flex flex-col items-center justify-center md:block bg-card/98 backdrop-blur p-3 shadow-lg border md:rounded-lg w-full h-full md:w-auto md:h-auto"
+      className="fixed z-20 left-0 top-0 flex flex-col justify-center md:block bg-card/98 backdrop-blur p-3 px-5 md:px-3 shadow-lg border md:rounded-lg w-full h-full md:w-auto md:h-auto"
       style={{
         top: pos.top,
         left: pos.left,
@@ -98,7 +101,12 @@ export default function EventEditor({
       onPointerDown={(e) => e.stopPropagation()}
       ref={editorRef}
     >
-      <h3 className="text-xl mb-5 font-semibold">Edit Event</h3>
+      <div className="flex justify-between mb-5 items-center">
+        <h3 className="text-xl font-semibold">Edit Event</h3>
+        <Button size="icon" variant="secondary" onClick={onDelete}>
+          <Trash2Icon />{" "}
+        </Button>
+      </div>
       <div className="flex flex-col gap-5">
         <Field>
           <FieldLabel>Title &amp; Color</FieldLabel>
@@ -134,13 +142,12 @@ export default function EventEditor({
             onChange={(e) => setDescription(e.target.value)}
           />
         </Field>
-
-        <div className="flex flex-wrap items-end justify-between">
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>Save</Button>
-        </div>
+      </div>
+      <div className="flex flex-wrap items-end justify-between mt-5">
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave}>Save</Button>
       </div>
     </div>
   );
