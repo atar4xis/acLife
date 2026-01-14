@@ -3,6 +3,8 @@ package utils
 
 import (
 	"crypto/rand"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +14,7 @@ import (
 	"regexp"
 	"runtime"
 	"runtime/debug"
+	"strings"
 
 	"acLife/types"
 )
@@ -93,4 +96,26 @@ func Assert(condition bool) {
 		fmt.Printf("Assertion failed at %s:%d\n%s\n", file, line, debug.Stack())
 		panic("assertion failed")
 	}
+}
+
+func Base64ToUUID(b64 string) (string, error) {
+	bytes, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		return "", err
+	}
+	if len(bytes) != 16 {
+		return "", fmt.Errorf("invalid UUID length")
+	}
+
+	hexStr := hex.EncodeToString(bytes)
+
+	uuid := fmt.Sprintf("%s-%s-%s-%s-%s",
+		hexStr[0:8],
+		hexStr[8:12],
+		hexStr[12:16],
+		hexStr[16:20],
+		hexStr[20:32],
+	)
+
+	return strings.ToLower(uuid), nil
 }

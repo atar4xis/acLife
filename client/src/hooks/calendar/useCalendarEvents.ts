@@ -6,6 +6,7 @@ import {
   encryptOfflineEvents,
   encryptEvents,
 } from "@/lib/calendar/crypt";
+import { uuidToBase64 } from "@/lib/utils";
 import type {
   CalendarEvent,
   EventSyncResponse,
@@ -55,8 +56,8 @@ export const useCalendarEvents = (
     const res = await post<EventSyncResponse>(
       "calendar/events/sync",
       cachedEvents.map((ev) => ({
-        id: ev.id,
-        updatedAt: ev.timestamp,
+        id: uuidToBase64(ev.id),
+        ts: ev.timestamp,
       })),
     );
 

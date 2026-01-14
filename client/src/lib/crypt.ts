@@ -43,7 +43,9 @@ export const deriveMasterKey = async (
   exportable: boolean = false,
 ): Promise<CryptoKey> => {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL("./worker/argon.ts", import.meta.url));
+    const worker = new Worker(new URL("./worker/argon.ts", import.meta.url), {
+      type: "module",
+    });
 
     worker.onmessage = async (e) => {
       if (e.data.error) {

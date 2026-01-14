@@ -12,7 +12,7 @@ type CalendarEvent struct {
 // CachedEvent represents a cached event received from the client.
 type CachedEvent struct {
 	ID        string `json:"id"`
-	UpdatedAt int64  `json:"updatedAt"`
+	Timestamp int64  `json:"ts"`
 }
 
 // EventSyncResponse is the structure of the response to an event sync request.

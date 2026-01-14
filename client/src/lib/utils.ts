@@ -59,15 +59,33 @@ export function formatPrice(currency: string, price: number): string {
   }).format(price / 100);
 }
 
-export function arrayBufferToBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-
+export function bytesToBase64(bytes: Uint8Array) {
   let binary = "";
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
 
   return btoa(binary);
+}
+
+export function arrayBufferToBase64(buffer: ArrayBuffer) {
+  return bytesToBase64(new Uint8Array(buffer));
+}
+
+export function uuidToBytes(uuid: string): Uint8Array {
+  const hex = uuid.replace(/-/g, "");
+  if (hex.length !== 32) throw new Error("invalid UUID in uuidToBytes");
+
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+  }
+
+  return bytes;
+}
+
+export function uuidToBase64(uuid: string): string {
+  return bytesToBase64(uuidToBytes(uuid));
 }
 
 export function uint8ArrayFromBase64(b64: string): Uint8Array {

@@ -128,10 +128,17 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build map of (eventId: updatedAt)
+	// Build map of (eventId: timestamp)
 	idToMillis := make(map[string]int64, len(cached))
-	for _, c := range cached {
-		idToMillis[c.ID] = c.UpdatedAt
+	for i, c := range cached {
+		uuid, err := utils.Base64ToUUID(c.ID)
+		if err != nil {
+			utils.LogError("SyncCalendarEvents", "InvalidUUID", fmt.Errorf("event %s invalid UUID: %v", c.ID, err))
+			continue
+		}
+
+		cached[i].ID = uuid
+		idToMillis[uuid] = c.Timestamp
 	}
 
 	// Fetch all events for this user from DB
