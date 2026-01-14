@@ -151,6 +151,7 @@ export default function EventEditor({
           <Textarea
             placeholder={originalEvent.current.description}
             value={description}
+            className="resize-none md:resize-y h-30 md:h-auto max-h-50"
             onChange={(e) => setDescription(e.target.value)}
           />
         </Field>
