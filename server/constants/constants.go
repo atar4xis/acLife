@@ -11,6 +11,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const Day = 24 * time.Hour
+
 const (
 	Version = "0.0.1"
 
@@ -21,6 +23,8 @@ const (
 	SRPSessionTTL     = 5 * time.Minute
 	SubCacheTTL       = 5 * time.Minute
 	RateLimitCacheTTL = 2 * time.Minute
+
+	AccessTokenExpiry = 7 * Day
 
 	DBMaxOpenConns    = 50
 	DBMaxIdleConns    = 10

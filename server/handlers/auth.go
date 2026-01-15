@@ -282,7 +282,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 
 	// Login successful, generate access token
 	accessToken := utils.RandomToken(32)
-	expires := time.Now().Add(12 * time.Hour)
+	expires := time.Now().Add(constants.AccessTokenExpiry)
 
 	// Get the user UUID for this email
 	var userUUID string
