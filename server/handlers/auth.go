@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto"
 	"database/sql"
 	"net/http"
@@ -20,6 +21,7 @@ var srpSessionStore = sync.Map{} // map[string]types.SRPSession
 
 func init() {
 	go cleanupSRPSessions()
+	go cleanupAccountSessions()
 }
 
 /* -------------------- Cleanup -------------------- */
@@ -37,6 +39,19 @@ func cleanupSRPSessions() {
 			}
 			return true
 		})
+	}
+}
+
+func cleanupAccountSessions() {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if _, err := database.Exec(context.Background(),
+			"DELETE FROM account_sessions WHERE expires_at < NOW()",
+		); err != nil {
+			utils.LogError("cleanupAccountSessions", "Exec", err)
+		}
 	}
 }
 
