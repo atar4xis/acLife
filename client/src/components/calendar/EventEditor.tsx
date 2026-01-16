@@ -1,6 +1,12 @@
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { EventBlockProps } from "@/types/Props";
-import { useLayoutEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Field, FieldLabel } from "../ui/field";
@@ -37,6 +43,16 @@ export default function EventEditor({
   const [end, setEnd] = useState<Date | undefined>(event.end.toJSDate());
   const isMobile = useIsMobile();
 
+  const newEvent = useRef<CalendarEvent>({
+    ...originalEvent.current,
+    title,
+    description,
+    color,
+    start: DateTime.fromJSDate(start || new Date()),
+    end: DateTime.fromJSDate(end || new Date()),
+    timestamp: Date.now(),
+  });
+
   const presetColors = [
     "#2563eb",
     "#8125ea",
@@ -50,18 +66,8 @@ export default function EventEditor({
   ];
 
   const handleSave = () => {
-    const newEvent = {
-      ...originalEvent.current,
-      title,
-      description,
-      color,
-      start: DateTime.fromJSDate(start || new Date()),
-      end: DateTime.fromJSDate(end || new Date()),
-      timestamp: Date.now(),
-    } as CalendarEvent;
-
     // make sure dates are valid
-    if (newEvent.start > newEvent.end) {
+    if (newEvent.current.start > newEvent.current.end) {
       toast.warning("An event cannot end before it starts.", {
         cancel: {
           label: "OK",
@@ -71,7 +77,7 @@ export default function EventEditor({
       return;
     }
 
-    onSave(newEvent);
+    onSave(newEvent.current);
   };
 
   useLayoutEffect(() => {
@@ -103,6 +109,33 @@ export default function EventEditor({
     return () => ro.disconnect();
   }, [isMobile, eventRef]);
 
+  // keybindings
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => {
+      // close the editor with escape
+      if (e.key === "Escape") onCancel();
+
+      // save the event with ctrl + s
+      if (e.key === "s" && e.ctrlKey) {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, [onCancel, handleSave]);
+
+  // sync ref with state
+  useEffect(() => {
+    newEvent.current.title = title;
+    newEvent.current.description = description;
+    newEvent.current.color = color;
+    newEvent.current.start = DateTime.fromJSDate(start || new Date());
+    newEvent.current.end = DateTime.fromJSDate(end || new Date());
+    newEvent.current.timestamp = Date.now();
+  });
+
   return (
     <div
       className="fixed z-20 left-0 top-0 flex flex-col justify-center md:block bg-card/98 backdrop-blur p-3 px-5 md:px-3 shadow-lg border md:rounded-lg w-full h-full md:w-auto md:h-auto"
@@ -119,7 +152,13 @@ export default function EventEditor({
           <XIcon />
         </Button>
       </div>
-      <form onSubmit={handleSave} className="flex flex-col gap-5 my-3">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+        className="flex flex-col gap-5 my-3"
+      >
         <Field>
           <FieldLabel>Title &amp; Color</FieldLabel>
           <div className="flex">
