@@ -27,4 +27,3 @@ tauri dev # desktop
 pnpm build # web
 tauri dev # desktop
 ```
-
