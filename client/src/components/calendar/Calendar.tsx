@@ -165,6 +165,11 @@ export default function AppCalendar({
     }
   };
 
+  const save = () => {
+    if (user?.type === "online") saveIfChanged();
+    else saveEvents(calendarEventsRef.current, () => {}); // save all events for offline users
+  };
+
   /* -------------------------------------------------------------------------- */
 
   const startNewEvent = (e: React.PointerEvent, dayIndex: number) => {
@@ -329,9 +334,7 @@ export default function AppCalendar({
         dragRef.current = null;
         setIsDragging(false);
 
-        // TODO: optimize maybe
-        if (user?.type === "online") saveIfChanged();
-        else saveEvents(calendarEventsRef.current, () => {}); // save all events for offline users
+        save();
 
         window.removeEventListener("pointermove", onGlobalPointerMove);
         window.removeEventListener("pointerup", onGlobalPointerUp);
@@ -393,7 +396,7 @@ export default function AppCalendar({
       event,
     });
 
-    saveIfChanged();
+    save();
   };
 
   /* -------------------------------------------------------------------------- */
