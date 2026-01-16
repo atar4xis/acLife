@@ -126,6 +126,25 @@ export default function EventEditor({
     return () => window.removeEventListener("keydown", listener);
   }, [onCancel, handleSave]);
 
+  // close on outside click
+  useEffect(() => {
+    const listener = (e: MouseEvent) => {
+      const el = e.target as Element;
+      if (
+        editorRef.current &&
+        !editorRef.current.contains(el) &&
+        !el.closest("[role=dialog]")
+      ) {
+        e.stopPropagation();
+        onCancel();
+      }
+    };
+
+    window.addEventListener("pointerdown", listener, { capture: true });
+    return () =>
+      window.removeEventListener("pointerdown", listener, { capture: true });
+  }, [onCancel]);
+
   // sync ref with state
   useEffect(() => {
     newEvent.current.title = title;
