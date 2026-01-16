@@ -119,7 +119,7 @@ export default function EventEditor({
           <XIcon />
         </Button>
       </div>
-      <div className="flex flex-col gap-5 my-3">
+      <form onSubmit={handleSave} className="flex flex-col gap-5 my-3">
         <Field>
           <FieldLabel>Title &amp; Color</FieldLabel>
           <div className="flex">
@@ -155,13 +155,18 @@ export default function EventEditor({
             onChange={(e) => setDescription(e.target.value)}
           />
         </Field>
-      </div>
+      </form>
       <div className="flex flex-wrap items-end justify-between mt-5">
-        <Button size="icon" variant="secondary" onClick={onDelete}>
+        <Button
+          size="icon"
+          variant="secondary"
+          type="button"
+          onClick={onDelete}
+        >
           <Trash2Icon />
         </Button>
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={onCancel}>
+          <Button variant="secondary" type="button" onClick={onCancel}>
             Cancel
           </Button>
           <Button onClick={handleSave}>Save</Button>
