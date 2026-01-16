@@ -1,8 +1,10 @@
 # acLife Client
 
-Web client for acLife built with Vite, TypeScript, and React.
+Web and desktop client for acLife built with Vite, TypeScript, and React.
 
 It uses Shadcn UI components and Tailwind CSS for styling.
+
+The desktop client uses Rust / Tauri and runs on Windows, Linux, and macOS.
 
 ## Installation
 
@@ -15,11 +17,14 @@ pnpm install
 ## Development
 
 ```bash
-pnpm dev
+pnpm dev # web
+tauri dev # desktop
 ```
 
 ## Build
 
 ```bash
-pnpm build
+pnpm build # web
+tauri dev # desktop
 ```
+
