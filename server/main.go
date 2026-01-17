@@ -45,6 +45,7 @@ func main() {
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
+		MaxAge:   int(constants.AccessTokenExpiry.Seconds()),
 	}
 
 	// Setup API router
