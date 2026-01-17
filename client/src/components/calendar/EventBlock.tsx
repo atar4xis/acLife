@@ -81,7 +81,7 @@ export default memo(function EventBlock({
         >
           {/* visible event block */}
           <div
-            className={`absolute left-0 right-0 z-10 ${mini ? "p-0" : "p-1"} text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_3px_rgba(0,0,0,0.35)]`}
+            className={`absolute rounded left-0 right-0 z-10 ${mini ? "p-0" : "p-1"} text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_3px_rgba(0,0,0,0.35)]`}
             style={{
               top: style.top,
               left: style.left + "%",
