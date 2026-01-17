@@ -45,6 +45,18 @@ import { getDayRects } from "@/lib/calendar/dom";
 import { getDayEventStyles } from "@/lib/calendar/event";
 import { useUser } from "@/context/UserContext";
 import useTapInteraction from "@/hooks/useTapInteraction";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Label } from "../ui/label";
+import { toast } from "sonner";
 
 /* -------------------------------------------------------------------------- */
 
@@ -128,7 +140,11 @@ export default function AppCalendar({
   const calendarEventsRef = useRef<CalendarEvent[]>(calendarEvents);
   const [isDragging, setIsDragging] = useState(false);
   const [hourHeight, setHourHeight] = useState(60);
+  const [updateRepeatDialogOpen, setUpdateRepeatDialogOpen] = useState(false);
+  const [deleteRepeatDialogOpen, setDeleteRepeatDialogOpen] = useState(false);
+  const [repeatOption, setRepeatOption] = useState<string>("this");
   const [now, setNow] = useState(DateTime.now());
+  const [_, forceRender] = useState(false);
   const changesMapRef = useRef<Map<string, EventChange>>(new Map());
   const { user } = useUser();
 
@@ -137,6 +153,8 @@ export default function AppCalendar({
   const gridRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<EventDragRef>(null);
   const hourHeightRef = useRef(hourHeight);
+
+  const toBeDeletedRef = useRef<CalendarEvent | null>(null);
 
   const visibleDays =
     {
@@ -224,6 +242,7 @@ export default function AppCalendar({
         originalEnd: start,
         label: "new event",
         dayRects: getDayRects(),
+        moved: false,
       };
     }
 
@@ -297,31 +316,14 @@ export default function AppCalendar({
       state.x = e.clientX;
       state.y = e.clientY;
 
-      const newEvent = {
-        ...state.event,
-        start: newStart,
-        end: newEnd,
-        timestamp: Date.now(),
-      };
-
-      // update the edited event in state
       if (
-        !state.event.start.equals(newStart) ||
-        !state.event.end.equals(newEnd)
+        state.event.start.toMillis() != newStart.toMillis() ||
+        state.event.end.toMillis() != newEnd.toMillis()
       ) {
-        dispatch({
-          type: "update",
-          id: state.event.id,
-          data: {
-            start: newStart,
-            end: newEnd,
-          },
-        });
-
-        updateChange({
-          type: "updated",
-          event: newEvent,
-        });
+        state.event.start = newStart;
+        state.event.end = newEnd;
+        state.moved = true;
+        forceRender((prev) => !prev);
       }
     },
     [visibleDays],
@@ -331,10 +333,44 @@ export default function AppCalendar({
     (e: PointerEvent) => {
       // make sure the same pointer was released, then reset drag state and remove listeners
       if (dragRef.current?.pointerId === e.pointerId) {
-        dragRef.current = null;
-        setIsDragging(false);
+        const state = dragRef.current;
+        const event = state.event;
 
-        save();
+        if (!event) return;
+
+        const newEvent = {
+          ...event,
+          timestamp: Date.now(),
+        };
+
+        // update the edited event in state
+        if (!event.parent) {
+          dispatch({
+            type: "update",
+            id: event.id,
+            data: {
+              start: newEvent.start,
+              end: newEvent.end,
+            },
+          });
+
+          updateChange({
+            type: "updated",
+            event: newEvent,
+          });
+
+          calendarEventsRef.current = calendarEventsRef.current.map((e) =>
+            e.id === event.id ? newEvent : e,
+          );
+
+          dragRef.current = null;
+          save();
+        } else if (dragRef.current.moved) {
+          // if the event has a parent, ask what to do
+          setUpdateRepeatDialogOpen(true);
+        }
+
+        setIsDragging(false);
 
         window.removeEventListener("pointermove", onGlobalPointerMove);
         window.removeEventListener("pointerup", onGlobalPointerUp);
@@ -360,6 +396,7 @@ export default function AppCalendar({
       const container = gridRef.current;
       if (!container) return;
 
+      e.preventDefault();
       e.stopPropagation();
       setIsDragging(true);
 
@@ -369,12 +406,13 @@ export default function AppCalendar({
         startY: e.clientY + container.scrollTop,
         x: e.clientX,
         y: e.clientY,
-        event: event,
+        event: { ...event },
         originalDay: dayIndex,
         originalStart: event.start,
         originalEnd: event.end,
         label: "",
         dayRects: getDayRects(),
+        moved: false,
       };
 
       window.addEventListener("pointermove", onGlobalPointerMove);
@@ -384,6 +422,16 @@ export default function AppCalendar({
   );
 
   const onEventEdit = (event: CalendarEvent) => {
+    if (event.parent) {
+      if (dragRef.current) {
+        dragRef.current.event = event;
+      } else {
+        toast.error("Failed to edit event.");
+      }
+      setUpdateRepeatDialogOpen(true);
+      return;
+    }
+
     dispatch({
       type: "update",
       id: event.id,
@@ -395,6 +443,10 @@ export default function AppCalendar({
       type: "updated",
       event,
     });
+
+    calendarEventsRef.current = calendarEventsRef.current.map((e) =>
+      e.id === event.id ? event : e,
+    );
 
     save();
   };
@@ -461,6 +513,8 @@ export default function AppCalendar({
     const visibleDates = new Set(visibleDays.map((d) => d.date.toISODate()));
 
     for (const e of calendarEvents) {
+      if (e.id === dragRef.current?.event.id && dragRef.current.moved) continue;
+
       let day = e.start.startOf("day");
       const lastDay = e.end.startOf("day");
 
@@ -475,6 +529,55 @@ export default function AppCalendar({
         map.get(key)!.push(e);
         day = day.plus({ days: 1 });
       }
+
+      // repeating event logic
+      if (
+        e.repeat &&
+        (!dragRef.current?.moved || dragRef.current.event.parent !== e.id)
+      ) {
+        let cursor = e.start;
+        const duration = e.end.diff(e.start);
+
+        const repeat = (at: DateTime) => {
+          const end = at.plus(duration);
+          const key = at.toISODate()!;
+          if (!visibleDates.has(key)) return; // don't repeat outside of visible range
+
+          if (!map.has(key)) map.set(key, []);
+          map.get(key)!.push({
+            ...e,
+            id: e.id + "_" + key, // each repetition needs a unique id
+            start: at,
+            end,
+            parent: e.id,
+          });
+        };
+
+        while (cursor <= visibleDays.at(-1)!.date.endOf("day")) {
+          // loop visible days
+          const dayIndex = cursor.weekday;
+
+          if (
+            cursor.toMillis() !== e.start.toMillis() &&
+            (!e.repeat.until || cursor.toMillis() < e.repeat.until) &&
+            !e.repeat.except?.includes(dayIndex) &&
+            !e.repeat.skip?.includes(cursor.toISODate()!)
+          ) {
+            repeat(cursor);
+          }
+
+          cursor = cursor.plus({
+            [e.repeat.unit]: e.repeat.interval,
+          });
+        }
+      }
+    }
+
+    if (dragRef.current?.event && dragRef.current.moved) {
+      const tempEvent = dragRef.current?.event;
+      const key = tempEvent.start.toISODate()!;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(tempEvent);
     }
 
     return map;
@@ -550,6 +653,12 @@ export default function AppCalendar({
                     onPointerDown={onEventPointerDown}
                     onEventEdit={onEventEdit}
                     onEventDelete={() => {
+                      if (event.parent) {
+                        setDeleteRepeatDialogOpen(true);
+                        toBeDeletedRef.current = event;
+                        return;
+                      }
+
                       dispatch({
                         type: "delete",
                         id: event.id,
@@ -633,6 +742,251 @@ export default function AppCalendar({
           {isDragging && <DragOverlay dragRef={dragRef} />}
         </div>
       </div>
+
+      <AlertDialog open={updateRepeatDialogOpen}>
+        <AlertDialogContent className="w-auto text-center">
+          <AlertDialogTitle>Update recurring event</AlertDialogTitle>
+          <AlertDialogDescription>
+            Which event would you like to update?
+          </AlertDialogDescription>
+          <RadioGroup
+            value={repeatOption}
+            onValueChange={setRepeatOption}
+            className="mt-3 gap-5"
+          >
+            <div className="flex gap-3">
+              <RadioGroupItem value="this" id="this" />
+              <Label htmlFor="this">This event</Label>
+            </div>
+            <div className="flex gap-3">
+              <RadioGroupItem value="future" id="future" />
+              <Label htmlFor="future">This and future events</Label>
+            </div>
+            <div className="flex gap-3">
+              <RadioGroupItem value="all" id="all" />
+              <Label htmlFor="all">All events</Label>
+            </div>
+          </RadioGroup>
+          <AlertDialogFooter className="!flex-col mt-5">
+            <AlertDialogAction
+              onClick={() => {
+                const event = dragRef.current?.event;
+                const parent = calendarEvents.find(
+                  (e) => e.id === event?.parent,
+                );
+                if (!dragRef.current || !event || !parent || !parent.repeat) {
+                  toast.error("Event no longer exists.");
+                  dragRef.current = null;
+                  setUpdateRepeatDialogOpen(false);
+                  return;
+                }
+
+                switch (repeatOption) {
+                  case "this": {
+                    // skip current repetition
+                    if (!parent.repeat.skip) parent.repeat.skip = [];
+                    parent.repeat.skip.push(
+                      dragRef.current.originalStart.toISODate()!,
+                    );
+                    onEventEdit(parent);
+
+                    // clone the event
+                    const newEvent = {
+                      ...event,
+                      id: crypto.randomUUID(),
+                      timestamp: Date.now(),
+                    } as CalendarEvent;
+
+                    delete newEvent.parent; // detach from parent
+                    delete newEvent.repeat; // don't repeat
+
+                    dispatch({
+                      type: "add",
+                      event: newEvent,
+                    });
+
+                    updateChange({
+                      type: "added",
+                      event: newEvent,
+                    });
+
+                    break;
+                  }
+
+                  case "future": {
+                    // clone the event
+                    const newEvent = {
+                      ...event,
+                      id: crypto.randomUUID(),
+                      timestamp: Date.now(),
+                      repeat: {
+                        interval: parent.repeat.interval,
+                        unit: parent.repeat.unit,
+                      },
+                    } as CalendarEvent;
+
+                    delete newEvent.parent; // detach from parent
+
+                    dispatch({
+                      type: "add",
+                      event: newEvent,
+                    });
+
+                    updateChange({
+                      type: "added",
+                      event: newEvent,
+                    });
+
+                    // end parent's repetition
+                    parent.repeat.until = event.start.startOf("day").toMillis();
+                    onEventEdit(parent);
+                    break;
+                  }
+
+                  case "all": {
+                    // update the parent
+                    const newEvent = {
+                      ...event,
+                      start: parent.start.set({
+                        day:
+                          parent.start.day -
+                          (dragRef.current.originalStart.day - event.start.day),
+                        hour: event.start.hour,
+                        minute: event.start.minute,
+                      }),
+                      end: parent.end.set({
+                        day:
+                          parent.end.day -
+                          (dragRef.current.originalEnd.day - event.end.day),
+                        hour: event.end.hour,
+                        minute: event.end.minute,
+                      }),
+                      id: parent.id,
+                    };
+
+                    delete newEvent.parent;
+
+                    onEventEdit(newEvent);
+                    break;
+                  }
+                }
+
+                dragRef.current = null;
+                setUpdateRepeatDialogOpen(false);
+
+                save();
+              }}
+            >
+              Update
+            </AlertDialogAction>
+            <AlertDialogCancel
+              onClick={() => {
+                dragRef.current = null;
+                setUpdateRepeatDialogOpen(false);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteRepeatDialogOpen}>
+        <AlertDialogContent className="w-auto text-center">
+          <AlertDialogTitle>Delete recurring event</AlertDialogTitle>
+          <AlertDialogDescription>
+            Which event would you like to delete?
+          </AlertDialogDescription>
+          <RadioGroup
+            value={repeatOption}
+            onValueChange={setRepeatOption}
+            className="mt-3 gap-5"
+          >
+            <div className="flex gap-3">
+              <RadioGroupItem value="this" id="this" />
+              <Label htmlFor="this">This event</Label>
+            </div>
+            <div className="flex gap-3">
+              <RadioGroupItem value="future" id="future" />
+              <Label htmlFor="future">This and future events</Label>
+            </div>
+            <div className="flex gap-3">
+              <RadioGroupItem value="all" id="all" />
+              <Label htmlFor="all">All events</Label>
+            </div>
+          </RadioGroup>
+          <AlertDialogFooter className="!flex-col mt-5">
+            <AlertDialogAction
+              onClick={() => {
+                const event = toBeDeletedRef?.current;
+                const parent = calendarEvents.find(
+                  (e) => e.id === event?.parent,
+                );
+                if (
+                  !toBeDeletedRef.current ||
+                  !event ||
+                  !parent ||
+                  !parent.repeat
+                ) {
+                  toast.error("Event no longer exists.");
+                  toBeDeletedRef.current = null;
+                  setDeleteRepeatDialogOpen(false);
+                  return;
+                }
+
+                switch (repeatOption) {
+                  case "this": {
+                    // skip current repetition
+                    if (!parent.repeat.skip) parent.repeat.skip = [];
+                    parent.repeat.skip.push(event.start.toISODate()!);
+                    onEventEdit(parent);
+
+                    // the event never existed so no need to actually delete anything
+                    break;
+                  }
+
+                  case "future": {
+                    // end parent's repetition
+                    parent.repeat.until = event.start.startOf("day").toMillis();
+                    onEventEdit(parent);
+                    break;
+                  }
+
+                  case "all": {
+                    // delete the parent
+                    dispatch({
+                      type: "delete",
+                      id: parent.id,
+                    });
+
+                    updateChange({
+                      id: parent.id,
+                      type: "deleted",
+                    });
+
+                    break;
+                  }
+                }
+
+                toBeDeletedRef.current = null;
+                setDeleteRepeatDialogOpen(false);
+
+                save();
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+            <AlertDialogCancel
+              onClick={() => {
+                toBeDeletedRef.current = null;
+                setDeleteRepeatDialogOpen(false);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }

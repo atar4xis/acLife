@@ -50,7 +50,7 @@ export default memo(function EventBlock({
   }, [style.height, event.title, startTimeFormat, endTimeFormat]);
 
   const copyID = () => {
-    navigator.clipboard.writeText(event.id);
+    navigator.clipboard.writeText(event.parent || event.id);
   };
 
   const { handlers: tapHandlers } = useTapInteraction({
@@ -132,7 +132,8 @@ export default memo(function EventBlock({
           <ContextMenuLabel>{event.title}</ContextMenuLabel>
 
           <ContextMenuItem onClick={copyID}>
-            <Clipboard /> Copy Event ID
+            <Clipboard />
+            {event.parent ? "Copy parent ID" : "Copy ID"}
           </ContextMenuItem>
 
           <ContextMenuItem onClick={onEventDelete}>

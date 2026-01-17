@@ -1,5 +1,15 @@
 import type { DateTime } from "luxon";
 
+export type RepeatIntervalUnit = "day" | "week" | "month" | "year";
+
+export type RepeatInterval = {
+  interval: number;
+  unit: RepeatIntervalUnit;
+  except?: number[]; // don't repeat on these weekdays
+  skip?: string[]; // skip these dates
+  until?: number; // millis
+};
+
 export type CalendarEvent = {
   id: string;
   start: DateTime;
@@ -7,6 +17,8 @@ export type CalendarEvent = {
   title: string;
   description?: string;
   color?: string;
+  repeat?: RepeatInterval;
+  parent?: string; // uuid of parent event
   timestamp: number;
 };
 
@@ -53,6 +65,7 @@ export type EventDragRef = {
   originalEnd: DateTime;
   label: string;
   dayRects: { day: number; rect: DOMRect }[];
+  moved: boolean;
 } | null;
 
 export type CachedEvent = {

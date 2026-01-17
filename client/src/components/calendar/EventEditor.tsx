@@ -1,4 +1,4 @@
-import type { CalendarEvent } from "@/types/calendar/Event";
+import type { CalendarEvent, RepeatInterval } from "@/types/calendar/Event";
 import type { EventBlockProps } from "@/types/Props";
 import {
   useEffect,
@@ -18,6 +18,56 @@ import { DateTime } from "luxon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Trash2Icon, XIcon } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+
+/* ------------------------------------------------- */
+
+// TODO: make these configurable
+const presetRepeat: Record<string, RepeatInterval> = {
+  daily: {
+    interval: 1,
+    unit: "day",
+  },
+  weekly: {
+    interval: 1,
+    unit: "week",
+  },
+  workdays: {
+    interval: 1,
+    unit: "day",
+    except: [6, 7],
+  },
+  monthly: {
+    interval: 1,
+    unit: "month",
+  },
+  yearly: {
+    interval: 1,
+    unit: "year",
+  },
+};
+
+const parseRepeatValue = (value: RepeatInterval) => {
+  for (const [key, preset] of Object.entries(presetRepeat)) {
+    if (
+      value.interval === preset.interval &&
+      value.unit === preset.unit &&
+      value.except?.join(",") === preset.except?.join(",")
+    ) {
+      return key;
+    }
+  }
+
+  return "custom";
+};
+
+/* ------------------------------------------------- */
 
 export default function EventEditor({
   event,
@@ -41,6 +91,10 @@ export default function EventEditor({
   const [color, setColor] = useState(event.color || "#2563eb");
   const [start, setStart] = useState<Date | undefined>(event.start.toJSDate());
   const [end, setEnd] = useState<Date | undefined>(event.end.toJSDate());
+  const [repeat, setRepeat] = useState(event.repeat);
+  const [customRepeat, setCustomRepeat] = useState(
+    event.repeat ? parseRepeatValue(event.repeat) === "custom" : false,
+  );
   const isMobile = useIsMobile();
 
   const newEvent = useRef<CalendarEvent>({
@@ -78,6 +132,32 @@ export default function EventEditor({
     }
 
     onSave(newEvent.current);
+  };
+
+  const handleSelectRepeat = (value: string) => {
+    if (value === "custom") {
+      setRepeat({
+        interval: 2,
+        unit: "day",
+      });
+      setCustomRepeat(true);
+      return;
+    } else {
+      setCustomRepeat(false);
+    }
+
+    if (value in presetRepeat) {
+      const { interval, unit, except } =
+        presetRepeat[value as keyof typeof presetRepeat];
+
+      setRepeat({
+        interval,
+        unit,
+        except,
+      });
+    } else {
+      setRepeat(undefined);
+    }
   };
 
   useLayoutEffect(() => {
@@ -133,7 +213,8 @@ export default function EventEditor({
       if (
         editorRef.current &&
         !editorRef.current.contains(el) &&
-        !el.closest("[role=dialog]")
+        !el.closest("[role=dialog]") && // color/date picker
+        !el.closest("[role=presentation]") // select dropdown
       ) {
         e.stopPropagation();
         onCancel();
@@ -152,8 +233,9 @@ export default function EventEditor({
     newEvent.current.color = color;
     newEvent.current.start = DateTime.fromJSDate(start || new Date());
     newEvent.current.end = DateTime.fromJSDate(end || new Date());
+    newEvent.current.repeat = repeat;
     newEvent.current.timestamp = Date.now();
-  });
+  }, [title, description, color, start, end, repeat]);
 
   return (
     <div
@@ -202,6 +284,76 @@ export default function EventEditor({
           <FieldLabel>Start &amp; End Time</FieldLabel>
           <DateTimePicker value={start} onChange={setStart} />
           <DateTimePicker value={end} onChange={setEnd} />
+
+          <Select
+            value={
+              repeat
+                ? customRepeat
+                  ? "custom"
+                  : parseRepeatValue(repeat)
+                : "never"
+            }
+            onValueChange={handleSelectRepeat}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Repeat" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="never">Does not repeat</SelectItem>
+              <SelectItem value="daily">Repeat daily</SelectItem>
+              <SelectItem value="workdays">
+                Repeat daily, except weekends
+              </SelectItem>
+              <SelectItem value="weekly">Repeat weekly</SelectItem>
+              <SelectItem value="monthly">Repeat monthly</SelectItem>
+              <SelectItem value="yearly">Repeat yearly</SelectItem>
+              <SelectItem value="custom">Custom</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {customRepeat && (
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                className="w-20"
+                min={1}
+                max={1000}
+                placeholder="Every"
+                value={repeat?.interval || 1}
+                onChange={(e) => {
+                  setRepeat(
+                    (prev) =>
+                      ({
+                        ...prev,
+                        interval: e.target.valueAsNumber,
+                      }) as RepeatInterval,
+                  );
+                }}
+              />
+              <Select
+                value={repeat?.unit || "day"}
+                onValueChange={(v) => {
+                  setRepeat(
+                    (prev) =>
+                      ({
+                        ...prev,
+                        unit: v,
+                      }) as RepeatInterval,
+                  );
+                }}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">Days</SelectItem>
+                  <SelectItem value="week">Weeks</SelectItem>
+                  <SelectItem value="month">Months</SelectItem>
+                  <SelectItem value="year">Years</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </Field>
 
         <Field>
