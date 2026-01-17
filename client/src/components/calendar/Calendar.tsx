@@ -799,6 +799,12 @@ export default function AppCalendar({
                       event: parent,
                     });
 
+                    dispatch({
+                      type: "update",
+                      id: parent.id,
+                      data: parent,
+                    });
+
                     // clone the event
                     const newEvent = {
                       ...event,
@@ -853,6 +859,12 @@ export default function AppCalendar({
                       type: "updated",
                       event: parent,
                     });
+
+                    dispatch({
+                      type: "update",
+                      id: parent.id,
+                      data: parent,
+                    });
                     break;
                   }
 
@@ -878,6 +890,12 @@ export default function AppCalendar({
                     };
 
                     delete newEvent.parent;
+
+                    dispatch({
+                      type: "update",
+                      id: newEvent.id,
+                      data: newEvent,
+                    });
 
                     updateChange({
                       type: "updated",
