@@ -27,6 +27,7 @@ export default function AppSidebar() {
               setCurrentDate(DateTime.fromJSDate(date || new Date()));
             }}
             className="w-full rounded-md border"
+            weekStartsOn={1}
           />
         </SidebarGroup>
       </SidebarContent>
