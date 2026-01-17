@@ -131,6 +131,20 @@ export default function EventEditor({
       return;
     }
 
+    // make sure it's at least 1 minute
+    if (
+      newEvent.current.end.toMillis() - newEvent.current.start.toMillis() <
+      60000
+    ) {
+      toast.warning("Invalid event duration.", {
+        cancel: {
+          label: "OK",
+          onClick: () => {},
+        },
+      });
+      return;
+    }
+
     onSave(newEvent.current);
   };
 
