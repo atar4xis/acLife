@@ -9,7 +9,7 @@ import {
   ContextMenuLabel,
   ContextMenuTrigger,
 } from "../ui/context-menu";
-import { Clipboard, Trash2 } from "lucide-react";
+import { Clipboard, PencilLine, Trash2 } from "lucide-react";
 import useTapInteraction from "@/hooks/useTapInteraction";
 
 export default memo(function EventBlock({
@@ -130,6 +130,11 @@ export default memo(function EventBlock({
         <ContextMenuContent onPointerDown={(e) => e.stopPropagation()}>
           {/* context menu items */}
           <ContextMenuLabel>{event.title}</ContextMenuLabel>
+
+          <ContextMenuItem onClick={() => setEditing(true)}>
+            <PencilLine />
+            Edit
+          </ContextMenuItem>
 
           <ContextMenuItem onClick={copyID}>
             <Clipboard />
