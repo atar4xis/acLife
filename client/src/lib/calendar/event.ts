@@ -10,14 +10,17 @@ export const getDayEventStyles = (
   day: DateTime,
   hourHeight: number,
 ): Record<string, EventStyle> => {
-  const dayStart = day.startOf("day");
-  const dayEnd = day.endOf("day");
+  const utcDay = day.setZone("utc", { keepLocalTime: true });
+  const dayStart = utcDay.startOf("day");
+  const dayEnd = utcDay.endOf("day");
 
   // map events to positions
   const positioned: PositionedEvent[] = events
     .map((ev) => {
-      const start = ev.start < dayStart ? dayStart : ev.start;
-      const end = ev.end > dayEnd ? dayEnd : ev.end;
+      const utcEvStart = ev.start.setZone("utc", { keepLocalTime: true });
+      const utcEvEnd = ev.end.setZone("utc", { keepLocalTime: true });
+      const start = utcEvStart < dayStart ? dayStart : utcEvStart;
+      const end = utcEvEnd > dayEnd ? dayEnd : utcEvEnd;
 
       return {
         id: ev.id,
