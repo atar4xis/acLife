@@ -25,6 +25,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
+import { Checkbox } from "../ui/checkbox";
+import { Label } from "../ui/label";
 
 /* ------------------------------------------------- */
 
@@ -326,47 +329,123 @@ export default function EventEditor({
           </Select>
 
           {customRepeat && (
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                className="w-20"
-                min={1}
-                max={1000}
-                placeholder="Every"
-                value={repeat?.interval || 1}
-                onChange={(e) => {
-                  setRepeat(
-                    (prev) =>
-                      ({
-                        ...prev,
-                        interval: e.target.valueAsNumber,
-                      }) as RepeatInterval,
-                  );
-                }}
-              />
-              <Select
-                value={repeat?.unit || "day"}
-                onValueChange={(v) => {
-                  setRepeat(
-                    (prev) =>
-                      ({
-                        ...prev,
-                        unit: v,
-                      }) as RepeatInterval,
-                  );
-                }}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Unit" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="day">Days</SelectItem>
-                  <SelectItem value="week">Weeks</SelectItem>
-                  <SelectItem value="month">Months</SelectItem>
-                  <SelectItem value="year">Years</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <>
+              <FieldLabel>Repeat Every</FieldLabel>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  className="w-20"
+                  min={1}
+                  max={1000}
+                  placeholder="Every"
+                  value={repeat?.interval || 1}
+                  onChange={(e) => {
+                    setRepeat(
+                      (prev) =>
+                        ({
+                          ...prev,
+                          interval: e.target.valueAsNumber,
+                        }) as RepeatInterval,
+                    );
+                  }}
+                />
+                <Select
+                  value={repeat?.unit || "day"}
+                  onValueChange={(v) => {
+                    setRepeat(
+                      (prev) =>
+                        ({
+                          ...prev,
+                          unit: v,
+                        }) as RepeatInterval,
+                    );
+                  }}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Days</SelectItem>
+                    <SelectItem value="week">Weeks</SelectItem>
+                    <SelectItem value="month">Months</SelectItem>
+                    <SelectItem value="year">Years</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-between">
+                <div className="flex items-start gap-2 mx-1">
+                  <Checkbox
+                    id="forever"
+                    checked={!repeat?.until}
+                    onCheckedChange={(c) => {
+                      setRepeat((prev) => {
+                        return {
+                          ...prev,
+                          until: c ? undefined : Date.now(),
+                        } as RepeatInterval;
+                      });
+                    }}
+                  />
+                  <Label htmlFor="forever">Forever</Label>
+                </div>
+                <div className="flex items-start gap-2 mx-1">
+                  <Label htmlFor="except">Excluding</Label>
+                  <Checkbox
+                    id="except"
+                    checked={repeat?.except !== undefined}
+                    onCheckedChange={(c) => {
+                      setRepeat((prev) => {
+                        return {
+                          ...prev,
+                          except: c ? [] : undefined,
+                        } as RepeatInterval;
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+              {repeat?.except !== undefined && (
+                <div className="flex justify-center">
+                  <ToggleGroup
+                    type="multiple"
+                    variant="outline"
+                    value={repeat.except.map(String)}
+                    onValueChange={(e) => {
+                      setRepeat((prev) => {
+                        return {
+                          ...prev,
+                          except: e.map(Number),
+                        } as RepeatInterval;
+                      });
+                    }}
+                  >
+                    <ToggleGroupItem value="1">M</ToggleGroupItem>
+                    <ToggleGroupItem value="2">T</ToggleGroupItem>
+                    <ToggleGroupItem value="3">W</ToggleGroupItem>
+                    <ToggleGroupItem value="4">T</ToggleGroupItem>
+                    <ToggleGroupItem value="5">F</ToggleGroupItem>
+                    <ToggleGroupItem value="6">S</ToggleGroupItem>
+                    <ToggleGroupItem value="7">S</ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+              )}
+              {repeat?.until && (
+                <>
+                  <FieldLabel>Until</FieldLabel>
+                  <DateTimePicker
+                    value={new Date(repeat.until)}
+                    onChange={(d) => {
+                      setRepeat((prev) => {
+                        return {
+                          ...prev,
+                          until: d ? d.getTime() : undefined,
+                        } as RepeatInterval;
+                      });
+                    }}
+                  />
+                </>
+              )}
+            </>
           )}
         </Field>
 

@@ -8,7 +8,7 @@ import { Calendar } from "../ui/calendar";
 
 type DateTimePickerProps = {
   value: Date | undefined;
-  onChange: Dispatch<SetStateAction<Date | undefined>>;
+  onChange: (val: Date | undefined) => void;
 };
 
 export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
