@@ -31,7 +31,7 @@ export const getDayEventStyles = (
           (start.diff(dayStart, "minutes").minutes / 60) * hourHeight,
         ),
         height: Math.max(
-          0,
+          5,
           (end.diff(start, "minutes").minutes / 60) * hourHeight,
         ),
         col: -1,
