@@ -345,19 +345,24 @@ export default function AppCalendar({
 
         // update the edited event in state
         if (!event.parent) {
-          dispatch({
-            type: "update",
-            id: event.id,
-            data: {
-              start: newEvent.start,
-              end: newEvent.end,
-            },
-          });
+          if (
+            newEvent.start.toMillis() !== state.originalStart.toMillis() ||
+            newEvent.end.toMillis() !== state.originalEnd.toMillis()
+          ) {
+            dispatch({
+              type: "update",
+              id: event.id,
+              data: {
+                start: newEvent.start,
+                end: newEvent.end,
+              },
+            });
 
-          updateChange({
-            type: "updated",
-            event: newEvent,
-          });
+            updateChange({
+              type: "updated",
+              event: newEvent,
+            });
+          }
 
           calendarEventsRef.current = calendarEventsRef.current.map((e) =>
             e.id === event.id ? newEvent : e,
@@ -788,7 +793,11 @@ export default function AppCalendar({
                     parent.repeat.skip.push(
                       dragRef.current.originalStart.toISODate()!,
                     );
-                    onEventEdit(parent);
+
+                    updateChange({
+                      type: "updated",
+                      event: parent,
+                    });
 
                     // clone the event
                     const newEvent = {
@@ -839,7 +848,11 @@ export default function AppCalendar({
 
                     // end parent's repetition
                     parent.repeat.until = event.start.startOf("day").toMillis();
-                    onEventEdit(parent);
+
+                    updateChange({
+                      type: "updated",
+                      event: parent,
+                    });
                     break;
                   }
 
@@ -866,7 +879,10 @@ export default function AppCalendar({
 
                     delete newEvent.parent;
 
-                    onEventEdit(newEvent);
+                    updateChange({
+                      type: "updated",
+                      event: newEvent,
+                    });
                     break;
                   }
                 }
@@ -939,7 +955,10 @@ export default function AppCalendar({
                     // skip current repetition
                     if (!parent.repeat.skip) parent.repeat.skip = [];
                     parent.repeat.skip.push(event.start.toISODate()!);
-                    onEventEdit(parent);
+                    updateChange({
+                      type: "updated",
+                      event: parent,
+                    });
 
                     // the event never existed so no need to actually delete anything
                     break;
@@ -948,7 +967,10 @@ export default function AppCalendar({
                   case "future": {
                     // end parent's repetition
                     parent.repeat.until = event.start.startOf("day").toMillis();
-                    onEventEdit(parent);
+                    updateChange({
+                      type: "updated",
+                      event: parent,
+                    });
                     break;
                   }
 
