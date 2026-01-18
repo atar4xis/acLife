@@ -102,3 +102,21 @@ export function uint8ArrayFromBase64(b64: string): Uint8Array {
 export function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(value, max));
 }
+
+export function shallowEqual(
+  a: Record<string, any> | null | undefined,
+  b: Record<string, any> | null | undefined,
+) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+
+  for (const key of aKeys) {
+    if (a[key] !== b[key]) return false;
+  }
+
+  return true;
+}

@@ -12,17 +12,9 @@ import { ArrowLeft, ArrowRight, SearchIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
-import { cn } from "@/lib/utils";
-import type { CalendarProps, WithChildren } from "@/types/Props";
+import type { CalendarProps } from "@/types/Props";
 import type {
   CalendarEvent,
   EventChange,
@@ -48,7 +40,6 @@ import {
   mapEventToDates,
 } from "@/lib/calendar/event";
 import { useUser } from "@/context/UserContext";
-import useTapInteraction from "@/hooks/useTapInteraction";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,49 +52,10 @@ import {
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Label } from "../ui/label";
 import { toast } from "sonner";
-
-/* -------------------------------------------------------------------------- */
-
-type CellProps = React.ComponentProps<"div"> & WithChildren;
-
-function HeaderCell({ children, className }: CellProps) {
-  return (
-    <div
-      className={cn(
-        "sticky top-0 z-11 border-b border-r flex items-center justify-center bg-background min-w-0",
-        className,
-      )}
-    >
-      <span className="truncate w-full text-center">{children}</span>
-    </div>
-  );
-}
-
-function GridCell({
-  children,
-  className,
-  day,
-  onCellTap,
-  ...handlers
-}: CellProps & {
-  day: number;
-  onCellTap: (e: React.PointerEvent, day: number) => void;
-}) {
-  const { handlers: tapHandlers } = useTapInteraction({
-    onTap: (e) => onCellTap(e, day),
-  });
-
-  return (
-    <div
-      className={cn("relative border-b border-r", className)}
-      data-day-index={day}
-      {...handlers}
-      {...tapHandlers}
-    >
-      {children}
-    </div>
-  );
-}
+import HeaderCell from "./HeaderCell";
+import GridCell from "./GridCell";
+import { useIsMobile } from "@/hooks/use-mobile";
+import ModeSwitcher from "./ModeSwitcher";
 
 /* -------------------------------------------------------------------------- */
 
@@ -158,13 +110,18 @@ export default function AppCalendar({
   const dragRef = useRef<EventDragRef>(null);
   const hourHeightRef = useRef(hourHeight);
 
-  const toBeDeletedRef = useRef<CalendarEvent | null>(null);
+  const evPendingUpdateRef = useRef<CalendarEvent | null>(null);
 
-  const visibleDays =
-    {
-      day: getDay(currentDate),
-      week: getWeekDays(currentDate),
-    }[mode] ?? [];
+  const visibleDays = useMemo(() => {
+    return (
+      {
+        day: getDay(currentDate),
+        week: getWeekDays(currentDate),
+      }[mode] ?? []
+    );
+  }, [currentDate, mode]);
+
+  const isMobile = useIsMobile();
 
   const move = (steps: number) => {
     const unit = mode === "day" ? "days" : mode === "week" ? "weeks" : "months";
@@ -176,83 +133,21 @@ export default function AppCalendar({
     return (minutes / 60) * hourHeight;
   };
 
-  const updateChange = (change: EventChange) => {
+  const updateChange = useCallback((change: EventChange) => {
     changesMapRef.current.set(change.event?.id ?? change.id!, change);
-  };
+  }, []);
 
-  const saveIfChanged = () => {
+  const saveIfChanged = useCallback(() => {
     if (changesMapRef.current.size > 0) {
       saveEvents(Array.from(changesMapRef.current.values()), () => null);
       changesMapRef.current.clear(); // reset after save
     }
-  };
+  }, [saveEvents]);
 
-  const save = () => {
+  const save = useCallback(() => {
     if (user?.type === "online") saveIfChanged();
     else saveEvents(calendarEventsRef.current, () => {}); // save all events for offline users
-  };
-
-  /* -------------------------------------------------------------------------- */
-
-  const startNewEvent = (e: React.PointerEvent, dayIndex: number) => {
-    const container = gridRef.current;
-    if (!container) return;
-
-    e.preventDefault();
-
-    const rect = container.getBoundingClientRect();
-    const startY = e.clientY + container.scrollTop;
-
-    const startMinutes = yToMinutes(
-      startY - rect.top - GRID_HEADER_HEIGHT,
-      hourHeight,
-    );
-
-    const start = visibleDays[dayIndex].date.plus({
-      minutes: snapMinutes(startMinutes, SNAP_MINS),
-    });
-    const end = start.plus({ minutes: DEFAULT_EVENT_DURATION });
-
-    const newEvent = {
-      id: crypto.randomUUID(),
-      title: DEFAULT_EVENT_NAME,
-      start,
-      end,
-      timestamp: Date.now(),
-    } as CalendarEvent;
-
-    dispatch({
-      type: "add",
-      event: newEvent,
-    });
-
-    updateChange({
-      type: "added",
-      event: newEvent,
-    });
-
-    if (e.pointerType !== "touch") {
-      setIsDragging(true);
-
-      dragRef.current = {
-        pointerId: e.pointerId,
-        type: "resize_end",
-        startY,
-        x: e.clientX,
-        y: e.clientY,
-        event: newEvent,
-        originalDay: dayIndex,
-        originalStart: start,
-        originalEnd: start,
-        label: "new event",
-        dayRects: getDayRects(),
-        moved: false,
-      };
-    }
-
-    window.addEventListener("pointermove", onGlobalPointerMove);
-    window.addEventListener("pointerup", onGlobalPointerUp);
-  };
+  }, [user, saveEvents, saveIfChanged]);
 
   /* -------------------------------------------------------------------------- */
 
@@ -330,7 +225,7 @@ export default function AppCalendar({
         forceRender((prev) => !prev);
       }
     },
-    [visibleDays],
+    [visibleDays, hourHeight],
   );
 
   const onGlobalPointerUp = useCallback(
@@ -376,6 +271,7 @@ export default function AppCalendar({
           save();
         } else if (dragRef.current.moved) {
           // if the event has a parent, ask what to do
+          evPendingUpdateRef.current = event;
           setUpdateRepeatDialogOpen(true);
         }
 
@@ -430,35 +326,129 @@ export default function AppCalendar({
     [onGlobalPointerMove, onGlobalPointerUp],
   );
 
-  const onEventEdit = (event: CalendarEvent) => {
-    if (event.parent) {
-      if (dragRef.current) {
-        dragRef.current.event = event;
-      } else {
-        toast.error("Failed to edit event.");
+  const onEventEdit = useCallback(
+    (event: CalendarEvent) => {
+      if (event.parent) {
+        evPendingUpdateRef.current = event;
+        setUpdateRepeatDialogOpen(true);
+        return;
       }
-      setUpdateRepeatDialogOpen(true);
-      return;
-    }
 
-    dispatch({
-      type: "update",
-      id: event.id,
-      data: event,
-    });
+      dispatch({
+        type: "update",
+        id: event.id,
+        data: event,
+      });
 
-    updateChange({
-      id: event.id,
-      type: "updated",
-      event,
-    });
+      updateChange({
+        id: event.id,
+        type: "updated",
+        event,
+      });
 
-    calendarEventsRef.current = calendarEventsRef.current.map((e) =>
-      e.id === event.id ? event : e,
-    );
+      calendarEventsRef.current = calendarEventsRef.current.map((e) =>
+        e.id === event.id ? event : e,
+      );
 
-    save();
-  };
+      save();
+    },
+    [dispatch, updateChange, save],
+  );
+
+  const onEventDelete = useCallback(
+    (event: CalendarEvent) => {
+      if (event.parent) {
+        setDeleteRepeatDialogOpen(true);
+        evPendingUpdateRef.current = event;
+        return;
+      }
+
+      dispatch({
+        type: "delete",
+        id: event.id,
+      });
+
+      updateChange({
+        id: event.id,
+        type: "deleted",
+      });
+
+      save();
+    },
+    [setDeleteRepeatDialogOpen, dispatch, updateChange, save],
+  );
+
+  /* -------------------------------------------------------------------------- */
+
+  const startNewEvent = useCallback(
+    (e: React.PointerEvent, dayIndex: number) => {
+      const container = gridRef.current;
+      if (!container) return;
+
+      e.preventDefault();
+
+      const rect = container.getBoundingClientRect();
+      const startY = e.clientY + container.scrollTop;
+
+      const startMinutes = yToMinutes(
+        startY - rect.top - GRID_HEADER_HEIGHT,
+        hourHeight,
+      );
+
+      const start = visibleDays[dayIndex].date.plus({
+        minutes: snapMinutes(startMinutes, SNAP_MINS),
+      });
+      const end = start.plus({ minutes: DEFAULT_EVENT_DURATION });
+
+      const newEvent = {
+        id: crypto.randomUUID(),
+        title: DEFAULT_EVENT_NAME,
+        start,
+        end,
+        timestamp: Date.now(),
+      } as CalendarEvent;
+
+      dispatch({
+        type: "add",
+        event: newEvent,
+      });
+
+      updateChange({
+        type: "added",
+        event: newEvent,
+      });
+
+      if (e.pointerType !== "touch") {
+        setIsDragging(true);
+
+        dragRef.current = {
+          pointerId: e.pointerId,
+          type: "resize_end",
+          startY,
+          x: e.clientX,
+          y: e.clientY,
+          event: newEvent,
+          originalDay: dayIndex,
+          originalStart: start,
+          originalEnd: start,
+          label: "new event",
+          dayRects: getDayRects(),
+          moved: false,
+        };
+      }
+
+      window.addEventListener("pointermove", onGlobalPointerMove);
+      window.addEventListener("pointerup", onGlobalPointerUp);
+    },
+    [
+      hourHeight,
+      dispatch,
+      updateChange,
+      visibleDays,
+      onGlobalPointerMove,
+      onGlobalPointerUp,
+    ],
+  );
 
   /* -------------------------------------------------------------------------- */
 
@@ -522,6 +512,7 @@ export default function AppCalendar({
     const visibleDates = new Set(visibleDays.map((d) => d.date.toISODate()));
 
     for (const e of calendarEvents) {
+      if (!e.id) continue;
       if (e.id === dragRef.current?.event.id && dragRef.current.moved) continue;
 
       mapEventToDates(map, e, visibleDates);
@@ -567,7 +558,12 @@ export default function AppCalendar({
     }
 
     return map;
-  }, [calendarEvents, visibleDays]);
+  }, [
+    calendarEvents,
+    visibleDays,
+    dragRef.current?.event?.start,
+    dragRef.current?.event?.end,
+  ]);
 
   // build map of event styles
   const stylesMap = useMemo(() => {
@@ -606,8 +602,9 @@ export default function AppCalendar({
       </div>
 
       {visibleDays.map((d, dayIndex) => {
-        const dayEvents = eventMap.get(d.date.toISODate()!) || [];
-        const styles = stylesMap.get(d.date.toISODate()!) || {};
+        const key = d.date.toISODate()!;
+        const dayEvents = eventMap.get(key) || [];
+        const styles = stylesMap.get(key) || {};
 
         return (
           <GridCell
@@ -642,25 +639,7 @@ export default function AppCalendar({
                     style={styles[event.id]}
                     onPointerDown={onEventPointerDown}
                     onEventEdit={onEventEdit}
-                    onEventDelete={() => {
-                      if (event.parent) {
-                        setDeleteRepeatDialogOpen(true);
-                        toBeDeletedRef.current = event;
-                        return;
-                      }
-
-                      dispatch({
-                        type: "delete",
-                        id: event.id,
-                      });
-
-                      updateChange({
-                        id: event.id,
-                        type: "deleted",
-                      });
-
-                      saveIfChanged();
-                    }}
+                    onEventDelete={onEventDelete}
                   />
                 ))}
               </div>
@@ -674,7 +653,7 @@ export default function AppCalendar({
   return (
     <main className="flex h-screen w-full flex-col">
       <nav className="flex items-center justify-between border-b p-3">
-        <SidebarTrigger className="md:hidden" />
+        {isMobile && <SidebarTrigger />}
 
         <div className="flex items-center gap-2 hidden md:flex">
           <Button
@@ -698,15 +677,7 @@ export default function AppCalendar({
           {getDateRangeString(mode, currentDate)}
         </h2>
 
-        <Select value={mode} onValueChange={setMode}>
-          <SelectTrigger className="mr-4 md:mr-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="day">Day</SelectItem>
-            <SelectItem value="week">Week</SelectItem>
-          </SelectContent>
-        </Select>
+        <ModeSwitcher mode={mode} setMode={setMode} />
 
         {/* TODO: implement search function */}
         <div className="flex items-center gap-2">
@@ -760,24 +731,26 @@ export default function AppCalendar({
           <AlertDialogFooter className="!flex-col mt-5">
             <AlertDialogAction
               onClick={() => {
-                const event = dragRef.current?.event;
+                const event = evPendingUpdateRef.current;
                 const parent = calendarEvents.find(
                   (e) => e.id === event?.parent,
                 );
-                if (!dragRef.current || !event || !parent || !parent.repeat) {
+                if (!event || !parent || !parent.repeat) {
                   toast.error("Event no longer exists.");
                   dragRef.current = null;
                   setUpdateRepeatDialogOpen(false);
                   return;
                 }
 
+                const evStart = dragRef.current
+                  ? dragRef.current.originalStart
+                  : event.start;
+
                 switch (repeatOption) {
                   case "this": {
                     // skip current repetition
                     if (!parent.repeat.skip) parent.repeat.skip = [];
-                    parent.repeat.skip.push(
-                      dragRef.current.originalStart.toISODate()!,
-                    );
+                    parent.repeat.skip.push(evStart.toISODate()!);
 
                     updateChange({
                       type: "updated",
@@ -858,16 +831,12 @@ export default function AppCalendar({
                     const newEvent = {
                       ...event,
                       start: parent.start.set({
-                        day:
-                          parent.start.day -
-                          (dragRef.current.originalStart.day - event.start.day),
+                        day: parent.start.day - (evStart.day - event.start.day),
                         hour: event.start.hour,
                         minute: event.start.minute,
                       }),
                       end: parent.end.set({
-                        day:
-                          parent.end.day -
-                          (dragRef.current.originalEnd.day - event.end.day),
+                        day: parent.end.day - (evStart.day - event.end.day),
                         hour: event.end.hour,
                         minute: event.end.minute,
                       }),
@@ -891,6 +860,7 @@ export default function AppCalendar({
                 }
 
                 dragRef.current = null;
+                evPendingUpdateRef.current = null;
                 setUpdateRepeatDialogOpen(false);
 
                 save();
@@ -901,6 +871,7 @@ export default function AppCalendar({
             <AlertDialogCancel
               onClick={() => {
                 dragRef.current = null;
+                evPendingUpdateRef.current = null;
                 setUpdateRepeatDialogOpen(false);
               }}
             >
@@ -937,18 +908,18 @@ export default function AppCalendar({
           <AlertDialogFooter className="!flex-col mt-5">
             <AlertDialogAction
               onClick={() => {
-                const event = toBeDeletedRef?.current;
+                const event = evPendingUpdateRef?.current;
                 const parent = calendarEvents.find(
                   (e) => e.id === event?.parent,
                 );
                 if (
-                  !toBeDeletedRef.current ||
+                  !evPendingUpdateRef.current ||
                   !event ||
                   !parent ||
                   !parent.repeat
                 ) {
                   toast.error("Event no longer exists.");
-                  toBeDeletedRef.current = null;
+                  evPendingUpdateRef.current = null;
                   setDeleteRepeatDialogOpen(false);
                   return;
                 }
@@ -958,6 +929,13 @@ export default function AppCalendar({
                     // skip current repetition
                     if (!parent.repeat.skip) parent.repeat.skip = [];
                     parent.repeat.skip.push(event.start.toISODate()!);
+
+                    dispatch({
+                      type: "update",
+                      id: parent.id,
+                      data: parent,
+                    });
+
                     updateChange({
                       type: "updated",
                       event: parent,
@@ -970,6 +948,13 @@ export default function AppCalendar({
                   case "future": {
                     // end parent's repetition
                     parent.repeat.until = event.start.startOf("day").toMillis();
+
+                    dispatch({
+                      type: "update",
+                      id: parent.id,
+                      data: parent,
+                    });
+
                     updateChange({
                       type: "updated",
                       event: parent,
@@ -993,7 +978,7 @@ export default function AppCalendar({
                   }
                 }
 
-                toBeDeletedRef.current = null;
+                evPendingUpdateRef.current = null;
                 setDeleteRepeatDialogOpen(false);
 
                 save();
@@ -1003,7 +988,7 @@ export default function AppCalendar({
             </AlertDialogAction>
             <AlertDialogCancel
               onClick={() => {
-                toBeDeletedRef.current = null;
+                evPendingUpdateRef.current = null;
                 setDeleteRepeatDialogOpen(false);
               }}
             >

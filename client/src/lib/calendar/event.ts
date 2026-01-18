@@ -5,39 +5,49 @@ import type {
 } from "@/types/calendar/Event";
 import type { DateTime } from "luxon";
 
+export function getEventPixelPosition(
+  event: CalendarEvent,
+  day: DateTime,
+  hourHeight: number,
+) {
+  const utcDay = day.setZone("utc", { keepLocalTime: true });
+  const dayStart = utcDay.startOf("day");
+  const dayEnd = utcDay.endOf("day");
+
+  const utcStart = event.start.setZone("utc", { keepLocalTime: true });
+  const utcEnd = event.end.setZone("utc", { keepLocalTime: true });
+
+  const start = utcStart < dayStart ? dayStart : utcStart;
+  const end = utcEnd > dayEnd ? dayEnd : utcEnd;
+
+  const top = Math.max(
+    0,
+    (start.diff(dayStart, "minutes").as("minutes") / 60) * hourHeight,
+  );
+  const height = Math.max(
+    5,
+    (end.diff(start, "minutes").as("minutes") / 60) * hourHeight,
+  );
+
+  return {
+    id: event.id,
+    start: event.start,
+    end: event.end,
+    top,
+    height,
+    col: -1,
+    maxCols: 1,
+  } as PositionedEvent;
+}
+
 export const getDayEventStyles = (
   events: CalendarEvent[],
   day: DateTime,
   hourHeight: number,
 ): Record<string, EventStyle> => {
-  const utcDay = day.setZone("utc", { keepLocalTime: true });
-  const dayStart = utcDay.startOf("day");
-  const dayEnd = utcDay.endOf("day");
-
   // map events to positions
   const positioned: PositionedEvent[] = events
-    .map((ev) => {
-      const utcEvStart = ev.start.setZone("utc", { keepLocalTime: true });
-      const utcEvEnd = ev.end.setZone("utc", { keepLocalTime: true });
-      const start = utcEvStart < dayStart ? dayStart : utcEvStart;
-      const end = utcEvEnd > dayEnd ? dayEnd : utcEvEnd;
-
-      return {
-        id: ev.id,
-        start: ev.start,
-        end: ev.end,
-        top: Math.max(
-          0,
-          (start.diff(dayStart, "minutes").minutes / 60) * hourHeight,
-        ),
-        height: Math.max(
-          5,
-          (end.diff(start, "minutes").minutes / 60) * hourHeight,
-        ),
-        col: -1,
-        maxCols: 1,
-      } as PositionedEvent;
-    })
+    .map((ev) => getEventPixelPosition(ev, day, hourHeight))
     .sort((a, b) => a.start.toMillis() - b.start.toMillis());
 
   const columns: PositionedEvent[][] = [];
