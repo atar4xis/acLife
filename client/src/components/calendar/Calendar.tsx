@@ -573,11 +573,15 @@ export default function AppCalendar({
   const stylesMap = useMemo(() => {
     const map = new Map<string, Record<string, EventStyle>>();
 
-    visibleDays.forEach((d) => {
-      const dayKey = d.date.toISODate()!;
-      const dayEvents = eventMap.get(dayKey) || [];
-      map.set(dayKey, getDayEventStyles(dayEvents, d.date, hourHeight));
-    });
+    for (const d of visibleDays) {
+      const key = d.date.toISODate();
+      if (!key) continue;
+
+      const events = eventMap.get(key);
+      if (!events?.length) continue;
+
+      map.set(key, getDayEventStyles(events, d.date, hourHeight));
+    }
 
     return map;
   }, [visibleDays, eventMap, hourHeight]);
