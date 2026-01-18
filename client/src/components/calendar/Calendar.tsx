@@ -42,7 +42,11 @@ import {
   getDateRangeString,
 } from "@/lib/calendar/date";
 import { getDayRects } from "@/lib/calendar/dom";
-import { getDayEventStyles } from "@/lib/calendar/event";
+import {
+  getDayEventStyles,
+  mapEventToDate,
+  mapEventToDates,
+} from "@/lib/calendar/event";
 import { useUser } from "@/context/UserContext";
 import useTapInteraction from "@/hooks/useTapInteraction";
 import {
@@ -520,20 +524,7 @@ export default function AppCalendar({
     for (const e of calendarEvents) {
       if (e.id === dragRef.current?.event.id && dragRef.current.moved) continue;
 
-      let day = e.start.startOf("day");
-      const lastDay = e.end.startOf("day");
-
-      while (day.toMillis() <= lastDay.toMillis()) {
-        const key = day.toISODate()!;
-        if (!visibleDates.has(key)) {
-          day = day.plus({ days: 1 });
-          continue;
-        }
-
-        if (!map.has(key)) map.set(key, []);
-        map.get(key)!.push(e);
-        day = day.plus({ days: 1 });
-      }
+      mapEventToDates(map, e, visibleDates);
 
       // repeating event logic
       if (
@@ -543,32 +534,24 @@ export default function AppCalendar({
         let cursor = e.start;
         const duration = e.end.diff(e.start);
 
-        const repeat = (at: DateTime) => {
-          const end = at.plus(duration);
-          const key = at.toISODate()!;
-          if (!visibleDates.has(key)) return; // don't repeat outside of visible range
-
-          if (!map.has(key)) map.set(key, []);
-          map.get(key)!.push({
-            ...e,
-            id: e.id + "_" + key, // each repetition needs a unique id
-            start: at,
-            end,
-            parent: e.id,
-          });
-        };
-
         while (cursor <= visibleDays.at(-1)!.date.endOf("day")) {
-          // loop visible days
           const dayIndex = cursor.weekday;
+          const key = cursor.toISODate()!;
 
           if (
             cursor.toMillis() !== e.start.toMillis() &&
+            visibleDates.has(key) &&
             (!e.repeat.until || cursor.toMillis() < e.repeat.until) &&
             !e.repeat.except?.includes(dayIndex) &&
-            !e.repeat.skip?.includes(cursor.toISODate()!)
+            !e.repeat.skip?.includes(key)
           ) {
-            repeat(cursor);
+            mapEventToDate(map, key, {
+              ...e,
+              id: e.id + "_" + key,
+              start: cursor,
+              end: cursor.plus(duration),
+              parent: e.id,
+            });
           }
 
           cursor = cursor.plus({
@@ -578,25 +561,9 @@ export default function AppCalendar({
       }
     }
 
-    // rendering of temporary event while dragging
+    // temporary event while dragging
     if (dragRef.current?.event && dragRef.current.moved) {
-      const tempEvent = dragRef.current.event;
-
-      let day = tempEvent.start.startOf("day");
-      const lastDay = tempEvent.end.startOf("day");
-
-      while (day.toMillis() <= lastDay.toMillis()) {
-        const key = day.toISODate()!;
-        if (!visibleDates.has(key)) {
-          day = day.plus({ days: 1 });
-          continue;
-        }
-
-        if (!map.has(key)) map.set(key, []);
-        map.get(key)!.push(tempEvent);
-
-        day = day.plus({ days: 1 });
-      }
+      mapEventToDates(map, dragRef.current.event, visibleDates);
     }
 
     return map;

@@ -116,3 +116,29 @@ export const getDayEventStyles = (
 
   return styles;
 };
+
+export function mapEventToDate(
+  map: Map<string, CalendarEvent[]>,
+  key: string,
+  event: CalendarEvent,
+) {
+  if (!map.has(key)) map.set(key, []);
+  map.get(key)!.push(event);
+}
+
+export function mapEventToDates(
+  map: Map<string, CalendarEvent[]>,
+  event: CalendarEvent,
+  visibleDates: Set<string | null>,
+) {
+  let day = event.start.startOf("day");
+  const lastDay = event.end.startOf("day");
+
+  while (day.toMillis() <= lastDay.toMillis()) {
+    const key = day.toISODate()!;
+    if (visibleDates.has(key)) {
+      mapEventToDate(map, key, event);
+    }
+    day = day.plus({ days: 1 });
+  }
+}
