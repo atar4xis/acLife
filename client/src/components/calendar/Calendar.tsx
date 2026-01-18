@@ -578,11 +578,25 @@ export default function AppCalendar({
       }
     }
 
+    // rendering of temporary event while dragging
     if (dragRef.current?.event && dragRef.current.moved) {
-      const tempEvent = dragRef.current?.event;
-      const key = tempEvent.start.toISODate()!;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(tempEvent);
+      const tempEvent = dragRef.current.event;
+
+      let day = tempEvent.start.startOf("day");
+      const lastDay = tempEvent.end.startOf("day");
+
+      while (day.toMillis() <= lastDay.toMillis()) {
+        const key = day.toISODate()!;
+        if (!visibleDates.has(key)) {
+          day = day.plus({ days: 1 });
+          continue;
+        }
+
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(tempEvent);
+
+        day = day.plus({ days: 1 });
+      }
     }
 
     return map;
