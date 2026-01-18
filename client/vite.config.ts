@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, type ConfigEnv } from "vite";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
@@ -11,6 +12,16 @@ export default ({ mode }: ConfigEnv) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+      },
+    },
+    test: {
+      globals: true,
+      environment: "jsdom",
+      setupFiles: "./tests/setup.ts",
+      server: {
+        deps: {
+          inline: ["@mzattahri/srp"],
+        },
       },
     },
   });
