@@ -40,17 +40,6 @@ import {
   mapEventToDates,
 } from "@/lib/calendar/event";
 import { useUser } from "@/context/UserContext";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogTitle,
-} from "../ui/alert-dialog";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Label } from "../ui/label";
 import { toast } from "sonner";
 import HeaderCell from "./HeaderCell";
 import GridCell from "./GridCell";
@@ -58,6 +47,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import ModeSwitcher from "./ModeSwitcher";
 import type { GridTouchRef } from "@/types/calendar/Cell";
 import { clamp } from "@/lib/utils";
+import RecurringUpdateDialog from "./RecurringUpdateDialog";
 
 /* -------------------------------------------------------------------------- */
 
@@ -100,7 +90,6 @@ export default function AppCalendar({
   const [hourHeight, setHourHeight] = useState(60);
   const [updateRepeatDialogOpen, setUpdateRepeatDialogOpen] = useState(false);
   const [deleteRepeatDialogOpen, setDeleteRepeatDialogOpen] = useState(false);
-  const [repeatOption, setRepeatOption] = useState<string>("this");
   const [now, setNow] = useState(DateTime.now());
   const [_, forceRender] = useState(false);
   const changesMapRef = useRef<Map<string, EventChange>>(new Map());
@@ -126,15 +115,19 @@ export default function AppCalendar({
 
   const isMobile = useIsMobile();
 
-  const move = (steps: number) => {
-    const unit = mode === "day" ? "days" : mode === "week" ? "weeks" : "months";
-    setCurrentDate(currentDate.plus({ [unit]: steps }));
-  };
+  const move = useCallback(
+    (steps: number) => {
+      const unit =
+        mode === "day" ? "days" : mode === "week" ? "weeks" : "months";
+      setCurrentDate(currentDate.plus({ [unit]: steps }));
+    },
+    [currentDate, setCurrentDate, mode],
+  );
 
-  const getNowY = () => {
+  const getNowY = useCallback(() => {
     const minutes = now.hour * 60 + now.minute;
     return (minutes / 60) * hourHeight;
-  };
+  }, [now, hourHeight]);
 
   const updateChange = useCallback((change: EventChange) => {
     changesMapRef.current.set(change.event?.id ?? change.id!, change);
@@ -630,75 +623,83 @@ export default function AppCalendar({
   }, [gridTouchRef.current?.delta?.x]);
 
   // headers in day/week view, one for every visibleDay
-  const dayWeekHeaders = visibleDays.map((d) => (
-    <HeaderCell
-      key={d.label}
-      className={`select-none ${isSameDate(d.date, DateTime.now()) ? "bg-card font-bold" : ""}`}
-    >
-      {d.label}
-    </HeaderCell>
-  ));
+  const dayWeekHeaders = useMemo(
+    () =>
+      visibleDays.map((d) => (
+        <HeaderCell
+          key={d.label}
+          className={`select-none ${isSameDate(d.date, DateTime.now()) ? "bg-card font-bold" : ""}`}
+        >
+          {d.label}
+        </HeaderCell>
+      )),
+    [visibleDays],
+  );
 
   // grid in day/week view
-  const timeGrid = HOURS.map((label, hour) => (
-    <Fragment key={label}>
-      <div
-        className={`select-none sticky left-0 z-5 border-r border-b flex text-sm items-center justify-center ${hour == DateTime.now().hour ? "bg-card font-bold" : "bg-background"}`}
-      >
-        {label}
-      </div>
-
-      {visibleDays.map((d, dayIndex) => {
-        const key = d.date.toISODate()!;
-        const dayEvents = eventMap.get(key) || [];
-        const styles = stylesMap.get(key) || {};
-
-        return (
-          <GridCell
-            key={`${d.label}-${hour}`}
-            day={dayIndex}
-            onCellTap={startNewEvent}
-            onTouchStart={gridTouchStart}
-            onTouchMove={gridTouchMove}
-            onTouchEnd={gridTouchEnd}
+  const timeGrid = useMemo(
+    () =>
+      HOURS.map((label, hour) => (
+        <Fragment key={label}>
+          <div
+            className={`select-none sticky left-0 z-5 border-r border-b flex text-sm items-center justify-center ${hour == DateTime.now().hour ? "bg-card font-bold" : "bg-background"}`}
           >
-            {hour === 0 && (
-              <div className="relative h-full">
-                <div style={{ height: hourHeight * 24 }} />
+            {label}
+          </div>
 
-                {/* current time indicator line */}
-                {isSameDate(d.date, now) && (
-                  <div
-                    className="pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-white
+          {visibleDays.map((d, dayIndex) => {
+            const key = d.date.toISODate()!;
+            const dayEvents = eventMap.get(key) || [];
+            const styles = stylesMap.get(key) || {};
+
+            return (
+              <GridCell
+                key={`${d.label}-${hour}`}
+                day={dayIndex}
+                onCellTap={startNewEvent}
+                onTouchStart={gridTouchStart}
+                onTouchMove={gridTouchMove}
+                onTouchEnd={gridTouchEnd}
+              >
+                {hour === 0 && (
+                  <div className="relative h-full">
+                    <div style={{ height: hourHeight * 24 }} />
+
+                    {/* current time indicator line */}
+                    {isSameDate(d.date, now) && (
+                      <div
+                        className="pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-white
                     before:absolute before:-left-1 before:top-1/2
                     before:h-2 before:w-2 before:-translate-y-1/2
                     before:rounded-full before:bg-white"
-                    style={{
-                      top: getNowY(),
-                      height: 2,
-                    }}
-                  />
-                )}
+                        style={{
+                          top: getNowY(),
+                          height: 2,
+                        }}
+                      />
+                    )}
 
-                {/* today's events */}
-                {dayEvents.map((event) => (
-                  <EventBlock
-                    key={event.id}
-                    event={event}
-                    day={dayIndex}
-                    style={styles[event.id]}
-                    onPointerDown={onEventPointerDown}
-                    onEventEdit={onEventEdit}
-                    onEventDelete={onEventDelete}
-                  />
-                ))}
-              </div>
-            )}
-          </GridCell>
-        );
-      })}
-    </Fragment>
-  ));
+                    {/* today's events */}
+                    {dayEvents.map((event) => (
+                      <EventBlock
+                        key={event.id}
+                        event={event}
+                        day={dayIndex}
+                        style={styles[event.id]}
+                        onPointerDown={onEventPointerDown}
+                        onEventEdit={onEventEdit}
+                        onEventDelete={onEventDelete}
+                      />
+                    ))}
+                  </div>
+                )}
+              </GridCell>
+            );
+          })}
+        </Fragment>
+      )),
+    [eventMap, stylesMap, visibleDays],
+  );
 
   return (
     <main className="flex h-screen w-full flex-col">
@@ -765,299 +766,231 @@ export default function AppCalendar({
         </div>
       </div>
 
-      <AlertDialog open={updateRepeatDialogOpen}>
-        <AlertDialogContent className="w-auto text-center">
-          <AlertDialogTitle>Update recurring event</AlertDialogTitle>
-          <AlertDialogDescription>
-            Which event would you like to update?
-          </AlertDialogDescription>
-          <RadioGroup
-            value={repeatOption}
-            onValueChange={setRepeatOption}
-            className="mt-3 gap-5"
-          >
-            <div className="flex gap-3">
-              <RadioGroupItem value="this" id="this" />
-              <Label htmlFor="this">This event</Label>
-            </div>
-            <div className="flex gap-3">
-              <RadioGroupItem value="future" id="future" />
-              <Label htmlFor="future">This and future events</Label>
-            </div>
-            <div className="flex gap-3">
-              <RadioGroupItem value="all" id="all" />
-              <Label htmlFor="all">All events</Label>
-            </div>
-          </RadioGroup>
-          <AlertDialogFooter className="!flex-col mt-5">
-            <AlertDialogAction
-              onClick={() => {
-                const event = evPendingUpdateRef.current;
-                const parent = calendarEvents.find(
-                  (e) => e.id === event?.parent,
-                );
-                if (!event || !parent || !parent.repeat) {
-                  toast.error("Event no longer exists.");
-                  dragRef.current = null;
-                  setUpdateRepeatDialogOpen(false);
-                  return;
-                }
+      <RecurringUpdateDialog
+        action="Update"
+        defaultOption="this"
+        open={updateRepeatDialogOpen}
+        setOpen={setUpdateRepeatDialogOpen}
+        onSubmit={(option: string) => {
+          const event = evPendingUpdateRef.current;
+          const parent = calendarEvents.find((e) => e.id === event?.parent);
+          if (!event || !parent || !parent.repeat) {
+            toast.error("Event no longer exists.");
+            dragRef.current = null;
+            setUpdateRepeatDialogOpen(false);
+            return;
+          }
 
-                const evStart = dragRef.current
-                  ? dragRef.current.originalStart
-                  : event.start;
+          const evStart = dragRef.current
+            ? dragRef.current.originalStart
+            : event.start;
 
-                switch (repeatOption) {
-                  case "this": {
-                    // skip current repetition
-                    if (!parent.repeat.skip) parent.repeat.skip = [];
-                    parent.repeat.skip.push(evStart.toISODate()!);
+          switch (option) {
+            case "this": {
+              // skip current repetition
+              if (!parent.repeat.skip) parent.repeat.skip = [];
+              parent.repeat.skip.push(evStart.toISODate()!);
 
-                    updateChange({
-                      type: "updated",
-                      event: parent,
-                    });
+              updateChange({
+                type: "updated",
+                event: parent,
+              });
 
-                    dispatch({
-                      type: "update",
-                      id: parent.id,
-                      data: parent,
-                    });
+              dispatch({
+                type: "update",
+                id: parent.id,
+                data: parent,
+              });
 
-                    // clone the event
-                    const newEvent = {
-                      ...event,
-                      id: crypto.randomUUID(),
-                      timestamp: Date.now(),
-                    } as CalendarEvent;
+              // clone the event
+              const newEvent = {
+                ...event,
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+              } as CalendarEvent;
 
-                    delete newEvent.parent; // detach from parent
-                    delete newEvent.repeat; // don't repeat
+              delete newEvent.parent; // detach from parent
+              delete newEvent.repeat; // don't repeat
 
-                    dispatch({
-                      type: "add",
-                      event: newEvent,
-                    });
+              dispatch({
+                type: "add",
+                event: newEvent,
+              });
 
-                    updateChange({
-                      type: "added",
-                      event: newEvent,
-                    });
+              updateChange({
+                type: "added",
+                event: newEvent,
+              });
 
-                    break;
-                  }
+              break;
+            }
 
-                  case "future": {
-                    // clone the event
-                    const newEvent = {
-                      ...event,
-                      id: crypto.randomUUID(),
-                      timestamp: Date.now(),
-                      repeat: {
-                        interval: parent.repeat.interval,
-                        unit: parent.repeat.unit,
-                      },
-                    } as CalendarEvent;
+            case "future": {
+              // clone the event
+              const newEvent = {
+                ...event,
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+                repeat: {
+                  interval: parent.repeat.interval,
+                  unit: parent.repeat.unit,
+                },
+              } as CalendarEvent;
 
-                    delete newEvent.parent; // detach from parent
+              delete newEvent.parent; // detach from parent
 
-                    dispatch({
-                      type: "add",
-                      event: newEvent,
-                    });
+              dispatch({
+                type: "add",
+                event: newEvent,
+              });
 
-                    updateChange({
-                      type: "added",
-                      event: newEvent,
-                    });
+              updateChange({
+                type: "added",
+                event: newEvent,
+              });
 
-                    // end parent's repetition
-                    parent.repeat.until = event.start.startOf("day").toMillis();
+              // end parent's repetition
+              parent.repeat.until = event.start.startOf("day").toMillis();
 
-                    updateChange({
-                      type: "updated",
-                      event: parent,
-                    });
+              updateChange({
+                type: "updated",
+                event: parent,
+              });
 
-                    dispatch({
-                      type: "update",
-                      id: parent.id,
-                      data: parent,
-                    });
-                    break;
-                  }
+              dispatch({
+                type: "update",
+                id: parent.id,
+                data: parent,
+              });
+              break;
+            }
 
-                  case "all": {
-                    // update the parent
-                    const newEvent = {
-                      ...event,
-                      start: parent.start.set({
-                        day: parent.start.day - (evStart.day - event.start.day),
-                        hour: event.start.hour,
-                        minute: event.start.minute,
-                      }),
-                      end: parent.end.set({
-                        day: parent.end.day - (evStart.day - event.end.day),
-                        hour: event.end.hour,
-                        minute: event.end.minute,
-                      }),
-                      id: parent.id,
-                    };
+            case "all": {
+              // update the parent
+              const newEvent = {
+                ...event,
+                start: parent.start.set({
+                  day: parent.start.day - (evStart.day - event.start.day),
+                  hour: event.start.hour,
+                  minute: event.start.minute,
+                }),
+                end: parent.end.set({
+                  day: parent.end.day - (evStart.day - event.end.day),
+                  hour: event.end.hour,
+                  minute: event.end.minute,
+                }),
+                id: parent.id,
+              };
 
-                    delete newEvent.parent;
+              delete newEvent.parent;
 
-                    dispatch({
-                      type: "update",
-                      id: newEvent.id,
-                      data: newEvent,
-                    });
+              dispatch({
+                type: "update",
+                id: newEvent.id,
+                data: newEvent,
+              });
 
-                    updateChange({
-                      type: "updated",
-                      event: newEvent,
-                    });
-                    break;
-                  }
-                }
+              updateChange({
+                type: "updated",
+                event: newEvent,
+              });
+              break;
+            }
+          }
 
-                dragRef.current = null;
-                evPendingUpdateRef.current = null;
-                setUpdateRepeatDialogOpen(false);
+          dragRef.current = null;
+          evPendingUpdateRef.current = null;
 
-                save();
-              }}
-            >
-              Update
-            </AlertDialogAction>
-            <AlertDialogCancel
-              onClick={() => {
-                dragRef.current = null;
-                evPendingUpdateRef.current = null;
-                setUpdateRepeatDialogOpen(false);
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          save();
+        }}
+        onCancel={() => {
+          dragRef.current = null;
+          evPendingUpdateRef.current = null;
+        }}
+      />
 
-      <AlertDialog open={deleteRepeatDialogOpen}>
-        <AlertDialogContent className="w-auto text-center">
-          <AlertDialogTitle>Delete recurring event</AlertDialogTitle>
-          <AlertDialogDescription>
-            Which event would you like to delete?
-          </AlertDialogDescription>
-          <RadioGroup
-            value={repeatOption}
-            onValueChange={setRepeatOption}
-            className="mt-3 gap-5"
-          >
-            <div className="flex gap-3">
-              <RadioGroupItem value="this" id="this" />
-              <Label htmlFor="this">This event</Label>
-            </div>
-            <div className="flex gap-3">
-              <RadioGroupItem value="future" id="future" />
-              <Label htmlFor="future">This and future events</Label>
-            </div>
-            <div className="flex gap-3">
-              <RadioGroupItem value="all" id="all" />
-              <Label htmlFor="all">All events</Label>
-            </div>
-          </RadioGroup>
-          <AlertDialogFooter className="!flex-col mt-5">
-            <AlertDialogAction
-              onClick={() => {
-                const event = evPendingUpdateRef?.current;
-                const parent = calendarEvents.find(
-                  (e) => e.id === event?.parent,
-                );
-                if (
-                  !evPendingUpdateRef.current ||
-                  !event ||
-                  !parent ||
-                  !parent.repeat
-                ) {
-                  toast.error("Event no longer exists.");
-                  evPendingUpdateRef.current = null;
-                  setDeleteRepeatDialogOpen(false);
-                  return;
-                }
+      <RecurringUpdateDialog
+        action="Delete"
+        defaultOption="this"
+        open={deleteRepeatDialogOpen}
+        setOpen={setDeleteRepeatDialogOpen}
+        onSubmit={(option: string) => {
+          const event = evPendingUpdateRef?.current;
+          const parent = calendarEvents.find((e) => e.id === event?.parent);
+          if (
+            !evPendingUpdateRef.current ||
+            !event ||
+            !parent ||
+            !parent.repeat
+          ) {
+            toast.error("Event no longer exists.");
+            evPendingUpdateRef.current = null;
+            setDeleteRepeatDialogOpen(false);
+            return;
+          }
 
-                switch (repeatOption) {
-                  case "this": {
-                    // skip current repetition
-                    if (!parent.repeat.skip) parent.repeat.skip = [];
-                    parent.repeat.skip.push(event.start.toISODate()!);
+          switch (option) {
+            case "this": {
+              // skip current repetition
+              if (!parent.repeat.skip) parent.repeat.skip = [];
+              parent.repeat.skip.push(event.start.toISODate()!);
 
-                    dispatch({
-                      type: "update",
-                      id: parent.id,
-                      data: parent,
-                    });
+              dispatch({
+                type: "update",
+                id: parent.id,
+                data: parent,
+              });
 
-                    updateChange({
-                      type: "updated",
-                      event: parent,
-                    });
+              updateChange({
+                type: "updated",
+                event: parent,
+              });
 
-                    // the event never existed so no need to actually delete anything
-                    break;
-                  }
+              // the event never existed so no need to actually delete anything
+              break;
+            }
 
-                  case "future": {
-                    // end parent's repetition
-                    parent.repeat.until = event.start.startOf("day").toMillis();
+            case "future": {
+              // end parent's repetition
+              parent.repeat.until = event.start.startOf("day").toMillis();
 
-                    dispatch({
-                      type: "update",
-                      id: parent.id,
-                      data: parent,
-                    });
+              dispatch({
+                type: "update",
+                id: parent.id,
+                data: parent,
+              });
 
-                    updateChange({
-                      type: "updated",
-                      event: parent,
-                    });
-                    break;
-                  }
+              updateChange({
+                type: "updated",
+                event: parent,
+              });
+              break;
+            }
 
-                  case "all": {
-                    // delete the parent
-                    dispatch({
-                      type: "delete",
-                      id: parent.id,
-                    });
+            case "all": {
+              // delete the parent
+              dispatch({
+                type: "delete",
+                id: parent.id,
+              });
 
-                    updateChange({
-                      id: parent.id,
-                      type: "deleted",
-                    });
+              updateChange({
+                id: parent.id,
+                type: "deleted",
+              });
 
-                    break;
-                  }
-                }
+              break;
+            }
+          }
 
-                evPendingUpdateRef.current = null;
-                setDeleteRepeatDialogOpen(false);
+          evPendingUpdateRef.current = null;
 
-                save();
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-            <AlertDialogCancel
-              onClick={() => {
-                evPendingUpdateRef.current = null;
-                setDeleteRepeatDialogOpen(false);
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          save();
+        }}
+        onCancel={() => {
+          evPendingUpdateRef.current = null;
+        }}
+      />
     </main>
   );
 }
