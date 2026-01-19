@@ -116,13 +116,13 @@ export default memo(
 
               {/* handles for resizing */}
               <div
-                className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-background/20"
+                className="hidden md:block absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-background/20"
                 onPointerDown={(e) =>
                   onPointerDown(e, "resize_start", event, day)
                 }
               />
               <div
-                className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-background/20"
+                className="hidden md:block absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-background/20"
                 onPointerDown={(e) =>
                   onPointerDown(e, "resize_end", event, day)
                 }
