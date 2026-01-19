@@ -45,10 +45,12 @@ export default function UserDropdown() {
         <DropdownMenuGroup>
           {user.type === "online" ? (
             <>
-              <DropdownMenuItem onClick={manageSubscription}>
-                <CreditCardIcon />
-                Manage Subscription
-              </DropdownMenuItem>
+              {user.subscription_status && (
+                <DropdownMenuItem onClick={manageSubscription}>
+                  <CreditCardIcon />
+                  Manage Subscription
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={logout}>
                 <LogOutIcon />
                 Log out
