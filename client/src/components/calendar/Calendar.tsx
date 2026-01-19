@@ -56,6 +56,8 @@ import HeaderCell from "./HeaderCell";
 import GridCell from "./GridCell";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ModeSwitcher from "./ModeSwitcher";
+import type { GridTouchRef } from "@/types/calendar/Cell";
+import { clamp } from "@/lib/utils";
 
 /* -------------------------------------------------------------------------- */
 
@@ -108,6 +110,7 @@ export default function AppCalendar({
 
   const gridRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<EventDragRef>(null);
+  const gridTouchRef = useRef<GridTouchRef | null>(null);
   const hourHeightRef = useRef(hourHeight);
 
   const evPendingUpdateRef = useRef<CalendarEvent | null>(null);
@@ -450,6 +453,39 @@ export default function AppCalendar({
     ],
   );
 
+  const gridTouchStart = useCallback((e: React.TouchEvent) => {
+    if (gridTouchRef.current != null) return;
+
+    gridTouchRef.current = {
+      start: {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      },
+    };
+  }, []);
+
+  const gridTouchMove = useCallback((e: React.TouchEvent) => {
+    if (gridTouchRef.current === null) return;
+
+    gridTouchRef.current.delta = {
+      x: gridTouchRef.current.start.x - e.touches[0].clientX,
+      y: gridTouchRef.current.start.y - e.touches[0].clientY,
+    };
+
+    forceRender((prev) => !prev);
+  }, []);
+
+  const gridTouchEnd = useCallback(() => {
+    if (gridTouchRef.current === null || !gridTouchRef.current.delta) return;
+
+    if (Math.abs(gridTouchRef.current.delta.x) > 100) {
+      move(gridTouchRef.current.delta.x > 0 ? 1 : -1);
+    }
+
+    gridTouchRef.current = null;
+    forceRender((prev) => !prev);
+  }, [move]);
+
   /* -------------------------------------------------------------------------- */
 
   // sync ref with state for zoom calculations
@@ -582,6 +618,17 @@ export default function AppCalendar({
     return map;
   }, [visibleDays, eventMap, hourHeight]);
 
+  // for swipe gesture on mobile
+  let swipeDelta = useMemo(() => {
+    let delta = 0;
+
+    if (gridTouchRef.current && gridTouchRef.current.delta) {
+      delta = gridTouchRef.current.delta.x;
+    }
+
+    return delta;
+  }, [gridTouchRef.current?.delta?.x]);
+
   // headers in day/week view, one for every visibleDay
   const dayWeekHeaders = visibleDays.map((d) => (
     <HeaderCell
@@ -611,6 +658,9 @@ export default function AppCalendar({
             key={`${d.label}-${hour}`}
             day={dayIndex}
             onCellTap={startNewEvent}
+            onTouchStart={gridTouchStart}
+            onTouchMove={gridTouchMove}
+            onTouchEnd={gridTouchEnd}
           >
             {hour === 0 && (
               <div className="relative h-full">
@@ -652,6 +702,17 @@ export default function AppCalendar({
 
   return (
     <main className="flex h-screen w-full flex-col">
+      {swipeDelta !== 0 && (
+        <div
+          className={`fixed top-1/2 z-100 ${Math.abs(swipeDelta) >= 100 ? "bg-foreground" : "bg-foreground/50"} text-background border p-1 rounded`}
+          style={{
+            [swipeDelta > 0 ? "right" : "left"]: "-80px",
+            transform: `translateX(${clamp(-swipeDelta, -100, 100)}px)`,
+          }}
+        >
+          {swipeDelta > 0 ? <ArrowRight /> : <ArrowLeft />}
+        </div>
+      )}
       <nav className="flex items-center justify-between border-b p-3">
         {isMobile && <SidebarTrigger />}
 
