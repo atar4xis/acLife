@@ -136,6 +136,8 @@ export default function AppCalendar({
     const key = change.event?.id ?? change.id!;
     const prev = changesMapRef.current.get(key) ?? [];
 
+    if (change.event) change.event.timestamp = Date.now();
+
     let next: EventChange[];
 
     if (change.type === "updated") {
