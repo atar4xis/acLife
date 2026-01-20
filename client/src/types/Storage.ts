@@ -13,4 +13,5 @@ export interface StorageData {
   cachedEvents: Encrypted | null;
   pushSubscription: string | null;
   pushDismissed: boolean;
+  sidebarOpen: boolean;
 }

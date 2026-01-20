@@ -29,15 +29,15 @@ export function createStorageContext<T extends object>(
       [data],
     );
 
-    const set = <K extends keyof T>(key: K, value: T[K]) => {
+    const set = useCallback(<K extends keyof T>(key: K, value: T[K]) => {
       setData((prev) => {
         const next = { ...prev, [key]: value };
         adapter.save(next);
         return next;
       });
-    };
+    }, []);
 
-    const value = useMemo(() => ({ get, set }), [get]);
+    const value = useMemo(() => ({ get, set }), [get, set]);
 
     return <Context.Provider value={value}>{children}</Context.Provider>;
   }
@@ -53,6 +53,7 @@ const defaults: StorageData = {
   cachedEvents: null,
   pushSubscription: null,
   pushDismissed: false,
+  sidebarOpen: true,
 };
 
 export const { StorageProvider, useStorage } =
