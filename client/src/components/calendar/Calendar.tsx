@@ -668,10 +668,10 @@ export default function AppCalendar({
                     {/* current time indicator line */}
                     {isSameDate(d.date, now) && (
                       <div
-                        className="pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-white
+                        className="pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-foreground
                     before:absolute before:-left-1 before:top-1/2
                     before:h-2 before:w-2 before:-translate-y-1/2
-                    before:rounded-full before:bg-white"
+                    before:rounded-full before:bg-foreground"
                         style={{
                           top: getNowY(),
                           height: 2,
