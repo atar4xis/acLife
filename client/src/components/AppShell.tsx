@@ -39,20 +39,18 @@ export default function AppShell() {
     if (masterKey === null) return;
     if (!activeSub && subRequired) return;
 
-    let alive = true;
-
-    toast.promise<CalendarEvent[]>(loadEvents(user, masterKey), {
-      loading: "Decrypting events...",
-      success: (events: CalendarEvent[]) => {
-        if (alive) setCalEvents(events);
-        return `Loaded ${events.length} events.`;
+    toast.promise(
+      (async () => {
+        const events = await loadEvents(user, masterKey);
+        setCalEvents(events);
+      })(),
+      {
+        id: "loading-calendar-events",
+        loading: "Loading calendar events...",
+        error: "Failed to load calendar events.",
       },
-      error: "Failed to load events.",
-    });
+    );
 
-    return () => {
-      alive = false;
-    };
     // eslint-disable-next-line
   }, [serverMeta, user, masterKey, activeSub, subRequired]);
 
