@@ -931,6 +931,8 @@ export default function AppCalendar({
                 repeat: {
                   interval: parent.repeat.interval,
                   unit: parent.repeat.unit,
+                  except: parent.repeat.except,
+                  until: parent.repeat.until,
                 },
               } as CalendarEvent;
 
