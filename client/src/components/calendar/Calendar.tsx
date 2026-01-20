@@ -555,7 +555,7 @@ export default function AppCalendar({
 
   // resync calendar events periodically and on push message
   useEffect(() => {
-    if (!user || !masterKey) return;
+    if (!user || !masterKey || user.type === "offline") return;
 
     const resync = async () => {
       toast.promise(
