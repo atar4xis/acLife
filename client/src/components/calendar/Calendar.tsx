@@ -150,8 +150,9 @@ export default function AppCalendar({
 
   const saveIfChanged = useCallback(() => {
     if (changesMapRef.current.size > 0) {
-      saveEvents(Array.from(changesMapRef.current.values()).flat(), () => null);
-      changesMapRef.current.clear(); // reset after save
+      saveEvents(Array.from(changesMapRef.current.values()).flat(), () => {
+        changesMapRef.current.clear(); // reset after save
+      });
     }
   }, [saveEvents]);
 
