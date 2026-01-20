@@ -16,6 +16,8 @@ import type { User } from "@/types/User";
 import { useState } from "react";
 import { toast } from "sonner";
 
+export const CLIENT_ID = Math.random().toString(36).slice(2, 8);
+
 export const useCalendarEvents = (
   user: User | null,
   masterKey: CryptoKey | null,
@@ -152,7 +154,10 @@ export const useCalendarEvents = (
         });
 
         const trySave = async () => {
-          const res = await post("calendar/events/save", payload);
+          const res = await post(
+            "calendar/events/save?c=" + CLIENT_ID,
+            payload,
+          );
 
           if (!res.success) {
             toast.error("Failed to save calendar events.");

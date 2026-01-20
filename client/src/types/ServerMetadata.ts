@@ -13,4 +13,5 @@ export interface ServerMetadata {
     };
     retentionPeriod?: number; // in days
   };
+  vapidPublicKey: string;
 }

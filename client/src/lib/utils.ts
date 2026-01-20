@@ -72,6 +72,13 @@ export function arrayBufferToBase64(buffer: ArrayBuffer) {
   return bytesToBase64(new Uint8Array(buffer));
 }
 
+export function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
+  return arrayBufferToBase64(buffer)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
 export function uuidToBytes(uuid: string): Uint8Array {
   const hex = uuid.replace(/-/g, "");
   if (hex.length !== 32) throw new Error("invalid UUID in uuidToBytes");
@@ -99,6 +106,12 @@ export function uint8ArrayFromBase64(b64: string): Uint8Array {
   return bytes;
 }
 
+export function uint8ArrayFromUrlSafeBase64(base64: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const safe = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  return uint8ArrayFromBase64(safe);
+}
+
 export function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(value, max));
 }
@@ -119,4 +132,12 @@ export function shallowEqual(
   }
 
   return true;
+}
+
+export function browserSupportsPush(): boolean {
+  return (
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
 }

@@ -48,6 +48,8 @@ import ModeSwitcher from "./ModeSwitcher";
 import type { GridTouchRef } from "@/types/calendar/Cell";
 import { clamp } from "@/lib/utils";
 import RecurringUpdateDialog from "./RecurringUpdateDialog";
+import type { PushEvent } from "@/types/Push";
+import { CLIENT_ID } from "@/hooks/calendar/useCalendarEvents";
 
 /* -------------------------------------------------------------------------- */
 
@@ -82,6 +84,7 @@ export default function AppCalendar({
   mode,
   setMode,
   saveEvents,
+  syncEvents,
 }: CalendarProps) {
   const { currentDate, setCurrentDate } = useCalendar();
   const [calendarEvents, dispatch] = useReducer(calendarReducer, events);
@@ -93,7 +96,7 @@ export default function AppCalendar({
   const [now, setNow] = useState(DateTime.now());
   const [_, forceRender] = useState(false);
   const changesMapRef = useRef<Map<string, EventChange>>(new Map());
-  const { user } = useUser();
+  const { user, masterKey } = useUser();
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
 
@@ -527,6 +530,47 @@ export default function AppCalendar({
     }, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // resync calendar events periodically and on push message
+  useEffect(() => {
+    if (!user || !masterKey) return;
+
+    const resync = async () => {
+      toast.promise(
+        new Promise<void>(async (resolve, _) => {
+          const newEvents = await syncEvents(user, masterKey);
+
+          dispatch({
+            type: "set",
+            events: newEvents,
+          });
+
+          resolve();
+        }),
+        {
+          loading: "Event sync in progress...",
+        },
+      );
+    };
+
+    const message = (ev: MessageEvent) => {
+      const data = ev.data as PushEvent;
+      if (data.type === "sync" && data.originClientId != CLIENT_ID) resync();
+    };
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", message);
+    }
+
+    const resyncInterval = setInterval(resync, 300000); // 5 minutes
+    return () => {
+      clearInterval(resyncInterval);
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.removeEventListener("message", message);
+      }
+    };
+  }, [syncEvents, user, masterKey]);
 
   // reset events when the defaults change
   useEffect(() => {

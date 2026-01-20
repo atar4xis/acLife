@@ -11,4 +11,6 @@ export interface StorageData {
   offlineEvents: Encrypted | null;
   offlineMasterKey: string;
   cachedEvents: Encrypted | null;
+  pushSubscription: string | null;
+  pushDismissed: boolean;
 }

@@ -10,6 +10,8 @@ import { useCalendarEvents } from "@/hooks/calendar/useCalendarEvents";
 import { useApi } from "@/context/ApiContext";
 import UnlockDialog from "./login/UnlockDialog";
 import SubscriptionDialog from "./subscription/SubscriptionDialog";
+import { toast } from "sonner";
+import PushService from "./PushService";
 
 export default function AppShell() {
   const [viewMode, setViewMode] = useState<ViewMode>(
@@ -19,7 +21,10 @@ export default function AppShell() {
   const { masterKey, user } = useUser();
   const { serverMeta } = useApi();
   const storage = useStorage();
-  const { saving, loadEvents, saveEvents } = useCalendarEvents(user, masterKey);
+  const { saving, loadEvents, saveEvents, syncEvents } = useCalendarEvents(
+    user,
+    masterKey,
+  );
 
   const activeSub =
     user?.type === "online" &&
@@ -63,12 +68,14 @@ export default function AppShell() {
     <>
       <AppSidebar />
       {saving && <Spinner className="fixed bottom-5 right-5 size-8" />}
+      <PushService />
       {calEvents !== null && (
         <AppCalendar
           events={calEvents}
           mode={viewMode}
           setMode={setViewMode}
           saveEvents={saveEvents}
+          syncEvents={syncEvents}
         />
       )}
     </>

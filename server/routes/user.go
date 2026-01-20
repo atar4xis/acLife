@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"os"
 	"time"
 
 	"acLife/handlers"
@@ -17,4 +18,9 @@ func User(r *mux.Router) {
 	sr.Use(handlers.RateLimitMiddleware(5, time.Second)) // 5 reqs/sec
 
 	sr.HandleFunc("", handlers.UserInfo).Methods("GET")
+	sr.HandleFunc("/push/subscribe", handlers.PushSubscribe).Methods("POST")
+
+	if os.Getenv("ENV") != "production" {
+		sr.HandleFunc("/push/test", handlers.PushTest).Methods("GET")
+	}
 }

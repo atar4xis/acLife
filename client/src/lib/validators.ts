@@ -90,7 +90,11 @@ export function validateServerMeta(data: any): data is ServerMetadata {
 
   // check for extra keys in top-level data
   const topKeys = Object.keys(data);
-  if (!topKeys.every((k) => ["url", "policies", "registration"].includes(k)))
+  if (
+    !topKeys.every((k) =>
+      ["url", "policies", "registration", "vapidPublicKey"].includes(k),
+    )
+  )
     return false;
 
   return true;

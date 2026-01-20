@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"acLife/database"
+	"acLife/push"
 	"acLife/session"
 	"acLife/types"
 	"acLife/utils"
@@ -111,6 +112,12 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		utils.LogError("SaveCalendarEvents", "Commit", err)
 		utils.SendInternalError(w)
 		return
+	}
+
+	// Notify other clients via push event
+	originClientID := r.URL.Query().Get("c")
+	if originClientID != "" && len(originClientID) == 6 {
+		push.SendToUser(r.Context(), user.UUID, push.SyncEvent(originClientID))
 	}
 
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{

@@ -42,6 +42,8 @@ const defaults: StorageData = {
   offlineEvents: null,
   offlineMasterKey: "",
   cachedEvents: null,
+  pushSubscription: null,
+  pushDismissed: false,
 };
 
 export const { StorageProvider, useStorage } =

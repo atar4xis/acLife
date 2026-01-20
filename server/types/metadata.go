@@ -25,7 +25,8 @@ type Policies struct {
 }
 
 type ServerMetadata struct {
-	URL          string       `json:"url"`
-	Policies     *Policies    `json:"policies,omitempty"`
-	Registration Registration `json:"registration"`
+	URL            string       `json:"url"`
+	Policies       *Policies    `json:"policies,omitempty"`
+	Registration   Registration `json:"registration"`
+	VapidPublicKey string       `json:"vapidPublicKey"`
 }

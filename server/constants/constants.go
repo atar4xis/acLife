@@ -56,5 +56,6 @@ func init() {
 			},
 			RetentionPeriod: 0,
 		},
+		VapidPublicKey: os.Getenv("VAPID_PUBLIC_KEY"), // for push service
 	}
 }

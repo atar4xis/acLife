@@ -3,6 +3,7 @@ module acLife
 go 1.25.5
 
 require (
+	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/sessions v1.4.0
 	github.com/jmoiron/sqlx v1.4.0
@@ -13,6 +14,7 @@ require (
 )
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect

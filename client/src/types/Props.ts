@@ -1,6 +1,7 @@
 import type { ViewMode } from "@/types/calendar/ViewMode";
 import type { CalendarEvent, EventChange } from "@/types/calendar/Event";
 import type { ReactNode, PointerEvent } from "react";
+import type { User } from "./User";
 
 export interface WithChildren {
   children?: ReactNode;
@@ -14,6 +15,7 @@ export interface CalendarProps {
     changes: EventChange[] | CalendarEvent[],
     cb: () => void,
   ) => void;
+  syncEvents: (user: User, masterKey: CryptoKey) => Promise<CalendarEvent[]>;
 }
 
 export interface EventBlockProps {

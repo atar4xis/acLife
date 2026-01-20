@@ -93,6 +93,22 @@ func Setup() error {
 		return err
 	}
 
+	// Create push_subscriptions table
+	pushTable := `
+	CREATE TABLE IF NOT EXISTS push_subscriptions (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		owner CHAR(36) NOT NULL,
+		endpoint VARCHAR(1024) NOT NULL UNIQUE,
+		p256dh VARCHAR(255) NOT NULL,
+		auth VARCHAR(255) NOT NULL,
+		FOREIGN KEY (owner) REFERENCES users(uuid) ON DELETE CASCADE
+	);`
+
+	if _, err := Exec(ctx, pushTable); err != nil {
+		utils.LogError("Setup", "Exec(push_subscriptions)", err)
+		return err
+	}
+
 	// Create calendar_events table
 	calendarTable := `
 	CREATE TABLE IF NOT EXISTS calendar_events (
