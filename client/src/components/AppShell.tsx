@@ -36,8 +36,13 @@ export default function AppShell() {
 
     let alive = true;
 
-    loadEvents(user, masterKey).then((events) => {
-      if (alive) setCalEvents(events);
+    toast.promise<CalendarEvent[]>(loadEvents(user, masterKey), {
+      loading: "Decrypting events...",
+      success: (events: CalendarEvent[]) => {
+        if (alive) setCalEvents(events);
+        return `Loaded ${events.length} events.`;
+      },
+      error: "Failed to load events.",
     });
 
     return () => {
