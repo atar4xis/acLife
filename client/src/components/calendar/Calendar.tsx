@@ -811,10 +811,20 @@ export default function AppCalendar({
           >
             Today
           </Button>
-          <Button variant="outline" size="icon" onClick={() => move(-1)}>
+          <Button
+            data-testid="prev-btn"
+            variant="outline"
+            size="icon"
+            onClick={() => move(-1)}
+          >
             <ArrowLeft />
           </Button>
-          <Button variant="outline" size="icon" onClick={() => move(1)}>
+          <Button
+            data-testid="next-btn"
+            variant="outline"
+            size="icon"
+            onClick={() => move(1)}
+          >
             <ArrowRight />
           </Button>
           <h2 className="ml-2 text-xl">
