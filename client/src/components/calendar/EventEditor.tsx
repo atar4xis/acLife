@@ -1,6 +1,7 @@
 import type { CalendarEvent, RepeatInterval } from "@/types/calendar/Event";
 import type { EventBlockProps } from "@/types/Props";
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -122,7 +123,7 @@ export default function EventEditor({
     "#141414",
   ];
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     // make sure dates are valid
     if (newEvent.current.start > newEvent.current.end) {
       toast.warning("An event cannot end before it starts.", {
@@ -149,7 +150,7 @@ export default function EventEditor({
     }
 
     onSave(newEvent.current);
-  };
+  }, [onSave]);
 
   const handleSelectRepeat = (value: string) => {
     if (value === "custom") {

@@ -7,16 +7,20 @@ import AppShell from "./components/AppShell";
 import { StorageProvider } from "./context/StorageContext";
 import { CalendarProvider } from "./context/CalendarContext";
 import { ApiProvider, useApi } from "./context/ApiContext";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Toaster } from "./components/ui/sonner";
 
 function AuthWrapper({ children }: WithChildren) {
   const { user, checkLogin } = useUser();
   const { url } = useApi();
+  const prevUrl = useRef(url);
 
   useEffect(() => {
-    if (!user && url) checkLogin();
-  }, [url]);
+    if (checkLogin && !user && url && url !== prevUrl.current) {
+      checkLogin();
+      prevUrl.current = url;
+    }
+  }, [url, checkLogin, user]);
 
   if (!user) return <LoginDialog />;
 

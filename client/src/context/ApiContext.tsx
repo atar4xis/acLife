@@ -17,7 +17,7 @@ interface ApiContextType {
   setUrl: (url: string) => void;
   get: <T>(endpoint: string) => Promise<APIResponse<T>>;
   getRaw: (endpoint: string) => Promise<Response>;
-  post: <T>(endpoint: string, body: any) => Promise<APIResponse<T>>;
+  post: <T>(endpoint: string, body: unknown) => Promise<APIResponse<T>>;
   query: <T>(endpoint: string) => Promise<T>;
   serverMeta: ServerMetadata | null;
   setServerMeta: (meta: ServerMetadata) => void;
@@ -84,11 +84,11 @@ export const ApiProvider = ({
   );
 
   const post = useCallback(
-    async <T,>(endpoint: string, body: any): Promise<APIResponse<T>> => {
+    async <T,>(endpoint: string, body: unknown): Promise<APIResponse<T>> => {
       if (!url) throw Error("Cannot POST before connection is established.");
 
       try {
-        let headers: Record<string, string> = {};
+        const headers: Record<string, string> = {};
         let payload: BodyInit | null = null;
 
         if (
@@ -150,6 +150,12 @@ export const ApiProvider = ({
         });
         const res = (await req.json()) as APIResponse<ServerMetadata>;
 
+        if (!res || !res.success || !res.data) {
+          setServerMeta(null);
+          toast.error("Failed to fetch server metadata.");
+          return;
+        }
+
         if (!validateServerMeta(res.data)) {
           setServerMeta(null);
           toast.error("Failed to validate server metadata.");
@@ -182,6 +188,7 @@ export const ApiProvider = ({
   );
 };
 
+// eslint-disable-next-line
 export const useApi = (): ApiContextType => {
   const context = useContext(ApiContext);
   if (!context) throw new Error("useApi must be used within an ApiProvider");

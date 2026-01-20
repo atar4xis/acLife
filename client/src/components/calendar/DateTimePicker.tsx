@@ -38,7 +38,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
             onSelect={(date) => {
               if (!date) return;
 
-              let newDate = new Date(date);
+              const newDate = new Date(date);
 
               // preserve the old time
               if (value) {

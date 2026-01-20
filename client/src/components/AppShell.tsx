@@ -53,6 +53,7 @@ export default function AppShell() {
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line
   }, [serverMeta, user, masterKey, activeSub, subRequired]);
 
   if (!storage || !user || !serverMeta) return null;

@@ -117,8 +117,8 @@ export function clamp(value: number, min: number, max: number) {
 }
 
 export function shallowEqual(
-  a: Record<string, any> | null | undefined,
-  b: Record<string, any> | null | undefined,
+  a: Record<string, unknown> | null | undefined,
+  b: Record<string, unknown> | null | undefined,
 ) {
   if (a === b) return true;
   if (!a || !b) return false;

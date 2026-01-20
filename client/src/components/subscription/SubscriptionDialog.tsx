@@ -10,7 +10,7 @@ import { useUser } from "@/context/UserContext";
 import { Button } from "../ui/button";
 import { useApi } from "@/context/ApiContext";
 import { formatPrice } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Price } from "@/types/Subscription";
 import { Skeleton } from "../ui/skeleton";
 import { toast } from "sonner";
@@ -23,7 +23,7 @@ export default function SubscriptionDialog() {
 
   const dialogTitle = "Select Subscription";
 
-  const fetchPricing = async () => {
+  const fetchPricing = useCallback(async () => {
     const res = await get<Price[]>("stripe/pricing");
 
     if (!res.success || !res.data) {
@@ -33,11 +33,11 @@ export default function SubscriptionDialog() {
 
     const sorted = res.data.sort((a, b) => a.amount - b.amount);
     setPrices(sorted);
-  };
+  }, [get]);
 
   useEffect(() => {
     fetchPricing();
-  }, []);
+  }, [fetchPricing]);
 
   const handlePurchase = async (priceId: string) => {
     setLoading(true);

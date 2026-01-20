@@ -64,7 +64,7 @@ export default memo(
 
     const copyID = useCallback(() => {
       navigator.clipboard.writeText(event.parent || event.id);
-    }, []);
+    }, [event.id, event.parent]);
 
     const { handlers: tapHandlers } = useTapInteraction({
       onTap: () => setTimeout(() => setEditing(true), 50),
@@ -72,7 +72,7 @@ export default memo(
 
     const handleDelete = useCallback(() => {
       onEventDelete(event);
-    }, [onEventDelete]);
+    }, [onEventDelete, event]);
 
     const preventTouch = useCallback((e: React.PointerEvent) => {
       if (e.pointerType === "touch") e.preventDefault();
@@ -95,7 +95,7 @@ export default memo(
                   if (e.pointerType === "touch") tapHandlers.onPointerDown(e);
                   onPointerDown(e, "move", event, day);
                 },
-                [tapHandlers.onPointerDown],
+                [tapHandlers, day, event, onPointerDown],
               )}
               onPointerUp={tapHandlers.onPointerUp}
               onDoubleClick={() => setEditing(true)}
@@ -166,6 +166,10 @@ export default memo(
     );
   },
   (prev, next) => {
-    return prev.event === next.event && shallowEqual(prev.style, next.style);
+    return (
+      prev.event === next.event &&
+      prev.day === next.day &&
+      shallowEqual(prev.style, next.style)
+    );
   },
 );

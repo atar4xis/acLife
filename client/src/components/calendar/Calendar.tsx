@@ -94,7 +94,7 @@ export default function AppCalendar({
   const [updateRepeatDialogOpen, setUpdateRepeatDialogOpen] = useState(false);
   const [deleteRepeatDialogOpen, setDeleteRepeatDialogOpen] = useState(false);
   const [now, setNow] = useState(DateTime.now());
-  const [_, forceRender] = useState(false);
+  const [, forceRender] = useState(false);
   const changesMapRef = useRef<Map<string, EventChange[]>>(new Map());
   const { user, masterKey } = useUser();
 
@@ -293,7 +293,7 @@ export default function AppCalendar({
         window.removeEventListener("pointerup", onGlobalPointerUp);
       }
     },
-    [user, onGlobalPointerMove],
+    [onGlobalPointerMove, updateChange, save, dispatch],
   );
 
   const onEventPointerDown = useCallback(
@@ -335,7 +335,10 @@ export default function AppCalendar({
       window.addEventListener("pointermove", onGlobalPointerMove);
       window.addEventListener("pointerup", onGlobalPointerUp);
     },
-    [onGlobalPointerMove, onGlobalPointerUp],
+
+    // visibleDays is needed here for getDayRects to work
+    // eslint-disable-next-line
+    [visibleDays, onGlobalPointerMove, onGlobalPointerUp],
   );
 
   const onEventEdit = useCallback(
@@ -550,15 +553,15 @@ export default function AppCalendar({
 
     const resync = async () => {
       toast.promise(
-        new Promise<void>(async (resolve, _) => {
-          const newEvents = await syncEvents(user, masterKey);
+        new Promise<void>((resolve) => {
+          syncEvents(user, masterKey).then((newEvents) => {
+            dispatch({
+              type: "set",
+              events: newEvents,
+            });
 
-          dispatch({
-            type: "set",
-            events: newEvents,
+            resolve();
           });
-
-          resolve();
         }),
         {
           loading: "Event sync in progress...",
@@ -593,63 +596,69 @@ export default function AppCalendar({
   /* -------------------------------------------------------------------------- */
 
   // build map of (day: events) for optimal fetching
-  const eventMap = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
-    const visibleDates = new Set(visibleDays.map((d) => d.date.toISODate()));
+  const eventMap = useMemo(
+    () => {
+      const map = new Map<string, CalendarEvent[]>();
+      const visibleDates = new Set(visibleDays.map((d) => d.date.toISODate()));
 
-    for (const e of calendarEvents) {
-      if (!e.id) continue;
-      if (e.id === dragRef.current?.event.id && dragRef.current.moved) continue;
+      for (const e of calendarEvents) {
+        if (!e.id) continue;
+        if (e.id === dragRef.current?.event.id && dragRef.current.moved)
+          continue;
 
-      mapEventToDates(map, e, visibleDates);
+        mapEventToDates(map, e, visibleDates);
 
-      // repeating event logic
-      if (
-        e.repeat &&
-        (!dragRef.current?.moved || dragRef.current.event.parent !== e.id)
-      ) {
-        let cursor = e.start;
-        const duration = e.end.diff(e.start);
+        // repeating event logic
+        if (
+          e.repeat &&
+          (!dragRef.current?.moved || dragRef.current.event.parent !== e.id)
+        ) {
+          let cursor = e.start;
+          const duration = e.end.diff(e.start);
 
-        while (cursor <= visibleDays.at(-1)!.date.endOf("day")) {
-          const dayIndex = cursor.weekday;
-          const key = cursor.toISODate()!;
+          while (cursor <= visibleDays.at(-1)!.date.endOf("day")) {
+            const dayIndex = cursor.weekday;
+            const key = cursor.toISODate()!;
 
-          if (
-            cursor.toMillis() !== e.start.toMillis() &&
-            visibleDates.has(key) &&
-            (!e.repeat.until || cursor.toMillis() < e.repeat.until) &&
-            !e.repeat.except?.includes(dayIndex) &&
-            !e.repeat.skip?.includes(key)
-          ) {
-            mapEventToDate(map, key, {
-              ...e,
-              id: e.id + "_" + key,
-              start: cursor,
-              end: cursor.plus(duration),
-              parent: e.id,
+            if (
+              cursor.toMillis() !== e.start.toMillis() &&
+              visibleDates.has(key) &&
+              (!e.repeat.until || cursor.toMillis() < e.repeat.until) &&
+              !e.repeat.except?.includes(dayIndex) &&
+              !e.repeat.skip?.includes(key)
+            ) {
+              mapEventToDate(map, key, {
+                ...e,
+                id: e.id + "_" + key,
+                start: cursor,
+                end: cursor.plus(duration),
+                parent: e.id,
+              });
+            }
+
+            cursor = cursor.plus({
+              [e.repeat.unit]: e.repeat.interval,
             });
           }
-
-          cursor = cursor.plus({
-            [e.repeat.unit]: e.repeat.interval,
-          });
         }
       }
-    }
 
-    // temporary event while dragging
-    if (dragRef.current?.event && dragRef.current.moved) {
-      mapEventToDates(map, dragRef.current.event, visibleDates);
-    }
+      // temporary event while dragging
+      if (dragRef.current?.event && dragRef.current.moved) {
+        mapEventToDates(map, dragRef.current.event, visibleDates);
+      }
 
-    return map;
-  }, [
-    calendarEvents,
-    visibleDays,
-    dragRef.current?.event?.start,
-    dragRef.current?.event?.end,
-  ]);
+      return map;
+    },
+    // dragRef.current... non-idiomatic but needed, refactor later ig
+    // eslint-disable-next-line
+    [
+      calendarEvents,
+      visibleDays,
+      dragRef.current?.event?.start,
+      dragRef.current?.event?.end,
+    ],
+  );
 
   // build map of event styles
   const stylesMap = useMemo(() => {
@@ -669,7 +678,7 @@ export default function AppCalendar({
   }, [visibleDays, eventMap, hourHeight]);
 
   // for swipe gesture on mobile
-  let swipeDelta = useMemo(() => {
+  const swipeDelta = useMemo(() => {
     let delta = 0;
 
     if (gridTouchRef.current && gridTouchRef.current.delta) {
@@ -677,6 +686,9 @@ export default function AppCalendar({
     }
 
     return delta;
+
+    // non-idiomatic but needed, refactor later ig
+    // eslint-disable-next-line
   }, [gridTouchRef.current?.delta?.x]);
 
   // headers in day/week view, one for every visibleDay
@@ -755,7 +767,21 @@ export default function AppCalendar({
           })}
         </Fragment>
       )),
-    [eventMap, stylesMap, visibleDays, now, getNowY, hourHeight],
+    [
+      eventMap,
+      stylesMap,
+      visibleDays,
+      now,
+      getNowY,
+      hourHeight,
+      gridTouchStart,
+      gridTouchMove,
+      gridTouchEnd,
+      onEventEdit,
+      onEventDelete,
+      onEventPointerDown,
+      startNewEvent,
+    ],
   );
 
   return (

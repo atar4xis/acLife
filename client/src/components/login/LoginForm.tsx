@@ -205,6 +205,7 @@ export function LoginForm({ serverMeta }: { serverMeta: ServerMetadata }) {
       const M2 = Uint8Array.from(atob(res2.data.M2), (c) => c.charCodeAt(0));
 
       // workaround for SRP_CheckM2 bug
+      // eslint-disable-next-line
       if (!SRP_CheckM2((client as any).M2, M2, SRP_PARAMS.group.bitLength)) {
         setError("Failed to verify server integrity.");
         return;

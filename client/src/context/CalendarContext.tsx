@@ -22,6 +22,7 @@ export function CalendarProvider({ children }: WithChildren) {
   );
 }
 
+// eslint-disable-next-line
 export function useCalendar() {
   const context = useContext(CalendarContext);
   return context;

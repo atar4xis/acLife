@@ -20,7 +20,7 @@ const UserContext = createContext<UserContextValue>({
   setUser: () => {},
   setMasterKey: () => {},
   logout: () => {},
-  checkLogin: async (_?: string) => {},
+  checkLogin: async () => {},
 });
 
 export function UserProvider({ children }: WithChildren) {
@@ -66,6 +66,7 @@ export function UserProvider({ children }: WithChildren) {
   );
 }
 
+// eslint-disable-next-line
 export function useUser() {
   const context = useContext(UserContext);
   return context;

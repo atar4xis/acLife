@@ -53,7 +53,7 @@ export default function useTapInteraction({
       pointerId.current = null;
     },
 
-    onPointerCancel(_) {
+    onPointerCancel() {
       pointerId.current = null;
     },
   };

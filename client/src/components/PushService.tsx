@@ -51,12 +51,11 @@ export default function PushService() {
 
     const tryEnable = async () => {
       toast.promise(
-        new Promise(async (resolve, reject) => {
+        (async () => {
           const permission = await Notification.requestPermission();
 
           if (permission !== "granted") {
-            reject("Notification permission request denied.");
-            return;
+            throw "Notification permission request denied.";
           }
 
           const sw = await navigator.serviceWorker.register("/acLife/sw.js", {
@@ -67,9 +66,8 @@ export default function PushService() {
             await new Promise<void>((resolve) => {
               navigator.serviceWorker.addEventListener(
                 "controllerchange",
-                () => {
-                  resolve();
-                },
+                () => resolve(),
+                { once: true },
               );
             });
           }
@@ -91,8 +89,7 @@ export default function PushService() {
 
           if (!p256dhBuf || !authBuf) {
             await sub.unsubscribe();
-            reject("Something went wrong. Please try again.");
-            return;
+            throw "Something went wrong. Please try again.";
           }
 
           const p256dh = arrayBufferToBase64Url(p256dhBuf);
@@ -105,13 +102,11 @@ export default function PushService() {
           });
 
           if (!res.success) {
-            reject("Something went wrong. Please try again later.");
-            return;
+            throw "Something went wrong. Please try again later.";
           }
 
           storage.set("pushSubscription", JSON.stringify(sub));
-          resolve("ok");
-        }),
+        })(),
         {
           loading: "Setting up push service...",
           success: () => {
@@ -124,7 +119,7 @@ export default function PushService() {
     };
 
     tryEnable();
-  }, [storage, serverMeta]);
+  }, [storage, serverMeta, post]);
 
   return (
     <YesNoDialog

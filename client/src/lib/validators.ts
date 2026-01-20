@@ -9,7 +9,9 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
-export function validateServerMeta(data: any): data is ServerMetadata {
+export function validateServerMeta(
+  data: ServerMetadata,
+): data is ServerMetadata {
   // ensure data is an object
   if (typeof data !== "object" || data === null) return false;
 
@@ -107,7 +109,7 @@ export function validatePassword(password: string): boolean {
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasDigit = /\d/.test(password);
-  const hasSpecial = /[!@#$%^&*(),.?":{}|<>_\-\\[\];'`~\/+=]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>_\-\\[\];'`~/+=]/.test(password);
 
   return lengthValid && hasUppercase && hasLowercase && hasDigit && hasSpecial;
 }
