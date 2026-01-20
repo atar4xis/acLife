@@ -486,6 +486,10 @@ export default function AppCalendar({
       y: gridTouchRef.current.start.y - e.touches[0].clientY,
     };
 
+    // don't count x if swiping y (prevents accidental moves)
+    if (Math.abs(gridTouchRef.current.delta.y) > 20)
+      gridTouchRef.current.delta.x = 0;
+
     forceRender((prev) => !prev);
   }, []);
 
