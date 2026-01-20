@@ -95,7 +95,7 @@ export default function AppCalendar({
   const [deleteRepeatDialogOpen, setDeleteRepeatDialogOpen] = useState(false);
   const [now, setNow] = useState(DateTime.now());
   const [_, forceRender] = useState(false);
-  const changesMapRef = useRef<Map<string, EventChange>>(new Map());
+  const changesMapRef = useRef<Map<string, EventChange[]>>(new Map());
   const { user, masterKey } = useUser();
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
@@ -133,12 +133,24 @@ export default function AppCalendar({
   }, [now, hourHeight]);
 
   const updateChange = useCallback((change: EventChange) => {
-    changesMapRef.current.set(change.event?.id ?? change.id!, change);
+    const key = change.event?.id ?? change.id!;
+    const prev = changesMapRef.current.get(key) ?? [];
+
+    let next: EventChange[];
+
+    if (change.type === "updated") {
+      next = prev.filter((c) => c.type !== "updated"); // delete old updates
+      next.push(change);
+    } else {
+      next = [...prev, change];
+    }
+
+    changesMapRef.current.set(key, next);
   }, []);
 
   const saveIfChanged = useCallback(() => {
     if (changesMapRef.current.size > 0) {
-      saveEvents(Array.from(changesMapRef.current.values()), () => null);
+      saveEvents(Array.from(changesMapRef.current.values()).flat(), () => null);
       changesMapRef.current.clear(); // reset after save
     }
   }, [saveEvents]);
