@@ -8,12 +8,14 @@ import {
   uint8ArrayFromUrlSafeBase64,
 } from "@/lib/utils";
 import { toast } from "sonner";
+import { useUser } from "@/context/UserContext";
 
 export default function PushService() {
   const storage = useStorage();
 
   const [open, setOpen] = useState(false);
   const { serverMeta, post } = useApi();
+  const { user } = useUser();
 
   // ask to enable push if not yet enabled
   useEffect(() => {
@@ -24,12 +26,14 @@ export default function PushService() {
       browserSupportsPush() &&
       !pushKey &&
       !pushDismissed &&
+      user &&
+      user.type === "online" &&
       serverMeta?.vapidPublicKey
     ) {
       setOpen(true);
       return;
     }
-  }, [storage, serverMeta]);
+  }, [storage, serverMeta, user]);
 
   // keep the service worker up to date
   useEffect(() => {
