@@ -88,7 +88,6 @@ export default function AppCalendar({
 }: CalendarProps) {
   const { currentDate, setCurrentDate } = useCalendar();
   const [calendarEvents, dispatch] = useReducer(calendarReducer, events);
-  const calendarEventsRef = useRef<CalendarEvent[]>(calendarEvents);
   const [isDragging, setIsDragging] = useState(false);
   const [hourHeight, setHourHeight] = useState(60);
   const [updateRepeatDialogOpen, setUpdateRepeatDialogOpen] = useState(false);
@@ -96,6 +95,7 @@ export default function AppCalendar({
   const [now, setNow] = useState(DateTime.now());
   const [, forceRender] = useState(false);
   const changesMapRef = useRef<Map<string, EventChange[]>>(new Map());
+  const pendingSaveRef = useRef(false);
   const { user, masterKey } = useUser();
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
@@ -132,23 +132,28 @@ export default function AppCalendar({
     return (minutes / 60) * hourHeight;
   }, [now, hourHeight]);
 
-  const updateChange = useCallback((change: EventChange) => {
-    const key = change.event?.id ?? change.id!;
-    const prev = changesMapRef.current.get(key) ?? [];
+  const updateChange = useCallback(
+    (change: EventChange) => {
+      if (user?.type === "offline") return; // offline users save all events locally
 
-    if (change.event) change.event.timestamp = Date.now();
+      const key = change.event?.id ?? change.id!;
+      const prev = changesMapRef.current.get(key) ?? [];
 
-    let next: EventChange[];
+      if (change.event) change.event.timestamp = Date.now();
 
-    if (change.type === "updated") {
-      next = prev.filter((c) => c.type !== "updated"); // delete old updates
-      next.push(change);
-    } else {
-      next = [...prev, change];
-    }
+      let next: EventChange[];
 
-    changesMapRef.current.set(key, next);
-  }, []);
+      if (change.type === "updated") {
+        next = prev.filter((c) => c.type !== "updated"); // delete old updates
+        next.push(change);
+      } else {
+        next = [...prev, change];
+      }
+
+      changesMapRef.current.set(key, next);
+    },
+    [user?.type],
+  );
 
   const saveIfChanged = useCallback(() => {
     if (changesMapRef.current.size > 0) {
@@ -160,8 +165,9 @@ export default function AppCalendar({
 
   const save = useCallback(() => {
     if (user?.type === "online") saveIfChanged();
-    else saveEvents(calendarEventsRef.current, () => {}); // save all events for offline users
-  }, [user, saveEvents, saveIfChanged]);
+    else saveEvents(calendarEvents, () => {}); // save all events for offline users
+    pendingSaveRef.current = false;
+  }, [user, saveEvents, saveIfChanged, calendarEvents]);
 
   /* -------------------------------------------------------------------------- */
 
@@ -277,12 +283,8 @@ export default function AppCalendar({
             });
           }
 
-          calendarEventsRef.current = calendarEventsRef.current.map((e) =>
-            e.id === event.id ? newEvent : e,
-          );
-
           dragRef.current = null;
-          save();
+          pendingSaveRef.current = true;
         } else if (dragRef.current.moved) {
           // if the event has a parent, ask what to do
           evPendingUpdateRef.current = event;
@@ -295,7 +297,7 @@ export default function AppCalendar({
         window.removeEventListener("pointerup", onGlobalPointerUp);
       }
     },
-    [onGlobalPointerMove, updateChange, save, dispatch],
+    [onGlobalPointerMove, updateChange, dispatch],
   );
 
   const onEventPointerDown = useCallback(
@@ -363,13 +365,9 @@ export default function AppCalendar({
         event,
       });
 
-      calendarEventsRef.current = calendarEventsRef.current.map((e) =>
-        e.id === event.id ? event : e,
-      );
-
-      save();
+      pendingSaveRef.current = true;
     },
-    [dispatch, updateChange, save],
+    [dispatch, updateChange],
   );
 
   const onEventDelete = useCallback(
@@ -390,9 +388,9 @@ export default function AppCalendar({
         type: "deleted",
       });
 
-      save();
+      pendingSaveRef.current = true;
     },
-    [setDeleteRepeatDialogOpen, dispatch, updateChange, save],
+    [setDeleteRepeatDialogOpen, dispatch, updateChange],
   );
 
   /* -------------------------------------------------------------------------- */
@@ -511,10 +509,10 @@ export default function AppCalendar({
     hourHeightRef.current = hourHeight;
   }, [hourHeight]);
 
-  // and for calendar events
+  // save when events update
   useEffect(() => {
-    calendarEventsRef.current = calendarEvents;
-  }, [calendarEvents]);
+    if (pendingSaveRef.current) save();
+  }, [calendarEvents, save]);
 
   // zoom in with ctrl + mouse wheel
   useEffect(() => {
@@ -989,8 +987,7 @@ export default function AppCalendar({
 
           dragRef.current = null;
           evPendingUpdateRef.current = null;
-
-          save();
+          pendingSaveRef.current = true;
         }}
         onCancel={() => {
           dragRef.current = null;
@@ -1073,8 +1070,7 @@ export default function AppCalendar({
           }
 
           evPendingUpdateRef.current = null;
-
-          save();
+          pendingSaveRef.current = true;
         }}
         onCancel={() => {
           evPendingUpdateRef.current = null;
