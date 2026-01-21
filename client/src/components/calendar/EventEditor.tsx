@@ -188,7 +188,7 @@ export default function EventEditor({
       const rect = anchor.getBoundingClientRect();
       const myRect = editor.getBoundingClientRect();
 
-      const top = isMobile ? 0 : rect.top - myRect.height * 0.25;
+      const top = isMobile ? 0 : rect.top - myRect.height * 0.15;
       const left = isMobile
         ? window.innerWidth / 2 - myRect.width / 2
         : rect.left + rect.width / 2 - myRect.width / 2;
@@ -257,7 +257,7 @@ export default function EventEditor({
 
   return (
     <div
-      className="fixed z-20 left-0 top-0 flex flex-col justify-center md:block bg-card/98 backdrop-blur p-3 px-5 md:px-3 shadow-lg border md:rounded-lg w-full h-full md:w-auto md:h-auto"
+      className="fixed z-20 left-0 top-0 flex flex-col justify-center md:block bg-card/80 backdrop-blur-[10px] p-3 px-5 md:px-3 shadow-lg border md:rounded-lg w-full h-full md:w-auto md:h-auto"
       style={{
         top: pos.top,
         left: pos.left,
