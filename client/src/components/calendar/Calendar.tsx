@@ -286,9 +286,17 @@ export default function AppCalendar({
           dragRef.current = null;
           pendingSaveRef.current = true;
         } else if (dragRef.current.moved) {
-          // if the event has a parent, ask what to do
-          evPendingUpdateRef.current = event;
-          setUpdateRepeatDialogOpen(true);
+          if (
+            event.start.toMillis() !== state.originalStart.toMillis() ||
+            event.end.toMillis() !== state.originalEnd.toMillis()
+          ) {
+            // if the event has a parent, ask what to do
+            evPendingUpdateRef.current = event;
+            setUpdateRepeatDialogOpen(true);
+          } else {
+            // if it didn't actually update, just revert
+            dragRef.current = null;
+          }
         }
 
         setIsDragging(false);
