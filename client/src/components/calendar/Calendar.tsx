@@ -466,7 +466,13 @@ export default function AppCalendar({
   );
 
   const gridTouchStart = useCallback((e: React.TouchEvent) => {
-    if (gridTouchRef.current != null || e.target !== e.currentTarget) return;
+    const targetElement = e.target as Element;
+    if (
+      gridTouchRef.current != null ||
+      (targetElement !== e.currentTarget &&
+        !targetElement.className.includes("event-block"))
+    )
+      return;
 
     gridTouchRef.current = {
       start: {

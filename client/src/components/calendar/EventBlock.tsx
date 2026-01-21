@@ -89,7 +89,7 @@ export default memo(
           <ContextMenuTrigger onPointerDown={preventTouch}>
             {/* visible event block */}
             <div
-              className={`${padding} absolute rounded left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_3px_rgba(0,0,0,0.35)]`}
+              className={`event-block ${padding} absolute rounded left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_3px_rgba(0,0,0,0.35)]`}
               style={blockStyle}
               onPointerDown={useCallback(
                 (e: React.PointerEvent) => {
