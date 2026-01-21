@@ -77,13 +77,14 @@ export default function AppShell() {
 
   if (!storage || !user || !serverMeta) return null;
 
-  if (masterKey === null) {
-    return <UnlockDialog />;
-  }
-
   if (!activeSub && subRequired) {
     return <SubscriptionDialog />;
   }
+
+  if (user.type === "online" && masterKey === null) {
+    return <UnlockDialog />;
+  }
+
   return (
     <>
       <AppSidebar />
