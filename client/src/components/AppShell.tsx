@@ -18,6 +18,7 @@ export default function AppShell() {
     window.innerWidth < 768 ? "day" : "week",
   );
   const [calEvents, setCalEvents] = useState<CalendarEvent[] | null>(null);
+  const [offline, setOffline] = useState(false);
   const { masterKey, user } = useUser();
   const { serverMeta } = useApi();
   const storage = useStorage();
@@ -54,6 +55,26 @@ export default function AppShell() {
     // eslint-disable-next-line
   }, [serverMeta, user, masterKey, activeSub, subRequired]);
 
+  // show offline when network goes offline
+  useEffect(() => {
+    const online = () => {
+      setOffline(false);
+    };
+    const offline = () => {
+      setOffline(true);
+    };
+
+    window.addEventListener("offline", offline);
+    window.addEventListener("online", online);
+
+    setOffline(!navigator.onLine);
+
+    return () => {
+      window.removeEventListener("offline", offline);
+      window.removeEventListener("online", online);
+    };
+  }, []);
+
   if (!storage || !user || !serverMeta) return null;
 
   if (masterKey === null) {
@@ -66,6 +87,11 @@ export default function AppShell() {
   return (
     <>
       <AppSidebar />
+      {user.type === "online" && offline && (
+        <div className="fixed z-50 top-0 left-0 p-1 right-0 text-center bg-red-500/75 dark:bg-red-700/75 text-white font-semibold">
+          You are offline. Check your connection.
+        </div>
+      )}
       {saving && <Spinner className="fixed bottom-5 right-5 size-8" />}
       <PushService />
       {calEvents !== null && (
