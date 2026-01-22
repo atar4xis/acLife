@@ -610,7 +610,7 @@ export default function AppCalendar({
 
   /* -------------------------------------------------------------------------- */
 
-  const dragEvent = dragRef.current?.event;
+  const dragEvent = dragRef.current?.moved ? dragRef.current?.event : null;
   const dragEventClean = useMemo(
     () =>
       ({
