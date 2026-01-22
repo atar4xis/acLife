@@ -34,11 +34,7 @@ import {
   getDateRangeString,
 } from "@/lib/calendar/date";
 import { getDayRects } from "@/lib/calendar/dom";
-import {
-  getDayEventStyles,
-  mapEventToDate,
-  mapEventToDates,
-} from "@/lib/calendar/event";
+import { getDayEventStyles, getEventMap } from "@/lib/calendar/event";
 import { useUser } from "@/context/UserContext";
 import { toast } from "sonner";
 import HeaderCell from "./HeaderCell";
@@ -50,6 +46,7 @@ import { clamp } from "@/lib/utils";
 import RecurringUpdateDialog from "./RecurringUpdateDialog";
 import type { PushEvent } from "@/types/Push";
 import { CLIENT_ID } from "@/hooks/calendar/useCalendarEvents";
+import { EMPTY_ARRAY } from "@/lib/constants";
 
 /* -------------------------------------------------------------------------- */
 
@@ -613,69 +610,35 @@ export default function AppCalendar({
 
   /* -------------------------------------------------------------------------- */
 
+  const dragEvent = dragRef.current?.event;
+  const dragDerived = useMemo(() => {
+    if (!dragEvent) {
+      return { exclude: EMPTY_ARRAY, append: EMPTY_ARRAY };
+    }
+
+    return {
+      exclude: [dragEvent.parent || dragEvent.id],
+      append: [dragEvent],
+    };
+    // non-idiomatic but necessary - refactor later
+    // eslint-disable-next-line
+  }, [dragEvent?.start, dragEvent?.end]);
+
+  const visibleDates = useMemo(
+    () => visibleDays.map((d) => d.date),
+    [visibleDays],
+  );
+
   // build map of (day: events) for optimal fetching
   const eventMap = useMemo(
-    () => {
-      const map = new Map<string, CalendarEvent[]>();
-      const visibleDates = new Set(visibleDays.map((d) => d.date.toISODate()));
-
-      for (const e of calendarEvents) {
-        if (!e.id) continue;
-        if (e.id === dragRef.current?.event.id && dragRef.current.moved)
-          continue;
-
-        mapEventToDates(map, e, visibleDates);
-
-        // repeating event logic
-        if (
-          e.repeat &&
-          (!dragRef.current?.moved || dragRef.current.event.parent !== e.id)
-        ) {
-          let cursor = e.start;
-          const duration = e.end.diff(e.start);
-
-          while (cursor <= visibleDays.at(-1)!.date.endOf("day")) {
-            const dayIndex = cursor.weekday;
-            const key = cursor.toISODate()!;
-
-            if (
-              cursor.toMillis() !== e.start.toMillis() &&
-              visibleDates.has(key) &&
-              (!e.repeat.until || cursor.toMillis() < e.repeat.until) &&
-              !e.repeat.except?.includes(dayIndex) &&
-              !e.repeat.skip?.includes(key)
-            ) {
-              mapEventToDate(map, key, {
-                ...e,
-                id: e.id + "_" + key,
-                start: cursor,
-                end: cursor.plus(duration),
-                parent: e.id,
-              });
-            }
-
-            cursor = cursor.plus({
-              [e.repeat.unit]: e.repeat.interval,
-            });
-          }
-        }
-      }
-
-      // temporary event while dragging
-      if (dragRef.current?.event && dragRef.current.moved) {
-        mapEventToDates(map, dragRef.current.event, visibleDates);
-      }
-
-      return map;
-    },
-    // dragRef.current... non-idiomatic but needed, refactor later ig
-    // eslint-disable-next-line
-    [
-      calendarEvents,
-      visibleDays,
-      dragRef.current?.event?.start,
-      dragRef.current?.event?.end,
-    ],
+    () =>
+      getEventMap(
+        calendarEvents,
+        visibleDates,
+        dragDerived.exclude,
+        dragDerived.append,
+      ),
+    [calendarEvents, visibleDates, dragDerived],
   );
 
   // build map of event styles

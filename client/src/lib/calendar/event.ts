@@ -152,3 +152,105 @@ export function mapEventToDates(
     day = day.plus({ days: 1 });
   }
 }
+
+function processRepeats(
+  map: Map<string, CalendarEvent[]>,
+  e: CalendarEvent,
+  visibleDates: Set<string>,
+  lastVisibleDayEnd: DateTime,
+  excludeSet: Set<string>,
+) {
+  if (!e.repeat || e.parent || excludeSet.has(e.id)) return;
+
+  let cursor = e.start;
+  const duration = e.end.diff(e.start);
+  const until = e.repeat.until;
+  const startMillis = e.start.toMillis();
+
+  while (cursor <= lastVisibleDayEnd) {
+    const millis = cursor.toMillis();
+
+    if (millis !== startMillis) {
+      const key = cursor.toISODate()!;
+      const weekday = cursor.weekday;
+
+      if (
+        visibleDates.has(key) &&
+        (!until || millis < until) &&
+        !e.repeat.except?.includes(weekday) &&
+        !e.repeat.skip?.includes(key)
+      ) {
+        mapEventToDate(map, key, {
+          ...e,
+          id: `${e.id}_${key}`,
+          start: cursor,
+          end: cursor.plus(duration),
+          parent: e.id,
+        });
+      }
+    }
+
+    cursor = cursor.plus({
+      [e.repeat.unit]: e.repeat.interval,
+    });
+  }
+}
+
+type EventMapCache = {
+  events?: CalendarEvent[];
+  dates?: DateTime[];
+  exclude?: string[];
+  append?: CalendarEvent[];
+  result?: Map<string, CalendarEvent[]>;
+};
+
+const eventMapCache: EventMapCache = {};
+
+export function getEventMap(
+  events: CalendarEvent[],
+  dates: DateTime[],
+  exclude: string[],
+  append: CalendarEvent[],
+) {
+  if (
+    eventMapCache.result &&
+    eventMapCache.events === events &&
+    eventMapCache.dates === dates &&
+    eventMapCache.exclude === exclude &&
+    eventMapCache.append === append
+  ) {
+    return eventMapCache.result;
+  }
+
+  const map = new Map<string, CalendarEvent[]>();
+
+  const visibleDates = new Set<string>();
+  for (const d of dates) {
+    visibleDates.add(d.toISODate()!);
+  }
+
+  const excludeSet = new Set(exclude);
+  const lastVisibleDayEnd = dates[dates.length - 1].endOf("day");
+
+  for (const e of events) {
+    if (!e.id || excludeSet.has(e.id)) continue;
+
+    mapEventToDates(map, e, visibleDates);
+    processRepeats(map, e, visibleDates, lastVisibleDayEnd, excludeSet);
+  }
+
+  for (const e of append) {
+    if (!e.id) continue;
+
+    mapEventToDates(map, e, visibleDates);
+    processRepeats(map, e, visibleDates, lastVisibleDayEnd, excludeSet);
+  }
+
+  eventMapCache.events = events;
+  eventMapCache.dates = dates;
+  eventMapCache.exclude = exclude;
+  eventMapCache.append = append;
+  eventMapCache.result = map;
+
+  return map;
+}
