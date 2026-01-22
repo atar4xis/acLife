@@ -67,7 +67,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
           &nbsp;
         </div>
         <div className="flex flex-col">
-          <span>{event.title}</span>
+          <span className="text-sm">{event.title}</span>
           <span className="text-xs font-normal">{startsInText}</span>
         </div>
       </div>
