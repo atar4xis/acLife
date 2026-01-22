@@ -173,16 +173,18 @@ function processRepeats(
     if (millis !== startMillis) {
       const key = cursor.toISODate()!;
       const weekday = cursor.weekday;
+      const id = `${e.id}_${key}`;
 
       if (
         visibleDates.has(key) &&
         (!until || millis < until) &&
         !e.repeat.except?.includes(weekday) &&
-        !e.repeat.skip?.includes(key)
+        !e.repeat.skip?.includes(key) &&
+        !excludeSet.has(id)
       ) {
         mapEventToDate(map, key, {
           ...e,
-          id: `${e.id}_${key}`,
+          id,
           start: cursor,
           end: cursor.plus(duration),
           parent: e.id,

@@ -611,18 +611,26 @@ export default function AppCalendar({
   /* -------------------------------------------------------------------------- */
 
   const dragEvent = dragRef.current?.event;
+  const dragEventClean = useMemo(
+    () =>
+      ({
+        ...dragEvent,
+        repeat: undefined,
+      }) as CalendarEvent,
+    // non-idiomatic but necessary - refactor later
+    // eslint-disable-next-line
+    [dragEvent?.start, dragEvent?.end],
+  );
   const dragDerived = useMemo(() => {
     if (!dragEvent) {
       return { exclude: EMPTY_ARRAY, append: EMPTY_ARRAY };
     }
 
     return {
-      exclude: [dragEvent.parent || dragEvent.id],
-      append: [dragEvent],
+      exclude: [dragEvent.id],
+      append: [dragEventClean],
     };
-    // non-idiomatic but necessary - refactor later
-    // eslint-disable-next-line
-  }, [dragEvent?.start, dragEvent?.end]);
+  }, [dragEvent, dragEventClean]);
 
   const visibleDates = useMemo(
     () => visibleDays.map((d) => d.date),
