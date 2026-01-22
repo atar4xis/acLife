@@ -14,6 +14,16 @@ export const getWeekDays = (date: DateTime) => {
   });
 };
 
+export const getRelativeDays = (now: DateTime, days: number) => {
+  const start = now.startOf("day");
+  return Array.from({ length: days }, (_, i) => {
+    const day = start.plus({ days: i });
+    const label =
+      i === 0 ? "Today" : i === 1 ? "Tomorrow" : day.toFormat("EEEE d");
+    return { date: day, label };
+  });
+};
+
 export const getMonthCells = (date: DateTime) => {
   const start = date.startOf("month").startOf("week");
   return Array.from({ length: 42 }, (_, i) => {

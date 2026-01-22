@@ -1,6 +1,6 @@
 import { isColorDark, shallowEqual } from "@/lib/utils";
 import type { EventBlockProps } from "@/types/Props";
-import { useRef, useState, memo, useMemo, useCallback } from "react";
+import { useRef, memo, useMemo, useCallback } from "react";
 import EventEditor from "./EventEditor";
 import {
   ContextMenu,
@@ -11,18 +11,19 @@ import {
 } from "../ui/context-menu";
 import { Clipboard, PencilLine, Trash2 } from "lucide-react";
 import useTapInteraction from "@/hooks/useTapInteraction";
+import { useCalendar } from "@/context/CalendarContext";
 
 export default memo(
   function EventBlock({
     event,
     day,
     style,
+    editing,
     onPointerDown,
     onEventEdit,
     onEventDelete,
   }: EventBlockProps) {
-    const [editing, setEditing] = useState(false);
-
+    const { setEditingEvent } = useCalendar();
     const { eventColor, textColor, startTimeFormat, endTimeFormat } =
       useMemo(() => {
         const color = event.color ?? "#2563eb";
@@ -68,7 +69,7 @@ export default memo(
     }, [event.id, event.parent]);
 
     const { handlers: tapHandlers } = useTapInteraction({
-      onTap: () => setTimeout(() => setEditing(true), 50),
+      onTap: () => setTimeout(() => setEditingEvent(event), 50),
     });
 
     const handleDelete = useCallback(() => {
@@ -99,7 +100,7 @@ export default memo(
                 [tapHandlers, day, event, onPointerDown],
               )}
               onPointerUp={tapHandlers.onPointerUp}
-              onDoubleClick={() => setEditing(true)}
+              onDoubleClick={() => setEditingEvent(event)}
               ref={eventRef}
             >
               <div
@@ -134,7 +135,7 @@ export default memo(
             {/* context menu items */}
             <ContextMenuLabel>{event.title}</ContextMenuLabel>
 
-            <ContextMenuItem onClick={() => setEditing(true)}>
+            <ContextMenuItem onClick={() => setEditingEvent(event)}>
               <PencilLine />
               Edit
             </ContextMenuItem>
@@ -157,10 +158,10 @@ export default memo(
             eventRef={eventRef}
             onSave={(newEvent) => {
               onEventEdit(newEvent);
-              setEditing(false);
+              setEditingEvent(null);
             }}
             onDelete={handleDelete}
-            onCancel={() => setEditing(false)}
+            onCancel={() => setEditingEvent(null)}
           />
         )}
       </>
@@ -170,6 +171,7 @@ export default memo(
     return (
       prev.event === next.event &&
       prev.day === next.day &&
+      prev.editing === next.editing &&
       shallowEqual(prev.style, next.style)
     );
   },

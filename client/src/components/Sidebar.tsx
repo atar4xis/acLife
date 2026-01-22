@@ -16,6 +16,7 @@ import UserDropdown from "./user/UserDropdown";
 import { useStorage } from "@/context/StorageContext";
 import { useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import AgendaList from "./calendar/AgendaList";
 
 export default function AppSidebar() {
   const { currentDate, setCurrentDate } = useCalendar();
@@ -54,6 +55,7 @@ export default function AppSidebar() {
             weekStartsOn={1}
           />
         </SidebarGroup>
+        <AgendaList />
       </SidebarContent>
       <SidebarRail enableDrag={true} />
       <SidebarFooter>

@@ -5,7 +5,6 @@ import {
   useMemo,
   useEffect,
   useCallback,
-  useReducer,
 } from "react";
 import { DateTime } from "luxon";
 import { ArrowLeft, ArrowRight, SearchIcon } from "lucide-react";
@@ -23,7 +22,6 @@ import type {
 } from "@/types/calendar/Event";
 import EventBlock from "./EventBlock";
 import DragOverlay from "./DragOverlay";
-import { calendarReducer } from "@/reducers/calendarReducer";
 import { useCalendar } from "@/context/CalendarContext";
 import {
   getDay,
@@ -83,8 +81,13 @@ export default function AppCalendar({
   saveEvents,
   syncEvents,
 }: CalendarProps) {
-  const { currentDate, setCurrentDate } = useCalendar();
-  const [calendarEvents, dispatch] = useReducer(calendarReducer, events);
+  const {
+    editingEvent,
+    currentDate,
+    calendarEvents,
+    setCurrentDate,
+    dispatch,
+  } = useCalendar();
   const [isDragging, setIsDragging] = useState(false);
   const [hourHeight, setHourHeight] = useState(60);
   const [updateRepeatDialogOpen, setUpdateRepeatDialogOpen] = useState(false);
@@ -601,12 +604,12 @@ export default function AppCalendar({
         navigator.serviceWorker.removeEventListener("message", message);
       }
     };
-  }, [syncEvents, user, masterKey]);
+  }, [syncEvents, user, masterKey, dispatch]);
 
   // reset events when the defaults change
   useEffect(() => {
     dispatch({ type: "set", events });
-  }, [events]);
+  }, [events, dispatch]);
 
   /* -------------------------------------------------------------------------- */
 
@@ -744,6 +747,7 @@ export default function AppCalendar({
                         event={event}
                         day={dayIndex}
                         style={styles[event.id]}
+                        editing={editingEvent?.id === event.id}
                         onPointerDown={onEventPointerDown}
                         onEventEdit={onEventEdit}
                         onEventDelete={onEventDelete}
@@ -770,6 +774,7 @@ export default function AppCalendar({
       onEventDelete,
       onEventPointerDown,
       startNewEvent,
+      editingEvent,
     ],
   );
 

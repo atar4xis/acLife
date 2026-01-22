@@ -22,6 +22,7 @@ export interface EventBlockProps {
   event: CalendarEvent;
   day: number;
   style: { top: number; left: number; width: number; height: number };
+  editing: boolean;
   onPointerDown: (
     e: PointerEvent,
     type: "move" | "resize_start" | "resize_end",
