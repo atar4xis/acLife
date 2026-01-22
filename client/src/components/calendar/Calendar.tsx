@@ -703,7 +703,7 @@ export default function AppCalendar({
       HOURS.map((label, hour) => (
         <Fragment key={label}>
           <div
-            className={`select-none sticky left-0 z-5 border-r border-b flex text-sm items-center justify-center ${hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
+            className={`select-none sticky left-0 z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex text-sm items-center justify-center ${hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
           >
             {label}
           </div>
@@ -844,7 +844,7 @@ export default function AppCalendar({
             gridTemplateRows: rows(hourHeight),
           }}
         >
-          <div className="sticky left-0 top-0 z-5 border-b border-r bg-background" />
+          <div className="sticky left-0 top-0 z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 bg-background" />
 
           {dayWeekHeaders}
           {timeGrid}

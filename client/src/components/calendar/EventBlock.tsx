@@ -53,7 +53,7 @@ export default memo(
 
     const eventRef = useRef<HTMLDivElement>(null);
     const lineHeight = 16;
-    const padding = style.height > lineHeight * 3 ? "p-1" : "p-0"; // TODO: maybe make it smarter in the future
+    const padding = style.height > lineHeight * 3 ? "p-1" : "p-[1px]"; // TODO: maybe make it smarter in the future
     const lineClamp = useMemo(
       () => Math.ceil(style.height / lineHeight) - 2,
       [style.height],
@@ -90,7 +90,7 @@ export default memo(
           <ContextMenuTrigger onPointerDown={preventTouch}>
             {/* visible event block */}
             <div
-              className={`event-block ${padding} absolute rounded left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_3px_rgba(0,0,0,0.35)]`}
+              className={`event-block ${padding} absolute left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_2px_rgba(0,0,0,0.35)]`}
               style={blockStyle}
               onPointerDown={useCallback(
                 (e: React.PointerEvent) => {

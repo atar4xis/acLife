@@ -19,7 +19,7 @@ export default memo(function GridCell({
 
   return (
     <div
-      className={cn("relative border-b border-r", className)}
+      className={cn("relative shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10", className)}
       data-day-index={day}
       {...handlers}
       {...tapHandlers}
