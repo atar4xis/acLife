@@ -9,7 +9,7 @@ import {
   ContextMenuLabel,
   ContextMenuTrigger,
 } from "../ui/context-menu";
-import { Clipboard, PencilLine, Trash2 } from "lucide-react";
+import { Clipboard, PencilLine, RedoDot, Trash2 } from "lucide-react";
 import useTapInteraction from "@/hooks/useTapInteraction";
 import { useCalendar } from "@/context/CalendarContext";
 
@@ -17,6 +17,7 @@ export default memo(
   function EventBlock({
     event,
     day,
+    date,
     style,
     editing,
     onPointerDown,
@@ -24,6 +25,15 @@ export default memo(
     onEventDelete,
   }: EventBlockProps) {
     const { setEditingEvent } = useCalendar();
+
+    const { startsToday, endsToday } = useMemo(
+      () => ({
+        startsToday: event.start.day === date.day,
+        endsToday: event.end.day === date.day,
+      }),
+      [event.start, event.end, date],
+    );
+
     const { eventColor, textColor, startTimeFormat, endTimeFormat } =
       useMemo(() => {
         const color = event.color ?? "#2563eb";
@@ -35,10 +45,12 @@ export default memo(
           textColor: isDark ? "text-white" : "text-black",
           startTimeFormat:
             (event.start.minute === 0 ? "h" : "h:mm") +
-            (!sameMeridiem ? " a" : ""),
-          endTimeFormat: event.end.minute === 0 ? "h a" : "h:mm a",
+            (!sameMeridiem || !endsToday ? " a" : ""),
+          endTimeFormat:
+            (event.end.minute === 0 ? "h a" : "h:mm a") +
+            (endsToday ? "" : " (EEE)"),
         };
-      }, [event.start, event.end, event.color]);
+      }, [event.start, event.end, event.color, endsToday]);
 
     const blockStyle = useMemo(
       () => ({
@@ -103,32 +115,44 @@ export default memo(
               onDoubleClick={() => setEditingEvent(event)}
               ref={eventRef}
             >
-              <div
-                className="font-semibold"
-                style={{
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: lineClamp,
-                  overflow: "hidden",
-                }}
-              >
-                {event.title}
-              </div>
-              <span className="text-xs block">{timeLabel}</span>
+              {!event.continued ? (
+                <>
+                  <div
+                    className="font-semibold"
+                    style={{
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: lineClamp,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {event.title}
+                  </div>
+                  <span className="text-xs block">{timeLabel}</span>
+                </>
+              ) : (
+                <div className="flex justify-end">
+                  <RedoDot size={16} />
+                </div>
+              )}
 
               {/* handles for resizing */}
-              <div
-                className="hidden md:block absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-background/20"
-                onPointerDown={(e) =>
-                  onPointerDown(e, "resize_start", event, day)
-                }
-              />
-              <div
-                className="hidden md:block absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-background/20"
-                onPointerDown={(e) =>
-                  onPointerDown(e, "resize_end", event, day)
-                }
-              />
+              {startsToday && (
+                <div
+                  className="hidden md:block absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-background/20"
+                  onPointerDown={(e) =>
+                    onPointerDown(e, "resize_start", event, day)
+                  }
+                />
+              )}
+              {endsToday && (
+                <div
+                  className="hidden md:block absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-background/20"
+                  onPointerDown={(e) =>
+                    onPointerDown(e, "resize_end", event, day)
+                  }
+                />
+              )}
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent onPointerDown={stopPropagation}>

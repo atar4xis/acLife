@@ -2,6 +2,7 @@ import type { ViewMode } from "@/types/calendar/ViewMode";
 import type { CalendarEvent, EventChange } from "@/types/calendar/Event";
 import type { ReactNode, PointerEvent } from "react";
 import type { User } from "./User";
+import type { DateTime } from "luxon";
 
 export interface WithChildren {
   children?: ReactNode;
@@ -21,6 +22,7 @@ export interface CalendarProps {
 export interface EventBlockProps {
   event: CalendarEvent;
   day: number;
+  date: DateTime;
   style: { top: number; left: number; width: number; height: number };
   editing: boolean;
   onPointerDown: (

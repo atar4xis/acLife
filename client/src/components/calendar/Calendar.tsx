@@ -746,6 +746,7 @@ export default function AppCalendar({
                         key={event.id}
                         event={event}
                         day={dayIndex}
+                        date={d.date}
                         style={styles[event.id]}
                         editing={editingEvent?.id === event.id}
                         onPointerDown={onEventPointerDown}
