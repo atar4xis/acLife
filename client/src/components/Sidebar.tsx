@@ -21,7 +21,7 @@ import AgendaList from "./calendar/AgendaList";
 export default function AppSidebar() {
   const { currentDate, setCurrentDate } = useCalendar();
   const isMobile = useIsMobile();
-  const { open, setOpen } = useSidebar();
+  const { open, setOpen, setOpenMobile } = useSidebar();
   const storage = useStorage();
 
   useEffect(() => {
@@ -49,6 +49,7 @@ export default function AppSidebar() {
             mode="single"
             selected={currentDate.toJSDate()}
             onSelect={(date) => {
+              if (isMobile) setOpenMobile(false);
               setCurrentDate(DateTime.fromJSDate(date || new Date()));
             }}
             className="w-full rounded-md border"
