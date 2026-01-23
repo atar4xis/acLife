@@ -152,7 +152,7 @@ export default memo(
         </ContextMenu>
 
         {/* edit overlay */}
-        {editing && (
+        {editing && !event.continued && (
           <EventEditor
             event={event}
             eventRef={eventRef}

@@ -142,12 +142,16 @@ export function mapEventToDates(
   visibleDates: Set<string | null>,
 ) {
   let day = event.start.startOf("day");
+  const firstDay = day;
   const lastDay = event.end.startOf("day");
 
   while (day.toMillis() <= lastDay.toMillis()) {
     const key = day.toISODate()!;
     if (visibleDates.has(key)) {
-      mapEventToDate(map, key, event);
+      mapEventToDate(map, key, {
+        ...event,
+        continued: day.toMillis() !== firstDay.toMillis(),
+      });
     }
     day = day.plus({ days: 1 });
   }

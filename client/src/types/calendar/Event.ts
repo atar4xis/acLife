@@ -20,6 +20,7 @@ export type CalendarEvent = {
   repeat?: RepeatInterval;
   parent?: string; // uuid of parent event
   timestamp: number;
+  continued?: boolean; // events spanning multiple days
 };
 
 export type EncryptedEvent = {
