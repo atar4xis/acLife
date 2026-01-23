@@ -1,12 +1,14 @@
 import { useCalendar } from "@/context/CalendarContext";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import { useEffect, useMemo, useState } from "react";
+import { useSidebar } from "../ui/sidebar";
 
 type AgendaEventProps = {
   event: CalendarEvent;
 };
 export default function AgendaEvent({ event }: AgendaEventProps) {
   const { setEditingEvent, setCurrentDate } = useCalendar();
+  const { setOpenMobile } = useSidebar();
   const [now, setNow] = useState(Date.now());
   const { eventColor, startTimeFormat, endTimeFormat } = useMemo(() => {
     const color = event.color ?? "#2563eb";
@@ -55,6 +57,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
       onClick={() => {
         setCurrentDate(event.start.startOf("day"));
         setEditingEvent(event);
+        setOpenMobile(false); // close sidebar
       }}
     >
       <div className="font-semibold flex">
