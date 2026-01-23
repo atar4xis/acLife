@@ -164,7 +164,7 @@ function processRepeats(
   lastVisibleDayEnd: DateTime,
   excludeSet: Set<string>,
 ) {
-  if (!e.repeat || e.parent || excludeSet.has(e.id)) return;
+  if (!e.repeat || e.parent) return;
 
   let cursor = e.start;
   const duration = e.end.diff(e.start);
@@ -239,9 +239,9 @@ export function getEventMap(
   const lastVisibleDayEnd = dates[dates.length - 1].endOf("day");
 
   for (const e of events) {
-    if (!e.id || excludeSet.has(e.id)) continue;
+    if (!e.id) continue;
 
-    mapEventToDates(map, e, visibleDates);
+    if (!excludeSet.has(e.id)) mapEventToDates(map, e, visibleDates);
     processRepeats(map, e, visibleDates, lastVisibleDayEnd, excludeSet);
   }
 
