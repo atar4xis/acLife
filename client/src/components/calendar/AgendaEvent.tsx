@@ -38,7 +38,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
             ? "minutes"
             : "seconds";
 
-    return `in ${diff.shiftTo(unit).mapUnits(Math.floor).toHuman()}`;
+    return `in ${diff.shiftTo(unit).mapUnits(Math.ceil).toHuman()}`;
   }, [event.start, now]);
 
   useEffect(() => {
