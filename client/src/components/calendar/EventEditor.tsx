@@ -149,6 +149,20 @@ export default function EventEditor({
       return;
     }
 
+    // make sure the encrypted data will be less than 10,000 bytes
+    // with the current implementation 9971 is the maximum size
+    if (
+      new TextEncoder().encode(JSON.stringify(newEvent.current)).length > 9971
+    ) {
+      toast.warning("The event is too large.", {
+        cancel: {
+          label: "OK",
+          onClick: () => {},
+        },
+      });
+      return;
+    }
+
     onSave(newEvent.current);
   }, [onSave]);
 

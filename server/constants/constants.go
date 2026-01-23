@@ -35,6 +35,7 @@ const (
 	MaxSaltLen      = 16
 	MaxVerifierLen  = 520
 	MaxChallengeLen = 64
+	MaxEventLen     = 10000
 )
 
 var Metadata types.ServerMetadata

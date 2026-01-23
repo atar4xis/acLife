@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"acLife/constants"
 	"acLife/database"
 	"acLife/push"
 	"acLife/session"
@@ -58,6 +59,11 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 			decoded, err := base64.StdEncoding.DecodeString(c.Event.Data) // decode event payload
 			if err != nil {
 				utils.LogError("SaveCalendarEvents", "InvalidBase64", fmt.Errorf("event %s invalid base64: %v", c.Event.ID, err))
+				continue
+			}
+
+			if len(decoded) > constants.MaxEventLen {
+				utils.SendBadRequest(w)
 				continue
 			}
 
