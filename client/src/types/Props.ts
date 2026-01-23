@@ -31,6 +31,6 @@ export interface EventBlockProps {
     event: CalendarEvent,
     day: number,
   ) => void;
-  onEventEdit: (event: CalendarEvent) => void;
+  onEventEdit: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   onEventDelete: (event: CalendarEvent) => void;
 }

@@ -180,8 +180,8 @@ export default memo(
           <EventEditor
             event={event}
             eventRef={eventRef}
-            onSave={(newEvent) => {
-              onEventEdit(newEvent);
+            onSave={(originalEvent, newEvent) => {
+              onEventEdit(originalEvent, newEvent);
               setEditingEvent(null);
             }}
             onDelete={handleDelete}

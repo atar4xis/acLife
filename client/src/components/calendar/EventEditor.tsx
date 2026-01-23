@@ -81,7 +81,7 @@ export default function EventEditor({
   onCancel,
 }: Partial<EventBlockProps> & {
   eventRef: RefObject<HTMLDivElement | null>;
-  onSave: (event: CalendarEvent) => void;
+  onSave: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   onDelete: () => void;
   onCancel: () => void;
 }) {
@@ -163,7 +163,7 @@ export default function EventEditor({
       return;
     }
 
-    onSave(newEvent.current);
+    onSave(originalEvent.current, newEvent.current);
   }, [onSave]);
 
   const handleSelectRepeat = (value: string) => {

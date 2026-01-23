@@ -263,7 +263,7 @@ export default function AppCalendar({
         };
 
         // update the edited event in state
-        if (!event.parent) {
+        if (!event.parent && !event.repeat) {
           if (
             newEvent.start.toMillis() !== state.originalStart.toMillis() ||
             newEvent.end.toMillis() !== state.originalEnd.toMillis()
@@ -290,7 +290,7 @@ export default function AppCalendar({
             event.start.toMillis() !== state.originalStart.toMillis() ||
             event.end.toMillis() !== state.originalEnd.toMillis()
           ) {
-            // if the event has a parent, ask what to do
+            // if the event has or is a parent, ask what to do
             evPendingUpdateRef.current = event;
             setUpdateRepeatDialogOpen(true);
           } else {
@@ -354,8 +354,8 @@ export default function AppCalendar({
   );
 
   const onEventEdit = useCallback(
-    (event: CalendarEvent) => {
-      if (event.parent) {
+    (originalEvent: CalendarEvent, event: CalendarEvent) => {
+      if (event.parent || originalEvent.repeat) {
         evPendingUpdateRef.current = event;
         setUpdateRepeatDialogOpen(true);
         return;
@@ -380,7 +380,7 @@ export default function AppCalendar({
 
   const onEventDelete = useCallback(
     (event: CalendarEvent) => {
-      if (event.parent) {
+      if (event.parent || event.repeat) {
         setDeleteRepeatDialogOpen(true);
         evPendingUpdateRef.current = event;
         return;
@@ -861,11 +861,31 @@ export default function AppCalendar({
         setOpen={setUpdateRepeatDialogOpen}
         onSubmit={(option: string) => {
           const event = evPendingUpdateRef.current;
-          const parent = calendarEvents.find((e) => e.id === event?.parent);
-          if (!event || !parent || !parent.repeat) {
+
+          if (!event) {
             toast.error("Event no longer exists.");
             dragRef.current = null;
             setUpdateRepeatDialogOpen(false);
+            return;
+          }
+
+          const isParent = !event.parent && event.repeat;
+          const parent = isParent
+            ? event
+            : calendarEvents.find((e) => e.id === event.parent);
+
+          if (!parent?.repeat) {
+            dispatch({
+              type: "update",
+              id: event.id,
+              data: event,
+            });
+
+            updateChange({
+              type: "updated",
+              event,
+            });
+
             return;
           }
 
@@ -873,11 +893,44 @@ export default function AppCalendar({
             ? dragRef.current.originalStart
             : event.start;
 
+          const evEnd = dragRef.current
+            ? dragRef.current.originalEnd
+            : event.end;
+
           switch (option) {
             case "this": {
-              // skip current repetition
-              if (!parent.repeat.skip) parent.repeat.skip = [];
-              parent.repeat.skip.push(evStart.toISODate()!);
+              // clone the event
+              const newEvent = {
+                ...event,
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+              } as CalendarEvent;
+
+              if (isParent) {
+                // move parent to next non-skipped repetition
+                const interval = {
+                  [parent.repeat.unit]: parent.repeat.interval,
+                };
+
+                let nextStart = evStart.plus(interval);
+                let nextEnd = evEnd.plus(interval);
+
+                if (parent.repeat.skip?.length) {
+                  const skipped = new Set(parent.repeat.skip);
+
+                  while (skipped.has(nextStart.toISODate()!)) {
+                    nextStart = nextStart.plus(interval);
+                    nextEnd = nextEnd.plus(interval);
+                  }
+                }
+
+                parent.start = nextStart;
+                parent.end = nextEnd;
+              } else {
+                // skip current repetition
+                if (!parent.repeat.skip) parent.repeat.skip = [];
+                parent.repeat.skip.push(evStart.toISODate()!);
+              }
 
               updateChange({
                 type: "updated",
@@ -889,13 +942,6 @@ export default function AppCalendar({
                 id: parent.id,
                 data: parent,
               });
-
-              // clone the event
-              const newEvent = {
-                ...event,
-                id: crypto.randomUUID(),
-                timestamp: Date.now(),
-              } as CalendarEvent;
 
               delete newEvent.parent; // detach from parent
               delete newEvent.repeat; // don't repeat
@@ -914,6 +960,22 @@ export default function AppCalendar({
             }
 
             case "future": {
+              if (isParent) {
+                // update everything
+                dispatch({
+                  type: "update",
+                  id: parent.id,
+                  data: event,
+                });
+
+                updateChange({
+                  type: "updated",
+                  event,
+                });
+
+                break;
+              }
+
               // clone the event
               const newEvent = {
                 ...event,
@@ -956,6 +1018,21 @@ export default function AppCalendar({
             }
 
             case "all": {
+              if (isParent) {
+                dispatch({
+                  type: "update",
+                  id: parent.id,
+                  data: event,
+                });
+
+                updateChange({
+                  type: "updated",
+                  event,
+                });
+
+                break;
+              }
+
               // update the parent
               const newEvent = {
                 ...event,
@@ -1005,24 +1082,50 @@ export default function AppCalendar({
         setOpen={setDeleteRepeatDialogOpen}
         onSubmit={(option: string) => {
           const event = evPendingUpdateRef?.current;
-          const parent = calendarEvents.find((e) => e.id === event?.parent);
-          if (
-            !evPendingUpdateRef.current ||
-            !event ||
-            !parent ||
-            !parent.repeat
-          ) {
+
+          if (!evPendingUpdateRef.current || !event) {
             toast.error("Event no longer exists.");
             evPendingUpdateRef.current = null;
             setDeleteRepeatDialogOpen(false);
             return;
           }
 
+          const isParent = !event.parent && event.repeat;
+          const parent = isParent
+            ? event
+            : calendarEvents.find((e) => e.id === event.parent);
+
+          if (!parent?.repeat) {
+            throw Error("Cannot delete a childless orphan.");
+          }
+
           switch (option) {
             case "this": {
-              // skip current repetition
-              if (!parent.repeat.skip) parent.repeat.skip = [];
-              parent.repeat.skip.push(event.start.toISODate()!);
+              if (isParent) {
+                // move parent to next non-skipped repetition
+                const interval = {
+                  [parent.repeat.unit]: parent.repeat.interval,
+                };
+
+                let nextStart = event.start.plus(interval);
+                let nextEnd = event.end.plus(interval);
+
+                if (parent.repeat.skip?.length) {
+                  const skipped = new Set(parent.repeat.skip);
+
+                  while (skipped.has(nextStart.toISODate()!)) {
+                    nextStart = nextStart.plus(interval);
+                    nextEnd = nextEnd.plus(interval);
+                  }
+                }
+
+                parent.start = nextStart;
+                parent.end = nextEnd;
+              } else {
+                // skip current repetition
+                if (!parent.repeat.skip) parent.repeat.skip = [];
+                parent.repeat.skip.push(event.start.toISODate()!);
+              }
 
               dispatch({
                 type: "update",
@@ -1040,6 +1143,20 @@ export default function AppCalendar({
             }
 
             case "future": {
+              if (isParent) {
+                // deleting the parent removes the chain
+                dispatch({
+                  type: "delete",
+                  id: parent.id,
+                });
+
+                updateChange({
+                  id: parent.id,
+                  type: "deleted",
+                });
+
+                return;
+              }
               // end parent's repetition
               parent.repeat.until = event.start.startOf("day").toMillis();
 
