@@ -33,4 +33,5 @@ export interface EventBlockProps {
   ) => void;
   onEventEdit: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   onEventDelete: (event: CalendarEvent) => void;
+  onDuplicate: (event: CalendarEvent) => void;
 }

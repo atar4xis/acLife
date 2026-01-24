@@ -401,6 +401,29 @@ export default function AppCalendar({
     [setDeleteRepeatDialogOpen, dispatch, updateChange],
   );
 
+  const onEventDuplicate = useCallback(
+    (event: CalendarEvent) => {
+      const newEvent = {
+        ...event,
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+      } as CalendarEvent;
+
+      dispatch({
+        type: "add",
+        event: newEvent,
+      });
+
+      updateChange({
+        type: "added",
+        event: newEvent,
+      });
+
+      save();
+    },
+    [dispatch, updateChange, save],
+  );
+
   /* -------------------------------------------------------------------------- */
 
   const startNewEvent = useCallback(
@@ -752,6 +775,7 @@ export default function AppCalendar({
                         onPointerDown={onEventPointerDown}
                         onEventEdit={onEventEdit}
                         onEventDelete={onEventDelete}
+                        onDuplicate={onEventDuplicate}
                       />
                     ))}
                   </div>
@@ -773,6 +797,7 @@ export default function AppCalendar({
       gridTouchEnd,
       onEventEdit,
       onEventDelete,
+      onEventDuplicate,
       onEventPointerDown,
       startNewEvent,
       editingEvent,

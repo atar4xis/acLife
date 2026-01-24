@@ -9,7 +9,7 @@ import {
   ContextMenuLabel,
   ContextMenuTrigger,
 } from "../ui/context-menu";
-import { Clipboard, PencilLine, RedoDot, Trash2 } from "lucide-react";
+import { Clipboard, CopyIcon, PencilLine, RedoDot, Trash2 } from "lucide-react";
 import useTapInteraction from "@/hooks/useTapInteraction";
 import { useCalendar } from "@/context/CalendarContext";
 
@@ -23,6 +23,7 @@ export default memo(
     onPointerDown,
     onEventEdit,
     onEventDelete,
+    onDuplicate,
   }: EventBlockProps) {
     const { setEditingEvent } = useCalendar();
 
@@ -96,6 +97,10 @@ export default memo(
       e.stopPropagation();
     }, []);
 
+    const duplicate = useCallback(() => {
+      onDuplicate(event);
+    }, [event, onDuplicate]);
+
     return (
       <>
         <ContextMenu>
@@ -167,6 +172,11 @@ export default memo(
             <ContextMenuItem onClick={copyID}>
               <Clipboard />
               {event.parent ? "Copy parent ID" : "Copy ID"}
+            </ContextMenuItem>
+
+            <ContextMenuItem onClick={duplicate}>
+              <CopyIcon />
+              Duplicate
             </ContextMenuItem>
 
             <ContextMenuItem onClick={handleDelete}>
