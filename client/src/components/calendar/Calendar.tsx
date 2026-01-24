@@ -87,6 +87,7 @@ export default function AppCalendar({
     calendarEvents,
     setCurrentDate,
     dispatch,
+    setEditingEvent,
   } = useCalendar();
   const [isDragging, setIsDragging] = useState(false);
   const [hourHeight, setHourHeight] = useState(60);
@@ -419,9 +420,10 @@ export default function AppCalendar({
         event: newEvent,
       });
 
+      setEditingEvent(null);
       save();
     },
-    [dispatch, updateChange, save],
+    [dispatch, updateChange, save, setEditingEvent],
   );
 
   /* -------------------------------------------------------------------------- */
