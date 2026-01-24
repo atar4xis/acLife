@@ -537,7 +537,7 @@ export default function AppCalendar({
       if (!e.ctrlKey) return;
       e.preventDefault();
 
-      const delta = e.deltaY > 0 ? -5 : 5;
+      const delta = e.deltaY > 0 ? -10 : 10;
       const newHeight = Math.max(
         20,
         Math.min(300, hourHeightRef.current + delta),
