@@ -481,7 +481,7 @@ export default function EventEditor({
                   )
                 : undefined
             }
-            className="resize-none md:resize h-30 md:h-auto max-h-50"
+            className="resize-none md:resize min-w-80 h-30 md:h-auto max-h-50"
             onChange={(e) => setDescription(e.target.value)}
           />
         </Field>
