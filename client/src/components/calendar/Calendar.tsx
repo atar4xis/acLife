@@ -540,7 +540,7 @@ export default function AppCalendar({
       const delta = e.deltaY > 0 ? -5 : 5;
       const newHeight = Math.max(
         20,
-        Math.min(200, hourHeightRef.current + delta),
+        Math.min(300, hourHeightRef.current + delta),
       );
 
       const rect = container.getBoundingClientRect();
