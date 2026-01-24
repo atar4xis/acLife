@@ -195,6 +195,7 @@ export default memo(
               setEditingEvent(null);
             }}
             onDelete={handleDelete}
+            onDuplicate={duplicate}
             onCancel={() => setEditingEvent(null)}
           />
         )}

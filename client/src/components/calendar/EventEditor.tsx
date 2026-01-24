@@ -18,7 +18,7 @@ import { DateTimePicker } from "./DateTimePicker";
 import { DateTime } from "luxon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Trash2Icon, XIcon } from "lucide-react";
+import { CopyIcon, Trash2Icon, XIcon } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -79,11 +79,13 @@ export default function EventEditor({
   onSave,
   onDelete,
   onCancel,
+  onDuplicate,
 }: Partial<EventBlockProps> & {
   eventRef: RefObject<HTMLDivElement | null>;
   onSave: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   onDelete: () => void;
   onCancel: () => void;
+  onDuplicate: () => void;
 }) {
   if (!event) throw new Error("invalid instance of EventEditor");
 
@@ -485,14 +487,24 @@ export default function EventEditor({
         </Field>
       </form>
       <div className="flex flex-wrap items-end justify-between mt-5">
-        <Button
-          size="icon"
-          variant="secondary"
-          type="button"
-          onClick={onDelete}
-        >
-          <Trash2Icon />
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            size="icon"
+            variant="secondary"
+            type="button"
+            onClick={onDelete}
+          >
+            <Trash2Icon />
+          </Button>
+          <Button
+            size="icon"
+            variant="secondary"
+            type="button"
+            onClick={onDuplicate}
+          >
+            <CopyIcon />
+          </Button>
+        </div>
         <div className="flex gap-3">
           <Button variant="secondary" type="button" onClick={onCancel}>
             Cancel
