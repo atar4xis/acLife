@@ -107,7 +107,7 @@ export default memo(
               onPointerDown={useCallback(
                 (e: React.PointerEvent) => {
                   if (e.pointerType === "touch") tapHandlers.onPointerDown(e);
-                  onPointerDown(e, "move", event, day);
+                  else onPointerDown(e, "move", event, day);
                 },
                 [tapHandlers, day, event, onPointerDown],
               )}

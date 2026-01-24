@@ -478,7 +478,7 @@ export default function AppCalendar({
     if (
       gridTouchRef.current != null ||
       (targetElement !== e.currentTarget &&
-        !targetElement.className.includes("event-block"))
+        !targetElement.closest(".event-block"))
     )
       return;
 
