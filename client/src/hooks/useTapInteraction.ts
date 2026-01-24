@@ -4,6 +4,7 @@ type TapInteractionOptions = {
   onTap: (e: React.PointerEvent<Element>) => void;
   threshold?: number;
   touchAction?: React.CSSProperties["touchAction"];
+  selfOnly?: boolean;
 };
 
 type TapInteractionHandlers = {
@@ -16,6 +17,7 @@ type TapInteractionHandlers = {
 export default function useTapInteraction({
   onTap,
   threshold = 8,
+  selfOnly = false,
   touchAction = "pan-y",
 }: TapInteractionOptions): {
   handlers: TapInteractionHandlers;
@@ -28,6 +30,7 @@ export default function useTapInteraction({
   const handlers: TapInteractionHandlers = {
     onPointerDown(e) {
       if (e.pointerType === "mouse" && e.button !== 0) return; // only left click
+      if (selfOnly && e.currentTarget !== e.target) return;
       if (e.pointerType !== "touch") {
         onTap(e);
         return;

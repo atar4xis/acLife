@@ -15,11 +15,15 @@ export default memo(function GridCell({
 }) {
   const { handlers: tapHandlers } = useTapInteraction({
     onTap: (e) => onCellTap(e, day),
+    selfOnly: true,
   });
 
   return (
     <div
-      className={cn("relative shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10", className)}
+      className={cn(
+        "relative shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10",
+        className,
+      )}
       data-day-index={day}
       {...handlers}
       {...tapHandlers}
