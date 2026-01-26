@@ -59,8 +59,6 @@ export default function LoginDialog() {
       if (url !== pendingServerURL) return;
 
       if (!validateServerMeta(res.data)) throw new Error("invalid meta");
-      if (domainName(res.data.url) !== domainName(url))
-        throw new Error("invalid url");
 
       setTestResult("success");
     } catch (e) {
