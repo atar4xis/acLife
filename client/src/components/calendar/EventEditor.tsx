@@ -273,7 +273,7 @@ export default function EventEditor({
 
   return (
     <div
-      className="fixed z-20 left-0 top-0 flex flex-col justify-center md:block bg-card/80 backdrop-blur-[10px] p-3 px-5 md:px-3 shadow-lg border md:rounded-lg w-full h-full md:w-auto md:h-auto"
+      className="event-editor fixed z-20 left-0 top-0 flex flex-col justify-center md:block bg-card/80 backdrop-blur-[10px] p-3 px-5 md:px-3 shadow-lg border md:rounded-lg w-full h-full md:w-auto md:h-auto"
       style={{
         top: pos.top,
         left: pos.left,

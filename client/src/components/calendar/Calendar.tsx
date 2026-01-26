@@ -502,8 +502,8 @@ export default function AppCalendar({
     const targetElement = e.target as Element;
     if (
       gridTouchRef.current != null ||
-      (targetElement !== e.currentTarget &&
-        !targetElement.closest(".event-block"))
+      targetElement.closest(".event-editor") ||
+      !targetElement.closest(".grid-cell")
     )
       return;
 
@@ -518,6 +518,52 @@ export default function AppCalendar({
   const gridTouchMove = useCallback((e: React.TouchEvent) => {
     if (gridTouchRef.current === null) return;
 
+    // pinch to zoom
+    if (e.touches.length === 2) {
+      gridTouchRef.current.delta = { x: 0, y: 0 };
+
+      const a = e.touches.item(0);
+      const b = e.touches.item(1);
+
+      const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+
+      // compute distance on first run
+      if (gridTouchRef.current.distance === undefined) {
+        gridTouchRef.current.distance = dist;
+        return;
+      }
+
+      const container = gridRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const midpointY =
+        (a.clientY + b.clientY) / 2 - rect.top + container.scrollTop;
+
+      if (gridTouchRef.current.distance !== undefined) {
+        const delta = dist / gridTouchRef.current.distance;
+
+        if (!gridTouchRef.current.raf) {
+          gridTouchRef.current.raf = requestAnimationFrame(() => {
+            setHourHeight((prev) => {
+              const next = clamp(prev * delta, 20, 300);
+
+              const zoomFactor = next / prev;
+              container.scrollTop =
+                midpointY * zoomFactor - (midpointY - container.scrollTop);
+
+              return next;
+            });
+            gridTouchRef.current!.raf = undefined;
+          });
+        }
+      }
+
+      gridTouchRef.current.distance = dist;
+      return;
+    }
+
+    gridTouchRef.current.distance = undefined;
     gridTouchRef.current.delta = {
       x: gridTouchRef.current.start.x - e.touches[0].clientX,
       y: gridTouchRef.current.start.y - e.touches[0].clientY,
@@ -527,15 +573,24 @@ export default function AppCalendar({
     if (Math.abs(gridTouchRef.current.delta.y) > 50)
       gridTouchRef.current.delta.x = 0;
 
-    forceRender((prev) => !prev);
+    gridTouchRef.current.raf = requestAnimationFrame(() =>
+      forceRender((prev) => !prev),
+    );
   }, []);
 
   const gridTouchEnd = useCallback(() => {
-    if (gridTouchRef.current === null || !gridTouchRef.current.delta) return;
+    if (gridTouchRef.current === null) return;
 
-    if (Math.abs(gridTouchRef.current.delta.x) > 100) {
+    if (
+      gridTouchRef.current.delta &&
+      Math.abs(gridTouchRef.current.delta.x) > 100
+    ) {
       move(gridTouchRef.current.delta.x > 0 ? 1 : -1);
     }
+
+    gridTouchRef.current.distance = undefined;
+    if (gridTouchRef.current.raf)
+      cancelAnimationFrame(gridTouchRef.current.raf);
 
     gridTouchRef.current = null;
     forceRender((prev) => !prev);
@@ -743,9 +798,6 @@ export default function AppCalendar({
                 key={`${d.label}-${hour}`}
                 day={dayIndex}
                 onCellTap={startNewEvent}
-                onTouchStart={gridTouchStart}
-                onTouchMove={gridTouchMove}
-                onTouchEnd={gridTouchEnd}
               >
                 {hour === 0 && (
                   <div className="relative h-full">
@@ -794,9 +846,6 @@ export default function AppCalendar({
       now,
       getNowY,
       hourHeight,
-      gridTouchStart,
-      gridTouchMove,
-      gridTouchEnd,
       onEventEdit,
       onEventDelete,
       onEventDuplicate,
@@ -866,11 +915,14 @@ export default function AppCalendar({
       <div className="flex-1 overflow-hidden">
         <div
           ref={gridRef}
-          className="grid h-full overflow-auto"
+          className="touch-pan-y grid h-full overflow-auto"
           style={{
             gridTemplateColumns: cols,
             gridTemplateRows: rows(hourHeight),
           }}
+          onTouchStart={gridTouchStart}
+          onTouchMove={gridTouchMove}
+          onTouchEnd={gridTouchEnd}
         >
           <div className="sticky left-0 top-0 z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 bg-background" />
 

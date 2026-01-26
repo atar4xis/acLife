@@ -11,4 +11,6 @@ export type GridTouchRef = {
     x: number;
     y: number;
   };
+  distance?: number;
+  raf?: number;
 };
