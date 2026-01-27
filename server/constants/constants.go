@@ -49,10 +49,10 @@ func init() {
 		URL:      os.Getenv("SERVER_URL"),
 		Policies: &types.Policies{},
 		Registration: types.Registration{
-			Enabled:              true,
-			SubscriptionRequired: true,
+			Enabled:              os.Getenv("DISABLE_REGISTRATION") != "true",
+			SubscriptionRequired: os.Getenv("STRIPE_API_KEY") != "",
 			Email: &types.EmailSettings{
-				VerificationRequired: false,
+				VerificationRequired: os.Getenv("DISABLE_EMAIL_VALIDATION") == "true",
 				DomainBlacklist:      []string{},
 			},
 			RetentionPeriod: 0,
