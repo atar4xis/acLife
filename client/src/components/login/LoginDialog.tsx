@@ -22,6 +22,10 @@ import { FieldDescription } from "@/components/ui/field";
 import { domainName, joinUrl } from "@/lib/utils";
 import { validateServerMeta } from "@/lib/validators";
 import { useApi } from "@/context/ApiContext";
+import { useUser } from "@/context/UserContext";
+import { deriveMasterKey, randomBytes } from "@/lib/crypt";
+import { useStorage } from "@/context/StorageContext";
+import type { User } from "@/types/User";
 
 export default function LoginDialog() {
   const [testing, setTesting] = useState(false);
@@ -31,6 +35,8 @@ export default function LoginDialog() {
   const [serverSwitcherOpen, setServerSwitcherOpen] = useState(false);
   const [pendingServerURL, setPendingServerURL] = useState<string>("");
   const { setUrl, serverMeta } = useApi();
+  const { setUser, setMasterKey } = useUser();
+  const storage = useStorage();
 
   useEffect(() => {
     const savedServerURL =
@@ -84,6 +90,50 @@ export default function LoginDialog() {
     setTestResult(null);
 
     setUrl(pendingServerURL);
+  };
+
+  const handleOfflineClick = async (e: React.MouseEvent) => {
+    if (!storage) return;
+
+    e.preventDefault();
+
+    // try to load the master key from storage
+    const storedMasterKey = storage.get("offlineMasterKey");
+    let masterKey: CryptoKey | null = null;
+
+    if (storedMasterKey) {
+      const raw = Uint8Array.from(atob(storedMasterKey), (c) =>
+        c.charCodeAt(0),
+      );
+
+      masterKey = await crypto.subtle.importKey(
+        "raw",
+        raw,
+        {
+          name: "AES-GCM",
+        },
+        false,
+        ["encrypt", "decrypt"],
+      );
+    } else {
+      // if one doesn't exist, derive it using a random password
+      const randomPassword = btoa(String.fromCharCode(...randomBytes(64)));
+      const randomSalt = randomBytes(16);
+      masterKey = await deriveMasterKey(randomPassword, randomSalt, true);
+
+      const exportedKey = new Uint8Array(
+        await crypto.subtle.exportKey("raw", masterKey),
+      );
+      storage.set(
+        "offlineMasterKey",
+        btoa(String.fromCharCode(...exportedKey)),
+      );
+    }
+
+    setUser({
+      type: "offline",
+    } as User);
+    setMasterKey(masterKey);
   };
 
   return (
@@ -176,7 +226,16 @@ export default function LoginDialog() {
             <div className="fixed left-4 top-4">
               <ModeToggle />
             </div>
-            {serverMeta && <LoginForm serverMeta={serverMeta} />}
+            {serverMeta ? (
+              <LoginForm
+                handleOfflineClick={handleOfflineClick}
+                serverMeta={serverMeta}
+              />
+            ) : (
+              <Button variant="outline" onClick={handleOfflineClick}>
+                Use in Offline Mode
+              </Button>
+            )}
           </>
         )}
       </DialogContent>

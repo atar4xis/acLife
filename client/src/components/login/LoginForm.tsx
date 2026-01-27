@@ -12,12 +12,10 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import type { ServerMetadata } from "@/types/ServerMetadata";
 import { useUser } from "@/context/UserContext";
-import type { User } from "@/types/User";
 import {
   deriveMasterKey,
   encrypt,
   generateSRPTriplet,
-  randomBytes,
   SRP_CheckM2,
   SRP_PARAMS,
   UNLOCK_CHECK_BYTES,
@@ -27,13 +25,19 @@ import { validatePassword } from "@/lib/validators";
 import { useApi } from "@/context/ApiContext";
 import { Client, generateSalt } from "@mzattahri/srp";
 
-export function LoginForm({ serverMeta }: { serverMeta: ServerMetadata }) {
+export function LoginForm({
+  handleOfflineClick,
+  serverMeta,
+}: {
+  serverMeta: ServerMetadata;
+  handleOfflineClick: (e: React.MouseEvent) => void;
+}) {
   const [newAccount, setNewAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const storage = useStorage();
-  const { setMasterKey, setUser, checkLogin } = useUser();
+  const { checkLogin } = useUser();
   const { post } = useApi();
 
   if (!storage) return null;
@@ -41,48 +45,6 @@ export function LoginForm({ serverMeta }: { serverMeta: ServerMetadata }) {
   const handleCreateAccountClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setNewAccount(!newAccount);
-  };
-
-  const handleOfflineClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-
-    // try to load the master key from storage
-    const storedMasterKey = storage.get("offlineMasterKey");
-    let masterKey: CryptoKey | null = null;
-
-    if (storedMasterKey) {
-      const raw = Uint8Array.from(atob(storedMasterKey), (c) =>
-        c.charCodeAt(0),
-      );
-
-      masterKey = await crypto.subtle.importKey(
-        "raw",
-        raw,
-        {
-          name: "AES-GCM",
-        },
-        false,
-        ["encrypt", "decrypt"],
-      );
-    } else {
-      // if one doesn't exist, derive it using a random password
-      const randomPassword = btoa(String.fromCharCode(...randomBytes(64)));
-      const randomSalt = randomBytes(16);
-      masterKey = await deriveMasterKey(randomPassword, randomSalt, true);
-
-      const exportedKey = new Uint8Array(
-        await crypto.subtle.exportKey("raw", masterKey),
-      );
-      storage.set(
-        "offlineMasterKey",
-        btoa(String.fromCharCode(...exportedKey)),
-      );
-    }
-
-    setUser({
-      type: "offline",
-    } as User);
-    setMasterKey(masterKey);
   };
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
