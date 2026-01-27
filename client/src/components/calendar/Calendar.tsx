@@ -651,18 +651,21 @@ export default function AppCalendar({
 
     const resync = async () => {
       toast.promise(
-        new Promise<void>((resolve) => {
-          syncEvents(user, masterKey).then((newEvents) => {
-            dispatch({
-              type: "set",
-              events: newEvents,
-            });
+        new Promise<void>((resolve, reject) => {
+          syncEvents(user, masterKey)
+            .then((newEvents) => {
+              dispatch({
+                type: "set",
+                events: newEvents,
+              });
 
-            resolve();
-          });
+              resolve();
+            })
+            .catch(() => reject());
         }),
         {
           loading: "Event sync in progress...",
+          error: "Failed to sync calendar events.",
         },
       );
     };

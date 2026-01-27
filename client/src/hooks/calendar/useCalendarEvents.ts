@@ -57,7 +57,7 @@ export const useCalendarEvents = (
 
       if (!res.success || !res.data) {
         toast.error("Failed to sync calendar events.");
-        return [];
+        throw new Error("Failed to sync calendar events.");
       }
 
       // the server tells us which events were updated, added, and deleted
