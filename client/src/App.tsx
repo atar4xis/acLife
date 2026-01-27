@@ -11,8 +11,8 @@ import { useEffect, useRef } from "react";
 import { Toaster } from "./components/ui/sonner";
 
 function AuthWrapper({ children }: WithChildren) {
-  const { user, checkLogin } = useUser();
-  const { url } = useApi();
+  const { user, checkLogin, setUser } = useUser();
+  const { url, pendingLogout, setPendingLogout } = useApi();
   const prevUrl = useRef(url);
 
   useEffect(() => {
@@ -21,6 +21,13 @@ function AuthWrapper({ children }: WithChildren) {
       prevUrl.current = url;
     }
   }, [url, checkLogin, user]);
+
+  useEffect(() => {
+    if (!pendingLogout) return;
+
+    setUser(null);
+    setPendingLogout(false);
+  }, [pendingLogout, setPendingLogout, setUser]);
 
   if (!user) return <LoginDialog />;
 
@@ -35,8 +42,8 @@ export default function App() {
           <UserProvider>
             <CalendarProvider>
               <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
+                <Toaster position="bottom-center" />
                 <AuthWrapper>
-                  <Toaster position="bottom-center" />
                   <AppShell />
                 </AuthWrapper>
               </SidebarProvider>

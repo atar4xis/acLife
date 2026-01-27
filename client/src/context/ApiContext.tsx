@@ -21,6 +21,8 @@ interface ApiContextType {
   query: <T>(endpoint: string) => Promise<T>;
   serverMeta: ServerMetadata | null;
   setServerMeta: (meta: ServerMetadata) => void;
+  pendingLogout: boolean;
+  setPendingLogout: (val: boolean) => void;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -31,6 +33,7 @@ export const ApiProvider = ({
 }: WithChildren & { initialUrl?: string }) => {
   const [url, setUrl] = useState(initialUrl);
   const [serverMeta, setServerMeta] = useState<ServerMetadata | null>(null);
+  const [pendingLogout, setPendingLogout] = useState(false);
 
   const get = useCallback(
     async <T,>(endpoint: string): Promise<APIResponse<T>> => {
@@ -114,6 +117,8 @@ export const ApiProvider = ({
             success: false,
             message: "Too many requests. Try again later.",
           } as APIResponse<T>;
+        } else if (response.status === 401) {
+          setPendingLogout(true);
         }
 
         const result = await response.json();
@@ -181,6 +186,8 @@ export const ApiProvider = ({
         query,
         serverMeta,
         setServerMeta,
+        pendingLogout,
+        setPendingLogout,
       }}
     >
       {children}

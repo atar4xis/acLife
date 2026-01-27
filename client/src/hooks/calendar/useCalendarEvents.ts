@@ -56,7 +56,10 @@ export const useCalendarEvents = (
       );
 
       if (!res.success || !res.data) {
-        toast.error("Failed to sync calendar events.");
+        toast.error(
+          "Failed to sync calendar events" +
+            (res.message ? `: ${res.message}` : "."),
+        );
         throw new Error("Failed to sync calendar events.");
       }
 
@@ -156,7 +159,10 @@ export const useCalendarEvents = (
             );
 
             if (!res.success) {
-              toast.error("Failed to save calendar events.");
+              toast.error(
+                "Failed to save calendar events" +
+                  (res.message ? `: ${res.message}` : "."),
+              );
               setSaving(false);
               return;
             }
