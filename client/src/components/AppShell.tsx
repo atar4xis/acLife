@@ -36,7 +36,7 @@ export default function AppShell() {
 
   // load calendar events
   useEffect(() => {
-    if (!serverMeta || !user) return;
+    if (!user) return;
     if (masterKey === null) return;
     if (!activeSub && subRequired) return;
 
@@ -53,7 +53,7 @@ export default function AppShell() {
     );
 
     // eslint-disable-next-line
-  }, [serverMeta, user, masterKey, activeSub, subRequired]);
+  }, [user, masterKey, activeSub, subRequired]);
 
   // show offline when network goes offline
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function AppShell() {
     };
   }, []);
 
-  if (!storage || !user || !serverMeta) return null;
+  if (!storage || !user) return null;
 
   if (!activeSub && subRequired) {
     return <SubscriptionDialog />;
