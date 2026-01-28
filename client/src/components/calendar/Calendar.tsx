@@ -124,6 +124,8 @@ export default function AppCalendar({
       const unit =
         mode === "day" ? "days" : mode === "week" ? "weeks" : "months";
       setCurrentDate(currentDate.plus({ [unit]: steps }));
+      if (dragRef.current)
+        dragRef.current.originalDay -= mode === "day" ? steps : steps * 7;
     },
     [currentDate, setCurrentDate, mode],
   );
@@ -932,7 +934,7 @@ export default function AppCalendar({
           {dayWeekHeaders}
           {timeGrid}
 
-          {isDragging && <DragOverlay dragRef={dragRef} />}
+          {isDragging && <DragOverlay move={move} dragRef={dragRef} />}
         </div>
       </div>
 
