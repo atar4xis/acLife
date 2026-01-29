@@ -234,7 +234,13 @@ export default function AppCalendar({
       }
 
       // when dragging, label tells the new start/end times and follows the pointer
-      state.label = `${newStart.toFormat("t")} - ${newEnd.toFormat("t")}`;
+      const diff = newEnd.diff(newStart).shiftTo("hours", "minutes");
+      const hours = Math.floor(diff.hours);
+      const minutes = Math.round(diff.minutes);
+      const durText = [];
+      if (hours > 0) durText.push(`${hours} hr${hours !== 1 ? "s" : ""}`);
+      if (minutes > 0) durText.push(`${minutes} min`);
+      state.label = `${newStart.toFormat("t")} - ${newEnd.toFormat("t")}\n${durText.join(" ")}`;
       state.x = e.clientX;
       state.y = e.clientY;
 

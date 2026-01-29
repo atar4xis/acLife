@@ -77,10 +77,11 @@ export default (function DragOverlay({
         style={{
           position: "fixed",
           top: y - 16,
-          left: x + myWidth > window.innerWidth ? x - myWidth - 16 : x + 16,
+          left:
+            x + myWidth + 32 > window.innerWidth ? x - myWidth - 32 : x + 32,
           zIndex: 20,
         }}
-        className="bg-background/80 p-1 truncate"
+        className="text-sm bg-secondary/80 p-1 truncate whitespace-pre rounded"
       >
         {dragRef.current.label}
       </div>
