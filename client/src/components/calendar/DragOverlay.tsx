@@ -57,7 +57,7 @@ export default (function DragOverlay({
   return (
     <>
       <div
-        className="fixed flex items-center justify-center z-20 left-0 top-0 bottom-0 w-20 bg-background/50 hover:bg-background"
+        className="fixed flex items-center justify-center z-20 left-0 top-0 bottom-0 w-16 bg-background opacity-30 hover:opacity-100"
         data-steps="-1"
         onPointerEnter={handleMoveEnter}
         onPointerLeave={handleMoveExit}
@@ -65,7 +65,7 @@ export default (function DragOverlay({
         <ArrowLeftCircle size={32} />
       </div>
       <div
-        className="fixed flex items-center justify-center z-20 right-0 top-0 bottom-0 w-20 bg-background/50 hover:bg-background"
+        className="fixed flex items-center justify-center z-20 right-0 top-0 bottom-0 w-16 bg-background opacity-30 hover:opacity-100"
         data-steps="1"
         onPointerEnter={handleMoveEnter}
         onPointerLeave={handleMoveExit}
