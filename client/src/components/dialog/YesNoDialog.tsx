@@ -12,6 +12,7 @@ import type { WithChildren } from "@/types/Props";
 
 type YesNoDialogProps = {
   open: boolean;
+  disabled?: boolean;
   title: ReactNode;
   description?: ReactNode;
   yesText?: string;
@@ -24,6 +25,7 @@ type YesNoDialogProps = {
 
 export default function YesNoDialog({
   open,
+  disabled,
   title,
   description,
   yesText,
@@ -44,14 +46,14 @@ export default function YesNoDialog({
         {children}
         <AlertDialogFooter>
           <div className="flex justify-between w-full">
-            <AlertDialogCancel onClick={onCancel}>
+            <AlertDialogCancel onClick={onCancel} disabled={disabled}>
               {cancelText || "Cancel"}
             </AlertDialogCancel>
             <div className="flex gap-2">
-              <AlertDialogCancel onClick={onNo}>
+              <AlertDialogCancel onClick={onNo} disabled={disabled}>
                 {noText || "No"}
               </AlertDialogCancel>
-              <AlertDialogAction onClick={onYes}>
+              <AlertDialogAction onClick={onYes} disabled={disabled}>
                 {yesText || "Yes"}
               </AlertDialogAction>
             </div>

@@ -14,6 +14,7 @@ export default function PushService() {
   const storage = useStorage();
 
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { serverMeta, post } = useApi();
   const { user } = useUser();
 
@@ -54,6 +55,7 @@ export default function PushService() {
     if (!storage || !serverMeta?.vapidPublicKey) return;
 
     const tryEnable = async () => {
+      setLoading(true);
       toast.promise(
         (async () => {
           const permission = await Notification.requestPermission();
@@ -117,7 +119,10 @@ export default function PushService() {
             setOpen(false);
             return "Push service enabled.";
           },
-          error: (d) => d,
+          error: (d) => {
+            setLoading(false);
+            return d;
+          },
         },
       );
     };
@@ -128,6 +133,7 @@ export default function PushService() {
   return (
     <YesNoDialog
       open={open}
+      disabled={loading}
       title="Push Service"
       yesText="Enable it"
       noText="Keep it off"
