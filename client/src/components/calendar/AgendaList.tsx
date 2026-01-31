@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { SidebarGroup, SidebarGroupLabel } from "../ui/sidebar";
 import { useCalendar } from "@/context/CalendarContext";
 import { getRelativeDays } from "@/lib/calendar/date";
@@ -13,10 +13,8 @@ const DAYS_AHEAD = 3;
 
 export default memo(function AgendaList() {
   const { calendarEvents } = useCalendar();
-  const visibleDays = useMemo(
-    () => getRelativeDays(DateTime.now(), DAYS_AHEAD),
-    [],
-  );
+  const [now, setNow] = useState(DateTime.now());
+  const visibleDays = useMemo(() => getRelativeDays(now, DAYS_AHEAD), [now]);
 
   const eventMap = useMemo(
     () =>
@@ -45,6 +43,11 @@ export default memo(function AgendaList() {
 
     return result;
   }, [eventMap]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(DateTime.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   return visibleDays.map((d) => {
     const key = d.date.toISODate()!;

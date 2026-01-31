@@ -780,12 +780,12 @@ export default function AppCalendar({
       visibleDays.map((d) => (
         <HeaderCell
           key={d.label}
-          className={`select-none ${isSameDate(d.date, DateTime.now()) ? "bg-card font-bold" : ""}`}
+          className={`select-none ${isSameDate(d.date, now) ? "bg-card font-bold" : ""}`}
         >
           {d.label}
         </HeaderCell>
       )),
-    [visibleDays],
+    [visibleDays, now],
   );
 
   // grid in day/week view
