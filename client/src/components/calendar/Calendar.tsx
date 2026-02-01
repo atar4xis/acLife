@@ -1186,7 +1186,18 @@ export default function AppCalendar({
             : calendarEvents.find((e) => e.id === event.parent);
 
           if (!parent?.repeat) {
-            throw Error("Cannot delete a childless orphan.");
+            dispatch({
+              type: "delete",
+              id: event.id,
+            });
+
+            updateChange({
+              id: event.id,
+              type: "deleted",
+            });
+
+            save();
+            return;
           }
 
           switch (option) {
