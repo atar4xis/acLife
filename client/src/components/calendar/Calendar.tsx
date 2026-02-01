@@ -96,7 +96,7 @@ export default function AppCalendar({
   const [now, setNow] = useState(DateTime.now());
   const [, forceRender] = useState(false);
   const changesMapRef = useRef<Map<string, EventChange[]>>(new Map());
-  const pendingSaveRef = useRef(false);
+  const pendingSaveRef = useRef<null | number>(null);
   const { user, masterKey } = useUser();
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
@@ -167,10 +167,15 @@ export default function AppCalendar({
   }, [saveEvents]);
 
   const save = useCallback(() => {
-    if (user?.type === "online") saveIfChanged();
-    else saveEvents(calendarEvents, () => {}); // save all events for offline users
-    pendingSaveRef.current = false;
-  }, [user, saveEvents, saveIfChanged, calendarEvents]);
+    if (pendingSaveRef.current !== null) return;
+
+    pendingSaveRef.current = setTimeout(() => {
+      pendingSaveRef.current = null;
+
+      if (user?.type === "online") saveIfChanged();
+      else saveEvents(calendarEvents, () => {}); // save all events for offline users
+    }, 100);
+  }, [calendarEvents, saveEvents, saveIfChanged, user?.type]);
 
   /* -------------------------------------------------------------------------- */
 
@@ -293,7 +298,7 @@ export default function AppCalendar({
           }
 
           dragRef.current = null;
-          pendingSaveRef.current = true;
+          save();
         } else if (dragRef.current.moved) {
           if (
             event.start.toMillis() !== state.originalStart.toMillis() ||
@@ -314,7 +319,7 @@ export default function AppCalendar({
         window.removeEventListener("pointerup", onGlobalPointerUp);
       }
     },
-    [onGlobalPointerMove, updateChange, dispatch],
+    [onGlobalPointerMove, updateChange, dispatch, save],
   );
 
   const onEventPointerDown = useCallback(
@@ -382,9 +387,9 @@ export default function AppCalendar({
         event,
       });
 
-      pendingSaveRef.current = true;
+      save();
     },
-    [dispatch, updateChange],
+    [dispatch, updateChange, save],
   );
 
   const onEventDelete = useCallback(
@@ -405,9 +410,9 @@ export default function AppCalendar({
         type: "deleted",
       });
 
-      pendingSaveRef.current = true;
+      save();
     },
-    [setDeleteRepeatDialogOpen, dispatch, updateChange],
+    [setDeleteRepeatDialogOpen, dispatch, updateChange, save],
   );
 
   const onEventDuplicate = useCallback(
@@ -431,7 +436,7 @@ export default function AppCalendar({
       setEditingEvent(null);
       save();
     },
-    [dispatch, updateChange, save, setEditingEvent],
+    [dispatch, updateChange, setEditingEvent, save],
   );
 
   /* -------------------------------------------------------------------------- */
@@ -610,11 +615,6 @@ export default function AppCalendar({
   useEffect(() => {
     hourHeightRef.current = hourHeight;
   }, [hourHeight]);
-
-  // save when events update
-  useEffect(() => {
-    if (pendingSaveRef.current) save();
-  }, [calendarEvents, save]);
 
   // zoom in with ctrl + mouse wheel
   useEffect(() => {
@@ -1157,7 +1157,7 @@ export default function AppCalendar({
 
           dragRef.current = null;
           evPendingUpdateRef.current = null;
-          pendingSaveRef.current = true;
+          save();
         }}
         onCancel={() => {
           dragRef.current = null;
@@ -1185,6 +1185,7 @@ export default function AppCalendar({
             ? event
             : calendarEvents.find((e) => e.id === event.parent);
 
+          // if the event has no parents or children just delete it
           if (!parent?.repeat) {
             dispatch({
               type: "delete",
@@ -1256,7 +1257,7 @@ export default function AppCalendar({
                   type: "deleted",
                 });
 
-                return;
+                break;
               }
               // end parent's repetition
               parent.repeat.until = event.start.startOf("day").toMillis();
@@ -1291,7 +1292,7 @@ export default function AppCalendar({
           }
 
           evPendingUpdateRef.current = null;
-          pendingSaveRef.current = true;
+          save();
         }}
         onCancel={() => {
           evPendingUpdateRef.current = null;
