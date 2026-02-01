@@ -167,7 +167,7 @@ export default function AppCalendar({
   }, [saveEvents]);
 
   const save = useCallback(() => {
-    if (pendingSaveRef.current !== null) return;
+    if (pendingSaveRef.current !== null) clearTimeout(pendingSaveRef.current);
 
     pendingSaveRef.current = setTimeout(() => {
       pendingSaveRef.current = null;
