@@ -107,6 +107,7 @@ export default function AppCalendar({
   const hourHeightRef = useRef(hourHeight);
 
   const evPendingUpdateRef = useRef<CalendarEvent | null>(null);
+  const calendarEventsRef = useRef(calendarEvents);
 
   const visibleDays = useMemo(() => {
     return (
@@ -173,9 +174,9 @@ export default function AppCalendar({
       pendingSaveRef.current = null;
 
       if (user?.type === "online") saveIfChanged();
-      else saveEvents(calendarEvents, () => {}); // save all events for offline users
+      else saveEvents(calendarEventsRef.current, () => {}); // save all events for offline users
     }, 100);
-  }, [calendarEvents, saveEvents, saveIfChanged, user?.type]);
+  }, [saveEvents, saveIfChanged, user?.type]);
 
   /* -------------------------------------------------------------------------- */
 
@@ -615,6 +616,11 @@ export default function AppCalendar({
   useEffect(() => {
     hourHeightRef.current = hourHeight;
   }, [hourHeight]);
+
+  // and calendar events
+  useEffect(() => {
+    calendarEventsRef.current = calendarEvents;
+  }, [calendarEvents]);
 
   // zoom in with ctrl + mouse wheel
   useEffect(() => {
