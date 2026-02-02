@@ -424,6 +424,9 @@ export default function AppCalendar({
         timestamp: Date.now(),
       } as CalendarEvent;
 
+      delete newEvent.parent;
+      delete newEvent.repeat;
+
       dispatch({
         type: "add",
         event: newEvent,
