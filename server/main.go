@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -39,8 +41,21 @@ func main() {
 		log.Fatal("SESSION_KEY is too short, must be at least 32 characters")
 	}
 
+	serverURL, err := url.Parse(os.Getenv("SERVER_URL"))
+	if err != nil {
+		log.Fatal("SERVER_URL is invalid")
+	}
+
+	// Figure out the cookie domain from the SERVER_URL
+	cookieDomain := serverURL.Hostname()
+
+	if cookieDomain == "localhost" || net.ParseIP(cookieDomain) != nil {
+		cookieDomain = "" // omit localhost or IPs
+	}
+
 	session.Store = sessions.NewCookieStore([]byte(sessionKey))
 	session.Store.Options = &sessions.Options{
+		Domain:   cookieDomain,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
