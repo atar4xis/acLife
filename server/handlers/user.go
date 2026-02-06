@@ -4,6 +4,9 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/url"
+	"os"
+	"regexp"
+	"strings"
 
 	"acLife/database"
 	"acLife/push"
@@ -53,6 +56,35 @@ func PushSubscribe(w http.ResponseWriter, r *http.Request) {
 	if err != nil || !u.IsAbs() || u.Scheme != "https" {
 		utils.SendBadRequest(w)
 		return
+	}
+
+	// Make sure the endpoint is allowed
+	allowed := os.Getenv("PUSH_ALLOWED_ENDPOINTS")
+	if allowed != "" {
+		host := u.Hostname()
+		found := false
+
+		for pattern := range strings.SplitSeq(allowed, ",") {
+			pattern = strings.TrimSpace(pattern)
+			if pattern == "" {
+				continue
+			}
+
+			re := "^" + regexp.QuoteMeta(pattern) + "$"
+			re = strings.ReplaceAll(re, `\*`, ".*")
+
+			matched, _ := regexp.MatchString(re, host)
+
+			if matched {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			utils.SendBadRequest(w)
+			return
+		}
 	}
 
 	// Validate auth: valid base64 and 16 bytes long
