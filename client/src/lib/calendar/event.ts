@@ -164,7 +164,7 @@ function processRepeats(
   lastVisibleDayEnd: DateTime,
   excludeSet: Set<string>,
 ) {
-  if (!e.repeat || e.parent) return;
+  if (!e.repeat || e.parent || e.continued) return;
 
   let cursor = e.start;
   const duration = e.end.diff(e.start);
@@ -186,13 +186,15 @@ function processRepeats(
         !e.repeat.skip?.includes(key) &&
         !excludeSet.has(id)
       ) {
-        mapEventToDate(map, key, {
+        const newEvent = {
           ...e,
           id,
           start: cursor,
           end: cursor.plus(duration),
           parent: e.id,
-        });
+        };
+
+        mapEventToDates(map, newEvent, visibleDates);
       }
     }
 
