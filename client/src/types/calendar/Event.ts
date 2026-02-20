@@ -18,9 +18,9 @@ export type CalendarEvent = {
   description?: string;
   color?: string;
   repeat?: RepeatInterval;
-  parent?: string; // uuid of parent event
   timestamp: number;
-  continued?: boolean; // events spanning multiple days
+  _parent?: string; // uuid of parent event
+  _continued?: boolean; // events spanning multiple days
 };
 
 export type EncryptedEvent = {
@@ -84,4 +84,8 @@ export type EventChange = {
   type: "added" | "updated" | "deleted";
   event?: CalendarEvent; // for added/updated
   id?: string; // for deleted
+};
+
+export type WithoutPrivateKeys<T> = {
+  [K in keyof T as K extends `_${string}` ? never : K]: T[K];
 };

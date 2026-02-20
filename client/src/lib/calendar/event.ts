@@ -150,7 +150,7 @@ export function mapEventToDates(
     if (visibleDates.has(key)) {
       mapEventToDate(map, key, {
         ...event,
-        continued: day.toMillis() !== firstDay.toMillis(),
+        _continued: day.toMillis() !== firstDay.toMillis(),
       });
     }
     day = day.plus({ days: 1 });
@@ -164,7 +164,7 @@ function processRepeats(
   lastVisibleDayEnd: DateTime,
   excludeSet: Set<string>,
 ) {
-  if (!e.repeat || e.parent || e.continued) return;
+  if (!e.repeat || e._parent || e._continued) return;
 
   let cursor = e.start;
   const duration = e.end.diff(e.start);
@@ -191,7 +191,7 @@ function processRepeats(
           id,
           start: cursor,
           end: cursor.plus(duration),
-          parent: e.id,
+          _parent: e.id,
         };
 
         mapEventToDates(map, newEvent, visibleDates);

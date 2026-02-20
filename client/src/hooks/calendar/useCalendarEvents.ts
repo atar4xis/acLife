@@ -11,6 +11,7 @@ import type {
   CalendarEvent,
   EventSyncResponse,
   EventChange,
+  WithoutPrivateKeys,
 } from "@/types/calendar/Event";
 import type { User } from "@/types/User";
 import { useCallback, useState } from "react";
@@ -152,7 +153,14 @@ export const useCalendarEvents = (
           // encrypt only added/updated events
           const toEncrypt = changes
             .filter((c) => c.type !== "deleted")
-            .map((c) => c.event!);
+            .map(
+              (c) =>
+                Object.fromEntries(
+                  Object.entries(c.event!).filter(
+                    ([key]) => !key.startsWith("_"),
+                  ),
+                ) as WithoutPrivateKeys<CalendarEvent>,
+            );
           const encryptedEvents = await encryptEvents(toEncrypt, masterKey);
 
           // build a map of (eventId: encryptedEvent) for quick lookup

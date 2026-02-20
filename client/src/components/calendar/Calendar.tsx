@@ -278,7 +278,7 @@ export default function AppCalendar({
         };
 
         // update the edited event in state
-        if (!event.parent && !event.repeat) {
+        if (!event._parent && !event.repeat) {
           if (
             newEvent.start.toMillis() !== state.originalStart.toMillis() ||
             newEvent.end.toMillis() !== state.originalEnd.toMillis()
@@ -370,7 +370,7 @@ export default function AppCalendar({
 
   const onEventEdit = useCallback(
     (originalEvent: CalendarEvent, event: CalendarEvent) => {
-      if (event.parent || originalEvent.repeat) {
+      if (event._parent || originalEvent.repeat) {
         evPendingUpdateRef.current = event;
         setUpdateRepeatDialogOpen(true);
         return;
@@ -395,7 +395,7 @@ export default function AppCalendar({
 
   const onEventDelete = useCallback(
     (event: CalendarEvent) => {
-      if (event.parent || event.repeat) {
+      if (event._parent || event.repeat) {
         setDeleteRepeatDialogOpen(true);
         evPendingUpdateRef.current = event;
         return;
@@ -424,7 +424,7 @@ export default function AppCalendar({
         timestamp: Date.now(),
       } as CalendarEvent;
 
-      delete newEvent.parent;
+      delete newEvent._parent;
       delete newEvent.repeat;
 
       dispatch({
@@ -968,10 +968,10 @@ export default function AppCalendar({
             return;
           }
 
-          const isParent = !event.parent && event.repeat;
+          const isParent = !event._parent && event.repeat;
           const parent = isParent
             ? event
-            : calendarEvents.find((e) => e.id === event.parent);
+            : calendarEvents.find((e) => e.id === event._parent);
 
           if (!parent?.repeat) {
             dispatch({
@@ -1042,7 +1042,7 @@ export default function AppCalendar({
                 data: parent,
               });
 
-              delete newEvent.parent; // detach from parent
+              delete newEvent._parent; // detach from parent
               delete newEvent.repeat; // don't repeat
 
               dispatch({
@@ -1088,7 +1088,7 @@ export default function AppCalendar({
                 },
               } as CalendarEvent;
 
-              delete newEvent.parent; // detach from parent
+              delete newEvent._parent; // detach from parent
 
               dispatch({
                 type: "add",
@@ -1148,7 +1148,7 @@ export default function AppCalendar({
                 id: parent.id,
               };
 
-              delete newEvent.parent;
+              delete newEvent._parent;
 
               dispatch({
                 type: "update",
@@ -1189,10 +1189,10 @@ export default function AppCalendar({
             return;
           }
 
-          const isParent = !event.parent && event.repeat;
+          const isParent = !event._parent && event.repeat;
           const parent = isParent
             ? event
-            : calendarEvents.find((e) => e.id === event.parent);
+            : calendarEvents.find((e) => e.id === event._parent);
 
           // if the event has no parents or children just delete it
           if (!parent?.repeat) {

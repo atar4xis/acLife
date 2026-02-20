@@ -74,7 +74,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
           <span className="text-xs font-normal">{startsInText}</span>
         </div>
       </div>
-      {!event.continued && (
+      {!event._continued && (
         <div className="text-xs font-normal truncate text-foreground/50">
           {event.start.toFormat(startTimeFormat) +
             "-" +

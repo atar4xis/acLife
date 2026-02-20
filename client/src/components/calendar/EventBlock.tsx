@@ -78,8 +78,8 @@ export default memo(
     );
 
     const copyID = useCallback(() => {
-      navigator.clipboard.writeText(event.parent || event.id);
-    }, [event.id, event.parent]);
+      navigator.clipboard.writeText(event._parent || event.id);
+    }, [event.id, event._parent]);
 
     const { handlers: tapHandlers } = useTapInteraction({
       onTap: () => setTimeout(() => setEditingEvent(event), 50),
@@ -120,7 +120,7 @@ export default memo(
               onDoubleClick={() => setEditingEvent(event)}
               ref={eventRef}
             >
-              {!event.continued ? (
+              {!event._continued ? (
                 <>
                   <div
                     className="font-semibold"
@@ -171,7 +171,7 @@ export default memo(
 
             <ContextMenuItem onClick={copyID}>
               <Clipboard />
-              {event.parent ? "Copy parent ID" : "Copy ID"}
+              {event._parent ? "Copy parent ID" : "Copy ID"}
             </ContextMenuItem>
 
             <ContextMenuItem onClick={duplicate}>
@@ -186,7 +186,7 @@ export default memo(
         </ContextMenu>
 
         {/* edit overlay */}
-        {editing && !event.continued && (
+        {editing && !event._continued && (
           <EventEditor
             event={event}
             eventRef={eventRef}

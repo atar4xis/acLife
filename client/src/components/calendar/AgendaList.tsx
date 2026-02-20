@@ -59,7 +59,7 @@ export default memo(function AgendaList() {
       <SidebarGroup key={key}>
         <SidebarGroupLabel>{d.label}</SidebarGroupLabel>
         {events.map((event) => (
-          <AgendaEvent key={event.parent || event.id} event={event} />
+          <AgendaEvent key={event._parent || event.id} event={event} />
         ))}
       </SidebarGroup>
     );
