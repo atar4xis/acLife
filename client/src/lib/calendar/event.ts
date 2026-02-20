@@ -30,9 +30,7 @@ export function getEventPixelPosition(
   );
 
   return {
-    id: event.id,
-    start: event.start,
-    end: event.end,
+    ...event,
     top,
     height,
     col: -1,
@@ -116,7 +114,7 @@ export const getDayEventStyles = (
   const styles: Record<string, EventStyle> = {};
   for (const ev of positioned) {
     const width = 100 / ev.maxCols;
-    styles[ev.id] = {
+    styles[ev._instanceId ?? ev.id] = {
       top: ev.top,
       height: ev.height,
       width,
@@ -177,18 +175,18 @@ function processRepeats(
     if (millis !== startMillis) {
       const key = cursor.toISODate()!;
       const weekday = cursor.weekday;
-      const id = `${e.id}_${key}`;
+      const instanceId = `${e.id}_${key}`;
 
       if (
         visibleDates.has(key) &&
         (!until || millis < until) &&
         !e.repeat.except?.includes(weekday) &&
         !e.repeat.skip?.includes(key) &&
-        !excludeSet.has(id)
+        !excludeSet.has(instanceId)
       ) {
         const newEvent = {
           ...e,
-          id,
+          _instanceId: instanceId,
           start: cursor,
           end: cursor.plus(duration),
           _parent: e.id,

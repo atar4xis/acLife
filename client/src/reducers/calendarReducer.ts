@@ -1,5 +1,5 @@
 import type { CalendarAction } from "@/types/calendar/Action";
-import type { CalendarEvent } from "@/types/calendar/Event";
+import type { CalendarEvent, WithoutPrivateKeys } from "@/types/calendar/Event";
 
 export function calendarReducer(
   state: CalendarEvent[],
@@ -11,15 +11,18 @@ export function calendarReducer(
     case "add":
       return [...state, action.event];
     case "update":
-      return state.map((ev) =>
-        ev.id === action.id
-          ? {
-              ...ev,
-              ...action.data,
-              timestamp: Date.now(),
-            }
-          : ev,
-      );
+      return state.map((ev) => {
+        const newEv = {
+          ...ev,
+          ...action.data,
+          timestamp: Date.now(),
+        };
+        return ev.id === action.id
+          ? (Object.fromEntries(
+              Object.entries(newEv).filter(([key]) => !key.startsWith("_")),
+            ) as WithoutPrivateKeys<CalendarEvent>)
+          : ev;
+      });
     case "delete":
       return state.filter((ev) => ev.id !== action.id);
     default:

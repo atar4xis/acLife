@@ -730,7 +730,7 @@ export default function AppCalendar({
     }
 
     return {
-      exclude: [dragEvent.id],
+      exclude: [dragEvent._instanceId ?? dragEvent.id],
       append: [dragEventClean],
     };
   }, [dragEvent, dragEventClean]);
@@ -838,14 +838,20 @@ export default function AppCalendar({
                     )}
 
                     {/* today's events */}
-                    {dayEvents.map((event) => (
+                    {dayEvents.map((event, idx) => (
                       <EventBlock
-                        key={event.id}
+                        key={(event._instanceId ?? event.id) + "_" + idx}
                         event={event}
                         day={dayIndex}
                         date={d.date}
-                        style={styles[event.id]}
-                        editing={editingEvent?.id === event.id}
+                        style={
+                          styles[event._instanceId ?? event.id] ??
+                          styles[event.id]
+                        }
+                        editing={
+                          (editingEvent?._instanceId ?? editingEvent?.id) ===
+                          (event._instanceId ?? event.id)
+                        }
                         onPointerDown={onEventPointerDown}
                         onEventEdit={onEventEdit}
                         onEventDelete={onEventDelete}

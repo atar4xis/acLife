@@ -33,7 +33,7 @@ export default memo(function AgendaList() {
 
     for (const [date, events] of eventMap) {
       const upcoming = events
-        .filter((e) => e.end.toMillis() > now)
+        .filter((e) => e.end.toMillis() > now && !e._continued)
         .sort((a, b) => a.start.toMillis() - b.start.toMillis());
 
       if (upcoming.length) {
@@ -59,7 +59,10 @@ export default memo(function AgendaList() {
       <SidebarGroup key={key}>
         <SidebarGroupLabel>{d.label}</SidebarGroupLabel>
         {events.map((event) => (
-          <AgendaEvent key={event._parent || event.id} event={event} />
+          <AgendaEvent
+            key={(event._parent || event.id) + "_" + event.start.toISODate()}
+            event={event}
+          />
         ))}
       </SidebarGroup>
     );

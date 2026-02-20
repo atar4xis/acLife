@@ -21,6 +21,7 @@ export type CalendarEvent = {
   timestamp: number;
   _parent?: string; // uuid of parent event
   _continued?: boolean; // events spanning multiple days
+  _instanceId?: string; // internal instance id
 };
 
 export type EncryptedEvent = {
