@@ -26,14 +26,10 @@ export const useCalendarEvents = (
   const storage = useStorage();
   const { post } = useApi();
 
-  const syncEvents = useCallback(
-    async (user: User, masterKey: CryptoKey): Promise<CalendarEvent[]> => {
+  const getCachedEvents = useCallback(
+    async (masterKey: CryptoKey): Promise<CalendarEvent[]> => {
       if (!storage) return [];
 
-      if (user.type !== "online")
-        throw new Error("Cannot syncEvents for offline user.");
-
-      // get cached events
       const cached = storage.get("cachedEvents");
       const cachedEvents: CalendarEvent[] = [];
 
@@ -46,6 +42,21 @@ export const useCalendarEvents = (
         }
       }
 
+      return cachedEvents;
+    },
+    [storage],
+  );
+
+  const syncEvents = useCallback(
+    async (user: User, masterKey: CryptoKey): Promise<CalendarEvent[]> => {
+      if (!storage) return [];
+
+      if (user.type !== "online")
+        throw new Error("Cannot syncEvents for offline user.");
+
+      // get cached events
+      const cachedEvents = await getCachedEvents(masterKey);
+
       // request sync from server, providing a map of our cached events
       const res = await post<EventSyncResponse>(
         "calendar/events/sync",
@@ -56,11 +67,10 @@ export const useCalendarEvents = (
       );
 
       if (!res.success || !res.data) {
-        toast.error(
+        throw new Error(
           "Failed to sync calendar events" +
             (res.message ? `: ${res.message}` : "."),
         );
-        throw new Error("Failed to sync calendar events.");
       }
 
       // the server tells us which events were updated, added, and deleted
@@ -99,7 +109,7 @@ export const useCalendarEvents = (
         return [];
       }
     },
-    [post, storage],
+    [post, storage, getCachedEvents],
   );
 
   const loadEvents = useCallback(
@@ -108,7 +118,13 @@ export const useCalendarEvents = (
 
       // for online users, we sync events with the server
       if (user.type === "online") {
-        return syncEvents(user, masterKey);
+        try {
+          return syncEvents(user, masterKey);
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : (err as string);
+          toast.error(errMsg);
+          return await getCachedEvents(masterKey);
+        }
       }
 
       // for offline users, we just decrypt from storage
@@ -120,7 +136,7 @@ export const useCalendarEvents = (
         return [];
       }
     },
-    [storage, syncEvents],
+    [storage, syncEvents, getCachedEvents],
   );
 
   const saveEvents = useCallback(
