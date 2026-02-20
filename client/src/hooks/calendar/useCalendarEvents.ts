@@ -84,15 +84,14 @@ export const useCalendarEvents = (
 
       // decrypt updated and added event data
       try {
-        const decryptedUpdated = await decryptEvents(updated, masterKey);
-        const decryptedAdded = await decryptEvents(added, masterKey);
+        const [decryptedUpdated, decryptedAdded] = await Promise.all([
+          decryptEvents(updated, masterKey),
+          decryptEvents(added, masterKey),
+        ]);
 
         // merge decrypted events into cachedMap
-        for (const ev of decryptedUpdated) {
-          cachedMap.set(ev.id, ev.data);
-        }
-        for (const ev of decryptedAdded) {
-          cachedMap.set(ev.id, ev.data);
+        for (const ev of [...decryptedUpdated, ...decryptedAdded]) {
+          cachedMap.set(ev.id, { ...ev.data, timestamp: ev.updatedAt });
         }
 
         const finalEvents = Array.from(cachedMap.values());
