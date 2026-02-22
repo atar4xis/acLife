@@ -820,8 +820,11 @@ export default function AppCalendar({
                 onCellTap={startNewEvent}
               >
                 {hour === 0 && (
-                  <div className="relative h-full">
-                    <div style={{ height: hourHeight * 24 }} />
+                  <div className="pointer-events-none relative h-full">
+                    <div
+                      className="pointer-events-none"
+                      style={{ height: hourHeight * 24 }}
+                    />
 
                     {/* current time indicator line */}
                     {isSameDate(d.date, now) && (
