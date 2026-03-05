@@ -625,6 +625,23 @@ export default function AppCalendar({
     calendarEventsRef.current = calendarEvents;
   }, [calendarEvents]);
 
+  // move days with arrow keys
+  useEffect(() => {
+    const onArrowKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        move(-1);
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        move(1);
+      }
+    };
+    window.addEventListener("keydown", onArrowKey, { passive: false });
+    return () => window.removeEventListener("keydown", onArrowKey);
+  }, [move]);
+
   // zoom in with ctrl + mouse wheel
   useEffect(() => {
     const container = gridRef.current;
