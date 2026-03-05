@@ -632,13 +632,12 @@ export default function AppCalendar({
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         move(-1);
-      }
-      if (e.key === "ArrowRight") {
+      } else if (e.key === "ArrowRight") {
         e.preventDefault();
         move(1);
       }
     };
-    window.addEventListener("keydown", onArrowKey, { passive: false });
+    window.addEventListener("keydown", onArrowKey);
     return () => window.removeEventListener("keydown", onArrowKey);
   }, [move]);
 
