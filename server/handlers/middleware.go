@@ -186,16 +186,16 @@ func SubscriptionMiddleware() mux.MiddlewareFunc {
 
 			status, ok := getSubStatus(subID)
 			if !ok {
-				if err := database.UpdateSubscriptionStatus(subID); err != nil {
+				newStatus, err := database.UpdateSubscriptionStatus(subID)
+				if err != nil {
 					utils.LogError("SubscriptionMiddleware", "UpdateSubscriptionStatus", err)
 					utils.SendInternalError(w)
 					return
 				}
 
-				user = session.GetLoggedInUser(r, true) // force refetch
-				utils.Assert(user != nil)
+				user.SubscriptionStatus = &newStatus
 
-				if user.SubscriptionStatus == nil {
+				if *user.SubscriptionStatus == ""  {
 					denySubscription(w)
 					return
 				}

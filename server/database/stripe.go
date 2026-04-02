@@ -11,9 +11,9 @@ import (
 )
 
 // UpdateSubscriptionStatus fetches a subscription from Stripe and updates subscription_status in the DB.
-func UpdateSubscriptionStatus(subID string, status ...string) error {
+func UpdateSubscriptionStatus(subID string, status ...string) (string, error) {
 	if subID == "" {
-		return nil
+		return "", nil
 	}
 
 	subStatus := ""
@@ -26,7 +26,7 @@ func UpdateSubscriptionStatus(subID string, status ...string) error {
 		s, err := subscription.Get(subID, nil)
 		if err != nil {
 			utils.LogError("UpdateSubscriptionStatus", "sub.Get", err)
-			return err
+			return "", err
 		}
 		subStatus = string(s.Status)
 	}
@@ -41,8 +41,8 @@ func UpdateSubscriptionStatus(subID string, status ...string) error {
 	)
 	if err != nil {
 		utils.LogError("UpdateSubscriptionStatus", "database.Exec", err)
-		return err
+		return "", err
 	}
 
-	return nil
+	return subStatus, nil
 }
