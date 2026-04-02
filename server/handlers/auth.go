@@ -59,6 +59,11 @@ func cleanupAccountSessions() {
 
 // Register handles creating new accounts.
 func Register(w http.ResponseWriter, r *http.Request) {
+	if !constants.Metadata.Registration.Enabled {
+		utils.SendBadRequest(w)
+		return
+	}
+
 	var req struct {
 		Challenge string `json:"challenge"`
 		Triplet   []byte `json:"triplet"`
