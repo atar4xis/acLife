@@ -425,6 +425,7 @@ export default function AppCalendar({
       } as CalendarEvent;
 
       delete newEvent._parent;
+      delete newEvent._instanceId;
       delete newEvent.repeat;
 
       dispatch({
