@@ -187,14 +187,15 @@ func StripeWebhook(w http.ResponseWriter, r *http.Request) {
 
 		// Schedule a status update
 		time.AfterFunc(5*time.Second, func() {
-			_ = database.UpdateSubscriptionStatus(subID)
+			_, _ = database.UpdateSubscriptionStatus(subID)
 		})
 	case "customer.subscription.updated":
 	case "customer.subscription.deleted":
 		subID, _ := obj["id"].(string)
 		status, _ := obj["status"].(string)
 
-		if err := database.UpdateSubscriptionStatus(subID, status); err != nil {
+		_, err := database.UpdateSubscriptionStatus(subID, status);
+		if err != nil {
 			utils.LogError("StripeWebhook", "UpdateSubscriptionStatus", err)
 		}
 	}
