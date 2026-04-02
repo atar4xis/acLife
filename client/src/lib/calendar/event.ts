@@ -174,14 +174,15 @@ function processRepeats(
 
     if (millis !== startMillis) {
       const key = cursor.toISODate()!;
-      const weekday = cursor.weekday;
+      const keyUTC = cursor.toUTC().toISODate()!;
+      const weekday = cursor.toUTC().weekday;
       const instanceId = `${e.id}_${key}`;
 
       if (
         visibleDates.has(key) &&
         (!until || millis < until) &&
         !e.repeat.except?.includes(weekday) &&
-        !e.repeat.skip?.includes(key) &&
+        !e.repeat.skip?.includes(keyUTC) &&
         !excludeSet.has(instanceId)
       ) {
         const newEvent = {

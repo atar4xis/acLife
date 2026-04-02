@@ -1043,7 +1043,7 @@ export default function AppCalendar({
                 if (parent.repeat.skip?.length) {
                   const skipped = new Set(parent.repeat.skip);
 
-                  while (skipped.has(nextStart.toISODate()!)) {
+                  while (skipped.has(nextStart.toUTC().toISODate()!)) {
                     nextStart = nextStart.plus(interval);
                     nextEnd = nextEnd.plus(interval);
                   }
@@ -1054,7 +1054,7 @@ export default function AppCalendar({
               } else {
                 // skip current repetition
                 if (!parent.repeat.skip) parent.repeat.skip = [];
-                parent.repeat.skip.push(evStart.toISODate()!);
+                parent.repeat.skip.push(evStart.toUTC().toISODate()!);
               }
 
               updateChange({
@@ -1250,7 +1250,7 @@ export default function AppCalendar({
                 if (parent.repeat.skip?.length) {
                   const skipped = new Set(parent.repeat.skip);
 
-                  while (skipped.has(nextStart.toISODate()!)) {
+                  while (skipped.has(nextStart.toUTC().toISODate()!)) {
                     nextStart = nextStart.plus(interval);
                     nextEnd = nextEnd.plus(interval);
                   }
@@ -1261,7 +1261,7 @@ export default function AppCalendar({
               } else {
                 // skip current repetition
                 if (!parent.repeat.skip) parent.repeat.skip = [];
-                parent.repeat.skip.push(event.start.toISODate()!);
+                parent.repeat.skip.push(event.start.toUTC().toISODate()!);
               }
 
               dispatch({
