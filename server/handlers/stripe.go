@@ -190,6 +190,7 @@ func StripeWebhook(w http.ResponseWriter, r *http.Request) {
 			_, _ = database.UpdateSubscriptionStatus(subID)
 		})
 	case "customer.subscription.updated":
+		fallthrough
 	case "customer.subscription.deleted":
 		subID, _ := obj["id"].(string)
 		status, _ := obj["status"].(string)
