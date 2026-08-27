@@ -2,9 +2,11 @@ import { calendarReducer } from "@/reducers/calendarReducer";
 import type { CalendarAction } from "@/types/calendar/Action";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { WithChildren } from "@/types/Props";
+import { eventKey } from "@/lib/calendar/event";
 import { DateTime } from "luxon";
 import {
   createContext,
+  useCallback,
   useContext,
   useReducer,
   useState,
@@ -21,6 +23,10 @@ type CalendarContextValue = {
   setEditingEvent: (event: CalendarEvent | null, day?: number | null) => void;
   lastPointer: { x: number; y: number } | null;
   setLastPointer: (p: { x: number; y: number } | null) => void;
+  selectedEvents: Map<string, CalendarEvent>;
+  toggleSelection: (event: CalendarEvent) => void;
+  selectEvents: (events: CalendarEvent[]) => void;
+  clearSelection: () => void;
 };
 
 const CalendarContext = createContext<CalendarContextValue | null>(null);
@@ -37,6 +43,10 @@ export function CalendarProvider({ children }: WithChildren) {
     y: number;
   } | null>(null);
 
+  const [selectedEvents, setSelectedEvents] = useState<
+    Map<string, CalendarEvent>
+  >(new Map());
+
   const setEditingEvent = (
     event: CalendarEvent | null,
     day?: number | null,
@@ -44,6 +54,30 @@ export function CalendarProvider({ children }: WithChildren) {
     setEditingEventState(event);
     setEditingEventDay(day ?? null);
   };
+
+  const toggleSelection = useCallback((event: CalendarEvent) => {
+    setSelectedEvents((prev) => {
+      const next = new Map(prev);
+      const key = eventKey(event);
+      if (!next.delete(key)) next.set(key, event);
+      return next;
+    });
+  }, []);
+
+  const selectEvents = useCallback((events: CalendarEvent[]) => {
+    setSelectedEvents((prev) => {
+      const next = new Map(events.map((e) => [eventKey(e), e]));
+
+      const unchanged =
+        next.size === prev.size && [...next.keys()].every((k) => prev.has(k));
+
+      return unchanged ? prev : next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedEvents((prev) => (prev.size === 0 ? prev : new Map()));
+  }, []);
 
   return (
     <CalendarContext.Provider
@@ -57,6 +91,10 @@ export function CalendarProvider({ children }: WithChildren) {
         setEditingEvent,
         lastPointer,
         setLastPointer,
+        selectedEvents,
+        toggleSelection,
+        selectEvents,
+        clearSelection,
       }}
     >
       {children}

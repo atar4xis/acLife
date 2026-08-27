@@ -25,6 +25,7 @@ export interface EventBlockProps {
   date: DateTime;
   style: { top: number; left: number; width: number; height: number };
   editing: boolean;
+  selected: boolean;
   onPointerDown: (
     e: PointerEvent,
     type: "move" | "resize_start" | "resize_end",

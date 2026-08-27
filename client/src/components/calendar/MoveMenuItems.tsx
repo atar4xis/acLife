@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { MoveIcon } from "lucide-react";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import { useCalendar } from "@/context/CalendarContext";
+import { eventKey } from "@/lib/calendar/event";
+import { isChainParent } from "@/lib/calendar/recurrence";
 import {
   getMovedEvent,
   findFreeSlotForEvent,
@@ -30,22 +32,45 @@ export function MoveMenuItems({
   onMove: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   menu: MoveMenuKit;
 }) {
-  const { calendarEvents } = useCalendar();
+  const { calendarEvents, selectedEvents, clearSelection } = useCalendar();
   const { Sub, SubTrigger, SubContent, Item, Separator } = menu;
+
+  const batch =
+    selectedEvents.size > 1 && selectedEvents.has(eventKey(event))
+      ? [
+          event,
+          ...Array.from(selectedEvents.entries())
+            .filter(([key]) => key !== eventKey(event))
+            .map(([, ev]) => ev),
+        ].sort((a, b) => Number(isChainParent(a)) - Number(isChainParent(b)))
+      : [event];
 
   const moveBy = (
     direction: "forward" | "backward",
     unit: "minutes" | "hours" | "days" | "weeks" | "months" | "years",
     amount: number,
   ) => {
-    onMove(event, getMovedEvent(event, direction, unit, amount));
+    for (const ev of batch) {
+      onMove(ev, getMovedEvent(ev, direction, unit, amount));
+    }
+
+    if (batch.length > 1) clearSelection();
   };
 
   const moveToFreeSlot = (direction: "forward" | "backward") => {
     const slot = findFreeSlotForEvent(calendarEvents, event, direction);
     if (!slot) return toast.error("No free slot found");
 
-    onMove(event, { ...event, start: slot.start, end: slot.end });
+    const shift = slot.start.diff(event.start);
+    for (const ev of batch) {
+      onMove(ev, {
+        ...ev,
+        start: ev.start.plus(shift),
+        end: ev.end.plus(shift),
+      });
+    }
+
+    if (batch.length > 1) clearSelection();
 
     const sameDay = slot.start.hasSame(slot.end, "day");
     toast.success(

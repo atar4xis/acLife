@@ -5,6 +5,8 @@ import type {
 } from "@/types/calendar/Event";
 import type { DateTime } from "luxon";
 
+export const eventKey = (event: CalendarEvent) => event._instanceId ?? event.id;
+
 export function getEventPixelPosition(
   event: CalendarEvent,
   day: DateTime,

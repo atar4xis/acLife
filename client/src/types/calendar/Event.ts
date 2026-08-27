@@ -68,6 +68,11 @@ export type EventDragRef = {
   label: string;
   dayRects: { day: number; rect: DOMRect }[];
   moved: boolean;
+  selection?: {
+    event: CalendarEvent;
+    originalStart: DateTime;
+    originalEnd: DateTime;
+  }[];
 } | null;
 
 export type CachedEvent = {

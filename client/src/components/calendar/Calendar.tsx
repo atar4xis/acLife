@@ -31,18 +31,22 @@ import {
   isSameDate,
   getDateRangeString,
 } from "@/lib/calendar/date";
-import { getDayRects } from "@/lib/calendar/dom";
-import { getDayEventStyles, getEventMap } from "@/lib/calendar/event";
+import { getDayRects, getEventRects } from "@/lib/calendar/dom";
+import { eventKey, getDayEventStyles, getEventMap } from "@/lib/calendar/event";
 import { useUser } from "@/context/UserContext";
 import { toast } from "sonner";
 import HeaderCell from "./HeaderCell";
 import GridCell from "./GridCell";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ModeSwitcher from "./ModeSwitcher";
-import type { GridTouchRef } from "@/types/calendar/Cell";
+import type { GridSelectionRef, GridTouchRef } from "@/types/calendar/Cell";
 import { clamp } from "@/lib/utils";
 import RecurringUpdateDialog from "./RecurringUpdateDialog";
-import { detachSingleOccurrence } from "@/lib/calendar/recurrence";
+import {
+  detachSingleOccurrence,
+  isChainParent,
+  skipSingleOccurrence,
+} from "@/lib/calendar/recurrence";
 import type { PushEvent } from "@/types/Push";
 import { CLIENT_ID } from "@/hooks/calendar/useCalendarEvents";
 import { EMPTY_ARRAY } from "@/lib/constants";
@@ -69,6 +73,32 @@ const eventUnchanged = (a: CalendarEvent, b: CalendarEvent) =>
   a.end.toMillis() === b.end.toMillis() &&
   repeatEqual(a.repeat, b.repeat);
 
+const withTimeOfDay = (date: DateTime, time: DateTime) =>
+  date.set({
+    hour: time.hour,
+    minute: time.minute,
+    second: time.second,
+    millisecond: time.millisecond,
+  });
+
+const applyBatchField = (
+  base: DateTime,
+  edited: DateTime,
+  dateChanged: boolean,
+  timeChanged: boolean,
+) => {
+  if (dateChanged && timeChanged) return edited;
+  if (timeChanged) return withTimeOfDay(base, edited);
+  if (dateChanged) {
+    return base.set({
+      year: edited.year,
+      month: edited.month,
+      day: edited.day,
+    });
+  }
+  return base;
+};
+
 /* -------------------------------------------------------------------------- */
 
 const GRID_HEADER_HEIGHT = 48;
@@ -77,6 +107,7 @@ const GRID_HEADER_HEIGHT = 48;
 const DEFAULT_EVENT_NAME = "new event";
 const DEFAULT_EVENT_DURATION = 60;
 const SNAP_MINS = 5;
+const SELECT_DRAG_THRESHOLD = 4;
 
 const GRID_CONFIG = {
   day: {
@@ -93,6 +124,120 @@ const HOURS = Array.from(
   { length: 24 },
   (_, i) => `${((i + 11) % 12) + 1} ${i < 12 ? "AM" : "PM"}`,
 );
+
+const NO_DRAG = { exclude: EMPTY_ARRAY, append: EMPTY_ARRAY };
+
+const resolveSelection = (
+  eventMap: Map<string, CalendarEvent[]> | null,
+  selected: Map<string, CalendarEvent>,
+  excludeKey: string,
+) => {
+  const live = new Map<string, CalendarEvent>();
+
+  for (const dayEvents of eventMap?.values() ?? []) {
+    for (const ev of dayEvents) {
+      if (ev._continued) continue;
+
+      const key = eventKey(ev);
+      if (selected.has(key) && !live.has(key)) live.set(key, ev);
+    }
+  }
+
+  const resolved: CalendarEvent[] = [];
+  for (const [key, stored] of selected) {
+    if (key === excludeKey) continue;
+    resolved.push(live.get(key) ?? stored);
+  }
+
+  return resolved;
+};
+
+const getBoxedKeys = (state: GridSelectionRef) => {
+  const left = Math.min(state.x0, state.x1);
+  const right = Math.max(state.x0, state.x1);
+  const top = Math.min(state.y0, state.y1);
+  const bottom = Math.max(state.y0, state.y1);
+
+  const keys = new Set<string>();
+
+  for (const rect of state.rects) {
+    if (
+      rect.left <= right &&
+      rect.right >= left &&
+      rect.top <= bottom &&
+      rect.bottom >= top
+    ) {
+      keys.add(rect.key);
+    }
+  }
+
+  return keys;
+};
+
+const getEventsByKey = (
+  eventMap: Map<string, CalendarEvent[]> | null,
+  keys: Set<string>,
+) => {
+  const found: CalendarEvent[] = [];
+  const seen = new Set<string>();
+
+  for (const dayEvents of eventMap?.values() ?? []) {
+    for (const ev of dayEvents) {
+      const key = eventKey(ev);
+      if (ev._continued || seen.has(key) || !keys.has(key)) continue;
+
+      seen.add(key);
+      found.push(ev);
+    }
+  }
+
+  return found;
+};
+
+const getDraggedTimes = (
+  type: "move" | "resize_start" | "resize_end" | "new",
+  originalStart: DateTime,
+  originalEnd: DateTime,
+  dayDelta: number,
+  deltaMinutes: number,
+) => {
+  let newStart = originalStart;
+  let newEnd = originalEnd;
+
+  if (type === "move") {
+    newStart = originalStart.plus({ days: dayDelta, minutes: deltaMinutes });
+    newEnd = originalEnd.plus({ days: dayDelta, minutes: deltaMinutes });
+  } else if (type === "resize_start") {
+    newStart = originalStart.plus({ days: dayDelta, minutes: deltaMinutes });
+    if (newStart >= newEnd) {
+      newStart = newEnd.minus({ minutes: SNAP_MINS });
+    }
+  } else if (type === "resize_end") {
+    newEnd = originalEnd.plus({ days: dayDelta, minutes: deltaMinutes });
+    if (newEnd <= newStart) {
+      newEnd = newStart.plus({ minutes: SNAP_MINS });
+    }
+  } else if (type === "new") {
+    const anchor = originalStart;
+    const pointerTime = anchor.plus({ days: dayDelta, minutes: deltaMinutes });
+
+    if (pointerTime >= anchor) {
+      newStart = anchor;
+      newEnd = pointerTime;
+      if (newEnd <= newStart) {
+        newEnd = newStart.plus({ minutes: SNAP_MINS });
+      }
+    } else {
+      newStart = pointerTime;
+      newEnd = anchor;
+      if (newStart >= newEnd) {
+        newStart = newEnd.minus({ minutes: SNAP_MINS });
+      }
+    }
+  }
+
+  return { newStart, newEnd };
+};
 
 /* -------------------------------------------------------------------------- */
 
@@ -112,13 +257,17 @@ export default function AppCalendar({
     setCurrentDate,
     dispatch,
     setEditingEvent,
+    selectedEvents,
+    toggleSelection,
+    selectEvents,
+    clearSelection,
   } = useCalendar();
   const [isDragging, setIsDragging] = useState(false);
   const [hourHeight, setHourHeight] = useState(60);
   const [updateRepeatDialogOpen, setUpdateRepeatDialogOpen] = useState(false);
   const [deleteRepeatDialogOpen, setDeleteRepeatDialogOpen] = useState(false);
   const [now, setNow] = useState(DateTime.now());
-  const [, forceRender] = useState(false);
+  const [renderTick, forceRender] = useState(0);
   const changesMapRef = useRef<Map<string, EventChange[]>>(new Map());
   const pendingSaveRef = useRef<null | number>(null);
   const { user, masterKey } = useUser();
@@ -128,10 +277,14 @@ export default function AppCalendar({
   const gridRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<EventDragRef>(null);
   const gridTouchRef = useRef<GridTouchRef | null>(null);
+  const eventMapRef = useRef<Map<string, CalendarEvent[]> | null>(null);
+  const selectionBoxRef = useRef<GridSelectionRef | null>(null);
   const hourHeightRef = useRef(hourHeight);
 
   const evPendingUpdateRef = useRef<CalendarEvent | null>(null);
   const calendarEventsRef = useRef(calendarEvents);
+  const selectedEventsRef = useRef(selectedEvents);
+  selectedEventsRef.current = selectedEvents;
 
   const visibleDays = useMemo(() => {
     return (
@@ -233,57 +386,13 @@ export default function AppCalendar({
 
       const dayDelta = dayIndex - state.originalDay;
 
-      let newStart = state.originalStart;
-      let newEnd = state.originalEnd;
-
-      if (state.type === "move") {
-        // if moving, change both start and end
-        newStart = state.originalStart.plus({
-          days: dayDelta,
-          minutes: deltaMinutes,
-        });
-        newEnd = state.originalEnd.plus({
-          days: dayDelta,
-          minutes: deltaMinutes,
-        });
-      } else if (state.type === "resize_start") {
-        // if resizing from the start, change the start only
-        newStart = state.originalStart.plus({
-          days: dayDelta,
-          minutes: deltaMinutes,
-        });
-        if (newStart >= newEnd) {
-          newStart = newEnd.minus({ minutes: SNAP_MINS });
-        }
-      } else if (state.type === "resize_end") {
-        // if resizing from the end, change the end only
-        newEnd = state.originalEnd.plus({
-          days: dayDelta,
-          minutes: deltaMinutes,
-        });
-        if (newEnd <= newStart) {
-          newEnd = newStart.plus({ minutes: SNAP_MINS });
-        }
-      } else if (state.type === "new") {
-        const anchor = state.originalStart;
-        const pointerTime = anchor.plus({
-          days: dayDelta,
-          minutes: deltaMinutes,
-        });
-        if (pointerTime >= anchor) {
-          newStart = anchor;
-          newEnd = pointerTime;
-          if (newEnd <= newStart) {
-            newEnd = newStart.plus({ minutes: SNAP_MINS });
-          }
-        } else {
-          newStart = pointerTime;
-          newEnd = anchor;
-          if (newStart >= newEnd) {
-            newStart = newEnd.minus({ minutes: SNAP_MINS });
-          }
-        }
-      }
+      const { newStart, newEnd } = getDraggedTimes(
+        state.type,
+        state.originalStart,
+        state.originalEnd,
+        dayDelta,
+        deltaMinutes,
+      );
 
       // when dragging, label tells the new start/end times and follows the pointer
       const diff = newEnd.diff(newStart).shiftTo("hours", "minutes");
@@ -293,8 +402,13 @@ export default function AppCalendar({
       if (hours > 0) durText.push(`${hours} hr${hours !== 1 ? "s" : ""}`);
       if (minutes > 0) durText.push(`${minutes} min`);
       state.label = `${newStart.toFormat("t")} - ${newEnd.toFormat("t")}\n${durText.join(" ")}`;
+      if (state.selection?.length) {
+        state.label += `\n${state.selection.length + 1} events`;
+      }
       state.x = e.clientX;
       state.y = e.clientY;
+
+      let changed = false;
 
       if (
         state.event.start.toMillis() != newStart.toMillis() ||
@@ -302,8 +416,31 @@ export default function AppCalendar({
       ) {
         state.event.start = newStart;
         state.event.end = newEnd;
+        changed = true;
+      }
+
+      for (const entry of state.selection ?? []) {
+        const times = getDraggedTimes(
+          state.type,
+          entry.originalStart,
+          entry.originalEnd,
+          dayDelta,
+          deltaMinutes,
+        );
+
+        if (
+          entry.event.start.toMillis() != times.newStart.toMillis() ||
+          entry.event.end.toMillis() != times.newEnd.toMillis()
+        ) {
+          entry.event.start = times.newStart;
+          entry.event.end = times.newEnd;
+          changed = true;
+        }
+      }
+
+      if (changed) {
         state.moved = true;
-        forceRender((prev) => !prev);
+        forceRender((tick) => tick + 1);
       }
     },
     [visibleDays, hourHeight],
@@ -322,6 +459,67 @@ export default function AppCalendar({
           ...event,
           timestamp: Date.now(),
         };
+
+        if (state.selection?.length) {
+          if (!state.moved) {
+            dragRef.current = null;
+          } else {
+            const entries = [
+              {
+                event,
+                originalStart: state.originalStart,
+                originalEnd: state.originalEnd,
+              },
+              ...state.selection,
+            ].sort(
+              (a, b) =>
+                Number(isChainParent(a.event)) - Number(isChainParent(b.event)),
+            );
+
+            let detached = false;
+            let working = calendarEvents;
+
+            for (const entry of entries) {
+              const moved = { ...entry.event, timestamp: Date.now() };
+
+              if (!moved._parent && !moved.repeat) {
+                dispatch({
+                  type: "update",
+                  id: moved.id,
+                  data: { start: moved.start, end: moved.end },
+                });
+
+                updateChange({ type: "updated", event: moved });
+              } else {
+                const parent = detachSingleOccurrence(
+                  moved,
+                  entry.originalStart,
+                  entry.originalEnd,
+                  working,
+                  dispatch,
+                  updateChange,
+                );
+
+                if (parent) {
+                  working = working.map((e) =>
+                    e.id === parent.id ? parent : e,
+                  );
+                }
+
+                detached = true;
+              }
+            }
+
+            dragRef.current = null;
+            if (detached) clearSelection();
+            save();
+          }
+
+          setIsDragging(false);
+          window.removeEventListener("pointermove", onGlobalPointerMove);
+          window.removeEventListener("pointerup", onGlobalPointerUp);
+          return;
+        }
 
         // update the edited event in state
         if (!event._parent && !event.repeat) {
@@ -366,7 +564,79 @@ export default function AppCalendar({
         window.removeEventListener("pointerup", onGlobalPointerUp);
       }
     },
-    [onGlobalPointerMove, updateChange, dispatch, save],
+    [
+      onGlobalPointerMove,
+      updateChange,
+      dispatch,
+      save,
+      calendarEvents,
+      clearSelection,
+    ],
+  );
+
+  const onSelectionPointerMove = useCallback(
+    (e: PointerEvent) => {
+      const state = selectionBoxRef.current;
+      const container = gridRef.current;
+      if (!state || e.pointerId !== state.pointerId || !container) return;
+
+      state.x1 = e.clientX + container.scrollLeft;
+      state.y1 = e.clientY + container.scrollTop;
+
+      state.moved ||=
+        Math.abs(state.x1 - state.x0) > SELECT_DRAG_THRESHOLD ||
+        Math.abs(state.y1 - state.y0) > SELECT_DRAG_THRESHOLD;
+
+      if (state.moved) {
+        const boxed = getEventsByKey(eventMapRef.current, getBoxedKeys(state));
+        selectEvents([...state.base, ...boxed]);
+      }
+
+      forceRender((tick) => tick + 1);
+    },
+    [selectEvents],
+  );
+
+  const onSelectionPointerUp = useCallback(
+    (e: PointerEvent) => {
+      const state = selectionBoxRef.current;
+      if (!state || e.pointerId !== state.pointerId) return;
+
+      if (!state.moved && state.toggle) toggleSelection(state.toggle);
+
+      selectionBoxRef.current = null;
+      forceRender((tick) => tick + 1);
+
+      window.removeEventListener("pointermove", onSelectionPointerMove);
+      window.removeEventListener("pointerup", onSelectionPointerUp);
+    },
+    [onSelectionPointerMove, toggleSelection],
+  );
+
+  const beginSelectionBox = useCallback(
+    (e: React.PointerEvent, toggle?: CalendarEvent) => {
+      const container = gridRef.current;
+      if (!container) return;
+
+      const offsetX = container.scrollLeft;
+      const offsetY = container.scrollTop;
+
+      selectionBoxRef.current = {
+        pointerId: e.pointerId,
+        x0: e.clientX + offsetX,
+        y0: e.clientY + offsetY,
+        x1: e.clientX + offsetX,
+        y1: e.clientY + offsetY,
+        moved: false,
+        toggle,
+        base: Array.from(selectedEventsRef.current.values()),
+        rects: getEventRects(offsetX, offsetY),
+      };
+
+      window.addEventListener("pointermove", onSelectionPointerMove);
+      window.addEventListener("pointerup", onSelectionPointerUp);
+    },
+    [onSelectionPointerMove, onSelectionPointerUp],
   );
 
   const onEventPointerDown = useCallback(
@@ -382,6 +652,26 @@ export default function AppCalendar({
       if (!container) return;
 
       e.preventDefault();
+      if (e.ctrlKey) {
+        beginSelectionBox(e, event);
+        return;
+      }
+
+      const selected = selectedEventsRef.current;
+      const key = eventKey(event);
+      if (selected.size > 0 && !selected.has(key)) {
+        clearSelection();
+      }
+
+      const selection =
+        selected.size > 1 && selected.has(key)
+          ? resolveSelection(eventMapRef.current, selected, key).map((ev) => ({
+              event: { ...ev },
+              originalStart: ev.start,
+              originalEnd: ev.end,
+            }))
+          : undefined;
+
       setIsDragging(true);
 
       dragRef.current = {
@@ -397,6 +687,7 @@ export default function AppCalendar({
         label: "",
         dayRects: getDayRects(),
         moved: false,
+        selection,
       };
 
       window.addEventListener("pointermove", onGlobalPointerMove);
@@ -405,13 +696,111 @@ export default function AppCalendar({
 
     // visibleDays is needed here for getDayRects to work
     // eslint-disable-next-line
-    [visibleDays, onGlobalPointerMove, onGlobalPointerUp],
+    [
+      visibleDays,
+      onGlobalPointerMove,
+      onGlobalPointerUp,
+      beginSelectionBox,
+      clearSelection,
+    ],
   );
+
+  const getBatch = useCallback((event: CalendarEvent) => {
+    const selected = selectedEventsRef.current;
+    const key = eventKey(event);
+    if (selected.size < 2 || !selected.has(key)) return null;
+
+    return [
+      event,
+      ...resolveSelection(eventMapRef.current, selected, key),
+    ].sort((a, b) => Number(isChainParent(a)) - Number(isChainParent(b)));
+  }, []);
 
   const onEventEdit = useCallback(
     (originalEvent: CalendarEvent, event: CalendarEvent) => {
       // nothing changed, so there's nothing to save
       if (eventUnchanged(originalEvent, event)) return;
+
+      const batch = getBatch(originalEvent);
+
+      if (batch) {
+        const originalKey = eventKey(originalEvent);
+        const startDateChanged = !event.start.hasSame(
+          originalEvent.start,
+          "day",
+        );
+        const startTimeChanged =
+          event.start.hour !== originalEvent.start.hour ||
+          event.start.minute !== originalEvent.start.minute ||
+          event.start.second !== originalEvent.start.second ||
+          event.start.millisecond !== originalEvent.start.millisecond;
+        const endDateChanged = !event.end.hasSame(originalEvent.end, "day");
+        const endTimeChanged =
+          event.end.hour !== originalEvent.end.hour ||
+          event.end.minute !== originalEvent.end.minute ||
+          event.end.second !== originalEvent.end.second ||
+          event.end.millisecond !== originalEvent.end.millisecond;
+
+        const patch: Partial<CalendarEvent> = {};
+        if (event.title !== originalEvent.title) patch.title = event.title;
+        if (event.description !== originalEvent.description) {
+          patch.description = event.description;
+        }
+        if (event.color !== originalEvent.color) patch.color = event.color;
+        if (!repeatEqual(originalEvent.repeat, event.repeat)) {
+          patch.repeat = event.repeat;
+        }
+
+        let working = calendarEventsRef.current;
+
+        for (const ev of batch) {
+          const isEdited = eventKey(ev) === originalKey;
+
+          const next = {
+            ...ev,
+            ...patch,
+            start: isEdited
+              ? event.start
+              : applyBatchField(
+                  ev.start,
+                  event.start,
+                  startDateChanged,
+                  startTimeChanged,
+                ),
+            end: isEdited
+              ? event.end
+              : applyBatchField(
+                  ev.end,
+                  event.end,
+                  endDateChanged,
+                  endTimeChanged,
+                ),
+            timestamp: Date.now(),
+          };
+
+          if (ev._parent || ev.repeat) {
+            const parent = detachSingleOccurrence(
+              next,
+              ev.start,
+              ev.end,
+              working,
+              dispatch,
+              updateChange,
+            );
+
+            if (parent) {
+              working = working.map((e) => (e.id === parent.id ? parent : e));
+            }
+          } else {
+            dispatch({ type: "update", id: next.id, data: next });
+            updateChange({ type: "updated", event: next });
+          }
+        }
+
+        clearSelection();
+        save();
+        return;
+      }
 
       if (event._parent || (originalEvent.repeat && event.repeat)) {
         evPendingUpdateRef.current = event;
@@ -433,7 +822,7 @@ export default function AppCalendar({
 
       save();
     },
-    [dispatch, updateChange, save],
+    [dispatch, updateChange, save, getBatch, clearSelection],
   );
 
   const onEventMove = useCallback(
@@ -458,6 +847,34 @@ export default function AppCalendar({
 
   const onEventDelete = useCallback(
     (event: CalendarEvent) => {
+      const batch = getBatch(event);
+
+      if (batch) {
+        let working = calendarEvents;
+
+        for (const ev of batch) {
+          if (ev._parent || ev.repeat) {
+            const parent = skipSingleOccurrence(
+              ev,
+              working,
+              dispatch,
+              updateChange,
+            );
+
+            if (parent) {
+              working = working.map((e) => (e.id === parent.id ? parent : e));
+            }
+          } else {
+            dispatch({ type: "delete", id: ev.id });
+            updateChange({ id: ev.id, type: "deleted" });
+          }
+        }
+
+        clearSelection();
+        save();
+        return;
+      }
+
       if (event._parent || event.repeat) {
         setDeleteRepeatDialogOpen(true);
         evPendingUpdateRef.current = event;
@@ -476,35 +893,49 @@ export default function AppCalendar({
 
       save();
     },
-    [setDeleteRepeatDialogOpen, dispatch, updateChange, save],
+    [
+      setDeleteRepeatDialogOpen,
+      dispatch,
+      updateChange,
+      save,
+      getBatch,
+      calendarEvents,
+      clearSelection,
+    ],
   );
 
   const onEventDuplicate = useCallback(
     (event: CalendarEvent) => {
-      const newEvent = {
-        ...event,
-        id: crypto.randomUUID(),
-        timestamp: Date.now(),
-      } as CalendarEvent;
+      const batch = getBatch(event) ?? [event];
 
-      delete newEvent._parent;
-      delete newEvent._instanceId;
-      delete newEvent.repeat;
+      for (const ev of batch) {
+        const newEvent = {
+          ...ev,
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+        } as CalendarEvent;
 
-      dispatch({
-        type: "add",
-        event: newEvent,
-      });
+        delete newEvent._parent;
+        delete newEvent._instanceId;
+        delete newEvent.repeat;
 
-      updateChange({
-        type: "added",
-        event: newEvent,
-      });
+        dispatch({
+          type: "add",
+          event: newEvent,
+        });
+
+        updateChange({
+          type: "added",
+          event: newEvent,
+        });
+      }
+
+      if (batch.length > 1) clearSelection();
 
       setEditingEvent(null);
       save();
     },
-    [dispatch, updateChange, setEditingEvent, save],
+    [dispatch, updateChange, setEditingEvent, save, getBatch, clearSelection],
   );
 
   /* -------------------------------------------------------------------------- */
@@ -515,6 +946,13 @@ export default function AppCalendar({
       if (!container) return;
 
       e.preventDefault();
+
+      if (e.ctrlKey) {
+        beginSelectionBox(e);
+        return;
+      }
+
+      clearSelection();
 
       const rect = container.getBoundingClientRect();
       const startY = e.clientY + container.scrollTop;
@@ -576,6 +1014,8 @@ export default function AppCalendar({
       visibleDays,
       onGlobalPointerMove,
       onGlobalPointerUp,
+      beginSelectionBox,
+      clearSelection,
     ],
   );
 
@@ -655,7 +1095,7 @@ export default function AppCalendar({
       gridTouchRef.current.delta.x = 0;
 
     gridTouchRef.current.raf = requestAnimationFrame(() =>
-      forceRender((prev) => !prev),
+      forceRender((tick) => tick + 1),
     );
   }, []);
 
@@ -674,7 +1114,7 @@ export default function AppCalendar({
       cancelAnimationFrame(gridTouchRef.current.raf);
 
     gridTouchRef.current = null;
-    forceRender((prev) => !prev);
+    forceRender((tick) => tick + 1);
   }, [move]);
 
   /* -------------------------------------------------------------------------- */
@@ -703,11 +1143,13 @@ export default function AppCalendar({
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
         move(1);
+      } else if (e.key === "Escape" && editingEvent === null) {
+        clearSelection();
       }
     };
     window.addEventListener("keydown", onArrowKey);
     return () => window.removeEventListener("keydown", onArrowKey);
-  }, [move]);
+  }, [move, editingEvent, clearSelection]);
 
   // zoom in with ctrl + mouse wheel
   useEffect(() => {
@@ -795,29 +1237,28 @@ export default function AppCalendar({
     dispatch({ type: "set", events });
   }, [events, dispatch]);
 
+  useEffect(() => {
+    clearSelection();
+  }, [visibleDays, clearSelection]);
+
   /* -------------------------------------------------------------------------- */
 
   const dragEvent = dragRef.current?.moved ? dragRef.current?.event : null;
-  const dragEventClean = useMemo(
-    () =>
-      ({
-        ...dragEvent,
-        repeat: undefined,
-      }) as CalendarEvent,
-    // non-idiomatic but necessary - refactor later
-    // eslint-disable-next-line
-    [dragEvent?.start, dragEvent?.end],
-  );
   const dragDerived = useMemo(() => {
-    if (!dragEvent) {
-      return { exclude: EMPTY_ARRAY, append: EMPTY_ARRAY };
-    }
+    const state = dragRef.current;
+    if (!dragEvent || !state) return NO_DRAG;
+
+    const dragged = [dragEvent, ...(state.selection ?? []).map((s) => s.event)];
 
     return {
-      exclude: [dragEvent._instanceId ?? dragEvent.id],
-      append: [dragEventClean],
+      exclude: dragged.map(eventKey),
+      append: dragged.map(
+        (ev) => ({ ...ev, repeat: undefined }) as CalendarEvent,
+      ),
     };
-  }, [dragEvent, dragEventClean]);
+    // non-idiomatic but necessary - refactor later
+    // eslint-disable-next-line
+  }, [dragEvent, renderTick]);
 
   const visibleDates = useMemo(
     () => visibleDays.map((d) => d.date),
@@ -835,6 +1276,21 @@ export default function AppCalendar({
       ),
     [calendarEvents, visibleDates, dragDerived],
   );
+
+  eventMapRef.current = eventMap;
+
+  const selectionBox = (() => {
+    const state = selectionBoxRef.current;
+    const container = gridRef.current;
+    if (!state || !container) return null;
+
+    return {
+      left: Math.min(state.x0, state.x1) - container.scrollLeft,
+      top: Math.min(state.y0, state.y1) - container.scrollTop,
+      width: Math.abs(state.x1 - state.x0),
+      height: Math.abs(state.y1 - state.y0),
+    };
+  })();
 
   // build map of event styles
   const stylesMap = useMemo(() => {
@@ -941,6 +1397,7 @@ export default function AppCalendar({
                           (editingEventDay == null ||
                             editingEventDay === dayIndex)
                         }
+                        selected={selectedEvents.has(eventKey(event))}
                         onPointerDown={onEventPointerDown}
                         onEventEdit={onEventEdit}
                         onEventMove={onEventMove}
@@ -970,6 +1427,7 @@ export default function AppCalendar({
       startNewEvent,
       editingEvent,
       editingEventDay,
+      selectedEvents,
     ],
   );
 
@@ -1048,6 +1506,13 @@ export default function AppCalendar({
           {timeGrid}
 
           {isDragging && <DragOverlay move={move} dragRef={dragRef} />}
+
+          {selectionBox && (
+            <div
+              className="selection-box fixed z-20 pointer-events-none border border-primary bg-primary/20"
+              style={selectionBox}
+            />
+          )}
         </div>
       </div>
 
