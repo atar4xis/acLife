@@ -13,25 +13,30 @@ import (
 	"acLife/utils"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/mysql"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 )
 
-var DB *sqlx.DB
+var (
+	DB *sqlx.DB
+
+	dbUser     = os.Getenv("DB_USER")
+	dbPassword = os.Getenv("DB_PASSWORD")
+	dbHost     = os.Getenv("DB_HOST")
+	dbPort     = os.Getenv("DB_PORT")
+	dbName     = os.Getenv("DB_NAME")
+)
 
 func Connect() error {
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	name := os.Getenv("DB_NAME")
-
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4",
-		user,
-		password,
-		host,
-		port,
-		name,
+		dbUser,
+		dbPassword,
+		dbHost,
+		dbPort,
+		dbName,
 	)
 
 	db, err := sqlx.Open("mysql", dsn)
@@ -53,75 +58,25 @@ func Connect() error {
 }
 
 func Setup() error {
-	ctx, cancel := context.WithTimeout(context.Background(), constants.DBTimeout)
-	defer cancel()
+	migrationDSN := fmt.Sprintf(
+		"mysql://%s:%s@tcp(%s:%s)/%s",
+		dbUser,
+		dbPassword,
+		dbHost,
+		dbPort,
+		dbName,
+	)
 
-	// Create users table
-	userTable := `
-	CREATE TABLE IF NOT EXISTS users (
-		id INT AUTO_INCREMENT PRIMARY KEY,
-		uuid CHAR(36) NOT NULL DEFAULT UUID() UNIQUE,
-		email VARCHAR(255) NOT NULL UNIQUE,
-		salt BINARY(16) NOT NULL,
-		srp_salt BINARY(16) NOT NULL,
-		verifier VARBINARY(512) NOT NULL,
-		challenge VARBINARY(64) NOT NULL,
-		stripe_customer_id VARCHAR(255),
-		stripe_subscription_id VARCHAR(255) UNIQUE,
-		subscription_status VARCHAR(50)
-	);`
-
-	if _, err := Exec(ctx, userTable); err != nil {
-		utils.LogError("Setup", "Exec(users)", err)
+	// Run database migrations
+	m, err := migrate.New("file://database/migrations", migrationDSN)
+	if err != nil {
+		utils.LogError("Setup", "migrate.New", err)
 		return err
 	}
+	defer m.Close()
 
-	// Create account_sessions table
-	sessionsTable := `
-	CREATE TABLE IF NOT EXISTS account_sessions (
-		id INT AUTO_INCREMENT PRIMARY KEY,
-		owner CHAR(36) NOT NULL,
-		access_token VARCHAR(64) NOT NULL UNIQUE,
-		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		expires_at DATETIME NOT NULL,
-		FOREIGN KEY (owner) REFERENCES users(uuid) ON DELETE CASCADE,
-		INDEX idx_access_token (access_token)
-	);`
-
-	if _, err := Exec(ctx, sessionsTable); err != nil {
-		utils.LogError("Setup", "Exec(account_sessions)", err)
-		return err
-	}
-
-	// Create push_subscriptions table
-	pushTable := `
-	CREATE TABLE IF NOT EXISTS push_subscriptions (
-		id INT AUTO_INCREMENT PRIMARY KEY,
-		owner CHAR(36) NOT NULL,
-		endpoint VARCHAR(1024) NOT NULL UNIQUE,
-		p256dh VARCHAR(255) NOT NULL,
-		auth VARCHAR(255) NOT NULL,
-		FOREIGN KEY (owner) REFERENCES users(uuid) ON DELETE CASCADE
-	);`
-
-	if _, err := Exec(ctx, pushTable); err != nil {
-		utils.LogError("Setup", "Exec(push_subscriptions)", err)
-		return err
-	}
-
-	// Create calendar_events table
-	calendarTable := `
-	CREATE TABLE IF NOT EXISTS calendar_events (
-		id CHAR(36) NOT NULL PRIMARY KEY,
-		owner CHAR(36) NOT NULL,
-		data BLOB NOT NULL,
-		updated_at TIMESTAMP(3) NOT NULL,
-		FOREIGN KEY (owner) REFERENCES users(uuid) ON DELETE CASCADE,
-		INDEX idx_owner (owner)
-	);`
-
-	if _, err := Exec(ctx, calendarTable); err != nil {
-		utils.LogError("Setup", "Exec(calendar_events)", err)
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		utils.LogError("Setup", "migrate.Up", err)
 		return err
 	}
 
