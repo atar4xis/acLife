@@ -35,6 +35,12 @@ const (
 	MaxVerifierLen  = 520
 	MaxChallengeLen = 64
 	MaxEventLen     = 10000
+
+	BucketIDLen     = 32  // HMAC-SHA256 output size
+	MaxEventBuckets = 60  // caps the number of weeks a single event may span
+	MaxSyncBuckets  = 100 // caps the number of buckets requested in a single sync
+
+	MaxBucketBackfillPerSync = 800
 )
 
 // AccessTokenExpiry set in init: ACCESS_TOKEN_EXPIRY_DAYS env var if present, else default 3 days.

@@ -89,7 +89,7 @@ export function LoginForm({
       try {
         const triplet = await generateSRPTriplet(email, password);
         const masterSalt = generateSalt();
-        const masterKey = await deriveMasterKey(password, masterSalt);
+        const { masterKey } = await deriveMasterKey(password, masterSalt);
         const challenge = await encrypt(UNLOCK_CHECK_BYTES, masterKey);
 
         const res = await post("auth/register", {

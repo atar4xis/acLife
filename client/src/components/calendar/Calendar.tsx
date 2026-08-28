@@ -32,7 +32,13 @@ import {
   getDateRangeString,
 } from "@/lib/calendar/date";
 import { getDayRects, getEventRects } from "@/lib/calendar/dom";
-import { eventKey, getDayEventStyles, getEventMap } from "@/lib/calendar/event";
+import {
+  eventKey,
+  getDayEventStyles,
+  getEventMap,
+  MAX_EVENT_DURATION_MINUTES,
+} from "@/lib/calendar/event";
+import { weekLabel } from "@/lib/calendar/buckets";
 import { useUser } from "@/context/UserContext";
 import { toast } from "sonner";
 import HeaderCell from "./HeaderCell";
@@ -212,10 +218,16 @@ const getDraggedTimes = (
     if (newStart >= newEnd) {
       newStart = newEnd.minus({ minutes: SNAP_MINS });
     }
+    if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
+      newStart = newEnd.minus({ minutes: MAX_EVENT_DURATION_MINUTES });
+    }
   } else if (type === "resize_end") {
     newEnd = originalEnd.plus({ days: dayDelta, minutes: deltaMinutes });
     if (newEnd <= newStart) {
       newEnd = newStart.plus({ minutes: SNAP_MINS });
+    }
+    if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
+      newEnd = newStart.plus({ minutes: MAX_EVENT_DURATION_MINUTES });
     }
   } else if (type === "new") {
     const anchor = originalStart;
@@ -227,11 +239,17 @@ const getDraggedTimes = (
       if (newEnd <= newStart) {
         newEnd = newStart.plus({ minutes: SNAP_MINS });
       }
+      if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
+        newEnd = newStart.plus({ minutes: MAX_EVENT_DURATION_MINUTES });
+      }
     } else {
       newStart = pointerTime;
       newEnd = anchor;
       if (newStart >= newEnd) {
         newStart = newEnd.minus({ minutes: SNAP_MINS });
+      }
+      if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
+        newStart = newEnd.minus({ minutes: MAX_EVENT_DURATION_MINUTES });
       }
     }
   }
@@ -270,7 +288,7 @@ export default function AppCalendar({
   const [renderTick, forceRender] = useState(0);
   const changesMapRef = useRef<Map<string, EventChange[]>>(new Map());
   const pendingSaveRef = useRef<null | number>(null);
-  const { user, masterKey } = useUser();
+  const { user, masterKey, bucketKey } = useUser();
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
 
@@ -1188,30 +1206,38 @@ export default function AppCalendar({
     return () => clearInterval(interval);
   }, []);
 
-  // resync calendar events periodically and on push message
-  useEffect(() => {
-    if (!user || !masterKey || user.type === "offline") return;
+  const resyncSeqRef = useRef(0);
 
-    const resync = async () => {
-      toast.promise(
-        new Promise<void>((resolve, reject) => {
-          syncEvents(user, masterKey)
-            .then((newEvents) => {
+  const resync = useCallback(() => {
+    if (!user || !masterKey || !bucketKey || user.type === "offline") return;
+
+    const seq = ++resyncSeqRef.current;
+
+    toast.promise(
+      new Promise<void>((resolve, reject) => {
+        syncEvents(user, masterKey, bucketKey, currentDate)
+          .then((newEvents) => {
+            if (seq === resyncSeqRef.current) {
               dispatch({
                 type: "set",
                 events: newEvents,
               });
+            }
 
-              resolve();
-            })
-            .catch(() => reject());
-        }),
-        {
-          loading: "Event sync in progress...",
-          error: "Failed to sync calendar events.",
-        },
-      );
-    };
+            resolve();
+          })
+          .catch(() => reject());
+      }),
+      {
+        loading: "Event sync in progress...",
+        error: "Failed to sync calendar events.",
+      },
+    );
+  }, [syncEvents, user, masterKey, bucketKey, currentDate, dispatch]);
+
+  // resync calendar events periodically and on push message
+  useEffect(() => {
+    if (!user || !masterKey || !bucketKey || user.type === "offline") return;
 
     const message = (ev: MessageEvent) => {
       const data = ev.data as PushEvent;
@@ -1230,7 +1256,26 @@ export default function AppCalendar({
         navigator.serviceWorker.removeEventListener("message", message);
       }
     };
-  }, [syncEvents, user, masterKey, dispatch]);
+  }, [resync, user, masterKey, bucketKey]);
+
+  const syncedWeekRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user || !masterKey || !bucketKey || user.type === "offline") return;
+
+    const week = weekLabel(currentDate);
+    if (syncedWeekRef.current === null) {
+      syncedWeekRef.current = week;
+      return;
+    }
+    if (syncedWeekRef.current === week) return;
+
+    const timeout = setTimeout(() => {
+      syncedWeekRef.current = week;
+      resync();
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [currentDate, resync, user, masterKey, bucketKey]);
 
   // reset events when the defaults change
   useEffect(() => {

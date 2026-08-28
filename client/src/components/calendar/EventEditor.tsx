@@ -1,5 +1,6 @@
 import type { CalendarEvent, RepeatInterval } from "@/types/calendar/Event";
 import type { EventBlockProps } from "@/types/Props";
+import { MAX_EVENT_DURATION_MINUTES } from "@/lib/calendar/event";
 import {
   useCallback,
   useEffect,
@@ -167,6 +168,19 @@ export default function EventEditor({
       60000
     ) {
       toast.warning("Invalid event duration.", {
+        cancel: {
+          label: "OK",
+          onClick: () => {},
+        },
+      });
+      return;
+    }
+
+    if (
+      newEvent.current.end.diff(newEvent.current.start).as("minutes") >
+      MAX_EVENT_DURATION_MINUTES
+    ) {
+      toast.warning("An event cannot last this long.", {
         cancel: {
           label: "OK",
           onClick: () => {},

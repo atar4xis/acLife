@@ -28,6 +28,7 @@ export type EncryptedEvent = {
   id: string;
   data: string;
   updatedAt: number;
+  buckets?: string[]; // base64-encoded bucket ids, only client -> server
 };
 
 export type DecryptedEvent = {
@@ -80,10 +81,17 @@ export type CachedEvent = {
   updatedAt: number;
 };
 
+// when buckets is omitted, the server performs a full sync
+export type EventSyncRequest = {
+  events: { id: string; ts: number }[];
+  buckets?: string[];
+};
+
 export type EventSyncResponse = {
   updated: EncryptedEvent[];
   deleted: string[];
   added: EncryptedEvent[];
+  needsBucketBackfill: string[]; // ids of returned events with no bucket rows yet
 };
 
 export type EventChange = {

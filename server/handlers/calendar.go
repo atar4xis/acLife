@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -15,6 +16,13 @@ import (
 	"acLife/types"
 	"acLife/utils"
 )
+
+// upsertEvent pairs a decoded calendar event with its decoded bucket ids.
+type upsertEvent struct {
+	types.CalendarEvent
+	Buckets [][]byte
+	IsNew   bool
+}
 
 func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	user := session.GetLoggedInUser(r)
@@ -47,7 +55,9 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = tx.Rollback() }() // rollback if commit never happens
 
 	var deletedIDs []string
-	var upserts []types.CalendarEvent
+	var upserts []upsertEvent
+
+	upsertIndex := make(map[string]int)
 
 	// Process each change
 	for _, c := range changes {
@@ -67,11 +77,37 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			upserts = append(upserts, types.CalendarEvent{
-				ID:        c.Event.ID,
-				Data:      decoded,
-				UpdatedAt: time.UnixMilli(c.Event.UpdatedAt), // convert ms to time.Time
-			})
+			if len(c.Event.Buckets) == 0 || len(c.Event.Buckets) > constants.MaxEventBuckets {
+				utils.SendBadRequest(w)
+				return
+			}
+
+			buckets := make([][]byte, 0, len(c.Event.Buckets))
+			for _, b := range c.Event.Buckets {
+				bucketID, err := base64.StdEncoding.DecodeString(b)
+				if err != nil || len(bucketID) != constants.BucketIDLen {
+					utils.SendBadRequest(w)
+					return
+				}
+				buckets = append(buckets, bucketID)
+			}
+
+			ev := upsertEvent{
+				CalendarEvent: types.CalendarEvent{
+					ID:        c.Event.ID,
+					Data:      decoded,
+					UpdatedAt: time.UnixMilli(c.Event.UpdatedAt), // convert ms to time.Time
+				},
+				Buckets: buckets,
+				IsNew:   c.Type == "added",
+			}
+
+			if idx, ok := upsertIndex[ev.ID]; ok {
+				upserts[idx] = ev
+			} else {
+				upsertIndex[ev.ID] = len(upserts)
+				upserts = append(upserts, ev)
+			}
 		}
 	}
 
@@ -113,6 +149,12 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 			utils.SendInternalError(w)
 			return
 		}
+
+		if err := replaceEventBuckets(ctx, tx, user.UUID, upserts); err != nil {
+			utils.LogError("SaveCalendarEvents", "ReplaceBuckets", err)
+			utils.SendInternalError(w)
+			return
+		}
 	}
 
 	if err := tx.Commit(); err != nil { // finalize transaction
@@ -132,15 +174,105 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// replaceEventBuckets replaces the calendar_event_buckets rows for the given upserts.
+func replaceEventBuckets(ctx context.Context, tx *sql.Tx, owner string, upserts []upsertEvent) error {
+	ids := make([]any, 0, len(upserts)+1)
+	ids = append(ids, owner)
+	placeholders := make([]string, 0, len(upserts))
+	for _, ev := range upserts {
+		if ev.IsNew {
+			continue
+		}
+		ids = append(ids, ev.ID)
+		placeholders = append(placeholders, "?")
+	}
+
+	if len(placeholders) > 0 {
+		if _, err := tx.ExecContext(ctx, `
+			DELETE ceb FROM calendar_event_buckets ceb
+			JOIN calendar_events ce ON ce.id = ceb.event_id
+			WHERE ce.owner = ? AND ceb.event_id IN (`+strings.Join(placeholders, ",")+`)
+		`, ids...); err != nil {
+			return err
+		}
+	}
+
+	bucketValues := make([]string, 0)
+	bucketArgs := make([]any, 0)
+	for _, ev := range upserts {
+		for _, bucketID := range ev.Buckets {
+			bucketValues = append(bucketValues, "(?, ?)")
+			bucketArgs = append(bucketArgs, ev.ID, bucketID)
+		}
+	}
+
+	if len(bucketValues) == 0 {
+		return nil
+	}
+
+	_, err := tx.ExecContext(ctx, `
+		INSERT INTO calendar_event_buckets (event_id, bucket_id) VALUES `+strings.Join(bucketValues, ","),
+		bucketArgs...,
+	)
+	return err
+}
+
+// scanCalendarEvents reads all rows of (id, data, updated_at) and closes rows.
+func scanCalendarEvents(rows *sql.Rows) ([]types.CalendarEvent, error) {
+	defer func() { _ = rows.Close() }()
+
+	var events []types.CalendarEvent
+	for rows.Next() {
+		var ev types.CalendarEvent
+		if err := rows.Scan(&ev.ID, &ev.Data, &ev.UpdatedAt); err != nil {
+			return nil, err
+		}
+		events = append(events, ev)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return events, nil
+}
+
+type eventMeta struct {
+	ID        string
+	UpdatedAt time.Time
+	IsLegacy  bool
+}
+
+func scanEventMeta(rows *sql.Rows) ([]eventMeta, error) {
+	defer func() { _ = rows.Close() }()
+
+	var out []eventMeta
+	for rows.Next() {
+		var m eventMeta
+		var legacy int
+		if err := rows.Scan(&m.ID, &m.UpdatedAt, &legacy); err != nil {
+			return nil, err
+		}
+		m.IsLegacy = legacy != 0
+		out = append(out, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
 func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	user := session.GetLoggedInUser(r)
 	utils.Assert(user != nil) // ensured by AuthMiddleware
 
-	var cached []types.CachedEvent
-	if err := utils.ParseJSON(r.Body, &cached); err != nil {
+	var req types.EventSyncRequest
+	if err := utils.ParseJSON(r.Body, &req); err != nil {
 		utils.SendBadRequest(w)
 		return
 	}
+
+	cached := req.Events
 
 	// Build map of (eventId: timestamp)
 	idToMillis := make(map[string]int64, len(cached))
@@ -155,28 +287,92 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		idToMillis[uuid] = c.Timestamp
 	}
 
-	// Fetch all events for this user from DB
-	rows, err := database.Query(r.Context(), `
-		SELECT id, data, updated_at
-		FROM calendar_events
-		WHERE owner = ?
-	`, user.UUID)
-	if err != nil {
-		utils.LogError("SyncCalendarEvents", "QueryAll", err)
-		utils.SendInternalError(w)
-		return
-	}
-	defer func() { _ = rows.Close() }()
-
 	var dbEvents []types.CalendarEvent
-	for rows.Next() {
-		var ev types.CalendarEvent
-		if err := rows.Scan(&ev.ID, &ev.Data, &ev.UpdatedAt); err != nil {
+	needsBackfill := make([]string, 0)
+
+	if req.Buckets == nil {
+		// full sync if no buckets are specified
+		rows, err := database.Query(r.Context(), `
+			SELECT id, data, updated_at
+			FROM calendar_events
+			WHERE owner = ?
+		`, user.UUID)
+		if err != nil {
+			utils.LogError("SyncCalendarEvents", "Query", err)
+			utils.SendInternalError(w)
+			return
+		}
+
+		dbEvents, err = scanCalendarEvents(rows)
+		if err != nil {
 			utils.LogError("SyncCalendarEvents", "Scan", err)
 			utils.SendInternalError(w)
 			return
 		}
-		dbEvents = append(dbEvents, ev)
+	} else {
+		if len(req.Buckets) == 0 || len(req.Buckets) > constants.MaxSyncBuckets {
+			utils.SendBadRequest(w)
+			return
+		}
+
+		args := make([]any, 0, len(req.Buckets)+1)
+		args = append(args, user.UUID)
+		placeholders := make([]string, 0, len(req.Buckets))
+		for _, b := range req.Buckets {
+			bucketID, err := base64.StdEncoding.DecodeString(b)
+			if err != nil || len(bucketID) != constants.BucketIDLen {
+				utils.SendBadRequest(w)
+				return
+			}
+			args = append(args, bucketID)
+			placeholders = append(placeholders, "?")
+		}
+
+		// events whose buckets fall in the requested range
+		rangeRows, err := database.Query(r.Context(), `
+			SELECT DISTINCT ce.id, ce.data, ce.updated_at
+			FROM calendar_events ce
+			JOIN calendar_event_buckets ceb ON ceb.event_id = ce.id
+			WHERE ce.owner = ? AND ceb.bucket_id IN (`+strings.Join(placeholders, ",")+`)
+		`, args...)
+		if err != nil {
+			utils.LogError("SyncCalendarEvents", "RangeQuery", err)
+			utils.SendInternalError(w)
+			return
+		}
+
+		rangeEvents, err := scanCalendarEvents(rangeRows)
+		if err != nil {
+			utils.LogError("SyncCalendarEvents", "RangeScan", err)
+			utils.SendInternalError(w)
+			return
+		}
+		dbEvents = append(dbEvents, rangeEvents...)
+
+		legacyRows, err := database.Query(r.Context(), `
+			SELECT ce.id, ce.data, ce.updated_at
+			FROM calendar_events ce
+			WHERE ce.owner = ? AND NOT EXISTS (
+				SELECT 1 FROM calendar_event_buckets ceb WHERE ceb.event_id = ce.id
+			)
+			LIMIT ?
+		`, user.UUID, constants.MaxBucketBackfillPerSync)
+		if err != nil {
+			utils.LogError("SyncCalendarEvents", "LegacyQuery", err)
+			utils.SendInternalError(w)
+			return
+		}
+
+		legacyEvents, err := scanCalendarEvents(legacyRows)
+		if err != nil {
+			utils.LogError("SyncCalendarEvents", "LegacyScan", err)
+			utils.SendInternalError(w)
+			return
+		}
+		for _, ev := range legacyEvents {
+			needsBackfill = append(needsBackfill, ev.ID)
+		}
+		dbEvents = append(dbEvents, legacyEvents...)
 	}
 
 	seenIDs := make(map[string]struct{})
@@ -203,7 +399,6 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Determine which cached events were deleted
 	deletedIDs := make([]string, 0, len(cached))
 	for _, c := range cached {
 		if _, ok := seenIDs[c.ID]; !ok {
@@ -214,9 +409,10 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSON(w, http.StatusOK, types.Reply[types.EventSyncResponse]{
 		Success: true,
 		Data: types.EventSyncResponse{
-			Updated: updatedEvents,
-			Deleted: deletedIDs,
-			Added:   addedEvents,
+			Updated:             updatedEvents,
+			Deleted:             deletedIDs,
+			Added:               addedEvents,
+			NeedsBucketBackfill: needsBackfill,
 		},
 	})
 }

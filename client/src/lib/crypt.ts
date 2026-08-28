@@ -46,12 +46,19 @@ export const ArgonType = {
   Argon2id: 2,
 } as const;
 
+const BUCKET_KEY_INFO = new TextEncoder().encode("acLife-bucket-key-v1");
+
+export type DerivedKeys = {
+  masterKey: CryptoKey;
+  bucketKey: CryptoKey;
+};
+
 export const deriveMasterKey = async (
   password: string,
   salt: Uint8Array,
   exportable: boolean = false,
   type: number = ArgonType.Argon2id,
-): Promise<CryptoKey> => {
+): Promise<DerivedKeys> => {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("./worker/argon.ts", import.meta.url), {
       type: "module",
@@ -62,14 +69,32 @@ export const deriveMasterKey = async (
         reject(new Error(e.data.error));
       } else {
         const hash = new Uint8Array(e.data.hash);
-        const key = await crypto.subtle.importKey(
-          "raw",
-          hash,
-          { name: "AES-GCM" },
-          exportable,
-          ["encrypt", "decrypt"],
+
+        const [masterKey, hkdfKey] = await Promise.all([
+          crypto.subtle.importKey(
+            "raw",
+            hash,
+            { name: "AES-GCM" },
+            exportable,
+            ["encrypt", "decrypt"],
+          ),
+          crypto.subtle.importKey("raw", hash, "HKDF", false, ["deriveKey"]),
+        ]);
+
+        const bucketKey = await crypto.subtle.deriveKey(
+          {
+            name: "HKDF",
+            hash: "SHA-256",
+            salt: new Uint8Array(0),
+            info: BUCKET_KEY_INFO,
+          },
+          hkdfKey,
+          { name: "HMAC", hash: "SHA-256", length: 256 },
+          false,
+          ["sign"],
         );
-        resolve(key);
+
+        resolve({ masterKey, bucketKey });
       }
       worker.terminate();
     };
@@ -88,6 +113,7 @@ export const deriveMasterKey = async (
 
 export type UnlockResult = {
   masterKey: CryptoKey;
+  bucketKey: CryptoKey;
   needsMigration: boolean;
 };
 
@@ -98,10 +124,19 @@ export const unlockMasterKey = async (
 ): Promise<UnlockResult> => {
   for (const type of [ArgonType.Argon2id, ArgonType.Argon2d]) {
     try {
-      const key = await deriveMasterKey(password, salt, false, type);
-      const challenge = await decrypt(encryptedChallenge, key);
+      const { masterKey, bucketKey } = await deriveMasterKey(
+        password,
+        salt,
+        false,
+        type,
+      );
+      const challenge = await decrypt(encryptedChallenge, masterKey);
       if (timingSafeEqual(challenge, UNLOCK_CHECK_BYTES)) {
-        return { masterKey: key, needsMigration: type !== ArgonType.Argon2id };
+        return {
+          masterKey,
+          bucketKey,
+          needsMigration: type !== ArgonType.Argon2id,
+        };
       }
     } catch {
       // try next algorithm
@@ -109,6 +144,13 @@ export const unlockMasterKey = async (
   }
 
   throw new Error("Invalid password.");
+};
+
+export const hmacSign = async (
+  key: CryptoKey,
+  data: string,
+): Promise<ArrayBuffer> => {
+  return crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
 };
 
 export const randomBytes = (len: number): Uint8Array => {

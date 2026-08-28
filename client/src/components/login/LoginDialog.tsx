@@ -119,7 +119,7 @@ export default function LoginDialog() {
       // if one doesn't exist, derive it using a random password
       const randomPassword = btoa(String.fromCharCode(...randomBytes(64)));
       const randomSalt = randomBytes(16);
-      masterKey = await deriveMasterKey(randomPassword, randomSalt, true);
+      ({ masterKey } = await deriveMasterKey(randomPassword, randomSalt, true));
 
       const exportedKey = new Uint8Array(
         await crypto.subtle.exportKey("raw", masterKey),

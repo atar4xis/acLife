@@ -16,7 +16,12 @@ export interface CalendarProps {
     changes: EventChange[] | CalendarEvent[],
     cb: () => void,
   ) => void;
-  syncEvents: (user: User, masterKey: CryptoKey) => Promise<CalendarEvent[]>;
+  syncEvents: (
+    user: User,
+    masterKey: CryptoKey,
+    bucketKey: CryptoKey,
+    currentDate: DateTime,
+  ) => Promise<CalendarEvent[]>;
 }
 
 export interface EventBlockProps {

@@ -14,9 +14,11 @@ import {
   encrypt,
   decrypt,
   UNLOCK_CHECK_BYTES,
+  type DerivedKeys,
 } from "../crypt";
 import { compress, decompress } from "../gzip";
 import { arrayBufferToBase64, uint8ArrayFromBase64 } from "../utils";
+import { computeEventBuckets } from "./buckets";
 
 export const encryptOfflineEvents = async (
   events: CalendarEvent[],
@@ -51,18 +53,22 @@ export const decryptEvents = async (
 export const encryptEvents = async (
   events: CalendarEvent[],
   masterKey: CryptoKey,
+  bucketKey: CryptoKey,
 ): Promise<EncryptedEvent[]> => {
   return Promise.all(
     events.map(async (ev) => {
+      const [data, buckets] = await Promise.all([
+        encrypt(new TextEncoder().encode(JSON.stringify(ev)), masterKey).then(
+          arrayBufferToBase64,
+        ),
+        computeEventBuckets(ev, bucketKey),
+      ]);
+
       return {
         id: ev.id,
         updatedAt: ev.timestamp,
-        data: arrayBufferToBase64(
-          await encrypt(
-            new TextEncoder().encode(JSON.stringify(ev)),
-            masterKey,
-          ),
-        ),
+        data,
+        buckets,
       } as EncryptedEvent;
     }),
   );
@@ -102,13 +108,9 @@ export const migrateMasterKeyToArgon2id = async (
   oldMasterKey: CryptoKey,
   post: ApiPost,
   storage?: CacheStorage,
-): Promise<CryptoKey> => {
-  const newMasterKey = await deriveMasterKey(
-    password,
-    salt,
-    false,
-    ArgonType.Argon2id,
-  );
+): Promise<DerivedKeys> => {
+  const { masterKey: newMasterKey, bucketKey: newBucketKey } =
+    await deriveMasterKey(password, salt, false, ArgonType.Argon2id);
 
   const newChallenge = await encrypt(UNLOCK_CHECK_BYTES, newMasterKey);
   const challengeRes = await post<never>("user/challenge", {
@@ -120,7 +122,10 @@ export const migrateMasterKeyToArgon2id = async (
     );
   }
 
-  const syncRes = await post<EventSyncResponse>("calendar/events/sync", []);
+  // migration needs every event regardless of week
+  const syncRes = await post<EventSyncResponse>("calendar/events/sync", {
+    events: [],
+  });
   if (!syncRes.success || !syncRes.data) {
     throw new Error(
       syncRes.message || "Failed to fetch calendar events for migration.",
@@ -137,7 +142,11 @@ export const migrateMasterKeyToArgon2id = async (
       : [];
 
   if (decryptedEvents.length > 0) {
-    const reencrypted = await encryptEvents(decryptedEvents, newMasterKey);
+    const reencrypted = await encryptEvents(
+      decryptedEvents,
+      newMasterKey,
+      newBucketKey,
+    );
     const saveRes = await post(
       "calendar/events/save",
       reencrypted.map((event) => ({ type: "updated", event })),
@@ -156,5 +165,5 @@ export const migrateMasterKeyToArgon2id = async (
       : null,
   );
 
-  return newMasterKey;
+  return { masterKey: newMasterKey, bucketKey: newBucketKey };
 };

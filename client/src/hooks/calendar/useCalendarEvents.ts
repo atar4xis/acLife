@@ -6,14 +6,20 @@ import {
   encryptOfflineEvents,
   encryptEvents,
 } from "@/lib/calendar/crypt";
+import {
+  computeEventBuckets,
+  computeSyncRangeBuckets,
+} from "@/lib/calendar/buckets";
 import { uuidToBase64 } from "@/lib/utils";
 import type {
   CalendarEvent,
+  EventSyncRequest,
   EventSyncResponse,
   EventChange,
   WithoutPrivateKeys,
 } from "@/types/calendar/Event";
 import type { User } from "@/types/User";
+import type { DateTime } from "luxon";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
@@ -22,6 +28,7 @@ export const CLIENT_ID = Math.random().toString(36).slice(2, 8);
 export const useCalendarEvents = (
   user: User | null,
   masterKey: CryptoKey | null,
+  bucketKey: CryptoKey | null,
 ) => {
   const [saving, setSaving] = useState(false);
   const storage = useStorage();
@@ -49,7 +56,12 @@ export const useCalendarEvents = (
   );
 
   const syncEvents = useCallback(
-    async (user: User, masterKey: CryptoKey): Promise<CalendarEvent[]> => {
+    async (
+      user: User,
+      masterKey: CryptoKey,
+      bucketKey: CryptoKey,
+      currentDate: DateTime,
+    ): Promise<CalendarEvent[]> => {
       if (!storage) return [];
 
       if (user.type !== "online")
@@ -58,13 +70,33 @@ export const useCalendarEvents = (
       // get cached events
       const cachedEvents = await getCachedEvents(masterKey);
 
+      const requestedBuckets = await computeSyncRangeBuckets(
+        currentDate,
+        bucketKey,
+      );
+      const requestedSet = new Set(requestedBuckets);
+
+      const eventsInRange = await Promise.all(
+        cachedEvents.map(async (ev) => {
+          const buckets = await computeEventBuckets(ev, bucketKey);
+          return buckets.some((b) => requestedSet.has(b)) ? ev : null;
+        }),
+      );
+
+      const request: EventSyncRequest = {
+        events: eventsInRange
+          .filter((ev): ev is CalendarEvent => ev !== null)
+          .map((ev) => ({
+            id: uuidToBase64(ev.id),
+            ts: ev.timestamp,
+          })),
+        buckets: requestedBuckets,
+      };
+
       // request sync from server, providing a map of our cached events
       const res = await post<EventSyncResponse>(
         "calendar/events/sync",
-        cachedEvents.map((ev) => ({
-          id: uuidToBase64(ev.id),
-          ts: ev.timestamp,
-        })),
+        request,
       );
 
       if (!res.success || !res.data) {
@@ -75,7 +107,7 @@ export const useCalendarEvents = (
       }
 
       // the server tells us which events were updated, added, and deleted
-      const { updated, added, deleted } = res.data;
+      const { updated, added, deleted, needsBucketBackfill } = res.data;
 
       // remove deleted events from cache
       const cachedMap = new Map(cachedEvents.map((ev) => [ev.id, ev]));
@@ -103,6 +135,23 @@ export const useCalendarEvents = (
           await encryptOfflineEvents(finalEvents, masterKey),
         );
 
+        if (needsBucketBackfill?.length > 0) {
+          const toBackfill = needsBucketBackfill
+            .map((id) => cachedMap.get(id))
+            .filter((ev): ev is CalendarEvent => ev !== undefined);
+
+          if (toBackfill.length > 0) {
+            encryptEvents(toBackfill, masterKey, bucketKey)
+              .then((encrypted) =>
+                post(
+                  "calendar/events/save",
+                  encrypted.map((event) => ({ type: "updated", event })),
+                ),
+              )
+              .catch(() => {});
+          }
+        }
+
         return finalEvents;
       } catch {
         toast.error("Failed to decrypt calendar events.");
@@ -113,13 +162,19 @@ export const useCalendarEvents = (
   );
 
   const loadEvents = useCallback(
-    async (user: User, masterKey: CryptoKey): Promise<CalendarEvent[]> => {
+    async (
+      user: User,
+      masterKey: CryptoKey,
+      bucketKey: CryptoKey | null,
+      currentDate: DateTime,
+    ): Promise<CalendarEvent[]> => {
       if (!storage) return [];
 
       // for online users, we sync events with the server
       if (user.type === "online") {
         try {
-          return syncEvents(user, masterKey);
+          if (!bucketKey) throw new Error("Missing bucket key.");
+          return await syncEvents(user, masterKey, bucketKey, currentDate);
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : (err as string);
           toast.error(errMsg);
@@ -149,6 +204,8 @@ export const useCalendarEvents = (
         if (!storage || !masterKey) return;
 
         if (user?.type === "online") {
+          if (!bucketKey) return;
+
           changes = changes as EventChange[];
           // encrypt only added/updated events
           const toEncrypt = changes
@@ -161,7 +218,11 @@ export const useCalendarEvents = (
                   ),
                 ) as WithoutPrivateKeys<CalendarEvent>,
             );
-          const encryptedEvents = await encryptEvents(toEncrypt, masterKey);
+          const encryptedEvents = await encryptEvents(
+            toEncrypt,
+            masterKey,
+            bucketKey,
+          );
 
           // build a map of (eventId: encryptedEvent) for quick lookup
           const encryptedMap = new Map(encryptedEvents.map((e) => [e.id, e]));
@@ -236,7 +297,7 @@ export const useCalendarEvents = (
         setSaving(false);
       }
     },
-    [masterKey, post, storage, user?.type],
+    [masterKey, bucketKey, post, storage, user?.type],
   );
 
   return { loadEvents, syncEvents, saveEvents, saving };

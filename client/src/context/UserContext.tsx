@@ -11,8 +11,10 @@ import { toast } from "sonner";
 type UserContextValue = {
   user: User | null;
   masterKey: CryptoKey | null;
+  bucketKey: CryptoKey | null;
   setUser: (user: User | null) => void;
   setMasterKey: (key: CryptoKey | null) => void;
+  setBucketKey: (key: CryptoKey | null) => void;
   logout: () => void;
   checkLogin: (password?: string) => Promise<User | void>;
 };
@@ -20,8 +22,10 @@ type UserContextValue = {
 const UserContext = createContext<UserContextValue>({
   user: null,
   masterKey: null,
+  bucketKey: null,
   setUser: () => {},
   setMasterKey: () => {},
+  setBucketKey: () => {},
   logout: () => {},
   checkLogin: async () => {},
 });
@@ -29,6 +33,7 @@ const UserContext = createContext<UserContextValue>({
 export function UserProvider({ children }: WithChildren) {
   const [user, setUser] = useState<User | null>(null);
   const [masterKey, setMasterKey] = useState<CryptoKey | null>(null);
+  const [bucketKey, setBucketKey] = useState<CryptoKey | null>(null);
   const { get, post } = useApi();
   const storage = useStorage();
 
@@ -49,18 +54,17 @@ export function UserProvider({ children }: WithChildren) {
           const encryptedChallenge = uint8ArrayFromBase64(
             atob(newUser.challenge),
           );
-          const { masterKey, needsMigration } = await unlockMasterKey(
-            password,
-            salt,
-            encryptedChallenge,
-          );
+          const { masterKey, bucketKey, needsMigration } =
+            await unlockMasterKey(password, salt, encryptedChallenge);
           setMasterKey(masterKey);
+          setBucketKey(bucketKey);
 
           // upgrade legacy Argon2d keys to Argon2id in the background
           if (needsMigration) {
             migrateMasterKeyToArgon2id(password, salt, masterKey, post, storage)
-              .then((upgradedKey) => {
-                setMasterKey(upgradedKey);
+              .then((upgraded) => {
+                setMasterKey(upgraded.masterKey);
+                setBucketKey(upgraded.bucketKey);
                 toast.success("Your account security has been upgraded.");
               })
               .catch((err) =>
@@ -69,6 +73,7 @@ export function UserProvider({ children }: WithChildren) {
           }
         } catch {
           setMasterKey(null); // will prompt UnlockDialog to ask for the password again
+          setBucketKey(null);
         }
       }
       return newUser;
@@ -82,12 +87,24 @@ export function UserProvider({ children }: WithChildren) {
 
   // invalidate master key if the user is null
   useEffect(() => {
-    if (user === null) setMasterKey(null);
+    if (user === null) {
+      setMasterKey(null);
+      setBucketKey(null);
+    }
   }, [user]);
 
   return (
     <UserContext.Provider
-      value={{ user, masterKey, setMasterKey, setUser, logout, checkLogin }}
+      value={{
+        user,
+        masterKey,
+        bucketKey,
+        setMasterKey,
+        setBucketKey,
+        setUser,
+        logout,
+        checkLogin,
+      }}
     >
       {children}
     </UserContext.Provider>

@@ -7,6 +7,8 @@ import type { DateTime } from "luxon";
 
 export const eventKey = (event: CalendarEvent) => event._instanceId ?? event.id;
 
+export const MAX_EVENT_DURATION_MINUTES = 4 * 7 * 24 * 60; // 4 weeks
+
 export function getEventPixelPosition(
   event: CalendarEvent,
   day: DateTime,

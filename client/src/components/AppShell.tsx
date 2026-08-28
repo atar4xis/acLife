@@ -5,6 +5,7 @@ import AppCalendar from "@/components/calendar/Calendar";
 import AppSidebar from "@/components/Sidebar";
 import { useStorage } from "@/context/StorageContext";
 import { useUser } from "@/context/UserContext";
+import { useCalendar } from "@/context/CalendarContext";
 import { Spinner } from "./ui/spinner";
 import { useCalendarEvents } from "@/hooks/calendar/useCalendarEvents";
 import { useApi } from "@/context/ApiContext";
@@ -19,12 +20,14 @@ export default function AppShell() {
   );
   const [calEvents, setCalEvents] = useState<CalendarEvent[] | null>(null);
   const [offline, setOffline] = useState(false);
-  const { masterKey, user } = useUser();
+  const { masterKey, bucketKey, user } = useUser();
+  const { currentDate } = useCalendar();
   const { serverMeta } = useApi();
   const storage = useStorage();
   const { saving, loadEvents, saveEvents, syncEvents } = useCalendarEvents(
     user,
     masterKey,
+    bucketKey,
   );
 
   const activeSub =
@@ -38,11 +41,17 @@ export default function AppShell() {
   useEffect(() => {
     if (!user) return;
     if (masterKey === null) return;
+    if (user.type === "online" && bucketKey === null) return;
     if (!activeSub && subRequired) return;
 
     toast.promise(
       (async () => {
-        const events = await loadEvents(user, masterKey);
+        const events = await loadEvents(
+          user,
+          masterKey,
+          bucketKey,
+          currentDate,
+        );
         setCalEvents(events);
       })(),
       {
@@ -53,7 +62,7 @@ export default function AppShell() {
     );
 
     // eslint-disable-next-line
-  }, [user, masterKey, activeSub, subRequired]);
+  }, [user, masterKey, bucketKey, activeSub, subRequired]);
 
   // show offline when network goes offline
   useEffect(() => {

@@ -18,7 +18,7 @@ import { useState } from "react";
 import { Button } from "../ui/button";
 
 export default function UnlockDialog() {
-  const { user, setMasterKey, logout } = useUser();
+  const { user, setMasterKey, setBucketKey, logout } = useUser();
   const { post } = useApi();
   const storage = useStorage();
   const [error, setError] = useState(false);
@@ -41,19 +41,21 @@ export default function UnlockDialog() {
     );
 
     try {
-      const { masterKey, needsMigration } = await unlockMasterKey(
+      const { masterKey, bucketKey, needsMigration } = await unlockMasterKey(
         password,
         salt,
         encryptedChallenge,
       );
       setMasterKey(masterKey);
+      setBucketKey(bucketKey);
       setError(false);
 
       // upgrade legacy Argon2d keys to Argon2id in the background
       if (needsMigration) {
         migrateMasterKeyToArgon2id(password, salt, masterKey, post, storage)
-          .then((upgradedKey) => {
-            setMasterKey(upgradedKey);
+          .then((upgraded) => {
+            setMasterKey(upgraded.masterKey);
+            setBucketKey(upgraded.bucketKey);
             toast.success("Your account security has been upgraded.");
           })
           .catch((err) => console.error("Master key migration failed:", err));
