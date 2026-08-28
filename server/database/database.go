@@ -4,6 +4,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"errors"
 	"fmt"
 	"os"
@@ -15,9 +16,12 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jmoiron/sqlx"
 )
+
+//go:embed migrations/*.sql
+var migrations embed.FS
 
 var (
 	DB *sqlx.DB
@@ -67,10 +71,15 @@ func Setup() error {
 		dbName,
 	)
 
-	// Run database migrations
-	m, err := migrate.New("file://database/migrations", migrationDSN)
+	src, err := iofs.New(migrations, "migrations")
 	if err != nil {
-		utils.LogError("Setup", "migrate.New", err)
+		utils.LogError("Setup", "iofs.New", err)
+		return err
+	}
+
+	m, err := migrate.NewWithSourceInstance("iofs", src, migrationDSN)
+	if err != nil {
+		utils.LogError("Setup", "migrate.NewWithSourceInstance", err)
 		return err
 	}
 	defer m.Close()
