@@ -8,6 +8,7 @@ import {
   useContext,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
 
 interface StorageContextValue<T extends object> {
@@ -23,6 +24,8 @@ export function createStorageContext<T extends object>(
 
   function StorageProvider({ children }: WithChildren) {
     const [data, setData] = useState<T>(defaults);
+    const dataRef = useRef(data);
+    dataRef.current = data;
 
     useEffect(() => {
       let cancelled = false;
@@ -30,6 +33,7 @@ export function createStorageContext<T extends object>(
       Promise.resolve(adapter.load())
         .then((loaded) => {
           if (!cancelled) {
+            dataRef.current = loaded;
             setData(loaded);
           }
         })
@@ -43,13 +47,14 @@ export function createStorageContext<T extends object>(
     }, []);
 
     const get = useCallback(
-      <K extends keyof T>(key: K): T[K] => data[key],
-      [data],
+      <K extends keyof T>(key: K): T[K] => dataRef.current[key],
+      [],
     );
 
     const set = useCallback(<K extends keyof T>(key: K, value: T[K]) => {
       setData((prev) => {
         const next = { ...prev, [key]: value };
+        dataRef.current = next;
 
         Promise.resolve(adapter.save(next)).catch((error) => {
           console.error("Failed to save storage data:", error);
