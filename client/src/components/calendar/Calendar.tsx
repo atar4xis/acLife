@@ -7,11 +7,16 @@ import {
   useCallback,
 } from "react";
 import { DateTime } from "luxon";
-import { ArrowLeft, ArrowRight, SearchIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, SearchIcon, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover";
 
 import type { CalendarProps } from "@/types/Props";
 import type {
@@ -55,6 +60,7 @@ import {
 } from "@/lib/calendar/recurrence";
 import type { PushEvent } from "@/types/Push";
 import { CLIENT_ID } from "@/hooks/calendar/useCalendarEvents";
+import { useCalendarSearch } from "@/hooks/calendar/useCalendarSearch";
 import { EMPTY_ARRAY } from "@/lib/constants";
 import type { RepeatInterval } from "@/types/calendar/Event";
 
@@ -266,6 +272,7 @@ export default function AppCalendar({
   setMode,
   saveEvents,
   syncEvents,
+  syncBuckets,
 }: CalendarProps) {
   const {
     editingEvent,
@@ -289,6 +296,45 @@ export default function AppCalendar({
   const changesMapRef = useRef<Map<string, EventChange[]>>(new Map());
   const pendingSaveRef = useRef<null | number>(null);
   const { user, masterKey, bucketKey } = useUser();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchAnchorRef = useRef<HTMLElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
+
+  const onExpandedSearchEvents = useCallback(
+    (newEvents: CalendarEvent[]) =>
+      dispatch({ type: "set", events: newEvents }),
+    [dispatch],
+  );
+
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    results: searchResults,
+    isExpanding: isSearchExpanding,
+    canExpandMore: canExpandSearchRadius,
+    expandSearchRadius,
+  } = useCalendarSearch(
+    calendarEvents,
+    user,
+    masterKey,
+    bucketKey,
+    currentDate,
+    syncBuckets,
+    onExpandedSearchEvents,
+  );
+
+  const onSelectSearchResult = useCallback(
+    (event: CalendarEvent) => {
+      setCurrentDate(event.start);
+      selectEvents([event]);
+      setSearchOpen(false);
+    },
+    [setCurrentDate, selectEvents],
+  );
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
 
@@ -1489,7 +1535,7 @@ export default function AppCalendar({
           {swipeDelta > 0 ? <ArrowRight /> : <ArrowLeft />}
         </div>
       )}
-      <nav className="flex items-center justify-between border-b p-3">
+      <nav className="relative flex items-center justify-between border-b p-3">
         {isMobile && <SidebarTrigger />}
 
         <div className="items-center gap-2 hidden md:flex">
@@ -1526,11 +1572,139 @@ export default function AppCalendar({
 
         <ModeSwitcher mode={mode} setMode={setMode} />
 
-        {/* TODO: implement search function */}
-        <div className="flex items-center gap-2">
-          <SearchIcon />
-          <Input className="hidden lg:block" placeholder="Search events..." />
-        </div>
+        <Popover
+          open={isMobile ? searchOpen : searchOpen && searchQuery.length > 0}
+          onOpenChange={setSearchOpen}
+        >
+          <PopoverAnchor asChild>
+            {isMobile ? (
+              <button
+                ref={(el) => {
+                  searchAnchorRef.current = el;
+                }}
+                type="button"
+                aria-label="Search events"
+                onClick={() => setSearchOpen(!searchOpen)}
+              >
+                <SearchIcon />
+              </button>
+            ) : (
+              <div
+                ref={(el) => {
+                  searchAnchorRef.current = el;
+                }}
+                className="flex items-center gap-2"
+              >
+                <SearchIcon />
+                <div className="relative flex items-center">
+                  <Input
+                    ref={searchInputRef}
+                    className="pr-8"
+                    placeholder="Search events..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setSearchOpen(true);
+                    }}
+                    onFocus={() =>
+                      searchQuery.length > 0 && setSearchOpen(true)
+                    }
+                  />
+                  {searchQuery.length > 0 && (
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      className="text-muted-foreground hover:text-foreground absolute right-2"
+                      onClick={() => {
+                        setSearchQuery("");
+                        searchInputRef.current?.focus();
+                      }}
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </PopoverAnchor>
+          <PopoverContent
+            align="end"
+            className={isMobile ? "w-[calc(100vw-1.5rem)] p-2" : "w-80 p-1"}
+            onOpenAutoFocus={(e) => {
+              if (!isMobile) e.preventDefault();
+            }}
+            onInteractOutside={(e) => {
+              if (searchAnchorRef.current?.contains(e.target as Node)) {
+                e.preventDefault();
+              }
+            }}
+          >
+            {isMobile && (
+              <div className="relative mb-2 flex items-center">
+                <Input
+                  ref={searchInputRef}
+                  className="pr-8"
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery.length > 0 && (
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    className="text-muted-foreground hover:text-foreground absolute right-2"
+                    onClick={() => {
+                      setSearchQuery("");
+                      searchInputRef.current?.focus();
+                    }}
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
+            )}
+            {searchResults.length === 0 ? (
+              <p className="text-muted-foreground p-2 text-sm">
+                {isSearchExpanding ? "Searching..." : "No matching events."}
+              </p>
+            ) : (
+              <ul className="max-h-80 overflow-auto">
+                {searchResults.map((ev) => (
+                  <li key={ev._instanceId ?? ev.id}>
+                    <button
+                      type="button"
+                      className="hover:bg-accent flex w-full items-stretch gap-2 rounded-sm p-2 text-left text-sm"
+                      onClick={() => onSelectSearchResult(ev)}
+                    >
+                      <span
+                        className="w-1 shrink-0 rounded-full"
+                        style={{ backgroundColor: ev.color ?? "#2563eb" }}
+                      />
+                      <span className="flex flex-col items-start">
+                        <span className="font-medium">{ev.title}</span>
+                        <span className="text-muted-foreground text-xs">
+                          {ev.start.toFormat("EEE, MMM d yyyy, h:mm a")}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!isSearchExpanding && canExpandSearchRadius && (
+              <div className="p-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={expandSearchRadius}
+                >
+                  Expand search radius
+                </Button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
       </nav>
 
       <div className="flex-1 overflow-hidden">

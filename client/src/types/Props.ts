@@ -22,6 +22,11 @@ export interface CalendarProps {
     bucketKey: CryptoKey,
     currentDate: DateTime,
   ) => Promise<CalendarEvent[]>;
+  syncBuckets: (
+    buckets: string[],
+    masterKey: CryptoKey,
+    bucketKey: CryptoKey,
+  ) => Promise<CalendarEvent[]>;
 }
 
 export interface EventBlockProps {

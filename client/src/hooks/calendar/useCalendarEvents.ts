@@ -55,31 +55,22 @@ export const useCalendarEvents = (
     [storage],
   );
 
-  const syncEvents = useCallback(
+  const syncBuckets = useCallback(
     async (
-      user: User,
+      buckets: string[],
       masterKey: CryptoKey,
       bucketKey: CryptoKey,
-      currentDate: DateTime,
     ): Promise<CalendarEvent[]> => {
       if (!storage) return [];
-
-      if (user.type !== "online")
-        throw new Error("Cannot syncEvents for offline user.");
-
       // get cached events
       const cachedEvents = await getCachedEvents(masterKey);
 
-      const requestedBuckets = await computeSyncRangeBuckets(
-        currentDate,
-        bucketKey,
-      );
-      const requestedSet = new Set(requestedBuckets);
+      const requestedSet = new Set(buckets);
 
       const eventsInRange = await Promise.all(
         cachedEvents.map(async (ev) => {
-          const buckets = await computeEventBuckets(ev, bucketKey);
-          return buckets.some((b) => requestedSet.has(b)) ? ev : null;
+          const evBuckets = await computeEventBuckets(ev, bucketKey);
+          return evBuckets.some((b) => requestedSet.has(b)) ? ev : null;
         }),
       );
 
@@ -90,7 +81,7 @@ export const useCalendarEvents = (
             id: uuidToBase64(ev.id),
             ts: ev.timestamp,
           })),
-        buckets: requestedBuckets,
+        buckets,
       };
 
       // request sync from server, providing a map of our cached events
@@ -159,6 +150,26 @@ export const useCalendarEvents = (
       }
     },
     [post, storage, getCachedEvents],
+  );
+
+  const syncEvents = useCallback(
+    async (
+      user: User,
+      masterKey: CryptoKey,
+      bucketKey: CryptoKey,
+      currentDate: DateTime,
+    ): Promise<CalendarEvent[]> => {
+      if (user.type !== "online")
+        throw new Error("Cannot syncEvents for offline user.");
+
+      const requestedBuckets = await computeSyncRangeBuckets(
+        currentDate,
+        bucketKey,
+      );
+
+      return syncBuckets(requestedBuckets, masterKey, bucketKey);
+    },
+    [syncBuckets],
   );
 
   const loadEvents = useCallback(
@@ -300,5 +311,5 @@ export const useCalendarEvents = (
     [masterKey, bucketKey, post, storage, user?.type],
   );
 
-  return { loadEvents, syncEvents, saveEvents, saving };
+  return { loadEvents, syncEvents, syncBuckets, saveEvents, saving };
 };

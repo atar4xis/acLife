@@ -24,7 +24,8 @@ export default function AppShell() {
   const { currentDate } = useCalendar();
   const { serverMeta } = useApi();
   const storage = useStorage();
-  const { saving, loadEvents, saveEvents, syncEvents } = useCalendarEvents(
+  const { saving, loadEvents, saveEvents, syncEvents, syncBuckets } =
+    useCalendarEvents(
     user,
     masterKey,
     bucketKey,
@@ -111,6 +112,7 @@ export default function AppShell() {
           setMode={setViewMode}
           saveEvents={saveEvents}
           syncEvents={syncEvents}
+          syncBuckets={syncBuckets}
         />
       )}
     </>

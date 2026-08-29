@@ -117,6 +117,7 @@ const renderCalendar = ({
         setMode={setMode}
         saveEvents={saveEvents}
         syncEvents={vi.fn()}
+        syncBuckets={vi.fn()}
       />
     </CalendarProvider>,
   );

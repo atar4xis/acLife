@@ -143,3 +143,15 @@ export function browserSupportsPush(): boolean {
     "Notification" in window
   );
 }
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function normalize(text: string): string {
+  return text.toLowerCase();
+}
+
+export function tokenize(query: string): string[] {
+  return normalize(query).split(/\s+/).filter(Boolean);
+}
