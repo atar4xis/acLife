@@ -1,0 +1,12 @@
+ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    owner CHAR(36) NOT NULL PRIMARY KEY,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    last_sent_at DATETIME NOT NULL,
+    send_window_start DATETIME NOT NULL,
+    send_count INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (owner) REFERENCES users(uuid) ON DELETE CASCADE
+);

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"net/http"
 	"time"
 
 	"acLife/handlers"
@@ -15,8 +16,11 @@ func Auth(r *mux.Router) {
 	sr.Use(handlers.MaxBodySizeMiddleware(16 << 10))      // 16 KB
 	sr.Use(handlers.RateLimitMiddleware(30, time.Minute)) // 30 reqs/min
 
-	sr.HandleFunc("/register", handlers.Register).Methods("POST")
+	sr.Handle("/register", handlers.RateLimitMiddleware(3, time.Minute)(http.HandlerFunc(handlers.Register))).Methods("POST") // Stricter 3 req/min for registrations
 	sr.HandleFunc("/login/start", handlers.LoginStart).Methods("POST")
 	sr.HandleFunc("/login/verify", handlers.LoginVerify).Methods("POST")
 	sr.HandleFunc("/logout", handlers.Logout).Methods("POST")
+	sr.HandleFunc("/verify-email", handlers.VerifyEmail).Methods("GET")
+	sr.HandleFunc("/verify-email", handlers.ConfirmEmailVerification).Methods("POST")
+	sr.HandleFunc("/resend-verification", handlers.ResendVerification).Methods("POST")
 }

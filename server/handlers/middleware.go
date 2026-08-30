@@ -21,8 +21,7 @@ import (
 var (
 	isBehindProxy = os.Getenv("IS_BEHIND_PROXY") != ""
 
-	rateLimitStore = sync.Map{} // map[string]*rateLimitEntry
-	subCache       = sync.Map{} // map[string]subCacheEntry
+	subCache = sync.Map{} // map[string]subCacheEntry
 )
 
 type rateLimitEntry struct {
@@ -36,20 +35,20 @@ type subCacheEntry struct {
 }
 
 func init() {
-	go cleanupRateLimits(constants.RateLimitCacheTTL)
 	go cleanupSubCache(constants.SubCacheTTL)
 }
 
 /* -------------------- Cleanup -------------------- */
 
-func cleanupRateLimits(ttl time.Duration) {
+// cleanupRateLimits periodically evicts stale entries from a rate limiter's own store.
+func cleanupRateLimits(store *sync.Map, ttl time.Duration) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {
 		now := time.Now()
 
-		rateLimitStore.Range(func(key, value any) bool {
+		store.Range(func(key, value any) bool {
 			entry := value.(*rateLimitEntry)
 
 			entry.mu.Lock()
@@ -64,7 +63,7 @@ func cleanupRateLimits(ttl time.Duration) {
 			entry.mu.Unlock()
 
 			if empty {
-				rateLimitStore.Delete(key)
+				store.Delete(key)
 			}
 			return true
 		})
@@ -110,13 +109,18 @@ func BodyCloseMiddleware() mux.MiddlewareFunc {
 }
 
 // RateLimitMiddleware limits the number of requests made by the user in a specified period of time.
+// Each call gets its own isolated store, so independently configured limiters never share state.
 func RateLimitMiddleware(maxRequests int, window time.Duration) mux.MiddlewareFunc {
+	store := &sync.Map{} // map[string]*rateLimitEntry
+
+	go cleanupRateLimits(store, constants.RateLimitCacheTTL)
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ip := getClientIP(r)
 			now := time.Now()
 
-			val, _ := rateLimitStore.LoadOrStore(ip, &rateLimitEntry{})
+			val, _ := store.LoadOrStore(ip, &rateLimitEntry{})
 			entry := val.(*rateLimitEntry)
 
 			entry.mu.Lock()
@@ -159,6 +163,27 @@ func AuthMiddleware() mux.MiddlewareFunc {
 				return
 			}
 
+			// Log out sessions that predate the account's email verification
+			if constants.Metadata.Registration.Email.VerificationRequired && !user.EmailVerified {
+				accessToken := session.Get[string](r, "access_token")
+				if accessToken != "" {
+					_, _ = database.Exec(r.Context(),
+						"DELETE FROM account_sessions WHERE access_token = ?",
+						accessToken)
+				}
+				_ = session.DestroySession(w, r)
+
+				utils.SendJSON(w, http.StatusForbidden, types.Reply[types.EmailUnverifiedData]{
+					Success: false,
+					Message: "Email verification required.",
+					Data: types.EmailUnverifiedData{
+						Email:                user.Email,
+						RequiresVerification: true,
+					},
+				})
+				return
+			}
+
 			ctx := context.WithValue(r.Context(), session.UserContextKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -195,7 +220,7 @@ func SubscriptionMiddleware() mux.MiddlewareFunc {
 
 				user.SubscriptionStatus = &newStatus
 
-				if *user.SubscriptionStatus == ""  {
+				if *user.SubscriptionStatus == "" {
 					denySubscription(w)
 					return
 				}

@@ -28,9 +28,11 @@ import { Client, generateSalt } from "@mzattahri/srp";
 export function LoginForm({
   handleOfflineClick,
   serverMeta,
+  onNeedsVerification,
 }: {
   serverMeta: ServerMetadata;
   handleOfflineClick: (e: React.MouseEvent) => void;
+  onNeedsVerification: (email: string) => void;
 }) {
   const [newAccount, setNewAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,11 +93,13 @@ export function LoginForm({
         const masterSalt = generateSalt();
         const { masterKey } = await deriveMasterKey(password, masterSalt);
         const challenge = await encrypt(UNLOCK_CHECK_BYTES, masterKey);
+        const confirmEmail = data.get("confirm-email") as string; // honeypot field
 
         const res = await post("auth/register", {
           challenge: btoa(String.fromCharCode(...new Uint8Array(challenge))),
           triplet: btoa(String.fromCharCode(...triplet.toUint8Array())),
           salt: btoa(String.fromCharCode(...masterSalt)),
+          ...(confirmEmail ? { email: confirmEmail } : {}),
         });
 
         if (!res.success) {
@@ -105,6 +109,12 @@ export function LoginForm({
 
         form.reset();
         setNewAccount(false);
+
+        if (serverMeta.registration.email?.verificationRequired) {
+          onNeedsVerification(email);
+          return;
+        }
+
         setSuccess("Account created. You may now log in.");
       } finally {
         setLoading(false);
@@ -220,6 +230,27 @@ export function LoginForm({
                       type="password"
                       placeholder="Confirm password"
                       required
+                    />
+                  </Field>
+                  <Field
+                    style={{
+                      position: "fixed",
+                      top: "-7777px",
+                      width: "1px",
+                      height: "1px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <FieldLabel htmlFor="confirm-email">
+                      Confirm Email
+                    </FieldLabel>
+                    <Input
+                      id="confirm-email"
+                      name="confirm-email"
+                      type="email"
+                      placeholder="Confirm email"
+                      tabIndex={-1}
+                      autoComplete="off"
                     />
                   </Field>
                   {serverMeta.policies.terms || serverMeta.policies.privacy ? (

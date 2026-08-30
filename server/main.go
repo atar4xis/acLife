@@ -31,6 +31,20 @@ func main() {
 		log.Fatalf("Database setup failed: %v", err)
 	}
 
+	// Make sure SMTP is configured if email verification is required
+	if constants.Metadata.Registration.Email.VerificationRequired {
+		check := func(envVar string) {
+			if os.Getenv(envVar) == "" {
+				log.Fatalf("%s is required for email verification but is not set. Set it or set DISABLE_EMAIL_VERIFICATION=true to disable email verification.", envVar)
+			}
+		}
+
+		check("SMTP_HOST")
+		check("SMTP_PORT")
+		check("SMTP_USERNAME")
+		check("SMTP_PASSWORD")
+	}
+
 	// Create cookie store
 	sessionKey := os.Getenv("SESSION_KEY")
 	if sessionKey == "" {

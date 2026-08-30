@@ -58,9 +58,9 @@ func GetLoggedInUser(r *http.Request, refetch ...bool) *types.User {
 	if err := database.QueryRow(
 		r.Context(),
 		`
-			SELECT 
+			SELECT
 				id, uuid, email, salt, srp_salt, verifier, challenge,
-				stripe_customer_id, stripe_subscription_id, subscription_status
+				stripe_customer_id, stripe_subscription_id, subscription_status, email_verified
 			FROM users
 			WHERE uuid = ?`,
 		ownerUUID,
@@ -75,6 +75,7 @@ func GetLoggedInUser(r *http.Request, refetch ...bool) *types.User {
 		&user.StripeCustomerID,
 		&user.StripeSubscriptionID,
 		&user.SubscriptionStatus,
+		&user.EmailVerified,
 	); err != nil {
 		if err != sql.ErrNoRows {
 			utils.LogError("GetLoggedInUser", "QueryRow", err)

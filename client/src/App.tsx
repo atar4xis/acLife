@@ -9,6 +9,7 @@ import { CalendarProvider } from "./context/CalendarContext";
 import { ApiProvider, useApi } from "./context/ApiContext";
 import { useEffect, useRef } from "react";
 import { Toaster } from "./components/ui/sonner";
+import { toast } from "sonner";
 
 function AuthWrapper({ children }: WithChildren) {
   const { user, checkLogin, setUser } = useUser();
@@ -35,6 +36,21 @@ function AuthWrapper({ children }: WithChildren) {
 }
 
 export default function App() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("verified") !== "false") return;
+
+    toast.error("Email verification failed. Please try again.");
+
+    params.delete("verified");
+    const newSearch = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      window.location.pathname + (newSearch ? `?${newSearch}` : ""),
+    );
+  }, []);
+
   return (
     <ThemeProvider defaultTheme="system" storageKey="ui-theme">
       <ApiProvider>

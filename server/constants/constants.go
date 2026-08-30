@@ -30,6 +30,12 @@ const (
 	DBConnMaxLifetime = 1 * time.Hour
 	DBTimeout         = 5 * time.Second
 
+	SMTPTimeout = 30 * time.Second
+
+	EmailQueuePollInterval   = 10 * time.Second
+	EmailQueueStaleThreshold = 1 * time.Minute
+	EmailQueueMaxAttempts    = 5
+
 	MaxEmailLen     = 260
 	MaxSaltLen      = 16
 	MaxVerifierLen  = 520
@@ -41,6 +47,10 @@ const (
 	MaxSyncBuckets  = 100 // caps the number of buckets requested in a single sync
 
 	MaxBucketBackfillPerSync = 800
+
+	EmailVerificationTTL             = 1 * Day
+	EmailVerificationResendCooldown  = 60 * time.Second
+	EmailVerificationMaxSendsPerHour = 4
 )
 
 // AccessTokenExpiry set in init: ACCESS_TOKEN_EXPIRY_DAYS env var if present, else default 3 days.
@@ -69,7 +79,7 @@ func init() {
 			Enabled:              os.Getenv("DISABLE_REGISTRATION") != "true",
 			SubscriptionRequired: os.Getenv("STRIPE_API_KEY") != "",
 			Email: &types.EmailSettings{
-				VerificationRequired: os.Getenv("DISABLE_EMAIL_VALIDATION") == "true",
+				VerificationRequired: os.Getenv("DISABLE_EMAIL_VERIFICATION") != "true",
 				DomainBlacklist:      []string{},
 			},
 			RetentionPeriod: 0,

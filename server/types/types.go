@@ -26,6 +26,13 @@ type User struct {
 	StripeCustomerID     *string `db:"stripe_customer_id"`
 	StripeSubscriptionID *string `db:"stripe_subscription_id"`
 	SubscriptionStatus   *string `db:"subscription_status"`
+	EmailVerified        bool    `db:"email_verified"`
+}
+
+// EmailUnverifiedData signals to the client that the account exists but its email is not verified yet.
+type EmailUnverifiedData struct {
+	Email                string `json:"email"`
+	RequiresVerification bool   `json:"requiresVerification"`
 }
 
 // PublicUser contains only the exposed fields of a user.

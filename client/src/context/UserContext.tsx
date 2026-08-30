@@ -34,7 +34,7 @@ export function UserProvider({ children }: WithChildren) {
   const [user, setUser] = useState<User | null>(null);
   const [masterKey, setMasterKey] = useState<CryptoKey | null>(null);
   const [bucketKey, setBucketKey] = useState<CryptoKey | null>(null);
-  const { get, post } = useApi();
+  const { get, post, setPendingVerificationEmail } = useApi();
   const storage = useStorage();
 
   const checkLogin = async (password: string | null = null) => {
@@ -48,6 +48,7 @@ export function UserProvider({ children }: WithChildren) {
       if (newUser.type !== "online") throw new Error(); // won't happen
 
       setUser(newUser);
+      setPendingVerificationEmail(null);
       if (password) {
         try {
           const salt = uint8ArrayFromBase64(newUser.salt);
@@ -77,7 +78,9 @@ export function UserProvider({ children }: WithChildren) {
         }
       }
       return newUser;
-    } else setUser(null);
+    } else {
+      setUser(null);
+    }
   };
 
   const logout = async () => {

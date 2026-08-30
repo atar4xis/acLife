@@ -6,6 +6,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { LoginForm } from "@/components/login/LoginForm";
+import { EmailVerificationRequired } from "@/components/login/EmailVerificationRequired";
+import { ConfirmEmailPrompt } from "@/components/login/ConfirmEmailPrompt";
 import { ModeToggle } from "@/components/ModeToggle";
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
@@ -34,9 +36,28 @@ export default function LoginDialog() {
   >(null);
   const [serverSwitcherOpen, setServerSwitcherOpen] = useState(false);
   const [pendingServerURL, setPendingServerURL] = useState<string>("");
-  const { setUrl, serverMeta } = useApi();
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(
+    null,
+  );
+  const [confirmToken, setConfirmToken] = useState<string | null>(null);
+  const {
+    setUrl,
+    serverMeta,
+    pendingVerificationEmail,
+    setPendingVerificationEmail,
+  } = useApi();
   const { setUser, setMasterKey } = useUser();
   const storage = useStorage();
+
+  useEffect(() => {
+    if (pendingVerificationEmail)
+      setVerificationEmail(pendingVerificationEmail);
+  }, [pendingVerificationEmail]);
+
+  const handleBackFromVerification = () => {
+    setVerificationEmail(null);
+    setPendingVerificationEmail(null);
+  };
 
   useEffect(() => {
     const savedServerURL =
@@ -45,6 +66,22 @@ export default function LoginDialog() {
     setPendingServerURL(savedServerURL);
     setUrl(savedServerURL);
   }, [setUrl]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("verify_token");
+    if (!token) return;
+
+    setConfirmToken(token);
+
+    params.delete("verify_token");
+    const newSearch = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      window.location.pathname + (newSearch ? `?${newSearch}` : ""),
+    );
+  }, []);
 
   const handleServerURLChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPendingServerURL(e.target.value || "");
@@ -226,10 +263,21 @@ export default function LoginDialog() {
             <div className="fixed left-4 top-4">
               <ModeToggle />
             </div>
-            {serverMeta ? (
+            {confirmToken ? (
+              <ConfirmEmailPrompt
+                token={confirmToken}
+                onDone={() => setConfirmToken(null)}
+              />
+            ) : verificationEmail ? (
+              <EmailVerificationRequired
+                email={verificationEmail}
+                onBack={handleBackFromVerification}
+              />
+            ) : serverMeta ? (
               <LoginForm
                 handleOfflineClick={handleOfflineClick}
                 serverMeta={serverMeta}
+                onNeedsVerification={setVerificationEmail}
               />
             ) : (
               <Button variant="outline" onClick={handleOfflineClick}>

@@ -23,9 +23,18 @@ interface ApiContextType {
   setServerMeta: (meta: ServerMetadata) => void;
   pendingLogout: boolean;
   setPendingLogout: (val: boolean) => void;
+  pendingVerificationEmail: string | null;
+  setPendingVerificationEmail: (email: string | null) => void;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
+
+function unverifiedEmailFrom(result: unknown): string | null {
+  const data = (result as { data?: unknown })?.data as
+    { email?: string; requiresVerification?: boolean } | undefined;
+
+  return data?.requiresVerification && data.email ? data.email : null;
+}
 
 export const ApiProvider = ({
   children,
@@ -34,6 +43,23 @@ export const ApiProvider = ({
   const [url, setUrl] = useState(initialUrl);
   const [serverMeta, setServerMeta] = useState<ServerMetadata | null>(null);
   const [pendingLogout, setPendingLogout] = useState(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<
+    string | null
+  >(null);
+
+  const handle429 = useCallback(
+    async (response: Response): Promise<APIResponse<unknown>> => {
+      let message: string;
+      try {
+        const result = await response.json();
+        message = result.message || "Too many requests. Try again later.";
+      } catch {
+        message = "Too many requests. Try again later.";
+      }
+      return { success: false, message } as APIResponse<unknown>;
+    },
+    [],
+  );
 
   const get = useCallback(
     async <T,>(endpoint: string): Promise<APIResponse<T>> => {
@@ -45,14 +71,22 @@ export const ApiProvider = ({
         });
 
         if (response.status === 429) {
-          return {
-            success: false,
-            message: "Too many requests. Try again later.",
-          } as APIResponse<T>;
+          return handle429(response) as Promise<APIResponse<T>>;
         }
 
-        const result = await response.json();
-        return result as APIResponse<T>;
+        const result = (await response.json()) as APIResponse<T>;
+
+        if (response.status === 401) {
+          setPendingLogout(true);
+        } else if (response.status === 403) {
+          const email = unverifiedEmailFrom(result);
+          if (email) {
+            setPendingVerificationEmail(email);
+            setPendingLogout(true);
+          }
+        }
+
+        return result;
       } catch (error) {
         console.error(error);
         return {
@@ -61,7 +95,7 @@ export const ApiProvider = ({
         } as APIResponse<T>;
       }
     },
-    [url],
+    [url, handle429],
   );
 
   const getRaw = useCallback(
@@ -111,16 +145,22 @@ export const ApiProvider = ({
         });
 
         if (response.status === 429) {
-          return {
-            success: false,
-            message: "Too many requests. Try again later.",
-          } as APIResponse<T>;
-        } else if (response.status === 401) {
-          setPendingLogout(true);
+          return handle429(response) as Promise<APIResponse<T>>;
         }
 
-        const result = await response.json();
-        return result as APIResponse<T>;
+        const result = (await response.json()) as APIResponse<T>;
+
+        if (response.status === 401) {
+          setPendingLogout(true);
+        } else if (response.status === 403) {
+          const email = unverifiedEmailFrom(result);
+          if (email) {
+            setPendingVerificationEmail(email);
+            setPendingLogout(true);
+          }
+        }
+
+        return result;
       } catch (error) {
         console.error(error);
         return {
@@ -129,7 +169,7 @@ export const ApiProvider = ({
         } as APIResponse<T>;
       }
     },
-    [url],
+    [url, handle429],
   );
 
   const query = useCallback(
@@ -186,6 +226,8 @@ export const ApiProvider = ({
         setServerMeta,
         pendingLogout,
         setPendingLogout,
+        pendingVerificationEmail,
+        setPendingVerificationEmail,
       }}
     >
       {children}
