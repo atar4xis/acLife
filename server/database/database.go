@@ -7,6 +7,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -64,8 +65,8 @@ func Connect() error {
 func Setup() error {
 	migrationDSN := fmt.Sprintf(
 		"mysql://%s:%s@tcp(%s:%s)/%s",
-		dbUser,
-		dbPassword,
+		url.QueryEscape(dbUser),
+		url.QueryEscape(dbPassword),
 		dbHost,
 		dbPort,
 		dbName,
