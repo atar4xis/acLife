@@ -211,7 +211,7 @@ func replaceEventBuckets(ctx context.Context, tx *sql.Tx, owner string, upserts 
 	}
 
 	_, err := tx.ExecContext(ctx, `
-		INSERT INTO calendar_event_buckets (event_id, bucket_id) VALUES `+strings.Join(bucketValues, ","),
+		INSERT IGNORE INTO calendar_event_buckets (event_id, bucket_id) VALUES `+strings.Join(bucketValues, ","),
 		bucketArgs...,
 	)
 	return err
