@@ -122,6 +122,8 @@ export default function EventEditor({
   const [customRepeat, setCustomRepeat] = useState(
     event.repeat ? parseRepeatValue(event.repeat) === "custom" : false,
   );
+  const [isTask, setIsTask] = useState(event.isTask ?? false);
+  const [completed, setCompleted] = useState(event.completed ?? false);
   const isMobile = useIsMobile();
 
   const newEvent = useRef<CalendarEvent>({
@@ -308,8 +310,10 @@ export default function EventEditor({
     newEvent.current.start = DateTime.fromJSDate(start || new Date());
     newEvent.current.end = DateTime.fromJSDate(end || new Date());
     newEvent.current.repeat = repeat;
+    newEvent.current.isTask = isTask;
+    newEvent.current.completed = isTask ? completed : undefined;
     newEvent.current.timestamp = Date.now();
-  }, [title, description, color, start, end, repeat]);
+  }, [title, description, color, start, end, repeat, isTask, completed]);
 
   return createPortal(
     <div
@@ -553,6 +557,29 @@ export default function EventEditor({
             className="resize-none md:resize min-w-80 h-30 md:h-auto max-h-50"
             onChange={(e) => setDescription(e.target.value)}
           />
+        </Field>
+
+        <Field className="-mt-1">
+          <div className="flex items-start justify-between px-1">
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="isTask"
+                checked={isTask}
+                onCheckedChange={(c) => setIsTask(!!c)}
+              />
+              <Label htmlFor="isTask">Task</Label>
+            </div>
+            {isTask && (
+              <div className="flex items-start gap-2">
+                <Label htmlFor="completed">Completed</Label>
+                <Checkbox
+                  id="completed"
+                  checked={completed}
+                  onCheckedChange={(c) => setCompleted(!!c)}
+                />
+              </div>
+            )}
+          </div>
         </Field>
       </form>
       <div className="flex flex-wrap items-end justify-between mt-5">

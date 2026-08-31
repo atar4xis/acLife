@@ -18,6 +18,10 @@ export type CalendarEvent = {
   description?: string;
   color?: string;
   repeat?: RepeatInterval;
+  isTask?: boolean;
+  completed?: boolean; // completion state for non-recurring tasks
+  completedInstances?: string[]; // ISO dates of completed occurrences, for recurring tasks
+  deadline?: DateTime;
   timestamp: number;
   _parent?: string; // uuid of parent event
   _continued?: boolean; // events spanning multiple days

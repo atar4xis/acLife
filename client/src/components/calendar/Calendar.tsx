@@ -83,6 +83,8 @@ const eventUnchanged = (a: CalendarEvent, b: CalendarEvent) =>
   a.color === b.color &&
   a.start.toMillis() === b.start.toMillis() &&
   a.end.toMillis() === b.end.toMillis() &&
+  a.isTask === b.isTask &&
+  a.completed === b.completed &&
   repeatEqual(a.repeat, b.repeat);
 
 const withTimeOfDay = (date: DateTime, time: DateTime) =>
@@ -117,6 +119,7 @@ const GRID_HEADER_HEIGHT = 48;
 
 // TODO: make these configurable
 const DEFAULT_EVENT_NAME = "new event";
+const DEFAULT_TASK_NAME = "new task";
 const DEFAULT_EVENT_DURATION = 60;
 const SNAP_MINS = 5;
 const SELECT_DRAG_THRESHOLD = 4;
@@ -286,6 +289,7 @@ export default function AppCalendar({
     toggleSelection,
     selectEvents,
     clearSelection,
+    setOnEventEdit,
   } = useCalendar();
   const [isDragging, setIsDragging] = useState(false);
   const [hourHeight, setHourHeight] = useState(60);
@@ -866,28 +870,89 @@ export default function AppCalendar({
         return;
       }
 
+      const onlyCompletedChanged =
+        event.completed !== originalEvent.completed &&
+        eventUnchanged(originalEvent, {
+          ...event,
+          completed: originalEvent.completed,
+        });
+
+      if (
+        onlyCompletedChanged &&
+        (event._parent || (originalEvent.repeat && event.repeat))
+      ) {
+        const isParent = isChainParent(event);
+        const parentId = isParent ? event.id : event._parent;
+        const originalParent = calendarEventsRef.current.find(
+          (e) => e.id === parentId,
+        );
+
+        if (originalParent?.repeat) {
+          const dateKey = event.start.toISODate()!;
+          const instances = originalParent.completedInstances ?? [];
+          const parent = {
+            ...originalParent,
+            completedInstances: event.completed
+              ? [...instances, dateKey]
+              : instances.filter((d) => d !== dateKey),
+            timestamp: Date.now(),
+          };
+
+          dispatch({ type: "update", id: parent.id, data: parent });
+          updateChange({ type: "updated", event: parent });
+          save();
+          return;
+        }
+      }
+
       if (event._parent || (originalEvent.repeat && event.repeat)) {
         evPendingUpdateRef.current = event;
         setUpdateRepeatDialogOpen(true);
         return;
       }
 
+      const stoppedRepeating =
+        originalEvent.repeat &&
+        !event.repeat &&
+        originalEvent.isTask &&
+        originalEvent.completedInstances !== undefined;
+
+      const startedRepeating =
+        !originalEvent.repeat &&
+        event.repeat &&
+        event.isTask &&
+        event.completed;
+
+      const nextEvent = stoppedRepeating
+        ? { ...event, completedInstances: undefined }
+        : startedRepeating
+          ? {
+              ...event,
+              completedInstances: [event.start.toISODate()!],
+            }
+          : event;
+
       dispatch({
         type: "update",
-        id: event.id,
-        data: event,
+        id: nextEvent.id,
+        data: nextEvent,
       });
 
       updateChange({
-        id: event.id,
+        id: nextEvent.id,
         type: "updated",
-        event,
+        event: nextEvent,
       });
 
       save();
     },
     [dispatch, updateChange, save, getBatch, clearSelection],
   );
+
+  // expose onEventEdit via context so other components can use it
+  useEffect(() => {
+    setOnEventEdit(onEventEdit);
+  }, [onEventEdit, setOnEventEdit]);
 
   const onEventMove = useCallback(
     (originalEvent: CalendarEvent, event: CalendarEvent) => {
@@ -1033,10 +1098,11 @@ export default function AppCalendar({
 
       const newEvent = {
         id: crypto.randomUUID(),
-        title: DEFAULT_EVENT_NAME,
+        title: e.altKey ? DEFAULT_TASK_NAME : DEFAULT_EVENT_NAME,
         start,
         end,
         timestamp: Date.now(),
+        isTask: e.altKey,
       } as CalendarEvent;
 
       dispatch({

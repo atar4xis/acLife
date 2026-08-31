@@ -19,6 +19,7 @@ import useTapInteraction from "@/hooks/useTapInteraction";
 import { useCalendar } from "@/context/CalendarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MoveMenuItems } from "./MoveMenuItems";
+import { Checkbox } from "../ui/checkbox";
 
 // how long (ms) a touch must be held roughly still before it starts a drag
 const LONG_PRESS_MS = 450;
@@ -212,6 +213,13 @@ export default memo(
       onDuplicate(event);
     }, [event, onDuplicate]);
 
+    const toggleCompleted = useCallback(
+      (checked: boolean) => {
+        onEventEdit(event, { ...event, completed: checked });
+      },
+      [event, onEventEdit],
+    );
+
     return (
       <>
         <ContextMenu>
@@ -221,7 +229,7 @@ export default memo(
           <ContextMenuTrigger onPointerDown={preventTouch} disabled={isMobile}>
             {/* visible event block */}
             <div
-              className={`pointer-events-auto event-block ${padding} absolute left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)] ${isHeld ? "scale-[1.03] shadow-lg ring-2 ring-white/80 z-30 transition-transform" : ""}`}
+              className={`pointer-events-auto event-block ${padding} absolute left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)] ${isHeld ? "scale-[1.03] shadow-lg ring-2 ring-white/80 z-30 transition-transform" : ""} ${event.isTask && event.completed ? "opacity-50" : ""}`}
               data-event-key={eventKey(event)}
               style={blockStyle}
               onPointerDown={useCallback(
@@ -252,18 +260,32 @@ export default memo(
             >
               {!event._continued ? (
                 <>
-                  <div
-                    className="font-semibold"
-                    style={{
-                      display: "-webkit-box",
-                      WebkitBoxOrient: "vertical",
-                      WebkitLineClamp: lineClamp,
-                      overflow: "hidden",
-                    }}
-                  >
-                    {event.title}
+                  <div className="flex items-start gap-1">
+                    {event.isTask && (
+                      <Checkbox
+                        className="mt-0.5 shrink-0 border-current/50"
+                        checked={event.completed ?? false}
+                        onPointerDown={stopPropagation}
+                        onCheckedChange={(c) => toggleCompleted(!!c)}
+                      />
+                    )}
+                    <div
+                      className={`font-semibold ${event.isTask && event.completed ? "line-through" : ""}`}
+                      style={{
+                        display: "-webkit-box",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: lineClamp,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {event.title}
+                    </div>
                   </div>
-                  <span className="text-xs block">{timeLabel}</span>
+                  <span
+                    className={`text-xs block ${event.isTask ? "ml-5" : ""} ${event.isTask && event.completed ? "line-through" : ""}`}
+                  >
+                    {timeLabel}
+                  </span>
                 </>
               ) : (
                 <div className="flex justify-end">

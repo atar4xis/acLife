@@ -33,7 +33,12 @@ export default memo(function AgendaList() {
 
     for (const [date, events] of eventMap) {
       const upcoming = events
-        .filter((e) => e.end.toMillis() > now && !e._continued)
+        .filter(
+          (e) =>
+            e.end.toMillis() > now &&
+            !e._continued &&
+            !(e.isTask && e.completed),
+        )
         .sort((a, b) => a.start.toMillis() - b.start.toMillis());
 
       if (upcoming.length) {

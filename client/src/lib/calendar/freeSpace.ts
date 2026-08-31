@@ -1,5 +1,6 @@
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { DateTime, Duration } from "luxon";
+import { resolveInstanceCompleted } from "./event";
 
 const SEARCH_HORIZON_DAYS = 365;
 const MAX_CANDIDATES = 5000;
@@ -24,6 +25,7 @@ function findOverlappingOccurrence(
 
     if (!e.repeat) {
       if (e.id === excludeKey) continue;
+      if (e.isTask && e.completed) continue;
       if (e.start < rangeEnd && e.end > rangeStart) {
         return { start: e.start, end: e.end };
       }
@@ -46,7 +48,9 @@ function findOverlappingOccurrence(
           cursor.toMillis() === e.start.toMillis() ? e.id : `${e.id}_${key}`;
 
         const skipped =
-          e.repeat.except?.includes(weekday) || e.repeat.skip?.includes(keyUTC);
+          e.repeat.except?.includes(weekday) ||
+          e.repeat.skip?.includes(keyUTC) ||
+          (e.isTask && resolveInstanceCompleted(e, key));
 
         if (!skipped && instanceId !== excludeKey) {
           const occEnd = cursor.plus(duration);

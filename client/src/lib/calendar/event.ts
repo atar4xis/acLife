@@ -139,6 +139,14 @@ export const getDayEventStyles = (
   return styles;
 };
 
+export const resolveInstanceCompleted = (
+  event: CalendarEvent,
+  dateKey: string,
+) =>
+  event.repeat
+    ? (event.completedInstances?.includes(dateKey) ?? false)
+    : event.completed;
+
 export function mapEventToDate(
   map: Map<string, CalendarEvent[]>,
   key: string,
@@ -205,6 +213,7 @@ function processRepeats(
           start: cursor,
           end: cursor.plus(duration),
           _parent: e.id,
+          completed: e.isTask ? resolveInstanceCompleted(e, key) : undefined,
         };
 
         mapEventToDates(map, newEvent, visibleDates);
@@ -247,7 +256,12 @@ function getBaseEventMap(events: CalendarEvent[], dates: DateTime[]) {
   for (const e of events) {
     if (!e.id) continue;
 
-    mapEventToDates(map, e, visibleDates);
+    const base =
+      e.isTask && e.repeat
+        ? { ...e, completed: resolveInstanceCompleted(e, e.start.toISODate()!) }
+        : e;
+
+    mapEventToDates(map, base, visibleDates);
     processRepeats(map, e, visibleDates, lastVisibleDayEnd, noExclusions);
   }
 

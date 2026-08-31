@@ -27,6 +27,10 @@ type CalendarContextValue = {
   toggleSelection: (event: CalendarEvent) => void;
   selectEvents: (events: CalendarEvent[]) => void;
   clearSelection: () => void;
+  onEventEdit: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
+  setOnEventEdit: (
+    handler: (originalEvent: CalendarEvent, event: CalendarEvent) => void,
+  ) => void;
 };
 
 const CalendarContext = createContext<CalendarContextValue | null>(null);
@@ -46,6 +50,17 @@ export function CalendarProvider({ children }: WithChildren) {
   const [selectedEvents, setSelectedEvents] = useState<
     Map<string, CalendarEvent>
   >(new Map());
+
+  const [onEventEdit, setOnEventEditState] = useState<
+    (originalEvent: CalendarEvent, event: CalendarEvent) => void
+  >(() => () => {});
+
+  const setOnEventEdit = useCallback(
+    (handler: (originalEvent: CalendarEvent, event: CalendarEvent) => void) => {
+      setOnEventEditState(() => handler);
+    },
+    [],
+  );
 
   const setEditingEvent = (
     event: CalendarEvent | null,
@@ -95,6 +110,8 @@ export function CalendarProvider({ children }: WithChildren) {
         toggleSelection,
         selectEvents,
         clearSelection,
+        onEventEdit,
+        setOnEventEdit,
       }}
     >
       {children}
