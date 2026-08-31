@@ -2,6 +2,15 @@ import "@testing-library/jest-dom/vitest";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, vi } from "vitest";
 
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    promise: vi.fn(),
+  },
+}));
+
 // mock API
 vi.mock("../src/context/ApiContext.tsx", () => {
   const original = vi.importActual("../src/context/ApiContext.tsx");
