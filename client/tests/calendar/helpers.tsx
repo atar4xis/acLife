@@ -109,6 +109,7 @@ export const renderCalendar = ({
         saveEvents={saveEvents}
         syncEvents={vi.fn()}
         syncBuckets={vi.fn()}
+        saveDebounceMs={0}
       />
     </CalendarProvider>,
   );
@@ -117,7 +118,7 @@ export const renderCalendar = ({
 };
 
 export const advanceSave = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  await new Promise((resolve) => setTimeout(resolve, 0));
 };
 
 export const getLastSavedEvents = (saveEvents: ReturnType<typeof vi.fn>) => {

@@ -276,6 +276,7 @@ export default function AppCalendar({
   saveEvents,
   syncEvents,
   syncBuckets,
+  saveDebounceMs = 100,
 }: CalendarProps) {
   const {
     editingEvent,
@@ -420,8 +421,8 @@ export default function AppCalendar({
 
       if (user?.type === "online") saveIfChanged();
       else saveEvents(calendarEventsRef.current, () => {}); // save all events for offline users
-    }, 100);
-  }, [saveEvents, saveIfChanged, user?.type]);
+    }, saveDebounceMs);
+  }, [saveEvents, saveIfChanged, user?.type, saveDebounceMs]);
 
   /* -------------------------------------------------------------------------- */
 

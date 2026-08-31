@@ -27,6 +27,7 @@ export interface CalendarProps {
     masterKey: CryptoKey,
     bucketKey: CryptoKey,
   ) => Promise<CalendarEvent[]>;
+  saveDebounceMs?: number;
 }
 
 export interface EventBlockProps {
