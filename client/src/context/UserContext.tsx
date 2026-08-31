@@ -57,20 +57,28 @@ export function UserProvider({ children }: WithChildren) {
           );
           const { masterKey, bucketKey, needsMigration } =
             await unlockMasterKey(password, salt, encryptedChallenge);
-          setMasterKey(masterKey);
-          setBucketKey(bucketKey);
 
           // upgrade legacy Argon2d keys to Argon2id in the background
           if (needsMigration) {
-            migrateMasterKeyToArgon2id(password, salt, masterKey, post, storage)
-              .then((upgraded) => {
-                setMasterKey(upgraded.masterKey);
-                setBucketKey(upgraded.bucketKey);
-                toast.success("Your account security has been upgraded.");
-              })
-              .catch((err) =>
-                console.error("Master key migration failed:", err),
+            try {
+              const upgraded = await migrateMasterKeyToArgon2id(
+                password,
+                salt,
+                masterKey,
+                post,
+                storage,
               );
+              setMasterKey(upgraded.masterKey);
+              setBucketKey(upgraded.bucketKey);
+              toast.success("Your account security has been upgraded.");
+            } catch (err) {
+              console.error("Master key migration failed:", err);
+              setMasterKey(masterKey);
+              setBucketKey(bucketKey);
+            }
+          } else {
+            setMasterKey(masterKey);
+            setBucketKey(bucketKey);
           }
         } catch {
           setMasterKey(null); // will prompt UnlockDialog to ask for the password again
