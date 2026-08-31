@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import {
   FIXED_NOW,
   DAY_WIDTH,
@@ -259,6 +259,67 @@ describe("Calendar", () => {
     expect(retro?.start.toISO()).toBe(
       FIXED_NOW.startOf("day").plus({ hours: 13 }).toISO(),
     );
+  });
+
+  it("applies task changes from the editor to every selected event", async () => {
+    const saveEvents = vi.fn();
+    const { user } = renderCalendar({
+      mode: "week",
+      events: [buildPlainEvent(), buildSecondEvent()],
+      saveEvents,
+    });
+
+    await ctrlClickEvent("Planning");
+    await ctrlClickEvent("Retro");
+
+    await openEventEditor(user, "Planning");
+
+    await user.click(screen.getByRole("checkbox", { name: /task/i }));
+    await user.click(screen.getByRole("checkbox", { name: /completed/i }));
+    await user.click(screen.getByRole("button", { name: /^save$/i }));
+    await advanceSave();
+
+    const savedEvents = getLastSavedEvents(saveEvents);
+    const planning = savedEvents.find((e) => e.id === "plain-event");
+    const retro = savedEvents.find((e) => e.id === "second-event");
+
+    expect(planning?.isTask).toBe(true);
+    expect(planning?.completed).toBe(true);
+    expect(retro?.isTask).toBe(true);
+    expect(retro?.completed).toBe(true);
+  });
+
+  it("completing one selected task from its block checkbox completes every selected event", async () => {
+    const saveEvents = vi.fn();
+    renderCalendar({
+      mode: "week",
+      events: [
+        buildEvent({ isTask: true }),
+        buildEvent({
+          id: "second-event",
+          title: "Retro",
+          description: undefined,
+          isTask: true,
+          start: FIXED_NOW.startOf("day").plus({ hours: 13 }),
+          end: FIXED_NOW.startOf("day").plus({ hours: 14 }),
+        }),
+      ],
+      saveEvents,
+    });
+
+    await ctrlClickEvent("Planning");
+    await ctrlClickEvent("Retro");
+
+    const block = await getEventBlock("Planning");
+    fireEvent.click(within(block).getByRole("checkbox"));
+    await advanceSave();
+
+    const savedEvents = getLastSavedEvents(saveEvents);
+    const planning = savedEvents.find((e) => e.id === "plain-event");
+    const retro = savedEvents.find((e) => e.id === "second-event");
+
+    expect(planning?.completed).toBe(true);
+    expect(retro?.completed).toBe(true);
   });
 
   it("changing only the time keeps every selected event on its own day", async () => {

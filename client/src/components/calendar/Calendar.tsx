@@ -818,6 +818,10 @@ export default function AppCalendar({
         if (!repeatEqual(originalEvent.repeat, event.repeat)) {
           patch.repeat = event.repeat;
         }
+        if (event.isTask !== originalEvent.isTask) patch.isTask = event.isTask;
+        if (event.completed !== originalEvent.completed) {
+          patch.completed = event.completed;
+        }
 
         let working = calendarEventsRef.current;
 
