@@ -87,6 +87,43 @@ const eventUnchanged = (a: CalendarEvent, b: CalendarEvent) =>
   a.completed === b.completed &&
   repeatEqual(a.repeat, b.repeat);
 
+const serializeEventForDiff = (ev: CalendarEvent) => {
+  const clean = Object.fromEntries(
+    Object.entries(ev).filter(([key]) => !key.startsWith("_")),
+  );
+
+  return JSON.stringify({
+    ...clean,
+    timestamp: undefined,
+    start: ev.start.toMillis(),
+    end: ev.end.toMillis(),
+    deadline: ev.deadline?.toMillis(),
+  });
+};
+
+const diffForHistory = (
+  target: CalendarEvent[],
+  current: CalendarEvent[],
+): EventChange[] => {
+  const currentMap = new Map(current.map((ev) => [ev.id, ev]));
+  const targetMap = new Map(target.map((ev) => [ev.id, ev]));
+  const changes: EventChange[] = [];
+
+  for (const [id, ev] of targetMap) {
+    const cur = currentMap.get(id);
+    if (!cur) changes.push({ type: "added", event: ev });
+    else if (serializeEventForDiff(cur) !== serializeEventForDiff(ev)) {
+      changes.push({ type: "updated", event: ev });
+    }
+  }
+
+  for (const id of currentMap.keys()) {
+    if (!targetMap.has(id)) changes.push({ type: "deleted", id });
+  }
+
+  return changes;
+};
+
 const withTimeOfDay = (date: DateTime, time: DateTime) =>
   date.set({
     hour: time.hour,
@@ -123,6 +160,7 @@ const DEFAULT_TASK_NAME = "new task";
 const DEFAULT_EVENT_DURATION = 60;
 const SNAP_MINS = 5;
 const SELECT_DRAG_THRESHOLD = 4;
+const HISTORY_LIMIT = 40;
 
 const GRID_CONFIG = {
   day: {
@@ -355,6 +393,13 @@ export default function AppCalendar({
   const selectedEventsRef = useRef(selectedEvents);
   selectedEventsRef.current = selectedEvents;
 
+  const historyRef = useRef<{
+    past: CalendarEvent[][];
+    future: CalendarEvent[][];
+  }>({ past: [], future: [] });
+  const clipboardRef = useRef<CalendarEvent[]>([]);
+  const gridPointerRef = useRef<{ x: number; y: number } | null>(null);
+
   const visibleDays = useMemo(() => {
     return (
       {
@@ -423,6 +468,48 @@ export default function AppCalendar({
       else saveEvents(calendarEventsRef.current, () => {}); // save all events for offline users
     }, saveDebounceMs);
   }, [saveEvents, saveIfChanged, user?.type, saveDebounceMs]);
+
+  const pushHistory = useCallback(() => {
+    const history = historyRef.current;
+    history.past.push(calendarEventsRef.current);
+    if (history.past.length > HISTORY_LIMIT) history.past.shift();
+    history.future = [];
+  }, []);
+
+  const applyHistorySnapshot = useCallback(
+    (target: CalendarEvent[]) => {
+      const current = calendarEventsRef.current;
+      for (const change of diffForHistory(target, current)) {
+        updateChange(change);
+      }
+
+      dispatch({ type: "set", events: target });
+      setEditingEvent(null);
+      clearSelection();
+      save();
+    },
+    [dispatch, updateChange, setEditingEvent, clearSelection, save],
+  );
+
+  const undo = useCallback(() => {
+    const history = historyRef.current;
+    const target = history.past.pop();
+    if (!target) return;
+
+    history.future.push(calendarEventsRef.current);
+    if (history.future.length > HISTORY_LIMIT) history.future.shift();
+    applyHistorySnapshot(target);
+  }, [applyHistorySnapshot]);
+
+  const redo = useCallback(() => {
+    const history = historyRef.current;
+    const target = history.future.pop();
+    if (!target) return;
+
+    history.past.push(calendarEventsRef.current);
+    if (history.past.length > HISTORY_LIMIT) history.past.shift();
+    applyHistorySnapshot(target);
+  }, [applyHistorySnapshot]);
 
   /* -------------------------------------------------------------------------- */
 
@@ -533,6 +620,8 @@ export default function AppCalendar({
           if (!state.moved) {
             dragRef.current = null;
           } else {
+            pushHistory();
+
             const entries = [
               {
                 event,
@@ -596,6 +685,9 @@ export default function AppCalendar({
             newEvent.start.toMillis() !== state.originalStart.toMillis() ||
             newEvent.end.toMillis() !== state.originalEnd.toMillis()
           ) {
+            // creating a new event already pushed history in startNewEvent
+            if (state.type !== "new") pushHistory();
+
             dispatch({
               type: "update",
               id: event.id,
@@ -640,6 +732,7 @@ export default function AppCalendar({
       save,
       calendarEvents,
       clearSelection,
+      pushHistory,
     ],
   );
 
@@ -793,6 +886,8 @@ export default function AppCalendar({
       const batch = getBatch(originalEvent);
 
       if (batch) {
+        pushHistory();
+
         const originalKey = eventKey(originalEvent);
         const startDateChanged = !event.start.hasSame(
           originalEvent.start,
@@ -893,6 +988,8 @@ export default function AppCalendar({
         );
 
         if (originalParent?.repeat) {
+          pushHistory();
+
           const dateKey = event.start.toISODate()!;
           const instances = originalParent.completedInstances ?? [];
           const parent = {
@@ -937,6 +1034,8 @@ export default function AppCalendar({
             }
           : event;
 
+      pushHistory();
+
       dispatch({
         type: "update",
         id: nextEvent.id,
@@ -951,7 +1050,7 @@ export default function AppCalendar({
 
       save();
     },
-    [dispatch, updateChange, save, getBatch, clearSelection],
+    [dispatch, updateChange, save, getBatch, clearSelection, pushHistory],
   );
 
   // expose onEventEdit via context so other components can use it
@@ -963,6 +1062,8 @@ export default function AppCalendar({
     (originalEvent: CalendarEvent, event: CalendarEvent) => {
       // nothing changed, so there's nothing to save
       if (eventUnchanged(originalEvent, event)) return;
+
+      pushHistory();
 
       // moving an event always affects this occurrence only, never prompts
       detachSingleOccurrence(
@@ -976,36 +1077,53 @@ export default function AppCalendar({
 
       save();
     },
-    [calendarEvents, dispatch, updateChange, save],
+    [calendarEvents, dispatch, updateChange, save, pushHistory],
+  );
+
+  const deleteSelectionBatch = useCallback(
+    (batch: CalendarEvent[]) => {
+      pushHistory();
+
+      let working = calendarEventsRef.current;
+
+      for (const ev of batch) {
+        if (ev._parent || ev.repeat) {
+          const parent = skipSingleOccurrence(
+            ev,
+            working,
+            dispatch,
+            updateChange,
+          );
+
+          if (parent) {
+            working = working.map((e) => (e.id === parent.id ? parent : e));
+          }
+        } else {
+          dispatch({ type: "delete", id: ev.id });
+          updateChange({ id: ev.id, type: "deleted" });
+        }
+      }
+
+      clearSelection();
+      setEditingEvent(null);
+      save();
+    },
+    [
+      dispatch,
+      updateChange,
+      save,
+      clearSelection,
+      setEditingEvent,
+      pushHistory,
+    ],
   );
 
   const onEventDelete = useCallback(
-    (event: CalendarEvent) => {
-      const batch = getBatch(event);
+    (event: CalendarEvent, ignoreSelection = false) => {
+      const batch = ignoreSelection ? null : getBatch(event);
 
       if (batch) {
-        let working = calendarEvents;
-
-        for (const ev of batch) {
-          if (ev._parent || ev.repeat) {
-            const parent = skipSingleOccurrence(
-              ev,
-              working,
-              dispatch,
-              updateChange,
-            );
-
-            if (parent) {
-              working = working.map((e) => (e.id === parent.id ? parent : e));
-            }
-          } else {
-            dispatch({ type: "delete", id: ev.id });
-            updateChange({ id: ev.id, type: "deleted" });
-          }
-        }
-
-        clearSelection();
-        save();
+        deleteSelectionBatch(batch);
         return;
       }
 
@@ -1014,6 +1132,8 @@ export default function AppCalendar({
         evPendingUpdateRef.current = event;
         return;
       }
+
+      pushHistory();
 
       dispatch({
         type: "delete",
@@ -1025,6 +1145,7 @@ export default function AppCalendar({
         type: "deleted",
       });
 
+      setEditingEvent(null);
       save();
     },
     [
@@ -1033,14 +1154,17 @@ export default function AppCalendar({
       updateChange,
       save,
       getBatch,
-      calendarEvents,
-      clearSelection,
+      deleteSelectionBatch,
+      setEditingEvent,
+      pushHistory,
     ],
   );
 
   const onEventDuplicate = useCallback(
     (event: CalendarEvent) => {
       const batch = getBatch(event) ?? [event];
+
+      pushHistory();
 
       for (const ev of batch) {
         const newEvent = {
@@ -1069,8 +1193,85 @@ export default function AppCalendar({
       setEditingEvent(null);
       save();
     },
-    [dispatch, updateChange, setEditingEvent, save, getBatch, clearSelection],
+    [
+      dispatch,
+      updateChange,
+      setEditingEvent,
+      save,
+      getBatch,
+      clearSelection,
+      pushHistory,
+    ],
   );
+
+  const copySelection = useCallback(() => {
+    if (selectedEventsRef.current.size === 0) return;
+    clipboardRef.current = Array.from(selectedEventsRef.current.values());
+  }, []);
+
+  const pasteAtPointer = useCallback(() => {
+    const clipboard = clipboardRef.current;
+    const pointer = gridPointerRef.current;
+    const container = gridRef.current;
+    if (clipboard.length === 0 || !pointer || !container) return;
+
+    const targetRect = getDayRects().find(
+      (d) => pointer.x >= d.rect.left && pointer.x <= d.rect.right,
+    );
+    const dayDate = targetRect ? visibleDays[targetRect.day]?.date : null;
+    if (!dayDate) return;
+
+    const rect = container.getBoundingClientRect();
+    const y = pointer.y + container.scrollTop;
+    const minutes = snapMinutes(
+      yToMinutes(y - rect.top - GRID_HEADER_HEIGHT, hourHeight),
+      SNAP_MINS,
+    );
+    const anchorTime = dayDate.plus({ minutes });
+
+    const anchorStart = clipboard.reduce(
+      (min, ev) => (ev.start < min ? ev.start : min),
+      clipboard[0].start,
+    );
+
+    pushHistory();
+
+    const pasted: CalendarEvent[] = [];
+
+    for (const ev of clipboard) {
+      const offset = ev.start.diff(anchorStart);
+      const duration = ev.end.diff(ev.start);
+      const newStart = anchorTime.plus(offset);
+
+      const newEvent = {
+        ...ev,
+        id: crypto.randomUUID(),
+        start: newStart,
+        end: newStart.plus(duration),
+        timestamp: Date.now(),
+      } as CalendarEvent;
+
+      delete newEvent._parent;
+      delete newEvent._instanceId;
+      delete newEvent.repeat;
+
+      pasted.push(newEvent);
+
+      dispatch({ type: "add", event: newEvent });
+      updateChange({ type: "added", event: newEvent });
+    }
+
+    selectEvents(pasted);
+    save();
+  }, [
+    visibleDays,
+    hourHeight,
+    dispatch,
+    updateChange,
+    save,
+    selectEvents,
+    pushHistory,
+  ]);
 
   /* -------------------------------------------------------------------------- */
 
@@ -1109,6 +1310,8 @@ export default function AppCalendar({
         timestamp: Date.now(),
         isTask: e.altKey,
       } as CalendarEvent;
+
+      pushHistory();
 
       dispatch({
         type: "add",
@@ -1151,6 +1354,7 @@ export default function AppCalendar({
       onGlobalPointerUp,
       beginSelectionBox,
       clearSelection,
+      pushHistory,
     ],
   );
 
@@ -1264,14 +1468,15 @@ export default function AppCalendar({
     calendarEventsRef.current = calendarEvents;
   }, [calendarEvents]);
 
-  // move days with arrow keys
+  // keyboard shortcuts: arrows, escape, delete, undo/redo, cut/copy/paste
   useEffect(() => {
-    const onArrowKey = (e: KeyboardEvent) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
       )
         return;
+
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         move(-1);
@@ -1280,11 +1485,54 @@ export default function AppCalendar({
         move(1);
       } else if (e.key === "Escape" && editingEvent === null) {
         clearSelection();
+      } else if (e.key === "Delete") {
+        if (editingEvent) {
+          e.preventDefault();
+          onEventDelete(editingEvent, true);
+        } else if (selectedEventsRef.current.size > 0) {
+          e.preventDefault();
+          deleteSelectionBatch(Array.from(selectedEventsRef.current.values()));
+        }
+      } else if (e.ctrlKey && e.key.toLowerCase() === "z" && e.shiftKey) {
+        e.preventDefault();
+        redo();
+      } else if (e.ctrlKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        undo();
+      } else if (e.ctrlKey && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
+      } else if (e.ctrlKey && e.key.toLowerCase() === "c") {
+        if (selectedEventsRef.current.size > 0) {
+          e.preventDefault();
+          copySelection();
+        }
+      } else if (e.ctrlKey && e.key.toLowerCase() === "x") {
+        if (selectedEventsRef.current.size > 0) {
+          e.preventDefault();
+          copySelection();
+          deleteSelectionBatch(Array.from(selectedEventsRef.current.values()));
+        }
+      } else if (e.ctrlKey && e.key.toLowerCase() === "v") {
+        if (clipboardRef.current.length > 0) {
+          e.preventDefault();
+          pasteAtPointer();
+        }
       }
     };
-    window.addEventListener("keydown", onArrowKey);
-    return () => window.removeEventListener("keydown", onArrowKey);
-  }, [move, editingEvent, clearSelection]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    move,
+    editingEvent,
+    clearSelection,
+    onEventDelete,
+    deleteSelectionBatch,
+    undo,
+    redo,
+    copySelection,
+    pasteAtPointer,
+  ]);
 
   // zoom in with ctrl + mouse wheel
   useEffect(() => {
@@ -1789,6 +2037,9 @@ export default function AppCalendar({
           onTouchStart={gridTouchStart}
           onTouchMove={gridTouchMove}
           onTouchEnd={gridTouchEnd}
+          onPointerMove={(e) => {
+            gridPointerRef.current = { x: e.clientX, y: e.clientY };
+          }}
         >
           <div className="sticky left-0 top-0 z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 bg-background" />
 
@@ -1821,6 +2072,8 @@ export default function AppCalendar({
             setUpdateRepeatDialogOpen(false);
             return;
           }
+
+          pushHistory();
 
           const isParent = !event._parent && event.repeat;
           const parent = isParent
@@ -2009,6 +2262,8 @@ export default function AppCalendar({
             return;
           }
 
+          pushHistory();
+
           const isParent = !event._parent && event.repeat;
           const parent = isParent
             ? event
@@ -2026,6 +2281,7 @@ export default function AppCalendar({
               type: "deleted",
             });
 
+            setEditingEvent(null);
             save();
             return;
           }
@@ -2121,6 +2377,7 @@ export default function AppCalendar({
           }
 
           evPendingUpdateRef.current = null;
+          setEditingEvent(null);
           save();
         }}
         onCancel={() => {
