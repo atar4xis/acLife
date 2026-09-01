@@ -6,7 +6,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { LoginForm } from "@/components/login/LoginForm";
-import { EmailVerificationRequired } from "@/components/login/EmailVerificationRequired";
+import {
+  EmailVerificationRequired,
+  RESEND_COOLDOWN_SECONDS,
+} from "@/components/login/EmailVerificationRequired";
 import { ConfirmEmailPrompt } from "@/components/login/ConfirmEmailPrompt";
 import { ModeToggle } from "@/components/ModeToggle";
 import { useState, useEffect } from "react";
@@ -39,6 +42,7 @@ export default function LoginDialog() {
   const [verificationEmail, setVerificationEmail] = useState<string | null>(
     null,
   );
+  const [verificationCooldown, setVerificationCooldown] = useState(0);
   const [confirmToken, setConfirmToken] = useState<string | null>(null);
   const {
     setUrl,
@@ -50,13 +54,21 @@ export default function LoginDialog() {
   const storage = useStorage();
 
   useEffect(() => {
-    if (pendingVerificationEmail)
+    if (pendingVerificationEmail) {
       setVerificationEmail(pendingVerificationEmail);
+      setVerificationCooldown(0);
+    }
   }, [pendingVerificationEmail]);
 
   const handleBackFromVerification = () => {
     setVerificationEmail(null);
+    setVerificationCooldown(0);
     setPendingVerificationEmail(null);
+  };
+
+  const handleNeedsVerification = (email: string) => {
+    setVerificationEmail(email);
+    setVerificationCooldown(RESEND_COOLDOWN_SECONDS);
   };
 
   useEffect(() => {
@@ -272,12 +284,13 @@ export default function LoginDialog() {
               <EmailVerificationRequired
                 email={verificationEmail}
                 onBack={handleBackFromVerification}
+                initialCooldown={verificationCooldown}
               />
             ) : serverMeta ? (
               <LoginForm
                 handleOfflineClick={handleOfflineClick}
                 serverMeta={serverMeta}
-                onNeedsVerification={setVerificationEmail}
+                onNeedsVerification={handleNeedsVerification}
               />
             ) : (
               <Button variant="outline" onClick={handleOfflineClick}>

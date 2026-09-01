@@ -4,20 +4,22 @@ import { Spinner } from "@/components/ui/spinner";
 import { useApi } from "@/context/ApiContext";
 import { useEffect, useState } from "react";
 
-const RESEND_COOLDOWN_SECONDS = 60;
+export const RESEND_COOLDOWN_SECONDS = 60;
 
 export function EmailVerificationRequired({
   email,
   onBack,
+  initialCooldown = 0,
 }: {
   email: string;
   onBack: () => void;
+  initialCooldown?: number;
 }) {
   const { post } = useApi();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(0);
+  const [cooldown, setCooldown] = useState(initialCooldown);
 
   useEffect(() => {
     if (cooldown <= 0) return;
