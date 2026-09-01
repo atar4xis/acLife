@@ -71,6 +71,49 @@ export default memo(
         };
       }, [event.start, event.end, event.color, endsToday]);
 
+    const lineHeight = 16;
+    const isTiny = style.height < lineHeight;
+    const [isPoppedOut, setIsPoppedOut] = useState(false);
+    const popOut = isTiny && isPoppedOut;
+    const popOutHeight = lineHeight * 2;
+
+    const popOutTimerRef = useRef<number | null>(null);
+    const isPointerDownRef = useRef(false);
+
+    const clearPopOutTimer = useCallback(() => {
+      if (popOutTimerRef.current !== null) {
+        window.clearTimeout(popOutTimerRef.current);
+        popOutTimerRef.current = null;
+      }
+    }, []);
+
+    const handleMouseEnter = useCallback(() => {
+      if (!isTiny || isPointerDownRef.current) return;
+      clearPopOutTimer();
+      popOutTimerRef.current = window.setTimeout(() => {
+        setIsPoppedOut(true);
+      }, 150);
+    }, [isTiny, clearPopOutTimer]);
+    const handleMouseLeave = useCallback(() => {
+      clearPopOutTimer();
+      setIsPoppedOut(false);
+    }, [clearPopOutTimer]);
+
+    // don't pop out while the event is being dragged/resized
+    useEffect(() => {
+      const handlePointerUp = () => {
+        isPointerDownRef.current = false;
+      };
+      window.addEventListener("pointerup", handlePointerUp);
+      window.addEventListener("pointercancel", handlePointerUp);
+      return () => {
+        window.removeEventListener("pointerup", handlePointerUp);
+        window.removeEventListener("pointercancel", handlePointerUp);
+      };
+    }, []);
+
+    useEffect(() => clearPopOutTimer, [clearPopOutTimer]);
+
     const blockStyle = useMemo(
       () => ({
         top: style.top,
@@ -83,21 +126,29 @@ export default memo(
         // starts) for browsers to reliably honor it instead of scrolling;
         // scrolling can still be done by starting the touch on empty grid
         touchAction: "none" as const,
-        height: style.height,
+        height: popOut ? popOutHeight : style.height,
         width: style.width + "%",
         backgroundColor: eventColor,
         boxShadow: selected ? SELECTED_SHADOW : undefined,
-        contain: "paint" as const,
+        contain: popOut ? undefined : ("paint" as const),
       }),
-      [style.top, style.left, style.height, style.width, eventColor, selected],
+      [
+        style.top,
+        style.left,
+        style.height,
+        style.width,
+        eventColor,
+        selected,
+        popOut,
+        popOutHeight,
+      ],
     );
 
     const eventRef = useRef<HTMLDivElement>(null);
-    const lineHeight = 16;
     const padding = style.height > lineHeight * 3 ? "p-1" : "p-[1px]"; // TODO: maybe make it smarter in the future
     const lineClamp = useMemo(
-      () => Math.ceil(style.height / lineHeight) - 2,
-      [style.height],
+      () => Math.ceil((popOut ? popOutHeight : style.height) / lineHeight) - 2,
+      [style.height, popOut, popOutHeight],
     );
     const timeLabel = useMemo(
       () =>
@@ -229,11 +280,17 @@ export default memo(
           <ContextMenuTrigger onPointerDown={preventTouch} disabled={isMobile}>
             {/* visible event block */}
             <div
-              className={`pointer-events-auto event-block ${padding} absolute left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)] ${isHeld ? "scale-[1.03] shadow-lg ring-2 ring-white/80 z-30 transition-transform" : ""} ${event.isTask && event.completed ? "opacity-50" : ""}`}
+              className={`pointer-events-auto event-block ${padding} absolute left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)] ${isHeld ? "scale-[1.03] shadow-lg ring-2 ring-white/80 z-30 transition-transform" : ""} ${popOut ? "z-20 shadow-lg" : ""} ${event.isTask && event.completed ? "opacity-50" : ""}`}
               data-event-key={eventKey(event)}
               style={blockStyle}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
               onPointerDown={useCallback(
                 (e: React.PointerEvent) => {
+                  isPointerDownRef.current = true;
+                  clearPopOutTimer();
+                  setIsPoppedOut(false);
+
                   if ((e.target as HTMLElement).closest(".resize-handle"))
                     return;
                   setLastPointer({ x: e.clientX, y: e.clientY });
@@ -247,6 +304,7 @@ export default memo(
                   event,
                   onPointerDown,
                   setLastPointer,
+                  clearPopOutTimer,
                 ],
               )}
               onPointerMove={handleTouchPointerMove}
