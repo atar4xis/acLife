@@ -79,7 +79,10 @@ func init() {
 
 	Metadata = types.ServerMetadata{
 		URL:      os.Getenv("SERVER_URL"),
-		Policies: &types.Policies{},
+		Policies: &types.Policies{
+			Privacy: os.Getenv("PRIVACY_URL"),
+			Terms:   os.Getenv("TERMS_URL"),
+		},
 		Registration: types.Registration{
 			Enabled:              os.Getenv("DISABLE_REGISTRATION") != "true",
 			SubscriptionRequired: os.Getenv("STRIPE_API_KEY") != "",
