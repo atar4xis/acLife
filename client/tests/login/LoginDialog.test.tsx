@@ -285,7 +285,15 @@ describe("LoginDialog", () => {
 
   it("submits registration and shows success message", async () => {
     apiMock.serverMeta = defaultServerMeta;
-    apiMock.post.mockResolvedValue({ success: true });
+    const powToken = `${btoa(
+      JSON.stringify({ seed: "abc", email: "new@example.com", expires: 9999999999 }),
+    )}.sig`;
+    apiMock.post.mockImplementation(async (endpoint: string) => {
+      if (endpoint === "auth/register/challenge") {
+        return { success: true, data: { token: powToken, difficulty: 0 } };
+      }
+      return { success: true };
+    });
     const user = userEvent.setup();
 
     renderLoginDialog();
@@ -307,11 +315,17 @@ describe("LoginDialog", () => {
       "StrongPassword123!",
     );
     expect(apiMock.post).toHaveBeenCalledWith(
+      "auth/register/challenge",
+      { email: "new@example.com" },
+    );
+    expect(apiMock.post).toHaveBeenCalledWith(
       "auth/register",
       expect.objectContaining({
         challenge: expect.any(String),
         triplet: expect.any(String),
         salt: expect.any(String),
+        powToken,
+        powNonce: expect.any(String),
       }),
     );
   });

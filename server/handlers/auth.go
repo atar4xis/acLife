@@ -3,8 +3,14 @@ package handlers
 import (
 	"context"
 	"crypto"
+	"crypto/hmac"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"math/bits"
 	"net/http"
 	"net/url"
 	"os"
@@ -272,6 +278,113 @@ func verificationEmailContent(token string) (subject, body string) {
 
 /* -------------------- Handlers -------------------- */
 
+// powChallengeData is the signed, self-contained payload embedded in a PoW token.
+// Bound to a specific email so a solved proof cannot be replayed.
+type powChallengeData struct {
+	Seed    string `json:"seed"`
+	Email   string `json:"email"`
+	Expires int64  `json:"expires"`
+}
+
+func signPowPayload(payload string) string {
+	mac := hmac.New(sha256.New, []byte(os.Getenv("SESSION_KEY")))
+	mac.Write([]byte(payload))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// verifyPowProof checks that nonce solves the challenge bound to email inside token.
+func verifyPowProof(token, nonce, email string) bool {
+	payload, sig, ok := strings.Cut(token, ".")
+	if !ok {
+		return false
+	}
+
+	if !hmac.Equal([]byte(signPowPayload(payload)), []byte(sig)) {
+		return false
+	}
+
+	raw, err := base64.RawURLEncoding.DecodeString(payload)
+	if err != nil {
+		return false
+	}
+
+	var data powChallengeData
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return false
+	}
+
+	if data.Email != email || time.Now().Unix() > data.Expires {
+		return false
+	}
+
+	hash := sha256.Sum256([]byte(data.Seed + "|" + data.Email + "|" + nonce))
+
+	zeroBits := 0
+	for _, b := range hash {
+		if b == 0 {
+			zeroBits += 8
+			continue
+		}
+		zeroBits += bits.LeadingZeros8(b)
+		break
+	}
+
+	return zeroBits >= constants.PowDifficultyBits
+}
+
+// RegisterChallenge issues a proof-of-work challenge bound to an email address.
+func RegisterChallenge(w http.ResponseWriter, r *http.Request) {
+	if !constants.Metadata.Registration.Enabled {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := utils.ParseJSON(r.Body, &req); err != nil {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	if !utils.ValidateEmail(req.Email) || len(req.Email) > constants.MaxEmailLen {
+		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
+			Success: false,
+			Message: "Invalid email address.",
+		})
+		return
+	}
+
+	data := powChallengeData{
+		Seed:    utils.RandomToken(16),
+		Email:   req.Email,
+		Expires: time.Now().Add(constants.PowChallengeTTL).Unix(),
+	}
+
+	raw, err := json.Marshal(data)
+	if err != nil {
+		utils.LogError("RegisterChallenge", "json.Marshal", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	payload := base64.RawURLEncoding.EncodeToString(raw)
+	token := payload + "." + signPowPayload(payload)
+
+	type PowData struct {
+		Token      string `json:"token"`
+		Difficulty int    `json:"difficulty"`
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[PowData]{
+		Success: true,
+		Data: PowData{
+			Token:      token,
+			Difficulty: constants.PowDifficultyBits,
+		},
+	})
+}
+
 // Register handles creating new accounts.
 func Register(w http.ResponseWriter, r *http.Request) {
 	if !constants.Metadata.Registration.Enabled {
@@ -284,6 +397,8 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		Triplet   []byte `json:"triplet"`
 		Salt      []byte `json:"salt"`
 		Email     string `json:"email"`
+		PowToken  string `json:"powToken"`
+		PowNonce  string `json:"powNonce"`
 	}
 	if err := utils.ParseJSON(r.Body, &req); err != nil {
 		utils.SendBadRequest(w)
@@ -302,7 +417,8 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	challenge := req.Challenge
 
 	// Make sure the fields are not empty
-	if len(triplet.Username()) == 0 || len(triplet.Verifier()) == 0 || len(triplet.Salt()) == 0 || len(challenge) == 0 {
+	if len(triplet.Username()) == 0 || len(triplet.Verifier()) == 0 || len(triplet.Salt()) == 0 ||
+		len(challenge) == 0 || len(req.PowToken) == 0 || len(req.PowNonce) == 0 {
 		utils.SendBadRequest(w)
 		return
 	}
@@ -312,7 +428,9 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		len(triplet.Salt()) > constants.MaxSaltLen ||
 		len(req.Salt) > constants.MaxSaltLen ||
 		len(triplet.Verifier()) > constants.MaxVerifierLen ||
-		len(challenge) > constants.MaxChallengeLen {
+		len(challenge) > constants.MaxChallengeLen ||
+		len(req.PowToken) > constants.MaxPowTokenLen ||
+		len(req.PowNonce) > constants.MaxPowNonceLen {
 		utils.SendBadRequest(w)
 		return
 	}
@@ -322,6 +440,15 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Invalid email address.",
+		})
+		return
+	}
+
+	// Proof of work
+	if !verifyPowProof(req.PowToken, req.PowNonce, triplet.Username()) {
+		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
+			Success: false,
+			Message: "Request verification failed. Please try again.",
 		})
 		return
 	}

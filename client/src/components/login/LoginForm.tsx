@@ -16,6 +16,7 @@ import {
   deriveMasterKey,
   encrypt,
   generateSRPTriplet,
+  solveProofOfWork,
   SRP_CheckM2,
   SRP_PARAMS,
   UNLOCK_CHECK_BYTES,
@@ -89,6 +90,20 @@ export function LoginForm({
       setLoading(true);
 
       try {
+        const challengeRes = await post<{ token: string; difficulty: number }>(
+          "auth/register/challenge",
+          { email },
+        );
+        if (!challengeRes.success || !challengeRes.data) {
+          setError(challengeRes.message || "An unknown error occurred.");
+          return;
+        }
+
+        const powNonce = await solveProofOfWork(
+          challengeRes.data.token,
+          challengeRes.data.difficulty,
+        );
+
         const triplet = await generateSRPTriplet(email, password);
         const masterSalt = generateSalt();
         const { masterKey } = await deriveMasterKey(password, masterSalt);
@@ -99,6 +114,8 @@ export function LoginForm({
           challenge: btoa(String.fromCharCode(...new Uint8Array(challenge))),
           triplet: btoa(String.fromCharCode(...triplet.toUint8Array())),
           salt: btoa(String.fromCharCode(...masterSalt)),
+          powToken: challengeRes.data.token,
+          powNonce,
           ...(confirmEmail ? { email: confirmEmail } : {}),
         });
 

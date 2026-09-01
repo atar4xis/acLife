@@ -41,6 +41,11 @@ const (
 	MaxVerifierLen  = 520
 	MaxChallengeLen = 64
 	MaxEventLen     = 10000
+	MaxPowTokenLen  = 512
+	MaxPowNonceLen  = 32
+
+	PowChallengeTTL   = 2 * time.Minute
+	PowDifficultyBits = 20 // ~2-4s of client-side hashing
 
 	BucketIDLen     = 32  // HMAC-SHA256 output size
 	MaxEventBuckets = 60  // caps the number of weeks a single event may span

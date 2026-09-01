@@ -252,3 +252,46 @@ export function SRP_CheckM2(
   const right = padUint8(received, Math.ceil(bitLen / 8));
   return timingSafeEqual(left, right);
 }
+
+function leadingZeroBits(bytes: Uint8Array): number {
+  let count = 0;
+  for (const byte of bytes) {
+    if (byte === 0) {
+      count += 8;
+      continue;
+    }
+    count += Math.clz32(byte) - 24;
+    break;
+  }
+  return count;
+}
+
+export async function solveProofOfWork(
+  token: string,
+  difficultyBits: number,
+): Promise<string> {
+  const [payload] = token.split(".");
+  const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(
+    base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "="),
+  );
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  const { seed, email } = JSON.parse(new TextDecoder().decode(bytes)) as {
+    seed: string;
+    email: string;
+  };
+
+  const enc = new TextEncoder();
+  for (let nonce = 0; ; nonce++) {
+    const nonceStr = nonce.toString();
+    const hash = new Uint8Array(
+      await crypto.subtle.digest(
+        "SHA-256",
+        enc.encode(`${seed}|${email}|${nonceStr}`),
+      ),
+    );
+    if (leadingZeroBits(hash) >= difficultyBits) {
+      return nonceStr;
+    }
+  }
+}
