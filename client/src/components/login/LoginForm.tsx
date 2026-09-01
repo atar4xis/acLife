@@ -25,6 +25,7 @@ import { useStorage } from "@/context/StorageContext";
 import { validatePassword } from "@/lib/validators";
 import { useApi } from "@/context/ApiContext";
 import { Client, generateSalt } from "@mzattahri/srp";
+import { Spinner } from "../ui/spinner";
 
 export function LoginForm({
   handleOfflineClick,
@@ -338,7 +339,7 @@ export function LoginForm({
               )}
               <Field>
                 <Button type="submit" disabled={loading}>
-                  Continue
+                  {loading ? <Spinner /> : "Continue"}
                 </Button>
                 {canRegister ? (
                   <Button variant="outline" onClick={handleCreateAccountClick}>
