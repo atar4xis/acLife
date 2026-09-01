@@ -260,15 +260,7 @@ export default memo(
             >
               {!event._continued ? (
                 <>
-                  <div className="flex items-start gap-1">
-                    {event.isTask && (
-                      <Checkbox
-                        className="mt-0.5 shrink-0 border-current/50"
-                        checked={event.completed ?? false}
-                        onPointerDown={stopPropagation}
-                        onCheckedChange={(c) => toggleCompleted(!!c)}
-                      />
-                    )}
+                  <div className="flex items-start justify-between gap-1">
                     <div
                       className={`font-semibold ${event.isTask && event.completed ? "line-through" : ""}`}
                       style={{
@@ -280,9 +272,17 @@ export default memo(
                     >
                       {event.title}
                     </div>
+                    {event.isTask && (
+                      <Checkbox
+                        className="mt-0.5 shrink-0 border-current/50"
+                        checked={event.completed ?? false}
+                        onPointerDown={stopPropagation}
+                        onCheckedChange={(c) => toggleCompleted(!!c)}
+                      />
+                    )}
                   </div>
                   <span
-                    className={`text-xs block ${event.isTask ? "ml-5" : ""} ${event.isTask && event.completed ? "line-through" : ""}`}
+                    className={`text-xs block ${event.isTask && event.completed ? "line-through" : ""}`}
                   >
                     {timeLabel}
                   </span>
