@@ -45,6 +45,10 @@ func main() {
 		check("SMTP_PASSWORD")
 	}
 
+	if os.Getenv("EMAIL_DOMAIN_BLACKLIST") != "" && os.Getenv("EMAIL_DOMAIN_WHITELIST") != "" {
+		log.Fatal("EMAIL_DOMAIN_BLACKLIST and EMAIL_DOMAIN_WHITELIST cannot be set at the same time")
+	}
+
 	// Create cookie store
 	sessionKey := os.Getenv("SESSION_KEY")
 	if sessionKey == "" {

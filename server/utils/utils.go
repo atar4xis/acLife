@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/mail"
 	"os"
+	"path"
 	"regexp"
 	"runtime"
 	"runtime/debug"
@@ -130,4 +131,33 @@ func GetAllowedOrigins() []string {
 	}
 
 	return origins
+}
+
+// IsEmailDomainAllowed checks the email's domain against the blacklist or whitelist environment variables, if set.
+func IsEmailDomainAllowed(email string) bool {
+	i := strings.LastIndex(email, "@")
+	if i == -1 {
+		return false
+	}
+	domain := strings.ToLower(email[i+1:])
+
+	if blacklist := os.Getenv("EMAIL_DOMAIN_BLACKLIST"); blacklist != "" {
+		for pattern := range strings.SplitSeq(blacklist, ",") {
+			if matched, _ := path.Match(strings.ToLower(strings.TrimSpace(pattern)), domain); matched {
+				return false
+			}
+		}
+		return true
+	}
+
+	if whitelist := os.Getenv("EMAIL_DOMAIN_WHITELIST"); whitelist != "" {
+		for pattern := range strings.SplitSeq(whitelist, ",") {
+			if matched, _ := path.Match(strings.ToLower(strings.TrimSpace(pattern)), domain); matched {
+				return true
+			}
+		}
+		return false
+	}
+
+	return true
 }

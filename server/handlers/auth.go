@@ -355,6 +355,14 @@ func RegisterChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !utils.IsEmailDomainAllowed(req.Email) {
+		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
+			Success: false,
+			Message: "Emails from this domain are not allowed.",
+		})
+		return
+	}
+
 	data := powChallengeData{
 		Seed:    utils.RandomToken(16),
 		Email:   req.Email,
@@ -440,6 +448,14 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Invalid email address.",
+		})
+		return
+	}
+
+	if !utils.IsEmailDomainAllowed(triplet.Username()) {
+		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
+			Success: false,
+			Message: "Emails from this domain are not allowed.",
 		})
 		return
 	}
