@@ -77,8 +77,10 @@ export default memo(
     const popOut = isTiny && isPoppedOut;
     const popOutHeight = lineHeight * 2;
 
+    const DRAG_MOVE_THRESHOLD = 5;
+
     const popOutTimerRef = useRef<number | null>(null);
-    const isPointerDownRef = useRef(false);
+    const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 
     const clearPopOutTimer = useCallback(() => {
       if (popOutTimerRef.current !== null) {
@@ -87,30 +89,50 @@ export default memo(
       }
     }, []);
 
-    const handleMouseEnter = useCallback(() => {
-      if (!isTiny || isPointerDownRef.current) return;
-      clearPopOutTimer();
-      popOutTimerRef.current = window.setTimeout(() => {
-        setIsPoppedOut(true);
-      }, 150);
-    }, [isTiny, clearPopOutTimer]);
-    const handleMouseLeave = useCallback(() => {
+    const collapsePopOut = useCallback(() => {
       clearPopOutTimer();
       setIsPoppedOut(false);
     }, [clearPopOutTimer]);
 
-    // don't pop out while the event is being dragged/resized
+    const handleMouseEnter = useCallback(
+      (e: React.MouseEvent) => {
+        if (!isTiny || e.buttons !== 0) return;
+        clearPopOutTimer();
+        popOutTimerRef.current = window.setTimeout(() => {
+          setIsPoppedOut(true);
+        }, 150);
+      },
+      [isTiny, clearPopOutTimer],
+    );
+    const handleMouseLeave = useCallback(() => {
+      collapsePopOut();
+    }, [collapsePopOut]);
+
     useEffect(() => {
-      const handlePointerUp = () => {
-        isPointerDownRef.current = false;
+      const handlePointerMove = (e: PointerEvent) => {
+        const start = dragStartRef.current;
+        if (!start) return;
+
+        if (
+          Math.abs(e.clientX - start.x) > DRAG_MOVE_THRESHOLD ||
+          Math.abs(e.clientY - start.y) > DRAG_MOVE_THRESHOLD
+        ) {
+          dragStartRef.current = null;
+          collapsePopOut();
+        }
       };
+      const handlePointerUp = () => {
+        dragStartRef.current = null;
+      };
+      window.addEventListener("pointermove", handlePointerMove);
       window.addEventListener("pointerup", handlePointerUp);
       window.addEventListener("pointercancel", handlePointerUp);
       return () => {
+        window.removeEventListener("pointermove", handlePointerMove);
         window.removeEventListener("pointerup", handlePointerUp);
         window.removeEventListener("pointercancel", handlePointerUp);
       };
-    }, []);
+    }, [collapsePopOut]);
 
     useEffect(() => clearPopOutTimer, [clearPopOutTimer]);
 
@@ -205,6 +227,7 @@ export default memo(
           if (!state) return;
           state.activated = true;
           setIsHeld(true);
+          collapsePopOut();
           navigator.vibrate?.(15);
           onPointerDown(e, "move", event, day);
         }, LONG_PRESS_MS);
@@ -217,7 +240,7 @@ export default memo(
           activated: false,
         };
       },
-      [tapHandlers, onPointerDown, event, day, setLastPointer],
+      [tapHandlers, onPointerDown, event, day, setLastPointer, collapsePopOut],
     );
 
     const handleTouchPointerMove = useCallback(
@@ -287,24 +310,26 @@ export default memo(
               onMouseLeave={handleMouseLeave}
               onPointerDown={useCallback(
                 (e: React.PointerEvent) => {
-                  isPointerDownRef.current = true;
-                  clearPopOutTimer();
-                  setIsPoppedOut(false);
-
-                  if ((e.target as HTMLElement).closest(".resize-handle"))
+                  if ((e.target as HTMLElement).closest(".resize-handle")) {
+                    collapsePopOut();
                     return;
+                  }
                   setLastPointer({ x: e.clientX, y: e.clientY });
 
-                  if (e.pointerType === "touch") handleTouchPointerDown(e);
-                  else onPointerDown(e, "move", event, day);
+                  if (e.pointerType === "touch") {
+                    handleTouchPointerDown(e);
+                  } else {
+                    dragStartRef.current = { x: e.clientX, y: e.clientY };
+                    onPointerDown(e, "move", event, day);
+                  }
                 },
                 [
+                  collapsePopOut,
                   handleTouchPointerDown,
                   day,
                   event,
                   onPointerDown,
                   setLastPointer,
-                  clearPopOutTimer,
                 ],
               )}
               onPointerMove={handleTouchPointerMove}

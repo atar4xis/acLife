@@ -50,12 +50,15 @@ describe("EventBlock pop out", () => {
     expect(block.style.height).toBe("10px");
   });
 
-  it("does not pop out while the event is being dragged", async () => {
+  it("collapses a popped-out event once the drag exceeds the movement threshold", async () => {
     renderCalendar({ events: [buildTinyEvent()] });
 
     const block = await getEventBlock("Standup");
 
     fireEvent.mouseEnter(block);
+    await wait(200);
+    expect(block.style.height).toBe("32px");
+
     fireEvent.pointerDown(block, {
       button: 0,
       pointerId: 1,
@@ -64,43 +67,72 @@ describe("EventBlock pop out", () => {
       clientY: 0,
     });
 
-    await wait(200);
+    // still under the movement threshold: stays popped out
+    dispatchWindowPointer("pointermove", {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 2,
+      clientY: 0,
+    });
+    expect(block.style.height).toBe("32px");
+
+    // moved past the threshold: this is now a real drag, collapse
+    dispatchWindowPointer("pointermove", {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 20,
+      clientY: 0,
+    });
     expect(block.style.height).toBe("10px");
 
     dispatchWindowPointer("pointerup", {
       button: 0,
       pointerId: 1,
       pointerType: "mouse",
-      clientX: 0,
+      clientX: 20,
       clientY: 0,
     });
   });
 
-  it("does not pop out when hovered while a drag is already in progress", async () => {
+  it("stays popped out through a double click instead of snapping shut on mousedown", async () => {
     renderCalendar({ events: [buildTinyEvent()] });
 
     const block = await getEventBlock("Standup");
 
-    // drag starts elsewhere, then the pointer is dragged over this block
-    fireEvent.pointerDown(block, {
-      button: 0,
-      pointerId: 1,
-      pointerType: "mouse",
-      clientX: 0,
-      clientY: 0,
-    });
     fireEvent.mouseEnter(block);
+    await wait(200);
+    expect(block.style.height).toBe("32px");
+
+    for (let i = 0; i < 2; i++) {
+      fireEvent.pointerDown(block, {
+        button: 0,
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 0,
+        clientY: 0,
+      });
+      dispatchWindowPointer("pointerup", {
+        button: 0,
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 0,
+        clientY: 0,
+      });
+    }
+    fireEvent.doubleClick(block);
+
+    expect(block.style.height).toBe("32px");
+  });
+
+  it("does not pop out when hovered while another event is being dragged", async () => {
+    renderCalendar({ events: [buildTinyEvent()] });
+
+    const block = await getEventBlock("Standup");
+
+    fireEvent.mouseEnter(block, { buttons: 1 });
 
     await wait(200);
     expect(block.style.height).toBe("10px");
-
-    dispatchWindowPointer("pointerup", {
-      button: 0,
-      pointerId: 1,
-      pointerType: "mouse",
-      clientX: 0,
-      clientY: 0,
-    });
   });
 
   it("does not affect the displayed times", async () => {
