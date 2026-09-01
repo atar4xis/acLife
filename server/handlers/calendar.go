@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -113,6 +114,7 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 
 	// Batch delete
 	if len(deletedIDs) > 0 {
+		sort.Strings(deletedIDs)
 		query := `DELETE FROM calendar_events WHERE owner = ? AND id IN (?` + strings.Repeat(",?", len(deletedIDs)-1) + `)`
 		args := make([]any, 0, len(deletedIDs)+1)
 		args = append(args, user.UUID)
@@ -128,6 +130,7 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 
 	// Batch upsert
 	if len(upserts) > 0 {
+		sort.Slice(upserts, func(i, j int) bool { return upserts[i].ID < upserts[j].ID })
 		valueStrings := make([]string, 0, len(upserts))
 		valueArgs := make([]any, 0, len(upserts)*4)
 
