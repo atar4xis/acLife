@@ -90,9 +90,6 @@ func main() {
 	// Setup timeout
 	r.Use(handlers.TimeoutMiddleware(constants.HTTPTimeout))
 
-	// Reject cross-origin requests (CSRF protection)
-	r.Use(handlers.CSRFMiddleware())
-
 	// Routes consist of a path and a handler function
 	r.HandleFunc("/", handlers.Root).Methods("GET")
 	r.HandleFunc("/metadata", handlers.Metadata).Methods("GET")
@@ -101,11 +98,15 @@ func main() {
 	r.NotFoundHandler = http.HandlerFunc(handlers.NotFound)
 	r.MethodNotAllowedHandler = http.HandlerFunc(handlers.MethodNotAllowed)
 
-	// Register all routes
-	routes.Auth(r)
-	routes.User(r)
+	// Reject cross-origin requests (CSRF protection)
+	csrfRouter := r.NewRoute().Subrouter()
+	csrfRouter.Use(handlers.CSRFMiddleware())
+
+	// Register all routes (stripe webhook exempt from CSRF protection)
+	routes.Auth(csrfRouter)
+	routes.User(csrfRouter)
 	routes.Stripe(r)
-	routes.Calendar(r)
+	routes.Calendar(csrfRouter)
 
 	// Setup CORS
 	origins := utils.GetAllowedOrigins();
