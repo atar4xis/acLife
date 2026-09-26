@@ -382,6 +382,14 @@ export default function AppCalendar({
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
 
   const gridRef = useRef<HTMLDivElement>(null);
+  const [scrollThumb, setScrollThumb] = useState<{
+    top: number;
+    height: number;
+  } | null>(null);
+  const scrollThumbDragRef = useRef<{
+    startY: number;
+    startScrollTop: number;
+  } | null>(null);
   const dragRef = useRef<EventDragRef>(null);
   const gridTouchRef = useRef<GridTouchRef | null>(null);
   const eventMapRef = useRef<Map<string, CalendarEvent[]> | null>(null);
@@ -1463,6 +1471,105 @@ export default function AppCalendar({
     hourHeightRef.current = hourHeight;
   }, [hourHeight]);
 
+  // custom scrollbar thumb
+  const [scrollThumbVisible, setScrollThumbVisible] = useState(false);
+  const scrollThumbHideTimerRef = useRef<number | null>(null);
+
+  const showScrollThumb = useCallback(() => {
+    setScrollThumbVisible(true);
+    if (scrollThumbHideTimerRef.current !== null) {
+      window.clearTimeout(scrollThumbHideTimerRef.current);
+    }
+    scrollThumbHideTimerRef.current = window.setTimeout(() => {
+      setScrollThumbVisible(false);
+    }, 1500);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (scrollThumbHideTimerRef.current !== null) {
+        window.clearTimeout(scrollThumbHideTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const updateScrollThumb = useCallback(() => {
+    const container = gridRef.current;
+    if (!container) return;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    if (scrollHeight <= clientHeight) {
+      setScrollThumb(null);
+      return;
+    }
+    const height = Math.max((clientHeight / scrollHeight) * clientHeight, 24);
+    const top =
+      (scrollTop / (scrollHeight - clientHeight)) * (clientHeight - height);
+    setScrollThumb({ top, height });
+    showScrollThumb();
+  }, [showScrollThumb]);
+
+  useEffect(() => {
+    updateScrollThumb();
+  }, [updateScrollThumb, hourHeight, mode, visibleDays]);
+
+  useEffect(() => {
+    const container = gridRef.current;
+    if (!container) return;
+    container.addEventListener("scroll", updateScrollThumb);
+    const observer = new ResizeObserver(updateScrollThumb);
+    observer.observe(container);
+    return () => {
+      container.removeEventListener("scroll", updateScrollThumb);
+      observer.disconnect();
+    };
+  }, [updateScrollThumb]);
+
+  const handleScrollThumbPointerDown = useCallback((e: React.PointerEvent) => {
+    const container = gridRef.current;
+    if (!container) return;
+    e.preventDefault();
+    e.stopPropagation();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    scrollThumbDragRef.current = {
+      startY: e.clientY,
+      startScrollTop: container.scrollTop,
+    };
+    setScrollThumbVisible(true);
+    if (scrollThumbHideTimerRef.current !== null) {
+      window.clearTimeout(scrollThumbHideTimerRef.current);
+      scrollThumbHideTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      const drag = scrollThumbDragRef.current;
+      const container = gridRef.current;
+      if (!drag || !container) return;
+      const { scrollHeight, clientHeight } = container;
+      const trackHeight = clientHeight - (scrollThumb?.height ?? 0);
+      if (trackHeight <= 0) return;
+      const deltaY = e.clientY - drag.startY;
+      const deltaScroll =
+        (deltaY / trackHeight) * (scrollHeight - clientHeight);
+      container.scrollTop = Math.min(
+        Math.max(drag.startScrollTop + deltaScroll, 0),
+        scrollHeight - clientHeight,
+      );
+    };
+    const handlePointerUp = () => {
+      if (scrollThumbDragRef.current) showScrollThumb();
+      scrollThumbDragRef.current = null;
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [scrollThumb, showScrollThumb]);
+
   // and calendar events
   useEffect(() => {
     calendarEventsRef.current = calendarEvents;
@@ -2026,10 +2133,10 @@ export default function AppCalendar({
         </Popover>
       </nav>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         <div
           ref={gridRef}
-          className="touch-pan-y grid h-full overflow-auto"
+          className="touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
           style={{
             gridTemplateColumns: cols,
             gridTemplateRows: rows(hourHeight),
@@ -2039,6 +2146,7 @@ export default function AppCalendar({
           onTouchEnd={gridTouchEnd}
           onPointerMove={(e) => {
             gridPointerRef.current = { x: e.clientX, y: e.clientY };
+            showScrollThumb();
           }}
         >
           <div className="sticky left-0 top-0 z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 bg-background" />
@@ -2055,6 +2163,14 @@ export default function AppCalendar({
             />
           )}
         </div>
+
+        {scrollThumb && (
+          <div
+            className={`absolute right-0.5 w-1 rounded-full bg-foreground/20 hover:bg-foreground/40 z-40 transition-opacity duration-300 ${scrollThumbVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            style={{ top: scrollThumb.top, height: scrollThumb.height }}
+            onPointerDown={handleScrollThumbPointerDown}
+          />
+        )}
       </div>
 
       <RecurringUpdateDialog

@@ -118,3 +118,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+.calendar-grid-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.calendar-grid-scroll::-webkit-scrollbar {
+  display: none;
+}
