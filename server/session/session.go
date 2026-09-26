@@ -2,10 +2,12 @@
 package session
 
 import (
+	"errors"
 	"net/http"
 
 	"acLife/constants"
 
+	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 )
 
@@ -13,7 +15,15 @@ var Store *sessions.CookieStore
 
 // GetSession returns the session or creates a new one
 func GetSession(r *http.Request) (*sessions.Session, error) {
-	return Store.Get(r, constants.SessionName)
+	sess, err := Store.Get(r, constants.SessionName)
+	if err != nil {
+		var mErr securecookie.MultiError
+		if errors.As(err, &mErr) {
+			return sess, nil
+		}
+		return nil, err
+	}
+	return sess, nil
 }
 
 // Set a value and save the session

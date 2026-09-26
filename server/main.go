@@ -78,8 +78,8 @@ func main() {
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
-		MaxAge:   int(constants.AccessTokenExpiry.Seconds()),
 	}
+	session.Store.MaxAge(int(constants.AccessTokenExpiry.Seconds()))
 
 	// Setup API router
 	r := mux.NewRouter()
