@@ -1898,6 +1898,23 @@ export default function AppCalendar({
     return map;
   }, [visibleDays, eventMap, hourHeight]);
 
+  // fallback day index for editingEvent when no explicit day was given (e.g. agenda click)
+  const editingEventFirstDayIndex = useMemo(() => {
+    if (!editingEvent) return null;
+    const editingKey = editingEvent._instanceId ?? editingEvent.id;
+
+    for (let i = 0; i < visibleDays.length; i++) {
+      const key = visibleDays[i].date.toISODate();
+      const events = key ? eventMap.get(key) : undefined;
+
+      if (events?.some((e) => (e._instanceId ?? e.id) === editingKey)) {
+        return i;
+      }
+    }
+
+    return null;
+  }, [editingEvent, visibleDays, eventMap]);
+
   // for swipe gesture on mobile
   const swipeDelta = useMemo(() => {
     let delta = 0;
@@ -2001,8 +2018,9 @@ export default function AppCalendar({
                         editing={
                           (editingEvent?._instanceId ?? editingEvent?.id) ===
                             (event._instanceId ?? event.id) &&
-                          (editingEventDay == null ||
-                            editingEventDay === dayIndex)
+                          (editingEventDay == null
+                            ? editingEventFirstDayIndex === dayIndex
+                            : editingEventDay === dayIndex)
                         }
                         selected={selectedEvents.has(eventKey(event))}
                         onPointerDown={onEventPointerDown}
@@ -2034,6 +2052,7 @@ export default function AppCalendar({
       startNewEvent,
       editingEvent,
       editingEventDay,
+      editingEventFirstDayIndex,
       selectedEvents,
       timezones,
       currentDate,
