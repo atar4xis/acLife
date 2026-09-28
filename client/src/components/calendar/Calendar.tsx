@@ -2414,7 +2414,7 @@ export default function AppCalendar({
               const startDayOffset = evStart
                 .startOf("day")
                 .diff(event.start.startOf("day"), "days").days;
-              const endDayOffset = evStart
+              const endDayOffset = evEnd
                 .startOf("day")
                 .diff(event.end.startOf("day"), "days").days;
 
