@@ -19,4 +19,5 @@ func Calendar(r *mux.Router) {
 
 	sr.HandleFunc("/events/save", handlers.SaveCalendarEvents).Methods("POST")
 	sr.HandleFunc("/events/sync", handlers.SyncCalendarEvents).Methods("POST")
+	sr.HandleFunc("/events/migrate-envelope", handlers.MigrateEnvelope).Methods("POST")
 }

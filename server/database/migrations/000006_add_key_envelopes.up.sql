@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS key_envelopes (
+    id CHAR(36) NOT NULL DEFAULT UUID() PRIMARY KEY,
+    owner CHAR(36) NOT NULL,
+    type VARCHAR(16) NOT NULL,
+    version INT NOT NULL DEFAULT 1,
+    salt VARBINARY(64) NOT NULL,
+    data VARBINARY(256) NOT NULL,
+    kdf_params VARCHAR(255) NOT NULL,
+    FOREIGN KEY (owner) REFERENCES users(uuid) ON DELETE CASCADE,
+    UNIQUE KEY idx_owner_type (owner, type)
+);
+
+ALTER TABLE users MODIFY salt BINARY(16) NULL;
+ALTER TABLE users MODIFY challenge VARBINARY(64) NULL;

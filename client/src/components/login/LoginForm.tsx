@@ -13,18 +13,16 @@ import { useState } from "react";
 import type { ServerMetadata } from "@/types/ServerMetadata";
 import { useUser } from "@/context/UserContext";
 import {
-  deriveMasterKey,
-  encrypt,
+  generateMasterKeyEnvelope,
   generateSRPTriplet,
   solveProofOfWork,
   SRP_CheckM2,
   SRP_PARAMS,
-  UNLOCK_CHECK_BYTES,
 } from "@/lib/crypt";
 import { useStorage } from "@/context/StorageContext";
 import { validatePassword } from "@/lib/validators";
 import { useApi } from "@/context/ApiContext";
-import { Client, generateSalt } from "@mzattahri/srp";
+import { Client } from "@mzattahri/srp";
 import { Spinner } from "../ui/spinner";
 
 export function LoginForm({
@@ -106,15 +104,12 @@ export function LoginForm({
         );
 
         const triplet = await generateSRPTriplet(email, password);
-        const masterSalt = generateSalt();
-        const { masterKey } = await deriveMasterKey(password, masterSalt);
-        const challenge = await encrypt(UNLOCK_CHECK_BYTES, masterKey);
+        const { envelope } = await generateMasterKeyEnvelope(password);
         const confirmEmail = data.get("confirm-email") as string; // honeypot field
 
         const res = await post("auth/register", {
-          challenge: btoa(String.fromCharCode(...new Uint8Array(challenge))),
           triplet: btoa(String.fromCharCode(...triplet.toUint8Array())),
-          salt: btoa(String.fromCharCode(...masterSalt)),
+          envelopes: [envelope],
           powToken: challengeRes.data.token,
           powNonce,
           ...(confirmEmail ? { email: confirmEmail } : {}),
@@ -201,7 +196,7 @@ export function LoginForm({
         return;
       }
 
-      checkLogin(password);
+      await checkLogin(password);
     } finally {
       setLoading(false);
     }

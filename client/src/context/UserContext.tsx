@@ -2,16 +2,14 @@ import type { WithChildren } from "@/types/Props";
 import type { User } from "@/types/User";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useApi } from "./ApiContext";
-import { unlockMasterKey } from "@/lib/crypt";
-import { migrateMasterKeyToArgon2id } from "@/lib/calendar/crypt";
-import { uint8ArrayFromBase64 } from "@/lib/utils";
+import { unlockAccount } from "@/lib/unlockAccount";
 import { useStorage } from "@/context/StorageContext";
-import { toast } from "sonner";
 
 type UserContextValue = {
   user: User | null;
   masterKey: CryptoKey | null;
   bucketKey: CryptoKey | null;
+  isUnlocking: boolean;
   setUser: (user: User | null) => void;
   setMasterKey: (key: CryptoKey | null) => void;
   setBucketKey: (key: CryptoKey | null) => void;
@@ -23,6 +21,7 @@ const UserContext = createContext<UserContextValue>({
   user: null,
   masterKey: null,
   bucketKey: null,
+  isUnlocking: false,
   setUser: () => {},
   setMasterKey: () => {},
   setBucketKey: () => {},
@@ -34,6 +33,7 @@ export function UserProvider({ children }: WithChildren) {
   const [user, setUser] = useState<User | null>(null);
   const [masterKey, setMasterKey] = useState<CryptoKey | null>(null);
   const [bucketKey, setBucketKey] = useState<CryptoKey | null>(null);
+  const [isUnlocking, setIsUnlocking] = useState(false);
   const { get, post, setPendingVerificationEmail } = useApi();
   const storage = useStorage();
 
@@ -50,39 +50,25 @@ export function UserProvider({ children }: WithChildren) {
       setUser(newUser);
       setPendingVerificationEmail(null);
       if (password) {
+        setIsUnlocking(true);
         try {
-          const salt = uint8ArrayFromBase64(newUser.salt);
-          const encryptedChallenge = uint8ArrayFromBase64(
-            atob(newUser.challenge),
+          const unlockMethod = storage.get("unlockMethod");
+          const exportable =
+            unlockMethod === "stay-unlocked" || unlockMethod === "pin";
+          const { masterKey, bucketKey } = await unlockAccount(
+            password,
+            newUser,
+            post,
+            storage,
+            exportable,
           );
-          const { masterKey, bucketKey, needsMigration } =
-            await unlockMasterKey(password, salt, encryptedChallenge);
-
-          // upgrade legacy Argon2d keys to Argon2id in the background
-          if (needsMigration) {
-            try {
-              const upgraded = await migrateMasterKeyToArgon2id(
-                password,
-                salt,
-                masterKey,
-                post,
-                storage,
-              );
-              setMasterKey(upgraded.masterKey);
-              setBucketKey(upgraded.bucketKey);
-              toast.success("Your account security has been upgraded.");
-            } catch (err) {
-              console.error("Master key migration failed:", err);
-              setMasterKey(masterKey);
-              setBucketKey(bucketKey);
-            }
-          } else {
-            setMasterKey(masterKey);
-            setBucketKey(bucketKey);
-          }
+          setMasterKey(masterKey);
+          setBucketKey(bucketKey);
         } catch {
           setMasterKey(null); // will prompt UnlockDialog to ask for the password again
           setBucketKey(null);
+        } finally {
+          setIsUnlocking(false);
         }
       }
       return newUser;
@@ -93,6 +79,9 @@ export function UserProvider({ children }: WithChildren) {
 
   const logout = async () => {
     await post("auth/logout", null);
+    storage.set("unlockMethod", "password");
+    storage.set("unlockKeys", null);
+    storage.set("pinWrappedKeys", null);
     checkLogin();
   };
 
@@ -110,6 +99,7 @@ export function UserProvider({ children }: WithChildren) {
         user,
         masterKey,
         bucketKey,
+        isUnlocking,
         setMasterKey,
         setBucketKey,
         setUser,

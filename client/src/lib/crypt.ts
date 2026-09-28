@@ -6,6 +6,7 @@ import {
   generateSalt,
   type Params,
 } from "@mzattahri/srp";
+import { arrayBufferToBase64, uint8ArrayFromBase64 } from "./utils";
 
 export const SRP_PARAMS: Params = {
   name: "DH16-SHA256-CustomKDF",
@@ -53,48 +54,62 @@ export type DerivedKeys = {
   bucketKey: CryptoKey;
 };
 
-export const deriveMasterKey = async (
+export type EnvelopeKDFParams = {
+  algo: "argon2id" | "argon2d" | "argon2i";
+  time: number;
+  mem: number;
+  parallelism: number;
+  hashLen: number;
+};
+
+export const DEFAULT_ENVELOPE_KDF: EnvelopeKDFParams = {
+  algo: "argon2id",
+  time: 3,
+  mem: 65536,
+  parallelism: 1,
+  hashLen: 32,
+};
+
+export type KeyEnvelope = {
+  type: "master";
+  version: number;
+  salt: string; // base64
+  data: string; // base64
+  kdfParams: string; // JSON-encoded EnvelopeKDFParams
+};
+
+const kdfParamsToArgonType = (algo: EnvelopeKDFParams["algo"]): number => {
+  switch (algo) {
+    case "argon2d":
+      return ArgonType.Argon2d;
+    case "argon2i":
+      return ArgonType.Argon2i;
+    default:
+      return ArgonType.Argon2id;
+  }
+};
+
+const argon2Hash = async (
   password: string,
   salt: Uint8Array,
-  exportable: boolean = false,
-  type: number = ArgonType.Argon2id,
-): Promise<DerivedKeys> => {
+  params: {
+    time: number;
+    mem: number;
+    hashLen: number;
+    parallelism: number;
+    type: number;
+  },
+): Promise<Uint8Array> => {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("./worker/argon.ts", import.meta.url), {
       type: "module",
     });
 
-    worker.onmessage = async (e) => {
+    worker.onmessage = (e) => {
       if (e.data.error) {
         reject(new Error(e.data.error));
       } else {
-        const hash = new Uint8Array(e.data.hash);
-
-        const [masterKey, hkdfKey] = await Promise.all([
-          crypto.subtle.importKey(
-            "raw",
-            hash,
-            { name: "AES-GCM" },
-            exportable,
-            ["encrypt", "decrypt"],
-          ),
-          crypto.subtle.importKey("raw", hash, "HKDF", false, ["deriveKey"]),
-        ]);
-
-        const bucketKey = await crypto.subtle.deriveKey(
-          {
-            name: "HKDF",
-            hash: "SHA-256",
-            salt: new Uint8Array(0),
-            info: BUCKET_KEY_INFO,
-          },
-          hkdfKey,
-          { name: "HMAC", hash: "SHA-256", length: 256 },
-          false,
-          ["sign"],
-        );
-
-        resolve({ masterKey, bucketKey });
+        resolve(new Uint8Array(e.data.hash));
       }
       worker.terminate();
     };
@@ -102,13 +117,172 @@ export const deriveMasterKey = async (
     worker.postMessage({
       password,
       salt: Array.from(salt),
-      time: 3,
-      mem: 65536,
-      hashLen: 32,
-      parallelism: 1,
-      type,
+      ...params,
     });
   });
+};
+
+export const deriveBucketKeyFromMaster = async (
+  masterKeyRaw: Uint8Array,
+  exportable: boolean = false,
+): Promise<CryptoKey> => {
+  const hkdfKey = await crypto.subtle.importKey(
+    "raw",
+    masterKeyRaw,
+    "HKDF",
+    false,
+    ["deriveKey"],
+  );
+
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(0),
+      info: BUCKET_KEY_INFO,
+    },
+    hkdfKey,
+    { name: "HMAC", hash: "SHA-256", length: 256 },
+    exportable,
+    ["sign"],
+  );
+};
+
+export const deriveMasterKey = async (
+  password: string,
+  salt: Uint8Array,
+  exportable: boolean = false,
+  type: number = ArgonType.Argon2id,
+): Promise<DerivedKeys> => {
+  const hash = await argon2Hash(password, salt, {
+    time: 3,
+    mem: 65536,
+    hashLen: 32,
+    parallelism: 1,
+    type,
+  });
+
+  const [masterKey, bucketKey] = await Promise.all([
+    crypto.subtle.importKey("raw", hash, { name: "AES-GCM" }, exportable, [
+      "encrypt",
+      "decrypt",
+    ]),
+    deriveBucketKeyFromMaster(hash, exportable),
+  ]);
+
+  return { masterKey, bucketKey };
+};
+
+export const generateMasterKeyEnvelope = async (
+  password: string,
+  exportable: boolean = false,
+): Promise<DerivedKeys & { envelope: KeyEnvelope }> => {
+  const rawMasterKey = randomBytes(32);
+
+  const [masterKey, bucketKey] = await Promise.all([
+    crypto.subtle.importKey(
+      "raw",
+      rawMasterKey,
+      { name: "AES-GCM" },
+      exportable,
+      ["encrypt", "decrypt"],
+    ),
+    deriveBucketKeyFromMaster(rawMasterKey, exportable),
+  ]);
+
+  const envelope = await wrapMasterKeyBytes(password, rawMasterKey);
+
+  return { masterKey, bucketKey, envelope };
+};
+
+export const rewrapMasterKeyEnvelope = async (
+  password: string,
+  masterKey: CryptoKey,
+): Promise<KeyEnvelope> => {
+  const rawMasterKey = new Uint8Array(
+    await crypto.subtle.exportKey("raw", masterKey),
+  );
+  return wrapMasterKeyBytes(password, rawMasterKey);
+};
+
+const wrapMasterKeyBytes = async (
+  password: string,
+  rawMasterKey: Uint8Array,
+): Promise<KeyEnvelope> => {
+  const salt = randomBytes(16);
+  const hash = await argon2Hash(password, salt, {
+    time: DEFAULT_ENVELOPE_KDF.time,
+    mem: DEFAULT_ENVELOPE_KDF.mem,
+    hashLen: DEFAULT_ENVELOPE_KDF.hashLen,
+    parallelism: DEFAULT_ENVELOPE_KDF.parallelism,
+    type: kdfParamsToArgonType(DEFAULT_ENVELOPE_KDF.algo),
+  });
+
+  const wrappingKey = await crypto.subtle.importKey(
+    "raw",
+    hash,
+    { name: "AES-GCM" },
+    false,
+    ["encrypt", "decrypt"],
+  );
+
+  const data = await encrypt(rawMasterKey, wrappingKey);
+
+  return {
+    type: "master",
+    version: 1,
+    salt: arrayBufferToBase64(salt.buffer),
+    data: arrayBufferToBase64(data),
+    kdfParams: JSON.stringify(DEFAULT_ENVELOPE_KDF),
+  };
+};
+
+export const unwrapMasterKeyEnvelope = async (
+  password: string,
+  envelope: KeyEnvelope,
+  exportable: boolean = false,
+): Promise<DerivedKeys> => {
+  const params = JSON.parse(envelope.kdfParams) as EnvelopeKDFParams;
+  const salt = uint8ArrayFromBase64(envelope.salt);
+
+  const hash = await argon2Hash(password, salt, {
+    time: params.time,
+    mem: params.mem,
+    hashLen: params.hashLen,
+    parallelism: params.parallelism,
+    type: kdfParamsToArgonType(params.algo),
+  });
+
+  const wrappingKey = await crypto.subtle.importKey(
+    "raw",
+    hash,
+    { name: "AES-GCM" },
+    false,
+    ["encrypt", "decrypt"],
+  );
+
+  let rawMasterKey: Uint8Array;
+  try {
+    rawMasterKey = await decrypt(
+      uint8ArrayFromBase64(envelope.data),
+      wrappingKey,
+    );
+  } catch {
+    throw new Error("Invalid password.");
+  }
+
+  const [masterKey, bucketKey] = await Promise.all([
+    crypto.subtle.importKey(
+      "raw",
+      rawMasterKey,
+      { name: "AES-GCM" },
+      exportable,
+      ["encrypt", "decrypt"],
+    ),
+    deriveBucketKeyFromMaster(rawMasterKey, exportable),
+  ]);
+
+  return { masterKey, bucketKey };
 };
 
 export type UnlockResult = {
@@ -121,13 +295,14 @@ export const unlockMasterKey = async (
   password: string,
   salt: Uint8Array,
   encryptedChallenge: Uint8Array,
+  exportable: boolean = false,
 ): Promise<UnlockResult> => {
   for (const type of [ArgonType.Argon2id, ArgonType.Argon2d]) {
     try {
       const { masterKey, bucketKey } = await deriveMasterKey(
         password,
         salt,
-        false,
+        exportable,
         type,
       );
       const challenge = await decrypt(encryptedChallenge, masterKey);
@@ -144,6 +319,83 @@ export const unlockMasterKey = async (
   }
 
   throw new Error("Invalid password.");
+};
+
+export const exportKeyPair = async (
+  masterKey: CryptoKey,
+  bucketKey: CryptoKey,
+) => {
+  const [masterKeyRaw, bucketKeyRaw] = await Promise.all([
+    crypto.subtle.exportKey("raw", masterKey),
+    crypto.subtle.exportKey("raw", bucketKey),
+  ]);
+
+  return {
+    masterKeyB64: arrayBufferToBase64(masterKeyRaw),
+    bucketKeyB64: arrayBufferToBase64(bucketKeyRaw),
+  };
+};
+
+export const importKeyPair = async (
+  masterKeyB64: string,
+  bucketKeyB64: string,
+) => {
+  const [masterKey, bucketKey] = await Promise.all([
+    crypto.subtle.importKey(
+      "raw",
+      uint8ArrayFromBase64(masterKeyB64),
+      { name: "AES-GCM" },
+      true,
+      ["encrypt", "decrypt"],
+    ),
+    crypto.subtle.importKey(
+      "raw",
+      uint8ArrayFromBase64(bucketKeyB64),
+      { name: "HMAC", hash: "SHA-256" },
+      true,
+      ["sign"],
+    ),
+  ]);
+
+  return { masterKey, bucketKey };
+};
+
+export const wrapKeyPairWithPin = async (
+  pin: string,
+  masterKeyB64: string,
+  bucketKeyB64: string,
+) => {
+  const salt = randomBytes(16);
+  const { masterKey: wrappingKey } = await deriveMasterKey(pin, salt);
+
+  const payload = new TextEncoder().encode(
+    JSON.stringify({ masterKeyB64, bucketKeyB64 }),
+  );
+  const encrypted = await encrypt(payload, wrappingKey);
+
+  return {
+    salt: arrayBufferToBase64(salt.buffer),
+    encrypted: arrayBufferToBase64(encrypted),
+  };
+};
+
+export const unwrapKeyPairWithPin = async (
+  pin: string,
+  saltB64: string,
+  encryptedB64: string,
+) => {
+  const salt = uint8ArrayFromBase64(saltB64);
+  const { masterKey: wrappingKey } = await deriveMasterKey(pin, salt);
+
+  const decrypted = await decrypt(
+    uint8ArrayFromBase64(encryptedB64),
+    wrappingKey,
+  );
+  const { masterKeyB64, bucketKeyB64 } = JSON.parse(
+    new TextDecoder().decode(decrypted),
+  ) as { masterKeyB64: string; bucketKeyB64: string };
+
+  return importKeyPair(masterKeyB64, bucketKeyB64);
 };
 
 export const hmacSign = async (
@@ -199,8 +451,8 @@ export const decrypt = async (
 export async function generateSRPTriplet(
   email: string,
   password: string,
+  salt: Uint8Array = generateSalt(),
 ): Promise<Triplet> {
-  const salt = generateSalt();
   return await Triplet.create(SRP_PARAMS, email, password, salt);
 }
 

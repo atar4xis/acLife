@@ -13,6 +13,7 @@ import UnlockDialog from "./login/UnlockDialog";
 import SubscriptionDialog from "./subscription/SubscriptionDialog";
 import { toast } from "sonner";
 import PushService from "./PushService";
+import AutoLockService from "./AutoLockService";
 
 export default function AppShell() {
   const [viewMode, setViewMode] = useState<ViewMode>(
@@ -65,6 +66,11 @@ export default function AppShell() {
     // eslint-disable-next-line
   }, [user, masterKey, bucketKey, activeSub, subRequired]);
 
+  // wipe decrypted events from memory as soon as the data locks
+  useEffect(() => {
+    if (masterKey === null) setCalEvents(null);
+  }, [masterKey]);
+
   // show offline when network goes offline
   useEffect(() => {
     const online = () => {
@@ -105,6 +111,7 @@ export default function AppShell() {
       )}
       {saving && <Spinner className="fixed bottom-5 right-5 size-8" />}
       <PushService />
+      <AutoLockService />
       {calEvents !== null && (
         <AppCalendar
           events={calEvents}

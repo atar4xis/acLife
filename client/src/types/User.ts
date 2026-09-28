@@ -1,3 +1,5 @@
+import type { KeyEnvelope } from "@/lib/crypt";
+
 type OfflineUser = {
   type: "offline";
 };
@@ -6,8 +8,9 @@ type OnlineUser = {
   type: "online";
   uuid: string;
   email: string;
-  salt: string;
-  challenge: string;
+  salt: string | null;
+  challenge: string | null;
+  envelopes: KeyEnvelope[];
   subscription_status: string | null;
 };
 

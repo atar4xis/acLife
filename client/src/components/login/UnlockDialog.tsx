@@ -1,8 +1,7 @@
-import { unlockMasterKey } from "@/lib/crypt";
-import { migrateMasterKeyToArgon2id } from "@/lib/calendar/crypt";
+import { importKeyPair, unwrapKeyPairWithPin } from "@/lib/crypt";
+import { unlockAccount } from "@/lib/unlockAccount";
 import { useApi } from "@/context/ApiContext";
 import { useStorage } from "@/context/StorageContext";
-import { toast } from "sonner";
 import { Card, CardContent } from "../ui/card";
 import {
   Dialog,
@@ -14,7 +13,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from "../ui/field";
 import { Input } from "../ui/input";
 import { useUser } from "@/context/UserContext";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 
 export default function UnlockDialog() {
@@ -23,8 +22,67 @@ export default function UnlockDialog() {
   const storage = useStorage();
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingAutoUnlock, setCheckingAutoUnlock] = useState(true);
+  const [usePin, setUsePin] = useState(false);
 
-  if (!user || user.type != "online") return null;
+  const unlockMethod = storage.get("unlockMethod") || "password";
+  const pinWrappedKeys = storage.get("pinWrappedKeys");
+
+  // try auto-unlock, and show the pin form when a pin is set up
+  useEffect(() => {
+    if (!storage.ready) return;
+
+    (async () => {
+      if (unlockMethod === "stay-unlocked") {
+        const unlockKeys = storage.get("unlockKeys");
+        if (unlockKeys) {
+          try {
+            const { masterKey, bucketKey } = await importKeyPair(
+              unlockKeys.masterKeyB64,
+              unlockKeys.bucketKeyB64,
+            );
+            setMasterKey(masterKey);
+            setBucketKey(bucketKey);
+            return;
+          } catch (err) {
+            console.error("Auto-unlock error:", err);
+          }
+        }
+      } else if (unlockMethod === "pin" && pinWrappedKeys) {
+        setUsePin(true);
+      }
+
+      setCheckingAutoUnlock(false);
+    })();
+
+    // eslint-disable-next-line
+  }, [storage.ready]);
+
+  if (!user || user.type != "online" || checkingAutoUnlock) return null;
+
+  const handlePinSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!pinWrappedKeys) return;
+
+    setLoading(true);
+
+    const pin = new FormData(e.currentTarget).get("pin") as string;
+
+    try {
+      const { masterKey, bucketKey } = await unwrapKeyPairWithPin(
+        pin,
+        pinWrappedKeys.salt,
+        pinWrappedKeys.encrypted,
+      );
+      setError(false);
+      setMasterKey(masterKey);
+      setBucketKey(bucketKey);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,42 +92,20 @@ export default function UnlockDialog() {
     const data = new FormData(form);
 
     const password = data.get("password") as string;
-    const salt = Uint8Array.from(atob(user.salt), (c) => c.charCodeAt(0));
-    const encryptedChallenge = Uint8Array.from(
-      atob(atob(user.challenge)),
-      (c) => c.charCodeAt(0),
-    );
 
     try {
-      const { masterKey, bucketKey, needsMigration } = await unlockMasterKey(
+      const exportable =
+        unlockMethod === "stay-unlocked" || unlockMethod === "pin";
+      const { masterKey, bucketKey } = await unlockAccount(
         password,
-        salt,
-        encryptedChallenge,
+        user,
+        post,
+        storage,
+        exportable,
       );
       setError(false);
-
-      // upgrade legacy Argon2d keys to Argon2id in the background
-      if (needsMigration) {
-        try {
-          const upgraded = await migrateMasterKeyToArgon2id(
-            password,
-            salt,
-            masterKey,
-            post,
-            storage,
-          );
-          setMasterKey(upgraded.masterKey);
-          setBucketKey(upgraded.bucketKey);
-          toast.success("Your account security has been upgraded.");
-        } catch (err) {
-          console.error("Master key migration failed:", err);
-          setMasterKey(masterKey);
-          setBucketKey(bucketKey);
-        }
-      } else {
-        setMasterKey(masterKey);
-        setBucketKey(bucketKey);
-      }
+      setMasterKey(masterKey);
+      setBucketKey(bucketKey);
     } catch {
       setError(true);
     } finally {
@@ -89,30 +125,72 @@ export default function UnlockDialog() {
         <div className="flex flex-col gap-6 text-center">
           <Card className="bg-transparent border-none shadow-none">
             <CardContent>
-              <form onSubmit={handleFormSubmit}>
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="password">Password</FieldLabel>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      placeholder="Enter password"
-                      required
-                    />
-                  </Field>
-                  {error && (
-                    <span className="text-sm text-red-700 dark:text-red-400 text-left">
-                      Invalid password.
-                    </span>
-                  )}
-                  <Field>
-                    <Button type="submit" disabled={loading}>
-                      Continue
-                    </Button>
-                  </Field>
-                </FieldGroup>
-              </form>
+              {usePin ? (
+                <form onSubmit={handlePinSubmit}>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="pin">PIN code</FieldLabel>
+                      <Input
+                        id="pin"
+                        name="pin"
+                        type="password"
+                        inputMode="numeric"
+                        placeholder="Enter PIN"
+                        autoFocus
+                        required
+                      />
+                    </Field>
+                    {error && (
+                      <span className="text-sm text-red-700 dark:text-red-400 text-left">
+                        Invalid PIN.
+                      </span>
+                    )}
+                    <Field>
+                      <Button type="submit" disabled={loading}>
+                        Continue
+                      </Button>
+                    </Field>
+                  </FieldGroup>
+                </form>
+              ) : (
+                <form onSubmit={handleFormSubmit}>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="password">Password</FieldLabel>
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="Enter password"
+                        autoFocus
+                        required
+                      />
+                    </Field>
+                    {error && (
+                      <span className="text-sm text-red-700 dark:text-red-400 text-left">
+                        Invalid password.
+                      </span>
+                    )}
+                    <Field>
+                      <Button type="submit" disabled={loading}>
+                        Continue
+                      </Button>
+                    </Field>
+                  </FieldGroup>
+                </form>
+              )}
+              {pinWrappedKeys && (
+                <Button
+                  className="mt-2 w-full"
+                  variant="ghost"
+                  onClick={() => {
+                    setError(false);
+                    setUsePin((v) => !v);
+                  }}
+                >
+                  {usePin ? "Use password instead" : "Use PIN instead"}
+                </Button>
+              )}
               <Button
                 className="mt-2 w-full"
                 variant="outline"

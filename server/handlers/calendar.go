@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -25,15 +26,21 @@ type upsertEvent struct {
 	IsNew   bool
 }
 
+// EventChange is one entry of a calendar/events/save request body.
+type EventChange struct {
+	Type  string               `json:"type"`
+	ID    string               `json:"id,omitempty"`
+	Event types.EncryptedEvent `json:"event"`
+}
+
+// errBadEventChanges signals that a batch of changes failed validation (caller should respond 400).
+var errBadEventChanges = errors.New("invalid event changes")
+
 func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	user := session.GetLoggedInUser(r)
 	utils.Assert(user != nil) // ensured by AuthMiddleware
 
-	var changes []struct {
-		Type  string               `json:"type"`
-		ID    string               `json:"id,omitempty"`
-		Event types.EncryptedEvent `json:"event"`
-	}
+	var changes []EventChange
 	if err := utils.ParseJSON(r.Body, &changes); err != nil {
 		utils.SendBadRequest(w)
 		return
@@ -55,6 +62,36 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = tx.Rollback() }() // rollback if commit never happens
 
+	if err := applyCalendarChanges(ctx, tx, user.UUID, changes); err != nil {
+		if errors.Is(err, errBadEventChanges) {
+			utils.SendBadRequest(w)
+			return
+		}
+
+		utils.LogError("SaveCalendarEvents", "applyCalendarChanges", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if err := tx.Commit(); err != nil { // finalize transaction
+		utils.LogError("SaveCalendarEvents", "Commit", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	// Notify other clients via push event
+	originClientID := r.URL.Query().Get("c")
+	if originClientID != "" && len(originClientID) == 6 {
+		go push.SendToUser(context.Background(), user.UUID, push.SyncEvent(originClientID))
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
+		Success: true,
+	})
+}
+
+// applyCalendarChanges validates and applies a batch of event changes within tx, without committing.
+func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes []EventChange) error {
 	var deletedIDs []string
 	var upserts []upsertEvent
 
@@ -69,26 +106,23 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		case "added", "updated":
 			decoded, err := base64.StdEncoding.DecodeString(c.Event.Data) // decode event payload
 			if err != nil {
-				utils.LogError("SaveCalendarEvents", "InvalidBase64", fmt.Errorf("event %s invalid base64: %v", c.Event.ID, err))
+				utils.LogError("applyCalendarChanges", "InvalidBase64", fmt.Errorf("event %s invalid base64: %v", c.Event.ID, err))
 				continue
 			}
 
 			if len(decoded) > constants.MaxEventLen {
-				utils.SendBadRequest(w)
-				return
+				return errBadEventChanges
 			}
 
 			if len(c.Event.Buckets) == 0 || len(c.Event.Buckets) > constants.MaxEventBuckets {
-				utils.SendBadRequest(w)
-				return
+				return errBadEventChanges
 			}
 
 			buckets := make([][]byte, 0, len(c.Event.Buckets))
 			for _, b := range c.Event.Buckets {
 				bucketID, err := base64.StdEncoding.DecodeString(b)
 				if err != nil || len(bucketID) != constants.BucketIDLen {
-					utils.SendBadRequest(w)
-					return
+					return errBadEventChanges
 				}
 				buckets = append(buckets, bucketID)
 			}
@@ -117,14 +151,12 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		sort.Strings(deletedIDs)
 		query := `DELETE FROM calendar_events WHERE owner = ? AND id IN (?` + strings.Repeat(",?", len(deletedIDs)-1) + `)`
 		args := make([]any, 0, len(deletedIDs)+1)
-		args = append(args, user.UUID)
+		args = append(args, owner)
 		for _, id := range deletedIDs {
 			args = append(args, id)
 		}
 		if _, err := tx.ExecContext(ctx, query, args...); err != nil {
-			utils.LogError("SaveCalendarEvents", "BatchDelete", err)
-			utils.SendInternalError(w)
-			return
+			return err
 		}
 	}
 
@@ -136,7 +168,7 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 
 		for _, ev := range upserts {
 			valueStrings = append(valueStrings, "(?, ?, ?, ?)")
-			valueArgs = append(valueArgs, ev.ID, user.UUID, ev.Data, ev.UpdatedAt)
+			valueArgs = append(valueArgs, ev.ID, owner, ev.Data, ev.UpdatedAt)
 		}
 
 		query := `
@@ -148,33 +180,15 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		`
 
 		if _, err := tx.ExecContext(ctx, query, valueArgs...); err != nil {
-			utils.LogError("SaveCalendarEvents", "BatchUpsert", err)
-			utils.SendInternalError(w)
-			return
+			return err
 		}
 
-		if err := replaceEventBuckets(ctx, tx, user.UUID, upserts); err != nil {
-			utils.LogError("SaveCalendarEvents", "ReplaceBuckets", err)
-			utils.SendInternalError(w)
-			return
+		if err := replaceEventBuckets(ctx, tx, owner, upserts); err != nil {
+			return err
 		}
 	}
 
-	if err := tx.Commit(); err != nil { // finalize transaction
-		utils.LogError("SaveCalendarEvents", "Commit", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	// Notify other clients via push event
-	originClientID := r.URL.Query().Get("c")
-	if originClientID != "" && len(originClientID) == 6 {
-		go push.SendToUser(context.Background(), user.UUID, push.SyncEvent(originClientID))
-	}
-
-	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
-		Success: true,
-	})
+	return nil
 }
 
 // replaceEventBuckets replaces the calendar_event_buckets rows for the given upserts.

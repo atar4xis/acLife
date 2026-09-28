@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"context"
+	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/url"
 	"os"
@@ -18,6 +21,8 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"mz.attahri.com/code/srp/v3"
+
 	_ "crypto/sha256"
 )
 
@@ -25,8 +30,14 @@ func UserInfo(w http.ResponseWriter, r *http.Request) {
 	user := session.GetLoggedInUser(r)
 	utils.Assert(user != nil) // ensured by AuthMiddleware
 
+	envelopes, err := fetchEnvelopes(r.Context(), user.UUID)
+	if err != nil {
+		utils.LogError("UserInfo", "fetchEnvelopes", err)
+		utils.SendInternalError(w)
+		return
+	}
+
 	// Respond with JSON (only exposing what needs to be)
-	// TODO: send Salt and Challenge only when requested
 	utils.SendJSON(w, http.StatusOK, types.Reply[types.PublicUser]{
 		Success: true,
 		Data: types.PublicUser{
@@ -35,7 +46,351 @@ func UserInfo(w http.ResponseWriter, r *http.Request) {
 			SubscriptionStatus: user.SubscriptionStatus,
 			Salt:               user.Salt,
 			Challenge:          user.Challenge,
+			Envelopes:          envelopes,
 		},
+	})
+}
+
+// fetchEnvelopes loads all key envelopes belonging to owner.
+func fetchEnvelopes(ctx context.Context, owner string) ([]types.KeyEnvelope, error) {
+	rows, err := database.Query(ctx,
+		"SELECT type, version, salt, data, kdf_params FROM key_envelopes WHERE owner = ?",
+		owner,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	envelopes := []types.KeyEnvelope{}
+	for rows.Next() {
+		var e types.KeyEnvelope
+		if err := rows.Scan(&e.Type, &e.Version, &e.Salt, &e.Data, &e.KDFParams); err != nil {
+			return nil, err
+		}
+		envelopes = append(envelopes, e)
+	}
+
+	return envelopes, rows.Err()
+}
+
+// verifyCurrentPassword reports whether currentTriplet proves knowledge of user's current password.
+func verifyCurrentPassword(user *types.User, currentTriplet srp.Triplet) bool {
+	return len(currentTriplet.Verifier()) != 0 &&
+		len(currentTriplet.Verifier()) == len(user.Verifier) &&
+		subtle.ConstantTimeCompare(currentTriplet.Salt(), user.SrpSalt) == 1 &&
+		subtle.ConstantTimeCompare(currentTriplet.Verifier(), user.Verifier) == 1
+}
+
+// upsertEnvelopesTx inserts or updates key envelopes for owner within tx.
+func upsertEnvelopesTx(ctx context.Context, tx *sql.Tx, owner string, envelopes []types.KeyEnvelope) error {
+	for _, e := range envelopes {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO key_envelopes (owner, type, version, salt, data, kdf_params)
+			VALUES (?, ?, ?, ?, ?, ?)
+			ON DUPLICATE KEY UPDATE version=VALUES(version), salt=VALUES(salt), data=VALUES(data), kdf_params=VALUES(kdf_params)`,
+			owner, e.Type, e.Version, e.Salt, e.Data, e.KDFParams,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// UpdateEmail changes the caller's email and SRP credentials from a client-generated triplet.
+func UpdateEmail(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	var req struct {
+		CurrentTriplet []byte `json:"current_triplet"`
+		Triplet        []byte `json:"triplet"`
+	}
+	if err := utils.ParseJSON(r.Body, &req); err != nil {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	var triplet srp.Triplet = req.Triplet
+
+	if len(triplet.Username()) == 0 || len(triplet.Verifier()) == 0 || len(triplet.Salt()) == 0 {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	if len(triplet.Username()) > constants.MaxEmailLen ||
+		len(triplet.Salt()) > constants.MaxSaltLen ||
+		len(triplet.Verifier()) > constants.MaxVerifierLen {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	var currentTriplet srp.Triplet = req.CurrentTriplet
+	if !verifyCurrentPassword(user, currentTriplet) {
+		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
+			Success: false,
+			Message: "Current password is incorrect.",
+		})
+		return
+	}
+
+	if !utils.ValidateEmail(triplet.Username()) {
+		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
+			Success: false,
+			Message: "Invalid email address.",
+		})
+		return
+	}
+
+	if !utils.IsEmailDomainAllowed(triplet.Username()) {
+		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
+			Success: false,
+			Message: "Emails from this domain are not allowed.",
+		})
+		return
+	}
+
+	newEmail := triplet.Username()
+	verificationRequired := constants.Metadata.Registration.Email.VerificationRequired
+
+	if _, err := database.Exec(r.Context(),
+		"UPDATE users SET email = ?, srp_salt = ?, verifier = ?, email_verified = 0 WHERE uuid = ?",
+		newEmail, triplet.Salt(), triplet.Verifier(), user.UUID,
+	); err != nil {
+		if database.IsDuplicateEntry(err) {
+			utils.SendJSON(w, http.StatusConflict, types.Reply[any]{
+				Success: false,
+				Message: "Email already in use.",
+			})
+			return
+		}
+
+		utils.LogError("UpdateEmail", "database.Exec", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if !verificationRequired {
+		utils.SendJSON(w, http.StatusOK, types.Reply[any]{
+			Success: true,
+		})
+		return
+	}
+
+	if err := createAndQueueVerificationToken(r.Context(), newEmail); err != nil {
+		utils.LogError("UpdateEmail", "createAndQueueVerificationToken", err)
+	}
+
+	accessToken := session.Get[string](r, "access_token")
+	if accessToken != "" {
+		_, _ = database.Exec(r.Context(),
+			"DELETE FROM account_sessions WHERE access_token = ?",
+			accessToken)
+	}
+	if err := session.DestroySession(w, r); err != nil {
+		utils.LogError("UpdateEmail", "session.DestroySession", err)
+	}
+
+	utils.SendJSON(w, http.StatusForbidden, types.Reply[types.EmailUnverifiedData]{
+		Success: false,
+		Message: "Email verification required.",
+		Data: types.EmailUnverifiedData{
+			Email:                newEmail,
+			RequiresVerification: true,
+		},
+	})
+}
+
+// UpdatePassword updates SRP credentials and the re-wrapped master key envelope together.
+func UpdatePassword(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	var req struct {
+		CurrentTriplet []byte              `json:"current_triplet"`
+		Triplet        []byte              `json:"triplet"`
+		Envelopes      []types.KeyEnvelope `json:"envelopes"`
+	}
+	if err := utils.ParseJSON(r.Body, &req); err != nil {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	var triplet srp.Triplet = req.Triplet
+
+	if len(triplet.Username()) == 0 || len(triplet.Verifier()) == 0 || len(triplet.Salt()) == 0 {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	if len(triplet.Salt()) > constants.MaxSaltLen || len(triplet.Verifier()) > constants.MaxVerifierLen {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	if !validateEnvelopes(req.Envelopes, true) {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	var currentTriplet srp.Triplet = req.CurrentTriplet
+	if !verifyCurrentPassword(user, currentTriplet) {
+		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
+			Success: false,
+			Message: "Current password is incorrect.",
+		})
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := database.DB.BeginTx(ctx, nil)
+	if err != nil {
+		utils.LogError("UpdatePassword", "BeginTx", err)
+		utils.SendInternalError(w)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx,
+		"UPDATE users SET srp_salt = ?, verifier = ? WHERE uuid = ?",
+		triplet.Salt(), triplet.Verifier(), user.UUID,
+	); err != nil {
+		utils.LogError("UpdatePassword", "tx.Exec(update users)", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if err := upsertEnvelopesTx(ctx, tx, user.UUID, req.Envelopes); err != nil {
+		utils.LogError("UpdatePassword", "upsertEnvelopesTx", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	// changing the password should invalidate every other session
+	currentToken := session.Get[string](r, "access_token")
+	if _, err := tx.ExecContext(ctx,
+		"DELETE FROM account_sessions WHERE owner = ? AND access_token != ?",
+		user.UUID, currentToken,
+	); err != nil {
+		utils.LogError("UpdatePassword", "tx.Exec(revoke sessions)", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		utils.LogError("UpdatePassword", "tx.Commit", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
+		Success: true,
+	})
+}
+
+// SaveEnvelopes stores or updates the caller's key envelopes without touching SRP credentials.
+func SaveEnvelopes(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	var req struct {
+		Envelopes []types.KeyEnvelope `json:"envelopes"`
+	}
+	if err := utils.ParseJSON(r.Body, &req); err != nil {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	if !validateEnvelopes(req.Envelopes, false) {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := database.DB.BeginTx(ctx, nil)
+	if err != nil {
+		utils.LogError("SaveEnvelopes", "BeginTx", err)
+		utils.SendInternalError(w)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if err := upsertEnvelopesTx(ctx, tx, user.UUID, req.Envelopes); err != nil {
+		utils.LogError("SaveEnvelopes", "upsertEnvelopesTx", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		utils.LogError("SaveEnvelopes", "tx.Commit", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
+		Success: true,
+	})
+}
+
+// MigrateEnvelope atomically saves re-encrypted calendar events with the envelope that decrypts them.
+func MigrateEnvelope(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	var req struct {
+		Envelopes []types.KeyEnvelope `json:"envelopes"`
+		Events    []EventChange       `json:"events"`
+	}
+	if err := utils.ParseJSON(r.Body, &req); err != nil {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	if !validateEnvelopes(req.Envelopes, true) {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := database.DB.BeginTx(ctx, nil)
+	if err != nil {
+		utils.LogError("MigrateEnvelope", "BeginTx", err)
+		utils.SendInternalError(w)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if len(req.Events) > 0 {
+		if err := applyCalendarChanges(ctx, tx, user.UUID, req.Events); err != nil {
+			if errors.Is(err, errBadEventChanges) {
+				utils.SendBadRequest(w)
+				return
+			}
+
+			utils.LogError("MigrateEnvelope", "applyCalendarChanges", err)
+			utils.SendInternalError(w)
+			return
+		}
+	}
+
+	if err := upsertEnvelopesTx(ctx, tx, user.UUID, req.Envelopes); err != nil {
+		utils.LogError("MigrateEnvelope", "upsertEnvelopesTx", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		utils.LogError("MigrateEnvelope", "tx.Commit", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	// other devices are still using the pre-migration key - tell them to resync
+	go push.SendToUser(context.Background(), user.UUID, push.SyncEvent(""))
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
+		Success: true,
 	})
 }
 
@@ -160,7 +515,6 @@ func RevokeSession(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 	})
 }
-
 
 // PushSubscribe stores a push service subscription in the DB.
 func PushSubscribe(w http.ResponseWriter, r *http.Request) {

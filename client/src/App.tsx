@@ -12,7 +12,7 @@ import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
 
 function AuthWrapper({ children }: WithChildren) {
-  const { user, checkLogin, setUser } = useUser();
+  const { user, isUnlocking, checkLogin, setUser } = useUser();
   const { url, pendingLogout, setPendingLogout } = useApi();
   const prevUrl = useRef(url);
 
@@ -30,7 +30,7 @@ function AuthWrapper({ children }: WithChildren) {
     setPendingLogout(false);
   }, [pendingLogout, setPendingLogout, setUser]);
 
-  if (!user) return <LoginDialog />;
+  if (!user || isUnlocking) return <LoginDialog />;
 
   return children;
 }

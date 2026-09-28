@@ -393,6 +393,33 @@ func RegisterChallenge(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// validateEnvelopes checks that envelopes are valid key envelopes
+func validateEnvelopes(envelopes []types.KeyEnvelope, requireOneMaster bool) bool {
+	if len(envelopes) == 0 || len(envelopes) > constants.MaxEnvelopeCount {
+		return false
+	}
+
+	seenType := make(map[string]bool, len(envelopes))
+	for _, e := range envelopes {
+		if e.Type != "master" {
+			return false
+		}
+		if seenType[e.Type] {
+			return false
+		}
+		seenType[e.Type] = true
+
+		if e.Version <= 0 ||
+			len(e.Salt) == 0 || len(e.Salt) > constants.MaxEnvelopeSaltLen ||
+			len(e.Data) == 0 || len(e.Data) > constants.MaxEnvelopeDataLen ||
+			len(e.KDFParams) == 0 || len(e.KDFParams) > constants.MaxKDFParamsLen {
+			return false
+		}
+	}
+
+	return !requireOneMaster || seenType["master"]
+}
+
 // Register handles creating new accounts.
 func Register(w http.ResponseWriter, r *http.Request) {
 	if !constants.Metadata.Registration.Enabled {
@@ -401,12 +428,11 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Challenge string `json:"challenge"`
-		Triplet   []byte `json:"triplet"`
-		Salt      []byte `json:"salt"`
-		Email     string `json:"email"`
-		PowToken  string `json:"powToken"`
-		PowNonce  string `json:"powNonce"`
+		Triplet   []byte              `json:"triplet"`
+		Envelopes []types.KeyEnvelope `json:"envelopes"`
+		Email     string              `json:"email"`
+		PowToken  string              `json:"powToken"`
+		PowNonce  string              `json:"powNonce"`
 	}
 	if err := utils.ParseJSON(r.Body, &req); err != nil {
 		utils.SendBadRequest(w)
@@ -422,11 +448,10 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var triplet srp.Triplet = req.Triplet
-	challenge := req.Challenge
 
 	// Make sure the fields are not empty
 	if len(triplet.Username()) == 0 || len(triplet.Verifier()) == 0 || len(triplet.Salt()) == 0 ||
-		len(challenge) == 0 || len(req.PowToken) == 0 || len(req.PowNonce) == 0 {
+		len(req.PowToken) == 0 || len(req.PowNonce) == 0 {
 		utils.SendBadRequest(w)
 		return
 	}
@@ -434,11 +459,14 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	// Enforce max lengths
 	if len(triplet.Username()) > constants.MaxEmailLen ||
 		len(triplet.Salt()) > constants.MaxSaltLen ||
-		len(req.Salt) > constants.MaxSaltLen ||
 		len(triplet.Verifier()) > constants.MaxVerifierLen ||
-		len(challenge) > constants.MaxChallengeLen ||
 		len(req.PowToken) > constants.MaxPowTokenLen ||
 		len(req.PowNonce) > constants.MaxPowNonceLen {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	if !validateEnvelopes(req.Envelopes, true) {
 		utils.SendBadRequest(w)
 		return
 	}
@@ -469,11 +497,20 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
+	tx, err := database.DB.BeginTx(ctx, nil)
+	if err != nil {
+		utils.LogError("Register", "BeginTx", err)
+		utils.SendInternalError(w)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
 	// Insert into database
-	if _, err := database.Exec(r.Context(), `
-		INSERT INTO users (email, salt, srp_salt, verifier, challenge)
-		VALUES (?, ?, ?, ?, ?)`,
-		triplet.Username(), req.Salt, triplet.Salt(), triplet.Verifier(), challenge,
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO users (email, srp_salt, verifier)
+		VALUES (?, ?, ?)`,
+		triplet.Username(), triplet.Salt(), triplet.Verifier(),
 	); err != nil {
 		if database.IsDuplicateEntry(err) {
 			utils.SendJSON(w, http.StatusConflict, types.Reply[any]{
@@ -483,7 +520,35 @@ func Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		utils.LogError("RegisterUser", "database.Exec", err)
+		utils.LogError("Register", "tx.Exec(insert user)", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	var userUUID string
+	if err := tx.QueryRowContext(ctx,
+		"SELECT uuid FROM users WHERE email = ?",
+		triplet.Username(),
+	).Scan(&userUUID); err != nil {
+		utils.LogError("Register", "tx.QueryRow(uuid)", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	for _, e := range req.Envelopes {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO key_envelopes (owner, type, version, salt, data, kdf_params)
+			VALUES (?, ?, ?, ?, ?, ?)`,
+			userUUID, e.Type, e.Version, e.Salt, e.Data, e.KDFParams,
+		); err != nil {
+			utils.LogError("Register", "tx.Exec(insert envelope)", err)
+			utils.SendInternalError(w)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		utils.LogError("Register", "tx.Commit", err)
 		utils.SendInternalError(w)
 		return
 	}

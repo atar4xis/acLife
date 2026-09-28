@@ -21,8 +21,7 @@ const storageMock = vi.hoisted(() => ({
 }));
 
 const cryptMock = vi.hoisted(() => ({
-  deriveMasterKey: vi.fn(),
-  encrypt: vi.fn(),
+  generateMasterKeyEnvelope: vi.fn(),
   generateSRPTriplet: vi.fn(),
   randomBytes: vi.fn(),
   SRP_CheckM2: vi.fn(),
@@ -69,8 +68,7 @@ vi.mock("../../src/lib/crypt.ts", async () => {
 
   return {
     ...actual,
-    deriveMasterKey: cryptMock.deriveMasterKey,
-    encrypt: cryptMock.encrypt,
+    generateMasterKeyEnvelope: cryptMock.generateMasterKeyEnvelope,
     generateSRPTriplet: cryptMock.generateSRPTriplet,
     randomBytes: cryptMock.randomBytes,
     SRP_CheckM2: cryptMock.SRP_CheckM2,
@@ -127,8 +125,23 @@ beforeEach(() => {
   storageMock.get.mockReset().mockReturnValue("");
   storageMock.set.mockReset();
 
-  cryptMock.deriveMasterKey.mockReset().mockResolvedValue({} as CryptoKey);
-  cryptMock.encrypt.mockReset().mockResolvedValue(Uint8Array.from([9, 9, 9]));
+  cryptMock.generateMasterKeyEnvelope.mockReset().mockResolvedValue({
+    masterKey: {} as CryptoKey,
+    bucketKey: {} as CryptoKey,
+    envelope: {
+      type: "master",
+      version: 1,
+      salt: "c2FsdA==",
+      data: "ZGF0YQ==",
+      kdfParams: JSON.stringify({
+        algo: "argon2id",
+        time: 3,
+        mem: 65536,
+        parallelism: 1,
+        hashLen: 32,
+      }),
+    },
+  });
   cryptMock.generateSRPTriplet.mockReset().mockResolvedValue({
     toUint8Array: () => Uint8Array.from([1, 2, 3]),
   });
@@ -321,9 +334,10 @@ describe("LoginDialog", () => {
     expect(apiMock.post).toHaveBeenCalledWith(
       "auth/register",
       expect.objectContaining({
-        challenge: expect.any(String),
         triplet: expect.any(String),
-        salt: expect.any(String),
+        envelopes: [
+          expect.objectContaining({ type: "master", version: 1 }),
+        ],
         powToken,
         powNonce: expect.any(String),
       }),

@@ -44,6 +44,11 @@ const (
 	MaxPowTokenLen  = 512
 	MaxPowNonceLen  = 32
 
+	MaxEnvelopeSaltLen = 64
+	MaxEnvelopeDataLen = 256
+	MaxKDFParamsLen    = 255
+	MaxEnvelopeCount   = 4
+
 	PowChallengeTTL   = 2 * time.Minute
 	PowDifficultyBits = 17 // ~1-5s of client-side hashing
 
@@ -78,7 +83,7 @@ func init() {
 	}
 
 	Metadata = types.ServerMetadata{
-		URL:      os.Getenv("SERVER_URL"),
+		URL: os.Getenv("SERVER_URL"),
 		Policies: &types.Policies{
 			Privacy: os.Getenv("PRIVACY_URL"),
 			Terms:   os.Getenv("TERMS_URL"),

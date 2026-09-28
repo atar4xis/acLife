@@ -35,14 +35,25 @@ type EmailUnverifiedData struct {
 	RequiresVerification bool   `json:"requiresVerification"`
 }
 
+// KeyEnvelope is a password-wrapped data-encryption key, stored server-side as opaque ciphertext.
+type KeyEnvelope struct {
+	Type      string `json:"type" db:"type"`
+	Version   int    `json:"version" db:"version"`
+	Salt      []byte `json:"salt" db:"salt"`
+	Data      []byte `json:"data" db:"data"`
+	KDFParams string `json:"kdfParams" db:"kdf_params"`
+}
+
 // PublicUser contains only the exposed fields of a user.
 type PublicUser struct {
 	UUID               string  `json:"uuid"`
 	Email              string  `json:"email"`
 	SubscriptionStatus *string `json:"subscription_status"`
 	// SrpSalt is exposed during SRP flow only, so it is not here
-	Salt      []byte `json:"salt"`
-	Challenge []byte `json:"challenge"`
+	// Salt and Challenge are legacy: populated for accounts that predate key envelopes.
+	Salt      []byte        `json:"salt"`
+	Challenge []byte        `json:"challenge"`
+	Envelopes []KeyEnvelope `json:"envelopes"`
 }
 
 // Session is a login session belonging to a user.

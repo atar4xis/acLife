@@ -9,11 +9,9 @@ import type { Encrypted } from "@/types/Crypt";
 import type { APIResponse } from "@/types/API";
 import { DateTime } from "luxon";
 import {
-  ArgonType,
-  deriveMasterKey,
+  generateMasterKeyEnvelope,
   encrypt,
   decrypt,
-  UNLOCK_CHECK_BYTES,
   type DerivedKeys,
 } from "../crypt";
 import { compress, decompress } from "../gzip";
@@ -95,32 +93,25 @@ const cookEvent = (event: RawCalendarEvent): CalendarEvent =>
     end: DateTime.fromISO(event.end),
   }) as CalendarEvent;
 
-type ApiPost = <T>(endpoint: string, body: unknown) => Promise<APIResponse<T>>;
+export type ApiPost = <T>(
+  endpoint: string,
+  body: unknown,
+) => Promise<APIResponse<T>>;
 
-type CacheStorage = {
+export type CacheStorage = {
   get(key: "cachedEvents"): Encrypted | null;
   set(key: "cachedEvents", value: Encrypted | null): void;
 };
 
-export const migrateMasterKeyToArgon2id = async (
+export const migrateToKeyEnvelope = async (
   password: string,
-  salt: Uint8Array,
   oldMasterKey: CryptoKey,
   post: ApiPost,
   storage?: CacheStorage,
+  exportable: boolean = false,
 ): Promise<DerivedKeys> => {
-  const { masterKey: newMasterKey, bucketKey: newBucketKey } =
-    await deriveMasterKey(password, salt, false, ArgonType.Argon2id);
-
-  const newChallenge = await encrypt(UNLOCK_CHECK_BYTES, newMasterKey);
-  const challengeRes = await post<never>("user/challenge", {
-    challenge: arrayBufferToBase64(newChallenge),
-  });
-  if (!challengeRes.success) {
-    throw new Error(
-      challengeRes.message || "Failed to update security challenge.",
-    );
-  }
+  const { masterKey: newMasterKey, bucketKey: newBucketKey, envelope } =
+    await generateMasterKeyEnvelope(password, exportable);
 
   // migration needs every event regardless of week
   const syncRes = await post<EventSyncResponse>("calendar/events/sync", {
@@ -141,21 +132,18 @@ export const migrateMasterKeyToArgon2id = async (
         }))
       : [];
 
-  if (decryptedEvents.length > 0) {
-    const reencrypted = await encryptEvents(
-      decryptedEvents,
-      newMasterKey,
-      newBucketKey,
-    );
-    const saveRes = await post(
-      "calendar/events/save",
-      reencrypted.map((event) => ({ type: "updated", event })),
-    );
-    if (!saveRes.success) {
-      throw new Error(
-        saveRes.message || "Failed to re-encrypt calendar events.",
-      );
-    }
+  // save events + envelope atomically, so an interrupted migration can't orphan either one
+  const reencrypted =
+    decryptedEvents.length > 0
+      ? await encryptEvents(decryptedEvents, newMasterKey, newBucketKey)
+      : [];
+
+  const migrateRes = await post<never>("calendar/events/migrate-envelope", {
+    events: reencrypted.map((event) => ({ type: "updated", event })),
+    envelopes: [envelope],
+  });
+  if (!migrateRes.success) {
+    throw new Error(migrateRes.message || "Failed to migrate key envelope.");
   }
 
   storage?.set(
