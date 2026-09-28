@@ -6,6 +6,7 @@ import type { WithChildren } from "@/types/Props";
 import AppShell from "./components/AppShell";
 import { StorageProvider } from "./context/StorageContext";
 import { CalendarProvider } from "./context/CalendarContext";
+import { CalendarSettingsProvider } from "./context/CalendarSettingsContext";
 import { ApiProvider, useApi } from "./context/ApiContext";
 import { useEffect, useRef } from "react";
 import { Toaster } from "./components/ui/sonner";
@@ -57,12 +58,14 @@ export default function App() {
         <StorageProvider>
           <UserProvider>
             <CalendarProvider>
-              <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
-                <Toaster position="bottom-center" />
-                <AuthWrapper>
-                  <AppShell />
-                </AuthWrapper>
-              </SidebarProvider>
+              <CalendarSettingsProvider>
+                <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
+                  <Toaster position="bottom-center" />
+                  <AuthWrapper>
+                    <AppShell />
+                  </AuthWrapper>
+                </SidebarProvider>
+              </CalendarSettingsProvider>
             </CalendarProvider>
           </UserProvider>
         </StorageProvider>

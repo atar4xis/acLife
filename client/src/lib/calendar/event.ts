@@ -181,15 +181,30 @@ function processRepeats(
   map: Map<string, CalendarEvent[]>,
   e: CalendarEvent,
   visibleDates: Set<string>,
+  firstVisibleDayStart: DateTime,
   lastVisibleDayEnd: DateTime,
   excludeSet: Set<string>,
 ) {
   if (!e.repeat || e._parent || e._continued) return;
 
-  let cursor = e.start;
+  const { unit, interval } = e.repeat;
   const duration = e.end.diff(e.start);
   const until = e.repeat.until;
   const startMillis = e.start.toMillis();
+
+  // the repeat series ends before the visible range even starts
+  if (until && until < firstVisibleDayStart.toMillis()) return;
+
+  let cursor = e.start;
+
+  if (cursor < firstVisibleDayStart) {
+    const unitsElapsed = firstVisibleDayStart.diff(e.start, unit).as(unit);
+    const intervalsToSkip = Math.max(0, Math.floor(unitsElapsed / interval));
+
+    if (intervalsToSkip > 0) {
+      cursor = e.start.plus({ [unit]: intervalsToSkip * interval });
+    }
+  }
 
   while (cursor <= lastVisibleDayEnd) {
     const millis = cursor.toMillis();
@@ -251,6 +266,7 @@ function getBaseEventMap(events: CalendarEvent[], dates: DateTime[]) {
   }
 
   const noExclusions = new Set<string>();
+  const firstVisibleDayStart = dates[0].startOf("day");
   const lastVisibleDayEnd = dates[dates.length - 1].endOf("day");
 
   for (const e of events) {
@@ -262,7 +278,14 @@ function getBaseEventMap(events: CalendarEvent[], dates: DateTime[]) {
         : e;
 
     mapEventToDates(map, base, visibleDates);
-    processRepeats(map, e, visibleDates, lastVisibleDayEnd, noExclusions);
+    processRepeats(
+      map,
+      e,
+      visibleDates,
+      firstVisibleDayStart,
+      lastVisibleDayEnd,
+      noExclusions,
+    );
   }
 
   baseEventMapCache.events = events;
@@ -303,6 +326,7 @@ export function getEventMap(
     for (const d of dates) {
       visibleDates.add(d.toISODate()!);
     }
+    const firstVisibleDayStart = dates[0].startOf("day");
     const lastVisibleDayEnd = dates[dates.length - 1].endOf("day");
 
     const additions = new Map<string, CalendarEvent[]>();
@@ -310,7 +334,14 @@ export function getEventMap(
       if (!e.id) continue;
 
       mapEventToDates(additions, e, visibleDates);
-      processRepeats(additions, e, visibleDates, lastVisibleDayEnd, excludeSet);
+      processRepeats(
+        additions,
+        e,
+        visibleDates,
+        firstVisibleDayStart,
+        lastVisibleDayEnd,
+        excludeSet,
+      );
     }
 
     for (const [key, added] of additions) {

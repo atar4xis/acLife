@@ -1,0 +1,269 @@
+import { describe, expect, it } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import {
+  DARK_COLORS,
+  LIGHT_COLORS,
+  ThemeProvider,
+  useTheme,
+} from "../../src/components/ThemeProvider.tsx";
+
+const STORAGE_KEY = "test-theme";
+
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <ThemeProvider storageKey={STORAGE_KEY}>{children}</ThemeProvider>
+);
+
+describe("useTheme", () => {
+  it("falls back to safe no-op defaults when used outside a ThemeProvider", () => {
+    const { result } = renderHook(() => useTheme());
+
+    expect(result.current.theme).toBe("system");
+    expect(() => result.current.setTheme("dark")).not.toThrow();
+  });
+
+  it("defaults to system theme with no color overrides or presets", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    expect(result.current.theme).toBe("system");
+    expect(result.current.colors).toEqual({});
+    expect(result.current.presets).toEqual([]);
+    expect(result.current.activePresetId).toBeNull();
+    expect(result.current.fontSize).toBe(16);
+  });
+
+  it("setColor switches to custom theme and persists the override", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setColor("sidebar", "#123456");
+    });
+
+    expect(result.current.theme).toBe("custom");
+    expect(result.current.colors.sidebar).toBe("#123456");
+    expect(JSON.parse(localStorage.getItem(`${STORAGE_KEY}-colors`)!)).toEqual(
+      { sidebar: "#123456" },
+    );
+  });
+
+  it("resetColors clears overrides without changing the theme mode", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setColor("sidebar-accent", "#abcdef");
+    });
+    act(() => {
+      result.current.resetColors();
+    });
+
+    expect(result.current.colors).toEqual({});
+    expect(result.current.theme).toBe("custom");
+    expect(localStorage.getItem(`${STORAGE_KEY}-colors`)).toBeNull();
+  });
+
+  it("setTheme discards color overrides when leaving custom", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setColor("primary", "#111111");
+    });
+    act(() => {
+      result.current.setTheme("dark");
+    });
+
+    expect(result.current.theme).toBe("dark");
+    expect(result.current.colors).toEqual({});
+    expect(localStorage.getItem(`${STORAGE_KEY}-colors`)).toBeNull();
+  });
+
+  it("setFontFamily and setFontSize persist to localStorage", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setFontFamily("Fira Code");
+    });
+    act(() => {
+      result.current.setFontSize(18);
+    });
+
+    expect(result.current.fontFamily).toBe("Fira Code");
+    expect(result.current.fontSize).toBe(18);
+    expect(localStorage.getItem(`${STORAGE_KEY}-font-family`)).toBe(
+      "Fira Code",
+    );
+    expect(localStorage.getItem(`${STORAGE_KEY}-font-size`)).toBe("18");
+  });
+
+  it("savePreset snapshots the full resolved palette, not just overrides", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setColor("sidebar", "#ff00ff");
+    });
+    act(() => {
+      result.current.setFontFamily("Inter");
+    });
+    act(() => {
+      result.current.setFontSize(20);
+    });
+    act(() => {
+      result.current.savePreset("My theme");
+    });
+
+    expect(result.current.presets).toHaveLength(1);
+    const preset = result.current.presets[0];
+    expect(preset.name).toBe("My theme");
+    expect(preset.colors.sidebar).toBe("#ff00ff");
+    // untouched vars fall back to the resolved base palette
+    expect(preset.colors.background).toBe(LIGHT_COLORS.background);
+    expect(preset.fontFamily).toBe("Inter");
+    expect(preset.fontSize).toBe(20);
+    expect(
+      JSON.parse(localStorage.getItem(`${STORAGE_KEY}-presets`)!),
+    ).toHaveLength(1);
+  });
+
+  it("savePreset captures the dark palette when the dark base is active", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setTheme("dark");
+    });
+    act(() => {
+      result.current.savePreset("Dark theme");
+    });
+
+    expect(result.current.presets[0].colors.background).toBe(
+      DARK_COLORS.background,
+    );
+  });
+
+  it("applyPreset restores colors and font settings and marks the preset active", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setColor("primary", "#010101");
+      result.current.setFontSize(22);
+    });
+    act(() => {
+      result.current.savePreset("Saved");
+    });
+    const presetId = result.current.presets[0].id;
+
+    act(() => {
+      result.current.setColor("primary", "#020202");
+      result.current.setFontSize(14);
+    });
+    expect(result.current.activePresetId).toBeNull();
+
+    act(() => {
+      result.current.applyPreset(presetId);
+    });
+
+    expect(result.current.colors.primary).toBe("#010101");
+    expect(result.current.fontSize).toBe(22);
+    expect(result.current.theme).toBe("custom");
+    expect(result.current.activePresetId).toBe(presetId);
+  });
+
+  it("clears the active preset when the user manually changes a color", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.savePreset("Saved");
+    });
+    const presetId = result.current.presets[0].id;
+
+    act(() => {
+      result.current.applyPreset(presetId);
+    });
+    expect(result.current.activePresetId).toBe(presetId);
+
+    act(() => {
+      result.current.setColor("accent", "#ababab");
+    });
+    expect(result.current.activePresetId).toBeNull();
+  });
+
+  it("clears the active preset when font settings change", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.savePreset("Saved");
+    });
+    const presetId = result.current.presets[0].id;
+
+    act(() => {
+      result.current.applyPreset(presetId);
+    });
+    act(() => {
+      result.current.setFontFamily("Comic Sans MS");
+    });
+
+    expect(result.current.activePresetId).toBeNull();
+  });
+
+  it("deletePreset removes it from the list and clears active state if needed", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.savePreset("A");
+    });
+    act(() => {
+      result.current.savePreset("B");
+    });
+    const [presetA, presetB] = result.current.presets;
+
+    act(() => {
+      result.current.applyPreset(presetA.id);
+    });
+    act(() => {
+      result.current.deletePreset(presetA.id);
+    });
+
+    expect(result.current.presets.map((p) => p.id)).toEqual([presetB.id]);
+    expect(result.current.activePresetId).toBeNull();
+  });
+
+  it("deletePreset leaves the active preset untouched if a different preset is removed", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.savePreset("A");
+    });
+    act(() => {
+      result.current.savePreset("B");
+    });
+    const [presetA, presetB] = result.current.presets;
+
+    act(() => {
+      result.current.applyPreset(presetB.id);
+    });
+    act(() => {
+      result.current.deletePreset(presetA.id);
+    });
+
+    expect(result.current.activePresetId).toBe(presetB.id);
+  });
+
+  it("importPreset adds an externally provided preset with a new id", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.importPreset({
+        name: "Imported",
+        colors: { background: "#000000" },
+        fontFamily: "Menlo",
+        fontSize: 15,
+      });
+    });
+
+    expect(result.current.presets).toHaveLength(1);
+    expect(result.current.presets[0]).toMatchObject({
+      name: "Imported",
+      colors: { background: "#000000" },
+      fontFamily: "Menlo",
+      fontSize: 15,
+    });
+    expect(result.current.presets[0].id).toBeTruthy();
+  });
+});

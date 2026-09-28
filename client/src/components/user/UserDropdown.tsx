@@ -9,11 +9,21 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
-import { CreditCardIcon, LogInIcon, LogOutIcon, User } from "lucide-react";
+import {
+  CreditCardIcon,
+  LogInIcon,
+  LogOutIcon,
+  SettingsIcon,
+  User,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useApi } from "@/context/ApiContext";
 
-export default function UserDropdown() {
+export default function UserDropdown({
+  onOpenAccountSettings,
+}: {
+  onOpenAccountSettings: () => void;
+}) {
   const { user, setUser, logout } = useUser();
   const { get } = useApi();
 
@@ -45,6 +55,10 @@ export default function UserDropdown() {
         <DropdownMenuGroup>
           {user.type === "online" ? (
             <>
+              <DropdownMenuItem onClick={onOpenAccountSettings}>
+                <SettingsIcon />
+                Account settings
+              </DropdownMenuItem>
               {user.subscription_status && (
                 <DropdownMenuItem onClick={manageSubscription}>
                   <CreditCardIcon />

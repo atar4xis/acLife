@@ -11,7 +11,6 @@ import {
   RESEND_COOLDOWN_SECONDS,
 } from "@/components/login/EmailVerificationRequired";
 import { ConfirmEmailPrompt } from "@/components/login/ConfirmEmailPrompt";
-import { ModeToggle } from "@/components/ModeToggle";
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -272,9 +271,6 @@ export default function LoginDialog() {
                 </span>
               </DialogDescription>
             </DialogHeader>
-            <div className="fixed left-4 top-4">
-              <ModeToggle />
-            </div>
             {confirmToken ? (
               <ConfirmEmailPrompt
                 token={confirmToken}

@@ -7,14 +7,18 @@ import { getEventMap } from "@/lib/calendar/event";
 import { EMPTY_ARRAY } from "@/lib/constants";
 import AgendaEvent from "./AgendaEvent";
 import type { CalendarEvent } from "@/types/calendar/Event";
-
-// TODO: make this configurable
-const DAYS_AHEAD = 3;
+import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 
 export default memo(function AgendaList() {
   const { calendarEvents } = useCalendar();
+  const { agendaRangeDays } = useCalendarSettings((s) => ({
+    agendaRangeDays: s.agendaRangeDays,
+  }));
   const [now, setNow] = useState(DateTime.now());
-  const visibleDays = useMemo(() => getRelativeDays(now, DAYS_AHEAD), [now]);
+  const visibleDays = useMemo(
+    () => getRelativeDays(now, agendaRangeDays),
+    [now, agendaRangeDays],
+  );
 
   const eventMap = useMemo(
     () =>

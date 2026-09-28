@@ -44,7 +44,12 @@ export const useCalendarEvents = (
       if (cached) {
         try {
           const decryptedCache = await decryptOfflineEvents(cached, masterKey);
-          cachedEvents.push(...decryptedCache);
+          // drop corrupted entries so the sync diff re-requests them fresh from the server
+          cachedEvents.push(
+            ...decryptedCache.filter(
+              (ev) => ev.start.isValid && ev.end.isValid,
+            ),
+          );
         } catch {
           toast.warning("Failed to decrypt event cache - it'll be discarded.");
         }
@@ -265,7 +270,9 @@ export const useCalendarEvents = (
             // update local cachedEvents with the new encrypted events
             const stored = storage.get("cachedEvents");
             const cached = stored
-              ? await decryptOfflineEvents(stored, masterKey)
+              ? (await decryptOfflineEvents(stored, masterKey)).filter(
+                  (ev) => ev.start.isValid && ev.end.isValid,
+                )
               : [];
 
             // build map of (eventId: event) to merge changes easily

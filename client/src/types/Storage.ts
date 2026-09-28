@@ -9,6 +9,28 @@ export interface StorageAdapter<T extends object> {
   clear(): MaybePromise<void>;
 }
 
+export type UnlockMethod = "password" | "pin" | "stay-unlocked";
+
+export type AutoLockOption =
+  | "disabled"
+  | "focus"
+  | "5m"
+  | "10m"
+  | "15m"
+  | "30m"
+  | "45m"
+  | "1h";
+
+export interface WrappedKeyPair {
+  salt: string;
+  encrypted: string;
+}
+
+export interface RawKeyPair {
+  masterKeyB64: string;
+  bucketKeyB64: string;
+}
+
 export interface StorageData {
   offlineEvents: Encrypted | null;
   offlineMasterKey: string;
@@ -16,4 +38,8 @@ export interface StorageData {
   pushSubscription: string | null;
   pushDismissed: boolean;
   sidebarOpen: boolean;
+  unlockMethod: UnlockMethod;
+  unlockKeys: RawKeyPair | null;
+  pinWrappedKeys: WrappedKeyPair | null;
+  autoLock: AutoLockOption;
 }

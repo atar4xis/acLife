@@ -15,6 +15,10 @@ import { Button } from "../ui/button";
 import { Field, FieldLabel } from "../ui/field";
 import { Textarea } from "../ui/textarea";
 import { ColorPicker } from "../ui/color-picker";
+import {
+  EVENT_COLOR_FALLBACK,
+  useCalendarSettings,
+} from "@/context/CalendarSettingsContext";
 import { clamp } from "@/lib/utils";
 import { DateTimePicker } from "./DateTimePicker";
 import { DateTime } from "luxon";
@@ -115,7 +119,10 @@ export default function EventEditor({
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
-  const [color, setColor] = useState(event.color || "#2563eb");
+  const eventColorPresets = useCalendarSettings((s) => s.eventColorPresets);
+  const [color, setColor] = useState(
+    event.color || eventColorPresets[0] || EVENT_COLOR_FALLBACK,
+  );
   const [start, setStart] = useState<Date | undefined>(event.start.toJSDate());
   const [end, setEnd] = useState<Date | undefined>(event.end.toJSDate());
   const [repeat, setRepeat] = useState(event.repeat);
@@ -136,17 +143,9 @@ export default function EventEditor({
     timestamp: Date.now(),
   });
 
-  const presetColors = [
-    "#2563eb",
-    "#8125ea",
-    "#ea25d6",
-    "#ea2528",
-    "#ea7a25",
-    "#eae425",
-    "#2fea25",
-    "#e5e5e5",
-    "#141414",
-  ];
+  const { eventColorPresets: presetColors } = useCalendarSettings((s) => ({
+    eventColorPresets: s.eventColorPresets,
+  }));
 
   const copyID = useCallback(() => {
     navigator.clipboard.writeText(event._parent || event.id);

@@ -12,6 +12,7 @@ import {
 } from "react";
 
 interface StorageContextValue<T extends object> {
+  ready: boolean;
   get<K extends keyof T>(key: K): T[K];
   set<K extends keyof T>(key: K, value: T[K]): void;
 }
@@ -24,6 +25,7 @@ export function createStorageContext<T extends object>(
 
   function StorageProvider({ children }: WithChildren) {
     const [data, setData] = useState<T>(defaults);
+    const [ready, setReady] = useState(false);
     const dataRef = useRef(data);
     dataRef.current = data;
 
@@ -39,6 +41,9 @@ export function createStorageContext<T extends object>(
         })
         .catch((error) => {
           console.error("Failed to load storage data:", error);
+        })
+        .finally(() => {
+          if (!cancelled) setReady(true);
         });
 
       return () => {
@@ -64,7 +69,12 @@ export function createStorageContext<T extends object>(
       });
     }, []);
 
-    const value = useMemo(() => ({ get, set }), [get, set]);
+    const value = useMemo(
+      () => ({ ready, get, set }),
+      // data included to always have the latest values
+      // eslint-disable-next-line
+      [ready, get, set, data],
+    );
 
     return <Context.Provider value={value}>{children}</Context.Provider>;
   }
@@ -89,6 +99,10 @@ const defaults: StorageData = {
   pushSubscription: null,
   pushDismissed: false,
   sidebarOpen: true,
+  unlockMethod: "password",
+  unlockKeys: null,
+  pinWrappedKeys: null,
+  autoLock: "disabled",
 };
 
 export const { StorageProvider, useStorage } =

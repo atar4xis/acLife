@@ -1,4 +1,5 @@
 import { useCalendar } from "@/context/CalendarContext";
+import { EVENT_COLOR_FALLBACK } from "@/context/CalendarSettingsContext";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSidebar } from "../ui/sidebar";
@@ -12,7 +13,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
   const { setOpenMobile } = useSidebar();
   const [now, setNow] = useState(Date.now());
   const { eventColor, startTimeFormat, endTimeFormat } = useMemo(() => {
-    const color = event.color ?? "#2563eb";
+    const color = event.color ?? EVENT_COLOR_FALLBACK;
     const sameMeridiem = event.start.toFormat("a") === event.end.toFormat("a");
     return {
       eventColor: color,

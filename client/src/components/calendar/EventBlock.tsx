@@ -1,5 +1,6 @@
 import { isColorDark, shallowEqual } from "@/lib/utils";
 import { eventKey } from "@/lib/calendar/event";
+import { EVENT_COLOR_FALLBACK } from "@/context/CalendarSettingsContext";
 import type { EventBlockProps } from "@/types/Props";
 import { useRef, memo, useMemo, useCallback, useEffect, useState } from "react";
 import EventEditor from "./EventEditor";
@@ -55,7 +56,7 @@ export default memo(
 
     const { eventColor, textColor, startTimeFormat, endTimeFormat } =
       useMemo(() => {
-        const color = event.color ?? "#2563eb";
+        const color = event.color ?? EVENT_COLOR_FALLBACK;
         const isDark = isColorDark(color);
         const sameMeridiem =
           event.start.toFormat("a") === event.end.toFormat("a");

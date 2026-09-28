@@ -6,8 +6,14 @@ export const getDay = (date: DateTime) => [
   { date: date.startOf("day"), label: date.toFormat("EEE d") },
 ];
 
-export const getWeekDays = (date: DateTime) => {
-  const start = date.startOf("week");
+export const getWeekDays = (
+  date: DateTime,
+  weekStartsOn: "mon" | "sun" = "mon",
+) => {
+  const offset =
+    weekStartsOn === "sun" ? date.weekday % 7 : date.weekday - 1;
+  const start = date.startOf("day").minus({ days: offset });
+
   return Array.from({ length: 7 }, (_, i) => {
     const day = start.plus({ days: i });
     return { date: day, label: day.toFormat("EEE d") };
@@ -32,12 +38,17 @@ export const getMonthCells = (date: DateTime) => {
   });
 };
 
-export const getDateRangeString = (mode: string, currentDate: DateTime) => {
+export const getDateRangeString = (
+  mode: string,
+  currentDate: DateTime,
+  weekStartsOn: "mon" | "sun" = "mon",
+) => {
   if (mode === "month") {
     return currentDate.toFormat("MMMM yyyy");
   }
 
-  const days = mode === "day" ? getDay(currentDate) : getWeekDays(currentDate);
+  const days =
+    mode === "day" ? getDay(currentDate) : getWeekDays(currentDate, weekStartsOn);
 
   const first = days[0].date;
   const last = days[days.length - 1].date;

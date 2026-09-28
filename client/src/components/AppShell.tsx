@@ -6,6 +6,7 @@ import AppSidebar from "@/components/Sidebar";
 import { useStorage } from "@/context/StorageContext";
 import { useUser } from "@/context/UserContext";
 import { useCalendar } from "@/context/CalendarContext";
+import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { Spinner } from "./ui/spinner";
 import { useCalendarEvents } from "@/hooks/calendar/useCalendarEvents";
 import { useApi } from "@/context/ApiContext";
@@ -14,15 +15,27 @@ import SubscriptionDialog from "./subscription/SubscriptionDialog";
 import { toast } from "sonner";
 import PushService from "./PushService";
 import AutoLockService from "./AutoLockService";
+import SettingsDialog from "./settings/SettingsDialog";
+import TimezoneChangeDialog from "./calendar/TimezoneChangeDialog";
 
 export default function AppShell() {
+  const { defaultView } = useCalendarSettings((s) => ({
+    defaultView: s.defaultView,
+  }));
   const [viewMode, setViewMode] = useState<ViewMode>(
-    window.innerWidth < 768 ? "day" : "week",
+    window.innerWidth < 768 ? "day" : defaultView,
   );
   const [calEvents, setCalEvents] = useState<CalendarEvent[] | null>(null);
   const [offline, setOffline] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsCategory, setSettingsCategory] = useState<
+    string | undefined
+  >(undefined);
   const { masterKey, bucketKey, user } = useUser();
-  const { currentDate } = useCalendar();
+  const { currentDate, setCurrentDate } = useCalendar();
+  const { defaultTimezone } = useCalendarSettings((s) => ({
+    defaultTimezone: s.defaultTimezone,
+  }));
   const { serverMeta } = useApi();
   const storage = useStorage();
   const { saving, loadEvents, saveEvents, syncEvents, syncBuckets } =
@@ -66,6 +79,13 @@ export default function AppShell() {
     // eslint-disable-next-line
   }, [user, masterKey, bucketKey, activeSub, subRequired]);
 
+  // re-zone the visible date so day/week boundaries follow the new default
+  useEffect(() => {
+    setCurrentDate(currentDate.setZone(defaultTimezone));
+
+    // eslint-disable-next-line
+  }, [defaultTimezone]);
+
   // wipe decrypted events from memory as soon as the data locks
   useEffect(() => {
     if (masterKey === null) setCalEvents(null);
@@ -103,7 +123,19 @@ export default function AppShell() {
 
   return (
     <>
-      <AppSidebar />
+      <AppSidebar
+        onOpenSettings={(categoryId) => {
+          setSettingsCategory(categoryId);
+          setSettingsOpen(true);
+        }}
+      />
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        offlineUser={user.type === "offline"}
+        subscriptionEnabled={!!serverMeta?.registration.subscriptionRequired}
+        initialCategoryId={settingsCategory}
+      />
       {user.type === "online" && offline && (
         <div className="fixed z-50 top-0 left-0 p-1 right-0 text-center bg-red-500/75 dark:bg-red-700/75 text-white font-semibold">
           You are offline. Check your connection.
@@ -112,6 +144,7 @@ export default function AppShell() {
       {saving && <Spinner className="fixed bottom-5 right-5 size-8" />}
       <PushService />
       <AutoLockService />
+      <TimezoneChangeDialog />
       {calEvents !== null && (
         <AppCalendar
           events={calEvents}

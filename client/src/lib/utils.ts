@@ -68,11 +68,71 @@ export function bytesToBase64(bytes: Uint8Array) {
   return btoa(binary);
 }
 
-export function arrayBufferToBase64(buffer: ArrayBuffer) {
+export function cssColorToHex(color: string): string {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "#000000";
+
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, 1, 1);
+
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+export function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const value = hex.replace("#", "");
+  const r = parseInt(value.slice(0, 2), 16) / 255;
+  const g = parseInt(value.slice(2, 4), 16) / 255;
+  const b = parseInt(value.slice(4, 6), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const delta = max - min;
+
+  let h = 0;
+  let s = 0;
+  if (delta > 0) {
+    s = delta / (1 - Math.abs(2 * l - 1));
+    switch (max) {
+      case r:
+        h = ((g - b) / delta) % 6;
+        break;
+      case g:
+        h = (b - r) / delta + 2;
+        break;
+      default:
+        h = (r - g) / delta + 4;
+    }
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+
+  return { h, s: s * 100, l: l * 100 };
+}
+
+export function hslToHex(h: number, s: number, l: number): string {
+  const sat = s / 100;
+  const light = l / 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = sat * Math.min(light, 1 - light);
+  const f = (n: number) =>
+    light - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+
+  const toHex = (n: number) =>
+    Math.round(f(n) * 255)
+      .toString(16)
+      .padStart(2, "0");
+
+  return `#${toHex(0)}${toHex(8)}${toHex(4)}`;
+}
+
+export function arrayBufferToBase64(buffer: ArrayBufferLike) {
   return bytesToBase64(new Uint8Array(buffer));
 }
 
-export function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
+export function arrayBufferToBase64Url(buffer: ArrayBufferLike): string {
   return arrayBufferToBase64(buffer)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
@@ -146,6 +206,15 @@ export function browserSupportsPush(): boolean {
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function readJSON<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 export function normalize(text: string): string {

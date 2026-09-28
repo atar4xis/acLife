@@ -29,6 +29,11 @@ import EventBlock from "./EventBlock";
 import DragOverlay from "./DragOverlay";
 import { useCalendar } from "@/context/CalendarContext";
 import {
+  EVENT_COLOR_FALLBACK,
+  MAX_EVENT_COLOR_PRESETS,
+  useCalendarSettings,
+} from "@/context/CalendarSettingsContext";
+import {
   getDay,
   getWeekDays,
   yToMinutes,
@@ -37,6 +42,10 @@ import {
   getDateRangeString,
 } from "@/lib/calendar/date";
 import { getDayRects, getEventRects } from "@/lib/calendar/dom";
+import {
+  getTimezoneHourLabel,
+  getTimezoneShortLabel,
+} from "@/lib/calendar/timezone";
 import {
   eventKey,
   getDayEventStyles,
@@ -154,21 +163,19 @@ const applyBatchField = (
 
 const GRID_HEADER_HEIGHT = 48;
 
-// TODO: make these configurable
-const DEFAULT_EVENT_NAME = "new event";
-const DEFAULT_TASK_NAME = "new task";
-const DEFAULT_EVENT_DURATION = 60;
-const SNAP_MINS = 5;
 const SELECT_DRAG_THRESHOLD = 4;
 const HISTORY_LIMIT = 40;
 
+const TIMEZONE_COL_WIDTH = "3.5rem";
+
 const GRID_CONFIG = {
   day: {
-    cols: "4rem 1fr",
+    cols: (tzCount: number) => `repeat(${tzCount}, ${TIMEZONE_COL_WIDTH}) 1fr`,
     rows: (h: number) => `48px repeat(24, ${h}px)`,
   },
   week: {
-    cols: "4rem repeat(7, 1fr)",
+    cols: (tzCount: number) =>
+      `repeat(${tzCount}, ${TIMEZONE_COL_WIDTH}) repeat(7, 1fr)`,
     rows: (h: number) => `48px repeat(24, ${h}px)`,
   },
 } as const;
@@ -253,6 +260,7 @@ const getDraggedTimes = (
   originalEnd: DateTime,
   dayDelta: number,
   deltaMinutes: number,
+  snapMins: number,
 ) => {
   let newStart = originalStart;
   let newEnd = originalEnd;
@@ -263,7 +271,7 @@ const getDraggedTimes = (
   } else if (type === "resize_start") {
     newStart = originalStart.plus({ days: dayDelta, minutes: deltaMinutes });
     if (newStart >= newEnd) {
-      newStart = newEnd.minus({ minutes: SNAP_MINS });
+      newStart = newEnd.minus({ minutes: snapMins });
     }
     if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
       newStart = newEnd.minus({ minutes: MAX_EVENT_DURATION_MINUTES });
@@ -271,7 +279,7 @@ const getDraggedTimes = (
   } else if (type === "resize_end") {
     newEnd = originalEnd.plus({ days: dayDelta, minutes: deltaMinutes });
     if (newEnd <= newStart) {
-      newEnd = newStart.plus({ minutes: SNAP_MINS });
+      newEnd = newStart.plus({ minutes: snapMins });
     }
     if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
       newEnd = newStart.plus({ minutes: MAX_EVENT_DURATION_MINUTES });
@@ -284,7 +292,7 @@ const getDraggedTimes = (
       newStart = anchor;
       newEnd = pointerTime;
       if (newEnd <= newStart) {
-        newEnd = newStart.plus({ minutes: SNAP_MINS });
+        newEnd = newStart.plus({ minutes: snapMins });
       }
       if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
         newEnd = newStart.plus({ minutes: MAX_EVENT_DURATION_MINUTES });
@@ -293,7 +301,7 @@ const getDraggedTimes = (
       newStart = pointerTime;
       newEnd = anchor;
       if (newStart >= newEnd) {
-        newStart = newEnd.minus({ minutes: SNAP_MINS });
+        newStart = newEnd.minus({ minutes: snapMins });
       }
       if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
         newStart = newEnd.minus({ minutes: MAX_EVENT_DURATION_MINUTES });
@@ -334,11 +342,36 @@ export default function AppCalendar({
   const [hourHeight, setHourHeight] = useState(60);
   const [updateRepeatDialogOpen, setUpdateRepeatDialogOpen] = useState(false);
   const [deleteRepeatDialogOpen, setDeleteRepeatDialogOpen] = useState(false);
-  const [now, setNow] = useState(DateTime.now());
+  const [now, setNow] = useState<DateTime>(DateTime.now());
   const [renderTick, forceRender] = useState(0);
   const changesMapRef = useRef<Map<string, EventChange[]>>(new Map());
   const pendingSaveRef = useRef<null | number>(null);
   const { user, masterKey, bucketKey } = useUser();
+  const {
+    snapMinutes: snapMins,
+    defaultEventName,
+    defaultTaskName,
+    defaultEventDuration,
+    weekStartsOn,
+    resyncIntervalMinutes,
+    addColorsAutomatically,
+    eventColorPresets,
+    timezones,
+    defaultTimezone,
+    setSetting: setCalendarSetting,
+  } = useCalendarSettings((s) => ({
+    snapMinutes: s.snapMinutes,
+    defaultEventName: s.defaultEventName,
+    defaultTaskName: s.defaultTaskName,
+    defaultEventDuration: s.defaultEventDuration,
+    weekStartsOn: s.weekStartsOn,
+    resyncIntervalMinutes: s.resyncIntervalMinutes,
+    addColorsAutomatically: s.addColorsAutomatically,
+    eventColorPresets: s.eventColorPresets,
+    timezones: s.timezones,
+    defaultTimezone: s.defaultTimezone,
+    setSetting: s.setSetting,
+  }));
   const [searchOpen, setSearchOpen] = useState(false);
   const searchAnchorRef = useRef<HTMLElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -412,10 +445,10 @@ export default function AppCalendar({
     return (
       {
         day: getDay(currentDate),
-        week: getWeekDays(currentDate),
+        week: getWeekDays(currentDate, weekStartsOn),
       }[mode] ?? []
     );
-  }, [currentDate, mode]);
+  }, [currentDate, mode, weekStartsOn]);
 
   const isMobile = useIsMobile();
 
@@ -545,7 +578,7 @@ export default function AppCalendar({
       // calculate minutes based on pointer Y within the grid
       const deltaMinutes = snapMinutes(
         yToMinutes(e.clientY + container.scrollTop - state.startY, hourHeight),
-        SNAP_MINS,
+        snapMins,
       );
 
       const dayDelta = dayIndex - state.originalDay;
@@ -556,6 +589,7 @@ export default function AppCalendar({
         state.originalEnd,
         dayDelta,
         deltaMinutes,
+        snapMins,
       );
 
       // when dragging, label tells the new start/end times and follows the pointer
@@ -590,6 +624,7 @@ export default function AppCalendar({
           entry.originalEnd,
           dayDelta,
           deltaMinutes,
+          snapMins,
         );
 
         if (
@@ -607,7 +642,7 @@ export default function AppCalendar({
         forceRender((tick) => tick + 1);
       }
     },
-    [visibleDays, hourHeight],
+    [visibleDays, hourHeight, snapMins],
   );
 
   const onGlobalPointerUp = useCallback(
@@ -891,6 +926,21 @@ export default function AppCalendar({
       // nothing changed, so there's nothing to save
       if (eventUnchanged(originalEvent, event)) return;
 
+      if (
+        addColorsAutomatically &&
+        event.color &&
+        eventColorPresets.length < MAX_EVENT_COLOR_PRESETS &&
+        !eventColorPresets.some(
+          (presetColor) =>
+            presetColor.toLowerCase() === event.color!.toLowerCase(),
+        )
+      ) {
+        setCalendarSetting("eventColorPresets", [
+          ...eventColorPresets,
+          event.color,
+        ]);
+      }
+
       const batch = getBatch(originalEvent);
 
       if (batch) {
@@ -1058,7 +1108,17 @@ export default function AppCalendar({
 
       save();
     },
-    [dispatch, updateChange, save, getBatch, clearSelection, pushHistory],
+    [
+      dispatch,
+      updateChange,
+      save,
+      getBatch,
+      clearSelection,
+      pushHistory,
+      addColorsAutomatically,
+      eventColorPresets,
+      setCalendarSetting,
+    ],
   );
 
   // expose onEventEdit via context so other components can use it
@@ -1233,7 +1293,7 @@ export default function AppCalendar({
     const y = pointer.y + container.scrollTop;
     const minutes = snapMinutes(
       yToMinutes(y - rect.top - GRID_HEADER_HEIGHT, hourHeight),
-      SNAP_MINS,
+      snapMins,
     );
     const anchorTime = dayDate.plus({ minutes });
 
@@ -1274,6 +1334,7 @@ export default function AppCalendar({
   }, [
     visibleDays,
     hourHeight,
+    snapMins,
     dispatch,
     updateChange,
     save,
@@ -1306,13 +1367,14 @@ export default function AppCalendar({
       );
 
       const start = visibleDays[dayIndex].date.plus({
-        minutes: snapMinutes(startMinutes, SNAP_MINS),
+        minutes: snapMinutes(startMinutes, snapMins),
       });
-      const end = start.plus({ minutes: DEFAULT_EVENT_DURATION });
+      const end = start.plus({ minutes: defaultEventDuration });
 
       const newEvent = {
         id: crypto.randomUUID(),
-        title: e.altKey ? DEFAULT_TASK_NAME : DEFAULT_EVENT_NAME,
+        title: e.altKey ? defaultTaskName : defaultEventName,
+        color: eventColorPresets[0] ?? EVENT_COLOR_FALLBACK,
         start,
         end,
         timestamp: Date.now(),
@@ -1355,6 +1417,11 @@ export default function AppCalendar({
     },
     [
       hourHeight,
+      snapMins,
+      defaultEventDuration,
+      defaultEventName,
+      defaultTaskName,
+      eventColorPresets,
       dispatch,
       updateChange,
       visibleDays,
@@ -1678,6 +1745,11 @@ export default function AppCalendar({
     return () => clearInterval(interval);
   }, []);
 
+  // setZone explicitly since CalendarSettingsProvider's zone update effect runs after this one
+  useEffect(() => {
+    setNow(DateTime.now().setZone(defaultTimezone));
+  }, [defaultTimezone]);
+
   const resyncSeqRef = useRef(0);
 
   const resync = useCallback(() => {
@@ -1720,7 +1792,7 @@ export default function AppCalendar({
       navigator.serviceWorker.addEventListener("message", message);
     }
 
-    const resyncInterval = setInterval(resync, 300000); // 5 minutes
+    const resyncInterval = setInterval(resync, resyncIntervalMinutes * 60000);
     return () => {
       clearInterval(resyncInterval);
 
@@ -1728,7 +1800,7 @@ export default function AppCalendar({
         navigator.serviceWorker.removeEventListener("message", message);
       }
     };
-  }, [resync, user, masterKey, bucketKey]);
+  }, [resync, user, masterKey, bucketKey, resyncIntervalMinutes]);
 
   const syncedWeekRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1854,16 +1926,34 @@ export default function AppCalendar({
     [visibleDays, now],
   );
 
+  const timezoneHeaderCells = useMemo(
+    () =>
+      timezones.map((tz, i) => (
+        <div
+          key={tz}
+          className="select-none sticky top-0 z-16 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex items-center justify-center bg-background text-xs text-muted-foreground truncate px-1"
+          style={{ left: `calc(${TIMEZONE_COL_WIDTH} * ${i})` }}
+        >
+          {timezones.length > 1 ? getTimezoneShortLabel(tz) : null}
+        </div>
+      )),
+    [timezones],
+  );
+
   // grid in day/week view
   const timeGrid = useMemo(
     () =>
-      HOURS.map((label, hour) => (
-        <Fragment key={label}>
-          <div
-            className={`select-none sticky left-0 z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex text-sm items-center justify-center ${hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
-          >
-            {label}
-          </div>
+      HOURS.map((_label, hour) => (
+        <Fragment key={hour}>
+          {timezones.map((tz, i) => (
+            <div
+              key={tz}
+              className={`select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex text-sm items-center justify-center ${tz === timezones[0] && hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
+              style={{ left: `calc(${TIMEZONE_COL_WIDTH} * ${i})` }}
+            >
+              {getTimezoneHourLabel(visibleDays[0]?.date ?? currentDate, hour, tz)}
+            </div>
+          ))}
 
           {visibleDays.map((d, dayIndex) => {
             const key = d.date.toISODate()!;
@@ -1945,6 +2035,8 @@ export default function AppCalendar({
       editingEvent,
       editingEventDay,
       selectedEvents,
+      timezones,
+      currentDate,
     ],
   );
 
@@ -1988,12 +2080,12 @@ export default function AppCalendar({
             <ArrowRight />
           </Button>
           <h2 className="ml-2 text-xl">
-            {getDateRangeString(mode, currentDate)}
+            {getDateRangeString(mode, currentDate, weekStartsOn)}
           </h2>
         </div>
 
         <h2 className="flex-1 text-xl ml-6 md:hidden">
-          {getDateRangeString(mode, currentDate)}
+          {getDateRangeString(mode, currentDate, weekStartsOn)}
         </h2>
 
         <ModeSwitcher mode={mode} setMode={setMode} />
@@ -2104,7 +2196,9 @@ export default function AppCalendar({
                     >
                       <span
                         className="w-1 shrink-0 rounded-full"
-                        style={{ backgroundColor: ev.color ?? "#2563eb" }}
+                        style={{
+                          backgroundColor: ev.color ?? EVENT_COLOR_FALLBACK,
+                        }}
                       />
                       <span className="flex flex-col items-start">
                         <span className="font-medium">{ev.title}</span>
@@ -2138,7 +2232,7 @@ export default function AppCalendar({
           ref={gridRef}
           className="touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
           style={{
-            gridTemplateColumns: cols,
+            gridTemplateColumns: cols(timezones.length),
             gridTemplateRows: rows(hourHeight),
           }}
           onTouchStart={gridTouchStart}
@@ -2149,7 +2243,7 @@ export default function AppCalendar({
             showScrollThumb();
           }}
         >
-          <div className="sticky left-0 top-0 z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 bg-background" />
+          {timezoneHeaderCells}
 
           {dayWeekHeaders}
           {timeGrid}
