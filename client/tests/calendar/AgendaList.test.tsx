@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { DateTime, Settings } from "luxon";
 import { useEffect } from "react";
 import AgendaList from "../../src/components/calendar/AgendaList.tsx";
+import AppCalendar from "../../src/components/calendar/Calendar.tsx";
 import { CalendarProvider, useCalendar } from "../../src/context/CalendarContext.tsx";
 import { CalendarSettingsProvider } from "../../src/context/CalendarSettingsContext.tsx";
 import { SidebarProvider } from "../../src/components/ui/sidebar.tsx";
@@ -33,6 +35,31 @@ const renderAgendaList = (events: ReturnType<typeof buildEvent>[]) =>
       </CalendarProvider>
     </CalendarSettingsProvider>,
   );
+
+const renderAgendaAndCalendar = (events: ReturnType<typeof buildEvent>[]) => {
+  const user = userEvent.setup();
+
+  render(
+    <CalendarSettingsProvider>
+      <CalendarProvider>
+        <SidebarProvider>
+          <AgendaList />
+        </SidebarProvider>
+        <AppCalendar
+          events={events}
+          mode="week"
+          setMode={vi.fn()}
+          saveEvents={vi.fn()}
+          syncEvents={vi.fn()}
+          syncBuckets={vi.fn()}
+          saveDebounceMs={0}
+        />
+      </CalendarProvider>
+    </CalendarSettingsProvider>,
+  );
+
+  return { user };
+};
 
 describe("AgendaList", () => {
   beforeEach(() => {
@@ -98,5 +125,24 @@ describe("AgendaList", () => {
     renderAgendaList([event]);
 
     expect(screen.queryByText("Tomorrow event")).not.toBeInTheDocument();
+  });
+
+  it("shows only one editor when clicking a multi-day event from the agenda view", async () => {
+    const multiDayEvent = buildEvent({
+      id: "multi-day",
+      title: "Party",
+      description: undefined,
+      start: FIXED_NOW.startOf("day").plus({ hours: 23 }),
+      end: FIXED_NOW.startOf("day").plus({ days: 1, hours: 1 }),
+    });
+
+    const { user } = renderAgendaAndCalendar([multiDayEvent]);
+
+    const agendaLabel = (await screen.findAllByText("Party"))[0];
+    await user.click(agendaLabel);
+
+    expect(
+      await screen.findAllByRole("heading", { name: /edit event/i }),
+    ).toHaveLength(1);
   });
 });

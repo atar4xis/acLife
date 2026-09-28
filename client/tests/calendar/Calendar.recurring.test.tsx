@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import {
   FIXED_NOW,
+  buildEvent,
   buildRecurringEvent,
   renderCalendar,
   advanceSave,
@@ -117,6 +118,58 @@ describe("Calendar", () => {
     const savedEvents = getLastSavedEvents(saveEvents);
     expect(savedEvents).toHaveLength(1);
     expect(savedEvents[0].title).toBe("Team standup");
+  });
+
+  it("editing the duration of a non-parent multi-day instance and applying to all events does not shift other instances by a day", async () => {
+    const saveEvents = vi.fn();
+    const parent = buildEvent({
+      id: "repeat-parent",
+      title: "Party",
+      description: undefined,
+      start: FIXED_NOW.startOf("week").plus({ days: 2, hours: 23 }),
+      end: FIXED_NOW.startOf("week").plus({ days: 3, hours: 1 }),
+      repeat: { interval: 1, unit: "day" as const },
+    });
+
+    const { user } = renderCalendar({
+      mode: "week",
+      events: [parent],
+      saveEvents,
+    });
+
+    const instanceBlock = document.querySelector(
+      '[data-event-key="repeat-parent_2026-03-19"]',
+    ) as HTMLElement;
+    await user.dblClick(instanceBlock);
+    expect(
+      await screen.findByRole("heading", { name: /edit event/i }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByDisplayValue("01:00"), {
+      target: { value: "01:30" },
+    });
+
+    await user.click(screen.getByRole("button", { name: /^save$/i }));
+
+    expect(
+      await screen.findByText(/update recurring event/i),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: /all events/i }));
+    await user.click(screen.getByRole("button", { name: /^update$/i }));
+    await advanceSave();
+
+    const savedEvents = getLastSavedEvents(saveEvents);
+    const parentEvent = savedEvents.find((e) => e.id === "repeat-parent");
+
+    expect(parentEvent?.start.toISO()).toBe(
+      FIXED_NOW.startOf("week").plus({ days: 2, hours: 23 }).toISO(),
+    );
+    expect(parentEvent?.end.toISO()).toBe(
+      FIXED_NOW.startOf("week")
+        .plus({ days: 3, hours: 1, minutes: 30 })
+        .toISO(),
+    );
   });
 
   it("deletes all recurring events from dialog", async () => {
