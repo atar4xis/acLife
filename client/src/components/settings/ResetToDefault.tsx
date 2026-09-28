@@ -20,7 +20,7 @@ export default function ResetToDefault({ onClick }: { onClick: () => void }) {
           <RotateCcw className="size-3.5" />
         </Button>
       </TooltipTrigger>
-      <TooltipContent>Reset to Default</TooltipContent>
+      <TooltipContent>Reset to default</TooltipContent>
     </Tooltip>
   );
 }
