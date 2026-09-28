@@ -14,8 +14,10 @@ export interface TimezoneOption {
 // zones that don't belong to a real IANA region (Etc/*, UTC, etc.)
 const OTHER_REGION = "Other";
 
-export const getDeviceTimezone = (): string =>
-  Intl.DateTimeFormat().resolvedOptions().timeZone;
+export const getDeviceTimezone = (): string => {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return tz === "UTC" ? "Etc/UTC" : tz;
+};
 
 export const isValidTimezone = (tz: string): boolean =>
   DateTime.now().setZone(tz).isValid;
