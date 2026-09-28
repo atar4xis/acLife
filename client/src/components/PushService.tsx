@@ -2,21 +2,19 @@ import { useApi } from "@/context/ApiContext";
 import YesNoDialog from "./dialog/YesNoDialog";
 import { useCallback, useEffect, useState } from "react";
 import { useStorage } from "@/context/StorageContext";
-import {
-  arrayBufferToBase64Url,
-  browserSupportsPush,
-  uint8ArrayFromUrlSafeBase64,
-} from "@/lib/utils";
+import { browserSupportsPush } from "@/lib/utils";
 import { toast } from "sonner";
 import { useUser } from "@/context/UserContext";
+import { usePushService } from "@/hooks/usePushService";
 
 export default function PushService() {
   const storage = useStorage();
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { serverMeta, post } = useApi();
+  const { serverMeta } = useApi();
   const { user } = useUser();
+  const { enable } = usePushService();
 
   // ask to enable push if not yet enabled
   useEffect(() => {
@@ -52,83 +50,19 @@ export default function PushService() {
   }, [storage]);
 
   const handleEnablePushService = useCallback(() => {
-    if (!storage || !serverMeta?.vapidPublicKey) return;
-
-    const tryEnable = async () => {
-      setLoading(true);
-      toast.promise(
-        (async () => {
-          const permission = await Notification.requestPermission();
-
-          if (permission !== "granted") {
-            throw "Notification permission request denied.";
-          }
-
-          const sw = await navigator.serviceWorker.register("/acLife/sw.js", {
-            scope: "/acLife/",
-          });
-
-          if (!navigator.serviceWorker.controller) {
-            await new Promise<void>((resolve) => {
-              navigator.serviceWorker.addEventListener(
-                "controllerchange",
-                () => resolve(),
-                { once: true },
-              );
-            });
-          }
-
-          const existing = await sw.pushManager.getSubscription();
-          if (existing) await existing.unsubscribe();
-
-          const sub = await sw.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: uint8ArrayFromUrlSafeBase64(
-              serverMeta.vapidPublicKey,
-            ),
-          });
-
-          const endpoint = sub.endpoint;
-
-          const p256dhBuf = sub.getKey("p256dh");
-          const authBuf = sub.getKey("auth");
-
-          if (!p256dhBuf || !authBuf) {
-            await sub.unsubscribe();
-            throw "Something went wrong. Please try again.";
-          }
-
-          const p256dh = arrayBufferToBase64Url(p256dhBuf);
-          const auth = arrayBufferToBase64Url(authBuf);
-
-          const res = await post("user/push/subscribe", {
-            endpoint,
-            p256dh,
-            auth,
-          });
-
-          if (!res.success) {
-            throw "Something went wrong. Please try again later.";
-          }
-
-          storage.set("pushSubscription", JSON.stringify(sub));
-        })(),
-        {
-          loading: "Setting up push service...",
-          success: () => {
-            setOpen(false);
-            return "Push service enabled.";
-          },
-          error: (d) => {
-            setLoading(false);
-            return d;
-          },
-        },
-      );
-    };
-
-    tryEnable();
-  }, [storage, serverMeta, post]);
+    setLoading(true);
+    toast.promise(enable(), {
+      loading: "Setting up push service...",
+      success: () => {
+        setOpen(false);
+        return "Push service enabled.";
+      },
+      error: (d) => {
+        setLoading(false);
+        return d;
+      },
+    });
+  }, [enable]);
 
   return (
     <YesNoDialog

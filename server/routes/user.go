@@ -25,6 +25,7 @@ func User(r *mux.Router) {
 	sr.HandleFunc("/sessions", handlers.ListSessions).Methods("GET")
 	sr.HandleFunc("/sessions/{id}", handlers.RevokeSession).Methods("DELETE")
 	sr.HandleFunc("/push/subscribe", handlers.PushSubscribe).Methods("POST")
+	sr.HandleFunc("/push/unsubscribe", handlers.PushUnsubscribe).Methods("POST")
 
 	if os.Getenv("ENV") != "production" {
 		sr.HandleFunc("/push/test", handlers.PushTest).Methods("GET")

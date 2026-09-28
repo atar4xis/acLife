@@ -602,6 +602,39 @@ func PushSubscribe(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// PushUnsubscribe removes a push service subscription from the DB.
+func PushUnsubscribe(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	var req struct {
+		Endpoint string `json:"endpoint"`
+	}
+
+	if err := utils.ParseJSON(r.Body, &req); err != nil {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	if req.Endpoint == "" {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	if _, err := database.Exec(r.Context(),
+		"DELETE FROM push_subscriptions WHERE owner = ? AND endpoint = ?",
+		user.UUID, req.Endpoint,
+	); err != nil {
+		utils.LogError("PushUnsubscribe", "database.Exec", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
+		Success: true,
+	})
+}
+
 // PushTest sends a test notification to the user.
 func PushTest(w http.ResponseWriter, r *http.Request) {
 	user := session.GetLoggedInUser(r)
