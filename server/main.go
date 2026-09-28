@@ -109,11 +109,11 @@ func main() {
 	routes.Calendar(csrfRouter)
 
 	// Setup CORS
-	origins := utils.GetAllowedOrigins();
+	origins := utils.GetAllowedOrigins()
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   origins,
-		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,
 	})

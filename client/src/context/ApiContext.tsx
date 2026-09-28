@@ -18,6 +18,7 @@ interface ApiContextType {
   get: <T>(endpoint: string) => Promise<APIResponse<T>>;
   getRaw: (endpoint: string) => Promise<Response>;
   post: <T>(endpoint: string, body: unknown) => Promise<APIResponse<T>>;
+  del: <T>(endpoint: string) => Promise<APIResponse<T>>;
   query: <T>(endpoint: string) => Promise<T>;
   serverMeta: ServerMetadata | null;
   setServerMeta: (meta: ServerMetadata) => void;
@@ -172,6 +173,38 @@ export const ApiProvider = ({
     [url, handle429],
   );
 
+  const del = useCallback(
+    async <T,>(endpoint: string): Promise<APIResponse<T>> => {
+      if (!url) throw Error("Cannot DELETE before connection is established.");
+
+      try {
+        const response = await fetch(joinUrl(url, endpoint), {
+          method: "DELETE",
+          credentials: "include",
+        });
+
+        if (response.status === 429) {
+          return handle429(response) as Promise<APIResponse<T>>;
+        }
+
+        const result = (await response.json()) as APIResponse<T>;
+
+        if (response.status === 401) {
+          setPendingLogout(true);
+        }
+
+        return result;
+      } catch (error) {
+        console.error(error);
+        return {
+          success: false,
+          message: "Invalid response from API.",
+        } as APIResponse<T>;
+      }
+    },
+    [url, handle429],
+  );
+
   const query = useCallback(
     async <T,>(endpoint: string): Promise<T> => {
       const response = await get<T>(endpoint);
@@ -221,6 +254,7 @@ export const ApiProvider = ({
         get,
         getRaw,
         post,
+        del,
         query,
         serverMeta,
         setServerMeta,

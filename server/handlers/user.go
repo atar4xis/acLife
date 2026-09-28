@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/base64"
 	"net/http"
 	"net/url"
@@ -14,6 +15,8 @@ import (
 	"acLife/session"
 	"acLife/types"
 	"acLife/utils"
+
+	"github.com/gorilla/mux"
 
 	_ "crypto/sha256"
 )
@@ -67,6 +70,97 @@ func UpdateChallenge(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 	})
 }
+
+// ListSessions returns the user's active sessions.
+func ListSessions(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	currentToken := session.Get[string](r, "access_token")
+
+	rows, err := database.Query(r.Context(),
+		"SELECT public_id, created_at, expires_at, access_token FROM account_sessions WHERE owner = ? ORDER BY created_at DESC",
+		user.UUID,
+	)
+	if err != nil {
+		utils.LogError("ListSessions", "database.Query", err)
+		utils.SendInternalError(w)
+		return
+	}
+	defer rows.Close()
+
+	sessions := []types.Session{}
+	for rows.Next() {
+		var s types.Session
+		var token string
+		if err := rows.Scan(&s.ID, &s.CreatedAt, &s.ExpiresAt, &token); err != nil {
+			utils.LogError("ListSessions", "rows.Scan", err)
+			utils.SendInternalError(w)
+			return
+		}
+		s.Current = token == currentToken
+		sessions = append(sessions, s)
+	}
+	if err := rows.Err(); err != nil {
+		utils.LogError("ListSessions", "rows.Err", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[[]types.Session]{
+		Success: true,
+		Data:    sessions,
+	})
+}
+
+// RevokeSession terminates one of the user's sessions, identified by public_id.
+func RevokeSession(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	publicID := mux.Vars(r)["id"]
+	currentToken := session.Get[string](r, "access_token")
+
+	var token string
+	if err := database.QueryRow(r.Context(),
+		"SELECT access_token FROM account_sessions WHERE public_id = ? AND owner = ?",
+		publicID, user.UUID,
+	).Scan(&token); err != nil {
+		if err == sql.ErrNoRows {
+			utils.SendJSON(w, http.StatusNotFound, types.Reply[any]{
+				Success: false,
+				Message: "Session not found.",
+			})
+			return
+		}
+
+		utils.LogError("RevokeSession", "database.QueryRow", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if token == currentToken {
+		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
+			Success: false,
+			Message: "Cannot terminate the current session.",
+		})
+		return
+	}
+
+	if _, err := database.Exec(r.Context(),
+		"DELETE FROM account_sessions WHERE public_id = ? AND owner = ?",
+		publicID, user.UUID,
+	); err != nil {
+		utils.LogError("RevokeSession", "database.Exec", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
+		Success: true,
+	})
+}
+
 
 // PushSubscribe stores a push service subscription in the DB.
 func PushSubscribe(w http.ResponseWriter, r *http.Request) {

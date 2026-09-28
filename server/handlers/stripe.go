@@ -200,7 +200,7 @@ func StripeWebhook(w http.ResponseWriter, r *http.Request) {
 		subID, _ := obj["id"].(string)
 		status, _ := obj["status"].(string)
 
-		_, err := database.UpdateSubscriptionStatus(subID, status);
+		_, err := database.UpdateSubscriptionStatus(subID, status)
 		if err != nil {
 			utils.LogError("StripeWebhook", "UpdateSubscriptionStatus", err)
 		}

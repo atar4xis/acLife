@@ -45,6 +45,14 @@ type PublicUser struct {
 	Challenge []byte `json:"challenge"`
 }
 
+// Session is a login session belonging to a user.
+type Session struct {
+	ID        string    `json:"id"`
+	CreatedAt time.Time `json:"createdAt"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Current   bool      `json:"current"`
+}
+
 // SRPSession holds the SRP server and a timestamp.
 type SRPSession struct {
 	Server    *srp.Server
