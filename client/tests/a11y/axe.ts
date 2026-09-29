@@ -9,8 +9,15 @@ const runAxe = configureAxe({
 // jsdom has no canvas; axe probes it for icon-ligature detection
 HTMLCanvasElement.prototype.getContext = () => null;
 
-export async function expectNoViolations(container: Element) {
-  const { violations } = await runAxe(container);
+export async function expectNoViolations(
+  container: Element,
+  disabledRules: string[] = [],
+) {
+  const { violations } = await runAxe(container, {
+    rules: Object.fromEntries(
+      disabledRules.map((id) => [id, { enabled: false }]),
+    ),
+  });
   expect(
     violations.map(
       (v) =>

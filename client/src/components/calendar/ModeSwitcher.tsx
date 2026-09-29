@@ -19,7 +19,7 @@ export default memo(function ModeSwitcher({
 }: ModeSwitcherParams) {
   return (
     <Select value={mode} onValueChange={setMode}>
-      <SelectTrigger className="mr-4 md:mr-0">
+      <SelectTrigger className="mr-4 md:mr-0" aria-label="View mode">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

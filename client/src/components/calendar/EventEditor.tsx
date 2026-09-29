@@ -387,6 +387,7 @@ export default function EventEditor({
               onChange={(e) => setTitle(e.target.value)}
             />
             <ColorPicker
+              aria-label="Event color"
               presetColors={presetColors}
               onChange={(v) => {
                 setColor(v as string);
@@ -398,8 +399,8 @@ export default function EventEditor({
 
         <Field>
           <FieldLabel>Start &amp; End Time</FieldLabel>
-          <DateTimePicker value={start} onChange={setStart} />
-          <DateTimePicker value={end} onChange={setEnd} />
+          <DateTimePicker label="Start" value={start} onChange={setStart} />
+          <DateTimePicker label="End" value={end} onChange={setEnd} />
 
           <Select
             value={
@@ -411,7 +412,7 @@ export default function EventEditor({
             }
             onValueChange={handleSelectRepeat}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Repeat">
               <SelectValue placeholder="Repeat" />
             </SelectTrigger>
             <SelectContent>
@@ -460,7 +461,7 @@ export default function EventEditor({
                     );
                   }}
                 >
-                  <SelectTrigger className="flex-1">
+                  <SelectTrigger className="flex-1" aria-label="Repeat unit">
                     <SelectValue placeholder="Unit" />
                   </SelectTrigger>
                   <SelectContent>
@@ -532,6 +533,7 @@ export default function EventEditor({
                 <>
                   <FieldLabel>Until</FieldLabel>
                   <DateTimePicker
+                    label="Until"
                     value={new Date(repeat.until)}
                     onChange={(d) => {
                       setRepeat((prev) => {

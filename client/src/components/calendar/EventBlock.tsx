@@ -21,6 +21,7 @@ import { useCalendar } from "@/context/CalendarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MoveMenuItems } from "./MoveMenuItems";
 import { Checkbox } from "../ui/checkbox";
+import { describeEvent } from "@/lib/calendar/a11y";
 
 // how long (ms) a touch must be held roughly still before it starts a drag
 const LONG_PRESS_MS = 450;
@@ -300,8 +301,11 @@ export default memo(
               inside the event editor */}
           <ContextMenuTrigger onPointerDown={preventTouch} disabled={isMobile}>
             {/* visible event block */}
+            {/* not focusable on purpose, keyboard focus belongs to the grid */}
             <div
               className={`pointer-events-auto event-block ${padding} absolute left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)] ${isHeld ? "scale-[1.03] shadow-lg ring-2 ring-white/80 z-30 transition-transform" : ""} ${popOut ? "z-20 shadow-lg" : ""} ${event.isTask && event.completed ? "opacity-50" : ""}`}
+              role={event.isTask ? "group" : "button"}
+              aria-label={describeEvent(event, selected)}
               data-event-key={eventKey(event)}
               style={blockStyle}
               onMouseEnter={handleMouseEnter}
@@ -356,6 +360,7 @@ export default memo(
                     {event.isTask && (
                       <Checkbox
                         className="mt-0.5 shrink-0 border-current/50"
+                        aria-label={`${event.title} completed`}
                         checked={event.completed ?? false}
                         onPointerDown={stopPropagation}
                         onCheckedChange={(c) => toggleCompleted(!!c)}

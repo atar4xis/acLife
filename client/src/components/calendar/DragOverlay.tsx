@@ -95,6 +95,7 @@ export default (function DragOverlay({
   return (
     <>
       <div
+        aria-hidden="true"
         className={`fixed flex items-center justify-center z-20 left-0 top-0 bottom-0 ${isMobile ? "w-8" : "w-16"} bg-background hover:opacity-100 ${direction === -1 ? "opacity-100" : "opacity-30"}`}
         data-steps="-1"
         onPointerEnter={handleMoveEnter}
@@ -103,6 +104,7 @@ export default (function DragOverlay({
         <ArrowLeftCircle size={isMobile ? 16 : 32} />
       </div>
       <div
+        aria-hidden="true"
         className={`fixed flex items-center justify-center z-20 right-0 top-0 bottom-0 ${isMobile ? "w-8" : "w-16"} bg-background hover:opacity-100 ${direction === 1 ? "opacity-100" : "opacity-30"}`}
         data-steps="1"
         onPointerEnter={handleMoveEnter}
@@ -111,6 +113,7 @@ export default (function DragOverlay({
         <ArrowRightCircle size={isMobile ? 16 : 32} />
       </div>
       <div
+        aria-hidden="true"
         ref={myRef}
         style={{
           position: "fixed",

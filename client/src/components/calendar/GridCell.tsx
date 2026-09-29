@@ -20,6 +20,7 @@ export default memo(function GridCell({
 
   return (
     <div
+      role="gridcell"
       className={cn(
         "pointer-events-auto grid-cell relative shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10",
         className,

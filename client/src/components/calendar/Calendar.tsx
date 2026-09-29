@@ -1,11 +1,4 @@
-import {
-  useRef,
-  useState,
-  Fragment,
-  useMemo,
-  useEffect,
-  useCallback,
-} from "react";
+import { useRef, useState, useMemo, useEffect, useCallback } from "react";
 import { DateTime } from "luxon";
 import { ArrowLeft, ArrowRight, SearchIcon, X } from "lucide-react";
 
@@ -42,6 +35,7 @@ import {
   getDateRangeString,
 } from "@/lib/calendar/date";
 import { getDayRects, getEventRects } from "@/lib/calendar/dom";
+import { describeFullDay } from "@/lib/calendar/a11y";
 import {
   getTimezoneHourLabel,
   getTimezoneShortLabel,
@@ -2024,6 +2018,9 @@ export default function AppCalendar({
         <HeaderCell
           key={d.label}
           className={`select-none ${headerBottom ? "top-auto bottom-0" : ""} ${isSameDate(d.date, now) ? "bg-card font-bold" : ""}`}
+          aria-label={
+            describeFullDay(d.date) + (isSameDate(d.date, now) ? ", today" : "")
+          }
         >
           {d.label}
         </HeaderCell>
@@ -2049,6 +2046,8 @@ export default function AppCalendar({
       timezones.map((tz, i) => (
         <div
           key={tz}
+          role={timezones.length > 1 ? "columnheader" : "presentation"}
+          aria-label={timezones.length > 1 ? tz : undefined}
           className={`select-none sticky ${headerBottom ? "bottom-0" : "top-0"} z-16 hover:z-20 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex items-center justify-center bg-background text-xs text-muted-foreground px-1`}
           style={tzStickyStyle(i)}
         >
@@ -2065,15 +2064,15 @@ export default function AppCalendar({
   );
 
   const headerRow = labelsRight ? (
-    <>
+    <div role="row" className="contents">
       {dayWeekHeaders}
       {timezoneHeaderCells}
-    </>
+    </div>
   ) : (
-    <>
+    <div role="row" className="contents">
       {timezoneHeaderCells}
       {dayWeekHeaders}
-    </>
+    </div>
   );
 
   // grid in day/week view
@@ -2085,6 +2084,7 @@ export default function AppCalendar({
             {timezones.map((tz, i) => (
               <div
                 key={tz}
+                role="rowheader"
                 className={`select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex text-sm items-center justify-center ${tz === timezones[0] && hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
                 style={tzStickyStyle(i)}
               >
@@ -2099,7 +2099,7 @@ export default function AppCalendar({
         );
 
         return (
-          <Fragment key={hour}>
+          <div key={hour} role="row" className="contents">
             {!labelsRight && timeLabels}
 
             {visibleDays.map((d, dayIndex) => {
@@ -2123,6 +2123,7 @@ export default function AppCalendar({
                       {/* current time indicator line */}
                       {isSameDate(d.date, now) && (
                         <div
+                          aria-hidden="true"
                           className="pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-foreground
                     before:absolute before:-left-1 before:top-1/2
                     before:h-2 before:w-2 before:-translate-y-1/2
@@ -2167,7 +2168,7 @@ export default function AppCalendar({
             })}
 
             {labelsRight && timeLabels}
-          </Fragment>
+          </div>
         );
       }),
     [
@@ -2386,6 +2387,8 @@ export default function AppCalendar({
       <div className="@container flex-1 overflow-hidden relative">
         <div
           ref={gridRef}
+          role="grid"
+          aria-label="Calendar"
           className="touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
           style={{
             gridTemplateColumns: cols(
@@ -2411,6 +2414,7 @@ export default function AppCalendar({
 
           {selectionBox && (
             <div
+              aria-hidden="true"
               className="selection-box fixed z-20 pointer-events-none border border-primary bg-primary/20"
               style={selectionBox}
             />

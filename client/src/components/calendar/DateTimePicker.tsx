@@ -11,9 +11,14 @@ import { toPickerDate } from "@/lib/calendar/date";
 type DateTimePickerProps = {
   value: Date | undefined;
   onChange: (val: Date | undefined) => void;
+  label?: string;
 };
 
-export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
+export function DateTimePicker({
+  value,
+  onChange,
+  label,
+}: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
   const { dayPickerWeekStart } = useWeekStart();
   const zoned = value && DateTime.fromJSDate(value);
@@ -65,6 +70,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
       <Input
         type="time"
         step="60"
+        aria-label={label && `${label} time`}
         value={zoned ? zoned.toFormat("HH:mm") : ""}
         onChange={(e) => {
           if (!zoned) return;
