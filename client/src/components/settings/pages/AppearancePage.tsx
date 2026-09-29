@@ -1,11 +1,14 @@
-import { memo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Download, Trash2, Upload } from "lucide-react";
+import type { ReactNode } from "react";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  GripVertical,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import {
   DARK_COLORS,
   DEFAULT_FONT_FAMILY,
@@ -19,6 +22,7 @@ import {
   type ThemeColors,
   type ThemePreset,
 } from "@/components/ThemeProvider";
+import { useDragReorder } from "@/hooks/useDragReorder";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
 import { useDeferredSliderValue } from "@/hooks/useDeferredSliderValue";
 import { cssColorToHex } from "@/lib/utils";
@@ -31,10 +35,27 @@ import {
   FieldGroup,
   FieldTitle,
 } from "@/components/ui/field";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { BUILT_IN_THEMES, BUILT_IN_THEME_ID_PREFIX } from "../builtInThemes";
 import ResetToDefault from "../ResetToDefault";
 import { sectionLabel, settingLabel } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
@@ -93,6 +114,9 @@ function parsePresetFile(text: string): Omit<ThemePreset, "id"> | null {
       typeof data !== "object" ||
       data === null ||
       typeof data.name !== "string" ||
+      (data.base !== undefined &&
+        data.base !== "light" &&
+        data.base !== "dark") ||
       typeof data.fontFamily !== "string" ||
       typeof data.fontSize !== "number" ||
       !isThemeColors(data.colors)
@@ -102,6 +126,7 @@ function parsePresetFile(text: string): Omit<ThemePreset, "id"> | null {
 
     return {
       name: data.name,
+      base: data.base,
       colors: data.colors,
       fontFamily: data.fontFamily,
       fontSize: data.fontSize,
@@ -112,9 +137,9 @@ function parsePresetFile(text: string): Omit<ThemePreset, "id"> | null {
 }
 
 function downloadPreset(preset: ThemePreset) {
-  const { name, colors, fontFamily, fontSize } = preset;
+  const { name, base, colors, fontFamily, fontSize } = preset;
   const blob = new Blob(
-    [JSON.stringify({ name, colors, fontFamily, fontSize }, null, 2)],
+    [JSON.stringify({ name, base, colors, fontFamily, fontSize }, null, 2)],
     { type: "application/json" },
   );
   const url = URL.createObjectURL(blob);
@@ -125,21 +150,100 @@ function downloadPreset(preset: ThemePreset) {
   URL.revokeObjectURL(url);
 }
 
-const PresetsSection = memo(function PresetsSection({
-  sectionRefs,
+const THEMES_PER_PAGE = 5;
+
+function stripes(colors: ThemeColors) {
+  const unique = [...new Set(Object.values(colors))];
+  const step = 100 / unique.length;
+  const stops = unique.map(
+    (c, i) => `${c} ${i * step}%, ${c} ${(i + 1) * step}%`,
+  );
+  return `linear-gradient(90deg, ${stops.join(", ")})`;
+}
+
+function IconAction({
+  label,
+  onClick,
+  children,
 }: {
-  sectionRefs: SectionRefs;
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
 }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          onClick={onClick}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+const PresetsList = memo(function PresetsList() {
   const {
     presets,
     activePresetId,
     savePreset,
     applyPreset,
     deletePreset,
+    renamePreset,
+    reorderPresets,
     importPreset,
   } = useTheme();
   const [presetName, setPresetName] = useState("");
+  const [page, setPage] = useState(0);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const skipRenameCommit = useRef(false);
+  // the click after a drag lands on the row, not the handle, so block it
+  const suppressApply = useRef(false);
+  const [previewEnabled, setPreviewEnabled] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const pageCount = Math.max(1, Math.ceil(presets.length / THEMES_PER_PAGE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageStart = currentPage * THEMES_PER_PAGE;
+  const pagePresets = useMemo(
+    () => presets.slice(pageStart, pageStart + THEMES_PER_PAGE),
+    [presets, pageStart],
+  );
+
+  // reordering is scoped to the visible page
+  const {
+    order: orderedPagePresets,
+    dragIndex,
+    onPointerDown,
+    setItemRef,
+  } = useDragReorder(pagePresets, (next) =>
+    reorderPresets([
+      ...presets.slice(0, pageStart),
+      ...next,
+      ...presets.slice(pageStart + THEMES_PER_PAGE),
+    ]),
+  );
+
+  const commitRename = () => {
+    const name = renameDraft.trim();
+    if (renamingId && name) {
+      if (presets.some((p) => p.id !== renamingId && p.name === name)) {
+        toast.error("A theme with that name already exists.");
+      } else {
+        renamePreset(renamingId, name);
+      }
+    }
+    setRenamingId(null);
+  };
+
+  const nameExists = presets.some((p) => p.name === presetName.trim());
 
   const handleSave = () => {
     const name = presetName.trim();
@@ -147,28 +251,27 @@ const PresetsSection = memo(function PresetsSection({
 
     savePreset(name);
     setPresetName("");
-    toast.success("Theme saved.");
+    toast.success(nameExists ? "Theme updated." : "Theme saved.");
   };
 
   const handleImportClick = () => fileInputRef.current?.click();
 
-  const handleImportFile = async (file: File) => {
-    const parsed = parsePresetFile(await file.text());
-    if (!parsed) {
-      toast.error("Invalid theme file.");
-      return;
-    }
+  const handleImportFiles = async (files: File[]) => {
+    for (const file of files) {
+      const parsed = parsePresetFile(await file.text());
+      if (!parsed) {
+        toast.error(`Invalid theme file: ${file.name}`);
+        continue;
+      }
 
-    importPreset(parsed);
-    toast.success(`Imported theme "${parsed.name}".`);
+      importPreset(parsed);
+      toast.success(`Imported theme "${parsed.name}".`);
+    }
   };
 
   return (
-    <Section
-      id="presets"
-      label={sectionLabel("presets")}
-      sectionRefs={sectionRefs}
-    >
+    <div className="flex flex-col gap-4" id="presets-list">
+      <FieldTitle>{settingLabel("presets-list")}</FieldTitle>
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-1 gap-2">
           <Input
@@ -184,7 +287,7 @@ const PresetsSection = memo(function PresetsSection({
             disabled={!presetName.trim()}
             onClick={handleSave}
           >
-            Save
+            {nameExists ? "Overwrite" : "Save"}
           </Button>
         </div>
 
@@ -195,11 +298,12 @@ const PresetsSection = memo(function PresetsSection({
           ref={fileInputRef}
           type="file"
           accept="application/json"
+          multiple
           className="hidden"
           onChange={(e) => {
-            const file = e.target.files?.[0];
+            const files = Array.from(e.target.files ?? []);
             e.target.value = "";
-            if (file) handleImportFile(file);
+            if (files.length) handleImportFiles(files);
           }}
         />
       </div>
@@ -207,73 +311,235 @@ const PresetsSection = memo(function PresetsSection({
       {presets.length === 0 ? (
         <FieldDescription>No saved themes yet.</FieldDescription>
       ) : (
-        <div className="flex flex-col gap-2">
-          {presets.map((preset) => {
-            const isActive = preset.id === activePresetId;
-            return (
-              <div
-                key={preset.id}
-                className={`flex items-center justify-between gap-4 rounded-md border p-3 ${
-                  isActive ? "border-primary bg-primary/5" : ""
-                }`}
-              >
-                <span className="text-sm font-medium">{preset.name}</span>
-                <div className="flex items-center gap-1">
-                  {isActive ? (
-                    <span className="px-2 text-xs text-muted-foreground">
-                      Active
-                    </span>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          onClick={() => applyPreset(preset.id)}
-                        >
-                          <Check />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Apply theme</TooltipContent>
-                    </Tooltip>
+        <>
+          <div className="flex flex-col gap-2">
+            {orderedPagePresets.map((item, index) => {
+              const isActive = item.id === activePresetId;
+              return (
+                <div
+                  key={item.id}
+                  ref={setItemRef(index)}
+                  role={isActive ? undefined : "button"}
+                  tabIndex={isActive ? undefined : 0}
+                  onClick={
+                    isActive
+                      ? undefined
+                      : () => !suppressApply.current && applyPreset(item)
+                  }
+                  onKeyDown={
+                    isActive
+                      ? undefined
+                      : (e) => {
+                          if (e.target !== e.currentTarget) return;
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            applyPreset(item);
+                          }
+                        }
+                  }
+                  className={`group relative flex items-center justify-between gap-3 overflow-hidden rounded-md border border-muted p-2 transition-opacity ${
+                    dragIndex === index ? "opacity-40" : ""
+                  } ${
+                    isActive
+                      ? "border-primary bg-primary/5"
+                      : "cursor-pointer hover:bg-accent"
+                  }`}
+                >
+                  {previewEnabled && !isActive && item.colors && (
+                    <div
+                      className="absolute inset-0 opacity-0 group-hover:opacity-75"
+                      style={{ background: stripes(item.colors) }}
+                    />
                   )}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => downloadPreset(preset)}
+                  <div
+                    className="relative flex min-w-0 items-center gap-1.5 rounded bg-background/80 pr-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      style={{ touchAction: "none" }}
+                      className="text-muted-foreground cursor-grab px-1 py-1 active:cursor-grabbing"
+                      onPointerDown={(e) => {
+                        suppressApply.current = true;
+                        window.addEventListener(
+                          "pointerup",
+                          () =>
+                            setTimeout(() => (suppressApply.current = false)),
+                          { once: true },
+                        );
+                        onPointerDown(index)(e);
+                      }}
+                    >
+                      <GripVertical className="size-4" />
+                    </button>
+                    {renamingId === item.id ? (
+                      <Input
+                        autoFocus
+                        value={renameDraft}
+                        className="h-6 w-[200px] px-1.5 py-0 text-sm"
+                        onChange={(e) => setRenameDraft(e.target.value)}
+                        onBlur={() => {
+                          if (skipRenameCommit.current) {
+                            skipRenameCommit.current = false;
+                            return;
+                          }
+                          commitRename();
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitRename();
+                          if (e.key === "Escape") {
+                            skipRenameCommit.current = true;
+                            setRenamingId(null);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span
+                        className="truncate text-sm font-medium"
+                        onDoubleClick={() => {
+                          setRenameDraft(item.name);
+                          setRenamingId(item.id);
+                        }}
                       >
-                        <Download />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Export as .json</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => deletePreset(preset.id)}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Delete theme</TooltipContent>
-                  </Tooltip>
+                        {item.name}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className="relative flex items-center gap-0.5 rounded bg-background/80"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {isActive && (
+                      <span className="px-2 text-xs text-muted-foreground">
+                        Active
+                      </span>
+                    )}
+                    <IconAction
+                      label="Export as .json"
+                      onClick={() => downloadPreset(item)}
+                    >
+                      <Download />
+                    </IconAction>
+                    <IconAction
+                      label="Delete theme"
+                      onClick={() => deletePreset(item.id)}
+                    >
+                      <Trash2 />
+                    </IconAction>
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <Label className="gap-2 font-normal">
+              <Checkbox
+                checked={previewEnabled}
+                onCheckedChange={(c) => setPreviewEnabled(!!c)}
+              />
+              Preview
+            </Label>
+            {pageCount > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  disabled={currentPage === 0}
+                  onClick={() => setPage(currentPage - 1)}
+                >
+                  <ChevronLeft />
+                </Button>
+                <span className="text-muted-foreground text-sm">
+                  {currentPage + 1} / {pageCount}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  disabled={currentPage === pageCount - 1}
+                  onClick={() => setPage(currentPage + 1)}
+                >
+                  <ChevronRight />
+                </Button>
               </div>
-            );
-          })}
-        </div>
+            )}
+          </div>
+        </>
       )}
-    </Section>
+    </div>
+  );
+});
+
+const CUSTOM_THEMES = [...BUILT_IN_THEMES]
+  .sort((a, b) => a.name.localeCompare(b.name))
+  .map((theme) => ({
+    ...theme,
+    id: `${BUILT_IN_THEME_ID_PREFIX}${theme.slug}`,
+  }));
+
+const CUSTOM_THEME_GROUPS = [
+  { label: "Dark", themes: CUSTOM_THEMES.filter((t) => t.category === "dark") },
+  {
+    label: "Light",
+    themes: CUSTOM_THEMES.filter((t) => t.category === "light"),
+  },
+];
+
+const customThemeCache = new Map<string, Omit<ThemePreset, "id">>();
+
+const CustomThemeField = memo(function CustomThemeField() {
+  const { activePresetId, applyPreset } = useTheme();
+  const value = CUSTOM_THEMES.find((t) => t.id === activePresetId)?.id ?? "";
+
+  const handleChange = async (id: string) => {
+    const theme = CUSTOM_THEMES.find((t) => t.id === id);
+    if (!theme) return;
+
+    try {
+      let parsed = customThemeCache.get(id);
+      if (!parsed) {
+        const res = await fetch(
+          `${import.meta.env.BASE_URL}themes/${theme.slug}.json`,
+        );
+        parsed = (res.ok && parsePresetFile(await res.text())) || undefined;
+        if (!parsed) throw new Error("invalid theme");
+
+        customThemeCache.set(id, parsed);
+      }
+
+      applyPreset({ ...parsed, id });
+    } catch {
+      toast.error(`Failed to load theme "${theme.name}".`);
+    }
+  };
+
+  return (
+    <Field orientation="responsive">
+      <FieldTitle>{settingLabel("custom-theme")}</FieldTitle>
+      <Select value={value} onValueChange={handleChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="None" />
+        </SelectTrigger>
+        <SelectContent>
+          {CUSTOM_THEME_GROUPS.map((group) => (
+            <SelectGroup key={group.label}>
+              <SelectLabel className="text-sm">
+                {group.label} themes
+              </SelectLabel>
+              {group.themes.map((theme) => (
+                <SelectItem key={theme.id} value={theme.id}>
+                  {theme.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ))}
+        </SelectContent>
+      </Select>
+    </Field>
   );
 });
 
@@ -429,7 +695,11 @@ export default function AppearancePage({
         sectionRefs={sectionRefs}
       >
         <ThemeModeField />
+        <CustomThemeField />
       </Section>
+
+      <Separator />
+      <PresetsList />
 
       <Separator />
 
@@ -441,10 +711,6 @@ export default function AppearancePage({
       <Separator />
 
       <ColorsSection sectionRefs={sectionRefs} />
-
-      <Separator />
-
-      <PresetsSection sectionRefs={sectionRefs} />
     </FieldGroup>
   );
 }

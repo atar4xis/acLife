@@ -25,7 +25,11 @@ export const settingsCategories: SettingsCategory[] = [
       {
         id: "theme",
         label: "Theme",
-        items: [{ id: "theme-mode", label: "Theme mode" }],
+        items: [
+          { id: "theme-mode", label: "Theme mode" },
+          { id: "custom-theme", label: "Custom theme" },
+          { id: "presets-list", label: "User themes" },
+        ],
       },
       {
         id: "font",
@@ -39,11 +43,6 @@ export const settingsCategories: SettingsCategory[] = [
         id: "colors",
         label: "Colors",
         items: [{ id: "colors-overrides", label: "Color overrides" }],
-      },
-      {
-        id: "presets",
-        label: "User themes",
-        items: [{ id: "presets-list", label: "Saved themes" }],
       },
     ],
   },

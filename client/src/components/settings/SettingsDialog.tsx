@@ -146,7 +146,7 @@ export default function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(720px,85vh)] w-[min(1100px,95vw)] max-w-none flex-col gap-0 p-0 sm:max-w-none">
+      <DialogContent className="flex h-[min(840px,85vh)] w-[min(1280px,95vw)] max-w-none flex-col gap-0 p-0 sm:max-w-none">
         <DialogTitle className="sr-only">Settings</DialogTitle>
         {isMobile && (
           <button

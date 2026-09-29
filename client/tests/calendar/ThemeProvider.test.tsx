@@ -156,7 +156,7 @@ describe("useTheme", () => {
     expect(result.current.activePresetId).toBeNull();
 
     act(() => {
-      result.current.applyPreset(presetId);
+      result.current.applyPreset(result.current.presets[0]);
     });
 
     expect(result.current.colors.primary).toBe("#010101");
@@ -174,7 +174,7 @@ describe("useTheme", () => {
     const presetId = result.current.presets[0].id;
 
     act(() => {
-      result.current.applyPreset(presetId);
+      result.current.applyPreset(result.current.presets[0]);
     });
     expect(result.current.activePresetId).toBe(presetId);
 
@@ -190,10 +190,9 @@ describe("useTheme", () => {
     act(() => {
       result.current.savePreset("Saved");
     });
-    const presetId = result.current.presets[0].id;
 
     act(() => {
-      result.current.applyPreset(presetId);
+      result.current.applyPreset(result.current.presets[0]);
     });
     act(() => {
       result.current.setFontFamily("Comic Sans MS");
@@ -214,7 +213,7 @@ describe("useTheme", () => {
     const [presetA, presetB] = result.current.presets;
 
     act(() => {
-      result.current.applyPreset(presetA.id);
+      result.current.applyPreset(presetA);
     });
     act(() => {
       result.current.deletePreset(presetA.id);
@@ -236,7 +235,7 @@ describe("useTheme", () => {
     const [presetA, presetB] = result.current.presets;
 
     act(() => {
-      result.current.applyPreset(presetB.id);
+      result.current.applyPreset(presetB);
     });
     act(() => {
       result.current.deletePreset(presetA.id);
@@ -265,5 +264,140 @@ describe("useTheme", () => {
       fontSize: 15,
     });
     expect(result.current.presets[0].id).toBeTruthy();
+  });
+
+  it("savePreset overwrites an existing preset with the same name", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setColor("primary", "#010101");
+    });
+    act(() => {
+      result.current.savePreset("Same");
+    });
+    const originalId = result.current.presets[0].id;
+
+    act(() => {
+      result.current.setColor("primary", "#020202");
+    });
+    act(() => {
+      result.current.savePreset("Same");
+    });
+
+    expect(result.current.presets).toHaveLength(1);
+    expect(result.current.presets[0].id).toBe(originalId);
+    expect(result.current.presets[0].colors.primary).toBe("#020202");
+  });
+
+  it("savePreset records the active base", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setTheme("dark");
+    });
+    act(() => {
+      result.current.savePreset("Dark one");
+    });
+
+    expect(result.current.presets[0].base).toBe("dark");
+  });
+
+  it("importPreset appends a number to names that already exist", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    const incoming = {
+      name: "catppuccin",
+      colors: {},
+      fontFamily: "",
+      fontSize: 16,
+    };
+
+    act(() => {
+      result.current.importPreset(incoming);
+      result.current.importPreset(incoming);
+      result.current.importPreset(incoming);
+    });
+
+    expect(result.current.presets.map((p) => p.name)).toEqual([
+      "catppuccin",
+      "catppuccin 2",
+      "catppuccin 3",
+    ]);
+  });
+
+  it("applyPreset switches to the base stored in the preset", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setTheme("light");
+    });
+    act(() => {
+      result.current.applyPreset({
+        id: "dark-preset",
+        name: "Dark preset",
+        base: "dark",
+        colors: { background: "#000000" },
+        fontFamily: "",
+        fontSize: 16,
+      });
+    });
+
+    expect(result.current.theme).toBe("custom");
+    expect(result.current.resolvedBase).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+
+  it("applyPreset keeps the current base when the preset has none", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.setTheme("dark");
+    });
+    act(() => {
+      result.current.applyPreset({
+        id: "no-base",
+        name: "No base",
+        colors: { background: "#ffffff" },
+        fontFamily: "",
+        fontSize: 16,
+      });
+    });
+
+    expect(result.current.resolvedBase).toBe("dark");
+  });
+
+  it("renamePreset changes only the name", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.savePreset("Old");
+    });
+    const { id } = result.current.presets[0];
+
+    act(() => {
+      result.current.renamePreset(id, "New");
+    });
+
+    expect(result.current.presets).toHaveLength(1);
+    expect(result.current.presets[0]).toMatchObject({ id, name: "New" });
+  });
+
+  it("reorderPresets replaces the order and persists it", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    act(() => {
+      result.current.savePreset("A");
+    });
+    act(() => {
+      result.current.savePreset("B");
+    });
+    const [a, b] = result.current.presets;
+
+    act(() => {
+      result.current.reorderPresets([b, a]);
+    });
+
+    expect(result.current.presets.map((p) => p.name)).toEqual(["B", "A"]);
+    const stored = JSON.parse(localStorage.getItem(`${STORAGE_KEY}-presets`)!);
+    expect(stored.map((p: { name: string }) => p.name)).toEqual(["B", "A"]);
   });
 });

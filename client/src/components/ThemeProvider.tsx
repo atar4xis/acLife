@@ -108,6 +108,7 @@ type ThemeProviderProps = {
 export type ThemePreset = {
   id: string;
   name: string;
+  base?: "light" | "dark";
   colors: ThemeColors;
   fontFamily: string;
   fontSize: number;
@@ -127,8 +128,10 @@ type ThemeProviderState = {
   presets: ThemePreset[];
   activePresetId: string | null;
   savePreset: (name: string) => void;
-  applyPreset: (id: string) => void;
+  applyPreset: (preset: ThemePreset) => void;
   deletePreset: (id: string) => void;
+  renamePreset: (id: string, name: string) => void;
+  reorderPresets: (presets: ThemePreset[]) => void;
   importPreset: (preset: Omit<ThemePreset, "id">) => void;
 };
 
@@ -152,6 +155,8 @@ const initialState: ThemeProviderState = {
   savePreset: () => null,
   applyPreset: () => null,
   deletePreset: () => null,
+  renamePreset: () => null,
+  reorderPresets: () => null,
   importPreset: () => null,
 };
 
@@ -183,6 +188,7 @@ export function ThemeProvider({
     localStorage.getItem(`${storageKey}-active-preset`),
   );
   const [resolvedBase, setResolvedBase] = useState<"light" | "dark">("light");
+  const presetsRef = useRef(presets);
   const lastBaseRef = useRef<"light" | "dark">(
     localStorage.getItem(`${storageKey}-last-base`) === "dark"
       ? "dark"
@@ -233,6 +239,12 @@ export function ThemeProvider({
     setActivePresetId(null);
   };
 
+  const writePresets = (next: ThemePreset[]) => {
+    presetsRef.current = next;
+    localStorage.setItem(`${storageKey}-presets`, JSON.stringify(next));
+    setPresets(next);
+  };
+
   const value: ThemeProviderState = {
     theme,
     setTheme: (next) => {
@@ -280,18 +292,25 @@ export function ThemeProvider({
       const preset: ThemePreset = {
         id: crypto.randomUUID(),
         name,
+        base: resolvedBase,
         colors: { ...basePalette, ...colors },
         fontFamily,
         fontSize,
       };
-      const next = [...presets, preset];
-      localStorage.setItem(`${storageKey}-presets`, JSON.stringify(next));
-      setPresets(next);
+      const existing = presetsRef.current.find((p) => p.name === name);
+      writePresets(
+        existing
+          ? presetsRef.current.map((p) =>
+              p === existing ? { ...preset, id: existing.id } : p,
+            )
+          : [...presetsRef.current, preset],
+      );
     },
-    applyPreset: (id) => {
-      const preset = presets.find((p) => p.id === id);
-      if (!preset) return;
-
+    applyPreset: (preset) => {
+      if (preset.base) {
+        lastBaseRef.current = preset.base;
+        localStorage.setItem(`${storageKey}-last-base`, preset.base);
+      }
       localStorage.setItem(
         `${storageKey}-colors`,
         JSON.stringify(preset.colors),
@@ -303,19 +322,27 @@ export function ThemeProvider({
       setThemeState("custom");
       setFontFamilyState(preset.fontFamily);
       setFontSizeState(preset.fontSize);
-      localStorage.setItem(`${storageKey}-active-preset`, id);
-      setActivePresetId(id);
+      localStorage.setItem(`${storageKey}-active-preset`, preset.id);
+      setActivePresetId(preset.id);
     },
     deletePreset: (id) => {
-      const next = presets.filter((p) => p.id !== id);
-      localStorage.setItem(`${storageKey}-presets`, JSON.stringify(next));
-      setPresets(next);
+      writePresets(presetsRef.current.filter((p) => p.id !== id));
       if (activePresetId === id) clearActivePreset();
     },
+    renamePreset: (id, name) => {
+      writePresets(
+        presetsRef.current.map((p) => (p.id === id ? { ...p, name } : p)),
+      );
+    },
+    reorderPresets: writePresets,
     importPreset: (preset) => {
-      const next = [...presets, { ...preset, id: crypto.randomUUID() }];
-      localStorage.setItem(`${storageKey}-presets`, JSON.stringify(next));
-      setPresets(next);
+      const taken = new Set(presetsRef.current.map((p) => p.name));
+      let name = preset.name;
+      for (let n = 2; taken.has(name); n++) name = `${preset.name} ${n}`;
+      writePresets([
+        ...presetsRef.current,
+        { ...preset, name, id: crypto.randomUUID() },
+      ]);
     },
   };
 
