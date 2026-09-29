@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "luxon";
-import { getDateRangeString, getWeekDays } from "../../src/lib/calendar/date.ts";
+import {
+  fromPickerDate,
+  getDateRangeString,
+  getWeekDays,
+  toPickerDate,
+} from "../../src/lib/calendar/date.ts";
 
 describe("getWeekDays", () => {
   // 2026-03-18 is a Wednesday
@@ -85,5 +90,37 @@ describe("getDateRangeString", () => {
     expect(getDateRangeString("week", straddling)).toBe(
       getDateRangeString("week", straddling, 1),
     );
+  });
+});
+
+describe("picker dates", () => {
+  it("turns a zoned date into local midnight on the same calendar day", () => {
+    // 01:00 on the 15th in Tokyo is still the 14th in UTC, which the tests run in
+    const tokyo = DateTime.fromISO("2026-03-15T01:00:00", {
+      zone: "Asia/Tokyo",
+    });
+
+    const picker = toPickerDate(tokyo);
+
+    expect([
+      picker.getFullYear(),
+      picker.getMonth(),
+      picker.getDate(),
+      picker.getHours(),
+    ]).toEqual([2026, 2, 15, 0]);
+  });
+
+  it("turns a picked day into midnight of that day in the default zone", () => {
+    const picked = fromPickerDate(new Date(2026, 2, 20));
+
+    expect(picked.toISO()).toBe(
+      DateTime.fromISO("2026-03-20T00:00:00").toISO(),
+    );
+  });
+
+  it("round-trips a calendar day", () => {
+    const date = DateTime.fromISO("2026-12-31T23:59:00");
+
+    expect(fromPickerDate(toPickerDate(date)).toISODate()).toBe("2026-12-31");
   });
 });

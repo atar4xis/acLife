@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
@@ -21,7 +21,24 @@ const renderPicker = (onChange = vi.fn()) => {
   return onChange;
 };
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("DateTimePicker", () => {
+  it("marks today in the default time zone, not the browser's", async () => {
+    // still the 14th in UTC, already the 15th in Tokyo
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-03-14T16:00:00Z"));
+    const user = userEvent.setup();
+    renderPicker();
+
+    await user.click(screen.getByRole("button", { name: /15 Mar 2026/ }));
+
+    const today = document.querySelector('[data-today="true"]');
+    expect(today).toHaveTextContent("15");
+  });
+
   it("highlights the day in the default time zone, not the browser's", async () => {
     const user = userEvent.setup();
     renderPicker();

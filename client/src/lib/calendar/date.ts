@@ -1,4 +1,14 @@
-import type { DateTime } from "luxon";
+import { DateTime } from "luxon";
+
+export const toPickerDate = (date: DateTime) =>
+  new Date(date.year, date.month - 1, date.day);
+
+export const fromPickerDate = (date: Date) =>
+  DateTime.fromObject({
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  });
 
 export const isSameDate = (a: DateTime, b: DateTime) => a.hasSame(b, "day");
 

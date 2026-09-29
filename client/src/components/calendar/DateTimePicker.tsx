@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
 import { useWeekStart } from "@/hooks/useWeekStart";
+import { toPickerDate } from "@/lib/calendar/date";
 
 type DateTimePickerProps = {
   value: Date | undefined;
@@ -16,7 +17,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
   const { dayPickerWeekStart } = useWeekStart();
   const zoned = value && DateTime.fromJSDate(value);
-  const pickerDate = zoned && new Date(zoned.year, zoned.month - 1, zoned.day);
+  const pickerDate = zoned && toPickerDate(zoned);
 
   return (
     <div className="flex gap-2">
@@ -40,6 +41,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
             mode="single"
             selected={pickerDate}
             defaultMonth={pickerDate}
+            today={toPickerDate(DateTime.now())}
             weekStartsOn={dayPickerWeekStart}
             onSelect={(date) => {
               if (!date) return;

@@ -18,6 +18,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import AgendaList from "./calendar/AgendaList";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useWeekStart } from "@/hooks/useWeekStart";
+import { fromPickerDate, toPickerDate } from "@/lib/calendar/date";
 
 export default function AppSidebar({
   onOpenSettings,
@@ -56,10 +57,11 @@ export default function AppSidebar({
         <SidebarGroup>
           <Calendar
             mode="single"
-            selected={currentDate.toJSDate()}
+            selected={toPickerDate(currentDate)}
+            today={toPickerDate(DateTime.now())}
             onSelect={(date) => {
               if (isMobile) setOpenMobile(false);
-              setCurrentDate(DateTime.fromJSDate(date || new Date()));
+              setCurrentDate(date ? fromPickerDate(date) : DateTime.now());
             }}
             className="w-full rounded-md border"
             weekStartsOn={dayPickerWeekStart}
