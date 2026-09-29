@@ -166,16 +166,27 @@ const GRID_HEADER_HEIGHT = 48;
 const SELECT_DRAG_THRESHOLD = 4;
 const HISTORY_LIMIT = 40;
 
-const TIMEZONE_COL_WIDTH = "3.5rem";
+const TIMEZONE_COL_MIN_WIDTH = "3.5rem";
+const TIMEZONE_COL_MAX_WIDTH = "6rem";
+
+const getTimezoneColWidth = (timezones: string[], dayCount: number) => {
+  if (timezones.length < 2) return TIMEZONE_COL_MIN_WIDTH;
+  const longest = Math.max(
+    ...timezones.map((tz) => getTimezoneShortLabel(tz).length),
+  );
+  const fitsLabel = `clamp(${TIMEZONE_COL_MIN_WIDTH}, ${longest}ch + 0.5rem, ${TIMEZONE_COL_MAX_WIDTH})`;
+  return `min(${fitsLabel}, calc(100cqw / ${timezones.length + dayCount}))`;
+};
 
 const GRID_CONFIG = {
   day: {
-    cols: (tzCount: number) => `repeat(${tzCount}, ${TIMEZONE_COL_WIDTH}) 1fr`,
+    cols: (tzCount: number, tzWidth: string) =>
+      `repeat(${tzCount}, ${tzWidth}) 1fr`,
     rows: (h: number) => `48px repeat(24, ${h}px)`,
   },
   week: {
-    cols: (tzCount: number) =>
-      `repeat(${tzCount}, ${TIMEZONE_COL_WIDTH}) repeat(7, 1fr)`,
+    cols: (tzCount: number, tzWidth: string) =>
+      `repeat(${tzCount}, ${tzWidth}) repeat(7, 1fr)`,
     rows: (h: number) => `48px repeat(24, ${h}px)`,
   },
 } as const;
@@ -1943,18 +1954,27 @@ export default function AppCalendar({
     [visibleDays, now],
   );
 
+  const tzColWidth = useMemo(
+    () => getTimezoneColWidth(timezones, visibleDays.length),
+    [timezones, visibleDays.length],
+  );
+
   const timezoneHeaderCells = useMemo(
     () =>
       timezones.map((tz, i) => (
         <div
           key={tz}
-          className="select-none sticky top-0 z-16 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex items-center justify-center bg-background text-xs text-muted-foreground truncate px-1"
-          style={{ left: `calc(${TIMEZONE_COL_WIDTH} * ${i})` }}
+          className="select-none sticky top-0 z-16 hover:z-20 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex items-center justify-center bg-background text-xs text-muted-foreground px-1"
+          style={{ left: `calc(${tzColWidth} * ${i})` }}
         >
-          {timezones.length > 1 ? getTimezoneShortLabel(tz) : null}
+          {timezones.length > 1 ? (
+            <span className="truncate hover:absolute hover:inset-y-0 hover:left-0 hover:w-max hover:min-w-full hover:overflow-visible hover:bg-background hover:ring-1 hover:ring-inset hover:ring-border hover:px-1 hover:flex hover:items-center hover:justify-center">
+              {getTimezoneShortLabel(tz)}
+            </span>
+          ) : null}
         </div>
       )),
-    [timezones],
+    [timezones, tzColWidth],
   );
 
   // grid in day/week view
@@ -1966,7 +1986,7 @@ export default function AppCalendar({
             <div
               key={tz}
               className={`select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex text-sm items-center justify-center ${tz === timezones[0] && hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
-              style={{ left: `calc(${TIMEZONE_COL_WIDTH} * ${i})` }}
+              style={{ left: `calc(${tzColWidth} * ${i})` }}
             >
               {getTimezoneHourLabel(visibleDays[0]?.date ?? currentDate, hour, tz)}
             </div>
@@ -2055,6 +2075,7 @@ export default function AppCalendar({
       editingEventFirstDayIndex,
       selectedEvents,
       timezones,
+      tzColWidth,
       currentDate,
     ],
   );
@@ -2246,12 +2267,12 @@ export default function AppCalendar({
         </Popover>
       </nav>
 
-      <div className="flex-1 overflow-hidden relative">
+      <div className="@container flex-1 overflow-hidden relative">
         <div
           ref={gridRef}
           className="touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
           style={{
-            gridTemplateColumns: cols(timezones.length),
+            gridTemplateColumns: cols(timezones.length, tzColWidth),
             gridTemplateRows: rows(hourHeight),
           }}
           onTouchStart={gridTouchStart}

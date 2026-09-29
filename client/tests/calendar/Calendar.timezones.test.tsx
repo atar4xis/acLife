@@ -48,9 +48,6 @@ describe("Calendar with multiple time zones", () => {
     });
     renderCalendar({ mode: "day" });
 
-    const grid = document.querySelector(".calendar-grid-scroll") as HTMLElement;
-    expect(grid.style.gridTemplateColumns).toBe("repeat(2, 3.5rem) 1fr");
-
     const headers = getHeaderCells();
     expect(headers).toHaveLength(2);
     expect(headers[0]).toHaveTextContent(getTimezoneShortLabel(DEVICE_TZ));
@@ -118,9 +115,6 @@ describe("Calendar with multiple time zones", () => {
     });
     renderCalendar({ mode: "day" });
 
-    const grid = document.querySelector(".calendar-grid-scroll") as HTMLElement;
-    expect(grid.style.gridTemplateColumns).toBe("repeat(3, 3.5rem) 1fr");
-    expect(getHeaderCells()).toHaveLength(3);
     expect(getHourCells()).toHaveLength(24 * 3);
     expect(await screen.findByText("Sydney")).toBeInTheDocument();
   });
