@@ -1,9 +1,9 @@
-import type { SettingKey } from "@/lib/settingsDefaults";
+import type { SettingKey, StoreKey } from "@/lib/settingsDefaults";
 
 export interface SettingItem {
   id: string;
   label: string;
-  settingKey?: SettingKey;
+  settingKey?: SettingKey | StoreKey;
 }
 
 export interface SettingsSection {
@@ -31,7 +31,7 @@ export const settingsCategories: SettingsCategory[] = [
         items: [
           { id: "theme-mode", label: "Theme mode", settingKey: "theme" },
           { id: "custom-theme", label: "Custom theme" },
-          { id: "presets-list", label: "User themes" },
+          { id: "presets-list", label: "User themes", settingKey: "presets" },
         ],
       },
       {
@@ -45,7 +45,13 @@ export const settingsCategories: SettingsCategory[] = [
       {
         id: "colors",
         label: "Colors",
-        items: [{ id: "colors-overrides", label: "Color overrides" }],
+        items: [
+          {
+            id: "colors-overrides",
+            label: "Color overrides",
+            settingKey: "colors",
+          },
+        ],
       },
     ],
   },
@@ -119,7 +125,16 @@ export const settingsCategories: SettingsCategory[] = [
             label: "Week start",
             settingKey: "weekStartsOn",
           },
-          { id: "calendar-timezones-list", label: "Time zones" },
+          {
+            id: "calendar-default-timezone",
+            label: "Default time zone",
+            settingKey: "defaultTimezone",
+          },
+          {
+            id: "calendar-timezones-list",
+            label: "Time zones",
+            settingKey: "timezones",
+          },
         ],
       },
       {
@@ -176,6 +191,7 @@ export const settingsCategories: SettingsCategory[] = [
           {
             id: "calendar-event-editor-color-presets",
             label: "Color presets",
+            settingKey: "eventColorPresets",
           },
           {
             id: "calendar-event-editor-add-colors-automatically",
@@ -207,6 +223,11 @@ export const settingsCategories: SettingsCategory[] = [
     label: "Sync",
     hideOffline: true,
     sections: [
+      {
+        id: "settings-sync",
+        label: "Settings",
+        items: [{ id: "sync-settings-enabled", label: "Sync settings" }],
+      },
       {
         id: "push-service",
         label: "Push service",
@@ -272,7 +293,7 @@ const keyLabels = new Map(
   ),
 );
 
-export function settingLabelByKey(settingKey: SettingKey): string {
+export function settingLabelByKey(settingKey: SettingKey | StoreKey): string {
   const label = keyLabels.get(settingKey);
   if (!label) throw new Error(`Unknown setting key: ${settingKey}`);
   return label;

@@ -47,6 +47,7 @@ import { sectionLabel, settingLabel } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
 import SettingsLabel from "../SettingsLabel";
+import SyncToggle from "../SyncToggle";
 import SettingsSelect from "../SettingsSelect";
 
 const THEME_OPTIONS: { value: Theme; label: string }[] = [
@@ -259,7 +260,10 @@ const PresetsList = memo(function PresetsList() {
 
   return (
     <div className="flex flex-col gap-4" id="presets-list">
-      <FieldTitle>{settingLabel("presets-list")}</FieldTitle>
+      <div className="flex items-center gap-1.5">
+        <FieldTitle>{settingLabel("presets-list")}</FieldTitle>
+        <SyncToggle settingKey="presets" />
+      </div>
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-1 gap-2">
           <Input
@@ -659,15 +663,18 @@ const ColorsSection = memo(function ColorsSection({
       label={sectionLabel("colors")}
       sectionRefs={sectionRefs}
       action={
-        theme === "custom" && (
-          <button
-            type="button"
-            onClick={resetColors}
-            className="text-muted-foreground hover:text-foreground text-sm"
-          >
-            Reset
-          </button>
-        )
+        <div className="flex items-center gap-2">
+          <SyncToggle settingKey="colors" />
+          {theme === "custom" && (
+            <button
+              type="button"
+              onClick={resetColors}
+              className="text-muted-foreground hover:text-foreground text-sm"
+            >
+              Reset
+            </button>
+          )}
+        </div>
       }
     >
       <ColorGrid variables={GENERAL_COLOR_VARS} />

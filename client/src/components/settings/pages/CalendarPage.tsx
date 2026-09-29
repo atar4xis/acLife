@@ -49,6 +49,7 @@ import { sectionLabel, settingLabel } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
 import SettingsLabel from "../SettingsLabel";
+import SyncToggle from "../SyncToggle";
 import SettingsSelect from "../SettingsSelect";
 
 const TimezonesField = memo(function TimezonesField() {
@@ -119,9 +120,12 @@ const TimezonesField = memo(function TimezonesField() {
   return (
     <FieldGroup className="mt-1 gap-5">
       <Field orientation="responsive">
-        <FieldTitle className="flex-auto font-normal">
-          Default time zone
-        </FieldTitle>
+        <div className="flex flex-auto items-center gap-1.5">
+          <FieldTitle className="font-normal">
+            {settingLabel("calendar-default-timezone")}
+          </FieldTitle>
+          <SyncToggle settingKey="defaultTimezone" />
+        </div>
         <SearchableSelect
           className="w-full shrink-0 @md/field-group:w-[250px]!"
           options={allOptions}
@@ -133,9 +137,12 @@ const TimezonesField = memo(function TimezonesField() {
 
       <Field orientation="responsive">
         <FieldContent>
-          <FieldTitle className="font-normal">
-            Additional time zones
-          </FieldTitle>
+          <div className="flex items-center gap-1.5">
+            <FieldTitle className="font-normal">
+              Additional time zones
+            </FieldTitle>
+            <SyncToggle settingKey="timezones" />
+          </div>
           <FieldDescription>
             Shown alongside the default time zone on the grid.
           </FieldDescription>
@@ -265,6 +272,7 @@ const ColorPresetsField = memo(function ColorPresetsField() {
             <FieldTitle>
               {settingLabel("calendar-event-editor-color-presets")}
             </FieldTitle>
+            <SyncToggle settingKey="eventColorPresets" />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button

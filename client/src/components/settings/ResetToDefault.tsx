@@ -14,6 +14,7 @@ export default function ResetToDefault({ onClick }: { onClick: () => void }) {
           type="button"
           variant="ghost"
           size="icon"
+          aria-label="Reset to default"
           className="size-5 text-muted-foreground hover:text-foreground"
           onClick={onClick}
         >
