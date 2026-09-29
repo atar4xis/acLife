@@ -1,4 +1,6 @@
-import { afterEach, beforeEach, expect, vi } from "vitest";
+import type { ComponentProps } from "react";
+import { afterEach, beforeEach, expect, vi, type Mock } from "vitest";
+import type { ViewMode } from "../../src/types/calendar/ViewMode.ts";
 import {
   act,
   fireEvent,
@@ -96,8 +98,8 @@ export const renderCalendar = ({
 }: {
   events?: CalendarEvent[];
   mode?: "day" | "week";
-  saveEvents?: ReturnType<typeof vi.fn>;
-  setMode?: ReturnType<typeof vi.fn>;
+  saveEvents?: Mock<ComponentProps<typeof AppCalendar>["saveEvents"]>;
+  setMode?: Mock<(mode: ViewMode) => void>;
 } = {}) => {
   const user = userEvent.setup();
 

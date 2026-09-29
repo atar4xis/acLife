@@ -13,7 +13,7 @@ type UserContextValue = {
   setUser: (user: User | null) => void;
   setMasterKey: (key: CryptoKey | null) => void;
   setBucketKey: (key: CryptoKey | null) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   checkLogin: (password?: string) => Promise<User | void>;
 };
 
@@ -25,7 +25,7 @@ const UserContext = createContext<UserContextValue>({
   setUser: () => {},
   setMasterKey: () => {},
   setBucketKey: () => {},
-  logout: () => {},
+  logout: async () => {},
   checkLogin: async () => {},
 });
 

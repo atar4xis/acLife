@@ -30,10 +30,22 @@ class FakeArgonWorker {
 vi.stubGlobal("Worker", FakeArgonWorker);
 
 const {
+  exportKeyPair,
   generateMasterKeyEnvelope,
+  importKeyPair,
   rewrapMasterKeyEnvelope,
+  unwrapKeyPairWithPin,
   unwrapMasterKeyEnvelope,
+  wrapKeyPairWithPin,
 } = await import("../../src/lib/crypt.ts");
+
+const sign = async (key: CryptoKey) =>
+  new Uint8Array(
+    await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("probe")),
+  );
+
+const rawKey = async (key: CryptoKey) =>
+  new Uint8Array(await crypto.subtle.exportKey("raw", key));
 
 describe("key envelopes", () => {
   beforeEach(() => {
@@ -100,5 +112,79 @@ describe("key envelopes", () => {
       crypto.subtle.exportKey("raw", unwrapped.masterKey),
     ]);
     expect(new Uint8Array(unwrappedRaw)).toEqual(new Uint8Array(originalRaw));
+  }, 30000);
+});
+
+describe("key pair export and PIN wrapping", () => {
+  beforeEach(() => {
+    vi.stubGlobal("Worker", FakeArgonWorker);
+  }, 30000);
+
+  const makeKeys = async () => {
+    const keys = await generateMasterKeyEnvelope("password-123!", true);
+    return {
+      ...keys,
+      exported: await exportKeyPair(keys.masterKey, keys.bucketKey),
+    };
+  };
+
+  it("round-trips a key pair through export and import", async () => {
+    const { masterKey, bucketKey, exported } = await makeKeys();
+    const imported = await importKeyPair(
+      exported.masterKeyB64,
+      exported.bucketKeyB64,
+    );
+
+    expect(await rawKey(imported.masterKey)).toEqual(await rawKey(masterKey));
+    expect(await sign(imported.bucketKey)).toEqual(await sign(bucketKey));
+  }, 30000);
+
+  it("refuses to export non-extractable keys", async () => {
+    const { masterKey, bucketKey } =
+      await generateMasterKeyEnvelope("password-123!");
+
+    await expect(exportKeyPair(masterKey, bucketKey)).rejects.toThrow();
+  }, 30000);
+
+  it("unwraps a PIN-wrapped key pair with the right PIN", async () => {
+    const { masterKey, bucketKey, exported } = await makeKeys();
+    const wrapped = await wrapKeyPairWithPin(
+      "1234",
+      exported.masterKeyB64,
+      exported.bucketKeyB64,
+    );
+
+    const unwrapped = await unwrapKeyPairWithPin(
+      "1234",
+      wrapped.salt,
+      wrapped.encrypted,
+    );
+
+    expect(await rawKey(unwrapped.masterKey)).toEqual(await rawKey(masterKey));
+    expect(await sign(unwrapped.bucketKey)).toEqual(await sign(bucketKey));
+  }, 30000);
+
+  it("rejects unwrapping with the wrong PIN", async () => {
+    const { exported } = await makeKeys();
+    const wrapped = await wrapKeyPairWithPin(
+      "1234",
+      exported.masterKeyB64,
+      exported.bucketKeyB64,
+    );
+
+    await expect(
+      unwrapKeyPairWithPin("4321", wrapped.salt, wrapped.encrypted),
+    ).rejects.toThrow();
+  }, 30000);
+
+  it("uses a fresh salt for every wrap", async () => {
+    const { exported } = await makeKeys();
+    const [a, b] = await Promise.all([
+      wrapKeyPairWithPin("1234", exported.masterKeyB64, exported.bucketKeyB64),
+      wrapKeyPairWithPin("1234", exported.masterKeyB64, exported.bucketKeyB64),
+    ]);
+
+    expect(a.salt).not.toBe(b.salt);
+    expect(a.encrypted).not.toBe(b.encrypted);
   }, 30000);
 });
