@@ -1,16 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { DateTime, Settings } from "luxon";
-import {
-  CalendarSettingsProvider,
-  useCalendarSettings,
-} from "../../src/context/CalendarSettingsContext.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
+import { useCalendarSettings } from "../../src/context/CalendarSettingsContext.tsx";
 import { getDeviceTimezone } from "../../src/lib/calendar/timezone.ts";
+import { seedSettings, readSettings } from "../settingsStorage.ts";
 
-const STORAGE_KEY = "acl-calendar-settings";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <CalendarSettingsProvider>{children}</CalendarSettingsProvider>
+  <SettingsStoreProvider>{children}</SettingsStoreProvider>
 );
 
 describe("useCalendarSettings time zones", () => {
@@ -24,13 +22,10 @@ describe("useCalendarSettings time zones", () => {
   });
 
   it("loads persisted time zones from localStorage", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
+    seedSettings({
         timezones: ["Asia/Tokyo", "Europe/London"],
         defaultTimezone: "Asia/Tokyo",
-      }),
-    );
+      });
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
@@ -39,13 +34,10 @@ describe("useCalendarSettings time zones", () => {
   });
 
   it("falls back to the first time zone when the stored default isn't in the list", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
+    seedSettings({
         timezones: ["Asia/Tokyo", "Europe/London"],
         defaultTimezone: "America/Chicago",
-      }),
-    );
+      });
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
@@ -53,7 +45,7 @@ describe("useCalendarSettings time zones", () => {
   });
 
   it("falls back to the device time zone when the stored list is empty", () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ timezones: [] }));
+    seedSettings({ timezones: [] });
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
@@ -62,13 +54,10 @@ describe("useCalendarSettings time zones", () => {
   });
 
   it("reorders the stored list so the default time zone is always first", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
+    seedSettings({
         timezones: ["Europe/London", "Asia/Tokyo"],
         defaultTimezone: "Asia/Tokyo",
-      }),
-    );
+      });
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
@@ -76,10 +65,7 @@ describe("useCalendarSettings time zones", () => {
   });
 
   it("drops an unresolvable persisted time zone like Factory and falls back to the device time zone", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ timezones: ["Factory"], defaultTimezone: "Factory" }),
-    );
+    seedSettings({ timezones: ["Factory"], defaultTimezone: "Factory" });
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
     const deviceTimezone = getDeviceTimezone();
@@ -89,13 +75,10 @@ describe("useCalendarSettings time zones", () => {
   });
 
   it("drops only the unresolvable entries, keeping valid additional time zones", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
+    seedSettings({
         timezones: ["Factory", "Asia/Tokyo"],
         defaultTimezone: "Factory",
-      }),
-    );
+      });
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
@@ -104,10 +87,7 @@ describe("useCalendarSettings time zones", () => {
   });
 
   it("never sets Luxon's global default zone to an unresolvable persisted zone", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ timezones: ["Factory"], defaultTimezone: "Factory" }),
-    );
+    seedSettings({ timezones: ["Factory"], defaultTimezone: "Factory" });
 
     renderHook(() => useCalendarSettings(), { wrapper });
 
@@ -115,10 +95,7 @@ describe("useCalendarSettings time zones", () => {
   });
 
   it("falls back to the default device time zone when lastSeenDeviceTimezone is missing", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ lastSeenDeviceTimezone: "" }),
-    );
+    seedSettings({ lastSeenDeviceTimezone: "" });
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
@@ -144,7 +121,7 @@ describe("useCalendarSettings time zones", () => {
       result.current.setSetting("defaultTimezone", "Asia/Tokyo");
     });
 
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    const stored = readSettings();
     expect(stored.timezones).toEqual(["Asia/Tokyo"]);
     expect(stored.defaultTimezone).toBe("Asia/Tokyo");
   });

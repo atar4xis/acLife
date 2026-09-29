@@ -1,16 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import {
-  DARK_COLORS,
-  LIGHT_COLORS,
   ThemeProvider,
   useTheme,
 } from "../../src/components/ThemeProvider.tsx";
-
-const STORAGE_KEY = "test-theme";
+import { DARK_COLORS, LIGHT_COLORS } from "../../src/lib/themeColors.ts";
+import { readSettings } from "../settingsStorage.ts";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <ThemeProvider storageKey={STORAGE_KEY}>{children}</ThemeProvider>
+  <SettingsStoreProvider>
+    <ThemeProvider>{children}</ThemeProvider>
+  </SettingsStoreProvider>
 );
 
 describe("useTheme", () => {
@@ -40,9 +41,7 @@ describe("useTheme", () => {
 
     expect(result.current.theme).toBe("custom");
     expect(result.current.colors.sidebar).toBe("#123456");
-    expect(JSON.parse(localStorage.getItem(`${STORAGE_KEY}-colors`)!)).toEqual(
-      { sidebar: "#123456" },
-    );
+    expect(readSettings().colors).toEqual({ sidebar: "#123456" });
   });
 
   it("resetColors clears overrides without changing the theme mode", () => {
@@ -57,7 +56,7 @@ describe("useTheme", () => {
 
     expect(result.current.colors).toEqual({});
     expect(result.current.theme).toBe("custom");
-    expect(localStorage.getItem(`${STORAGE_KEY}-colors`)).toBeNull();
+    expect(readSettings().colors).toEqual({});
   });
 
   it("setTheme discards color overrides when leaving custom", () => {
@@ -72,7 +71,7 @@ describe("useTheme", () => {
 
     expect(result.current.theme).toBe("dark");
     expect(result.current.colors).toEqual({});
-    expect(localStorage.getItem(`${STORAGE_KEY}-colors`)).toBeNull();
+    expect(readSettings().colors).toEqual({});
   });
 
   it("setFontFamily and setFontSize persist to localStorage", () => {
@@ -87,10 +86,8 @@ describe("useTheme", () => {
 
     expect(result.current.fontFamily).toBe("Fira Code");
     expect(result.current.fontSize).toBe(18);
-    expect(localStorage.getItem(`${STORAGE_KEY}-font-family`)).toBe(
-      "Fira Code",
-    );
-    expect(localStorage.getItem(`${STORAGE_KEY}-font-size`)).toBe("18");
+    expect(readSettings().fontFamily).toBe("Fira Code");
+    expect(readSettings().fontSize).toBe(18);
   });
 
   it("savePreset snapshots the full resolved palette, not just overrides", () => {
@@ -117,9 +114,7 @@ describe("useTheme", () => {
     expect(preset.colors.background).toBe(LIGHT_COLORS.background);
     expect(preset.fontFamily).toBe("Inter");
     expect(preset.fontSize).toBe(20);
-    expect(
-      JSON.parse(localStorage.getItem(`${STORAGE_KEY}-presets`)!),
-    ).toHaveLength(1);
+    expect(readSettings().presets).toHaveLength(1);
   });
 
   it("savePreset captures the dark palette when the dark base is active", () => {
@@ -397,7 +392,7 @@ describe("useTheme", () => {
     });
 
     expect(result.current.presets.map((p) => p.name)).toEqual(["B", "A"]);
-    const stored = JSON.parse(localStorage.getItem(`${STORAGE_KEY}-presets`)!);
+    const stored = readSettings().presets;
     expect(stored.map((p: { name: string }) => p.name)).toEqual(["B", "A"]);
   });
 });

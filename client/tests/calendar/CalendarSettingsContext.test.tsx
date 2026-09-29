@@ -1,21 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import {
-  CalendarSettingsProvider,
-  useCalendarSettings,
-} from "../../src/context/CalendarSettingsContext.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
+import { useCalendarSettings } from "../../src/context/CalendarSettingsContext.tsx";
+import { seedSettings, readSettings } from "../settingsStorage.ts";
 
-const STORAGE_KEY = "acl-calendar-settings";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <CalendarSettingsProvider>{children}</CalendarSettingsProvider>
+  <SettingsStoreProvider>{children}</SettingsStoreProvider>
 );
 
 describe("useCalendarSettings", () => {
-  it("throws when used outside a CalendarSettingsProvider", () => {
+  it("throws when used outside a settings provider", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => renderHook(() => useCalendarSettings())).toThrow(
-      "useCalendarSettings must be used within a CalendarSettingsProvider",
+      "useSettingsStore must be used within a SettingsStoreProvider",
     );
     spy.mockRestore();
   });
@@ -33,10 +31,7 @@ describe("useCalendarSettings", () => {
   });
 
   it("loads persisted settings from localStorage", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ weekStartsOn: "sun", snapMinutes: 15 }),
-    );
+    seedSettings({ weekStartsOn: "sun", snapMinutes: 15 });
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
@@ -47,10 +42,7 @@ describe("useCalendarSettings", () => {
   });
 
   it("falls back to the default resync interval when stored value is falsy", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ resyncIntervalMinutes: 0 }),
-    );
+    seedSettings({ resyncIntervalMinutes: 0 });
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
@@ -58,7 +50,7 @@ describe("useCalendarSettings", () => {
   });
 
   it("recovers to defaults when stored JSON is malformed", () => {
-    localStorage.setItem(STORAGE_KEY, "{not json");
+    localStorage.setItem("acl-settings", "{not json");
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
@@ -74,7 +66,7 @@ describe("useCalendarSettings", () => {
     });
 
     expect(result.current.weekStartsOn).toBe(7);
-    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).weekStartsOn).toBe(
+    expect(readSettings().weekStartsOn).toBe(
       7,
     );
   });

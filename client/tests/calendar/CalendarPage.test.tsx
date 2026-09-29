@@ -3,8 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import CalendarPage from "../../src/components/settings/pages/CalendarPage.tsx";
-import { CalendarSettingsProvider } from "../../src/context/CalendarSettingsContext.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import type { SectionRefs } from "../../src/components/settings/SettingsSection.tsx";
+import { readSettings } from "../settingsStorage.ts";
 
 function Harness() {
   const sectionRefs: SectionRefs = useRef(new Map());
@@ -13,9 +14,9 @@ function Harness() {
 
 const renderCalendarPage = () =>
   render(
-    <CalendarSettingsProvider>
+    <SettingsStoreProvider>
       <Harness />
-    </CalendarSettingsProvider>,
+    </SettingsStoreProvider>,
   );
 
 describe("CalendarPage", () => {
@@ -166,9 +167,7 @@ describe("CalendarPage", () => {
 
     expect(agendaSwitch).not.toBeChecked();
 
-    const stored = JSON.parse(
-      localStorage.getItem("acl-calendar-settings")!,
-    );
+    const stored = readSettings();
     expect(stored.agendaEnabled).toBe(false);
   });
 
@@ -182,9 +181,7 @@ describe("CalendarPage", () => {
 
     expect(screen.getByText("4 days")).toBeInTheDocument();
 
-    const stored = JSON.parse(
-      localStorage.getItem("acl-calendar-settings")!,
-    );
+    const stored = readSettings();
     expect(stored.agendaRangeDays).toBe(4);
   });
 
@@ -213,9 +210,7 @@ describe("CalendarPage", () => {
 
     // auto-save is debounced, so wait for the commit
     await waitFor(() => {
-      const stored = JSON.parse(
-        localStorage.getItem("acl-calendar-settings")!,
-      );
+      const stored = readSettings();
       expect(stored.defaultEventName).toBe("focus block");
     });
   });
@@ -229,9 +224,7 @@ describe("CalendarPage", () => {
     await user.type(input, "focus block");
     await user.tab();
 
-    const stored = JSON.parse(
-      localStorage.getItem("acl-calendar-settings")!,
-    );
+    const stored = readSettings();
     expect(stored.defaultEventName).toBe("focus block");
   });
 });

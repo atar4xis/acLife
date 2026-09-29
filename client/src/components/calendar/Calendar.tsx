@@ -1827,7 +1827,7 @@ export default function AppCalendar({
     return () => clearInterval(interval);
   }, []);
 
-  // setZone explicitly since CalendarSettingsProvider's zone update effect runs after this one
+  // re-zone explicitly, since the state holds a DateTime in the previous zone
   useEffect(() => {
     setNow(DateTime.now().setZone(defaultTimezone));
   }, [defaultTimezone]);

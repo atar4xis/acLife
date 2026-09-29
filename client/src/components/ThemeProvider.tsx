@@ -1,118 +1,19 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { readJSON } from "@/lib/utils";
+import { createContext, useContext, useEffect, useState } from "react";
+import {
+  useSettingsSelector,
+  useSettingsStore,
+} from "@/context/SettingsStoreContext";
 import { defaultThemeSettings } from "@/lib/settingsDefaults";
-
-export type Theme = "dark" | "light" | "system" | "custom";
-
-// css custom properties that make up the app's color palette, without the leading "--"
-// eslint-disable-next-line
-export const THEME_COLOR_VARS = [
-  "background",
-  "foreground",
-  "card",
-  "card-foreground",
-  "popover",
-  "popover-foreground",
-  "primary",
-  "primary-foreground",
-  "secondary",
-  "secondary-foreground",
-  "muted",
-  "muted-foreground",
-  "accent",
-  "accent-foreground",
-  "destructive",
-  "border",
-  "input",
-  "ring",
-  "sidebar",
-  "sidebar-foreground",
-  "sidebar-primary",
-  "sidebar-primary-foreground",
-  "sidebar-accent",
-  "sidebar-accent-foreground",
-  "sidebar-border",
-  "sidebar-ring",
-] as const;
-
-export type ThemeColorVar = (typeof THEME_COLOR_VARS)[number];
-
-export type ThemeColors = Partial<Record<ThemeColorVar, string>>;
-
-// mirrors the :root / .dark palettes in index.css
-// eslint-disable-next-line
-export const LIGHT_COLORS: Record<ThemeColorVar, string> = {
-  background: "oklch(0.975 0 0)",
-  foreground: "oklch(0.145 0 0)",
-  card: "oklch(1 0 0)",
-  "card-foreground": "oklch(0.145 0 0)",
-  popover: "oklch(1 0 0)",
-  "popover-foreground": "oklch(0.145 0 0)",
-  primary: "oklch(0.205 0 0)",
-  "primary-foreground": "oklch(0.985 0 0)",
-  secondary: "oklch(0.97 0 0)",
-  "secondary-foreground": "oklch(0.205 0 0)",
-  muted: "oklch(0.97 0 0)",
-  "muted-foreground": "oklch(0.556 0 0)",
-  accent: "oklch(0.97 0 0)",
-  "accent-foreground": "oklch(0.205 0 0)",
-  destructive: "oklch(0.577 0.245 27.325)",
-  border: "oklch(0.922 0 0)",
-  input: "oklch(0.812 0 0)",
-  ring: "oklch(0.708 0 0)",
-  sidebar: "oklch(0.985 0 0)",
-  "sidebar-foreground": "oklch(0.145 0 0)",
-  "sidebar-primary": "oklch(0.205 0 0)",
-  "sidebar-primary-foreground": "oklch(0.985 0 0)",
-  "sidebar-accent": "oklch(0.97 0 0)",
-  "sidebar-accent-foreground": "oklch(0.205 0 0)",
-  "sidebar-border": "oklch(0.922 0 0)",
-  "sidebar-ring": "oklch(0.708 0 0)",
-};
-
-// eslint-disable-next-line
-export const DARK_COLORS: Record<ThemeColorVar, string> = {
-  background: "oklch(0.145 0 0)",
-  foreground: "oklch(0.985 0 0)",
-  card: "oklch(0.205 0 0)",
-  "card-foreground": "oklch(0.985 0 0)",
-  popover: "oklch(0.205 0 0)",
-  "popover-foreground": "oklch(0.985 0 0)",
-  primary: "oklch(0.922 0 0)",
-  "primary-foreground": "oklch(0.205 0 0)",
-  secondary: "oklch(0.269 0 0)",
-  "secondary-foreground": "oklch(0.985 0 0)",
-  muted: "oklch(0.269 0 0)",
-  "muted-foreground": "oklch(0.708 0 0)",
-  accent: "oklch(0.269 0 0)",
-  "accent-foreground": "oklch(0.985 0 0)",
-  destructive: "oklch(0.704 0.191 22.216)",
-  border: "oklch(1 0 0 / 10%)",
-  input: "oklch(1 0 0 / 15%)",
-  ring: "oklch(0.556 0 0)",
-  sidebar: "oklch(0.205 0 0)",
-  "sidebar-foreground": "oklch(0.985 0 0)",
-  "sidebar-primary": "oklch(0.488 0.243 264.376)",
-  "sidebar-primary-foreground": "oklch(0.985 0 0)",
-  "sidebar-accent": "oklch(0.269 0 0)",
-  "sidebar-accent-foreground": "oklch(0.985 0 0)",
-  "sidebar-border": "oklch(1 0 0 / 10%)",
-  "sidebar-ring": "oklch(0.556 0 0)",
-};
+import {
+  DARK_COLORS,
+  LIGHT_COLORS,
+  THEME_COLOR_VARS,
+  type ThemeColorVar,
+} from "@/lib/themeColors";
+import type { Theme, ThemeColors, ThemePreset } from "@/types/Theme";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
-  defaultTheme?: Theme;
-  storageKey?: string;
-};
-
-export type ThemePreset = {
-  id: string;
-  name: string;
-  base?: "light" | "dark";
-  colors: ThemeColors;
-  fontFamily: string;
-  fontSize: number;
 };
 
 type ThemeProviderState = {
@@ -159,40 +60,18 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
-export function ThemeProvider({
-  children,
-  defaultTheme = defaultThemeSettings.theme,
-  storageKey = "vite-ui-theme",
-}: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
-  );
-  const [colors, setColors] = useState<ThemeColors>(() =>
-    readJSON(`${storageKey}-colors`, {}),
-  );
-  const [fontFamily, setFontFamilyState] = useState<string>(
-    () =>
-      localStorage.getItem(`${storageKey}-font-family`) ??
-      defaultThemeSettings.fontFamily,
-  );
-  const [fontSize, setFontSizeState] = useState<number>(
-    () =>
-      Number(localStorage.getItem(`${storageKey}-font-size`)) ||
-      defaultThemeSettings.fontSize,
-  );
-  const [presets, setPresets] = useState<ThemePreset[]>(() =>
-    readJSON(`${storageKey}-presets`, []),
-  );
-  const [activePresetId, setActivePresetId] = useState<string | null>(() =>
-    localStorage.getItem(`${storageKey}-active-preset`),
-  );
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  const store = useSettingsStore();
+  const { theme, colors, fontFamily, fontSize, presets, activePresetId } =
+    useSettingsSelector(({ settings }) => ({
+      theme: settings.theme,
+      colors: settings.colors,
+      fontFamily: settings.fontFamily,
+      fontSize: settings.fontSize,
+      presets: settings.presets,
+      activePresetId: settings.activePresetId,
+    }));
   const [resolvedBase, setResolvedBase] = useState<"light" | "dark">("light");
-  const presetsRef = useRef(presets);
-  const lastBaseRef = useRef<"light" | "dark">(
-    localStorage.getItem(`${storageKey}-last-base`) === "dark"
-      ? "dark"
-      : "light",
-  );
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -201,15 +80,14 @@ export function ThemeProvider({
     let base: "light" | "dark";
     if (theme === "custom") {
       // custom keeps whatever base was active before switching to it
-      base = lastBaseRef.current;
+      base = store.getSnapshot().lastBase;
     } else {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
         .matches
         ? "dark"
         : "light";
       base = theme === "light" || theme === "dark" ? theme : systemTheme;
-      lastBaseRef.current = base;
-      localStorage.setItem(`${storageKey}-last-base`, base);
+      store.setSetting("lastBase", base);
     }
 
     root.classList.add(base);
@@ -223,7 +101,7 @@ export function ThemeProvider({
         root.style.removeProperty(`--${key}`);
       }
     }
-  }, [theme, colors, storageKey]);
+  }, [theme, colors, store]);
 
   useEffect(() => {
     document.body.style.fontFamily = fontFamily || "";
@@ -233,56 +111,38 @@ export function ThemeProvider({
     document.documentElement.style.fontSize = `${fontSize}px`;
   }, [fontSize]);
 
-  const clearActivePreset = () => {
-    localStorage.removeItem(`${storageKey}-active-preset`);
-    setActivePresetId(null);
-  };
-
-  const writePresets = (next: ThemePreset[]) => {
-    presetsRef.current = next;
-    localStorage.setItem(`${storageKey}-presets`, JSON.stringify(next));
-    setPresets(next);
-  };
+  const writePresets = (next: ThemePreset[]) =>
+    store.setSetting("presets", next);
 
   const value: ThemeProviderState = {
     theme,
     setTheme: (next) => {
-      localStorage.setItem(storageKey, next);
-      setThemeState(next);
-      clearActivePreset();
-
-      // discard overrides so they don't resurface if custom is picked again
-      if (next !== "custom") {
-        localStorage.removeItem(`${storageKey}-colors`);
-        setColors({});
-      }
+      store.setSettings({
+        theme: next,
+        activePresetId: null,
+        // discard overrides so they don't resurface if custom is picked again
+        ...(next !== "custom" && { colors: {} }),
+      });
     },
     resolvedBase,
     colors,
     setColor: (variable, colorValue) => {
-      const next = { ...colors, [variable]: colorValue };
-      localStorage.setItem(`${storageKey}-colors`, JSON.stringify(next));
-      localStorage.setItem(storageKey, "custom");
-      setColors(next);
-      setThemeState("custom");
-      clearActivePreset();
+      store.setSettings({
+        colors: { ...colors, [variable]: colorValue },
+        theme: "custom",
+        activePresetId: null,
+      });
     },
     resetColors: () => {
-      localStorage.removeItem(`${storageKey}-colors`);
-      setColors({});
-      clearActivePreset();
+      store.setSettings({ colors: {}, activePresetId: null });
     },
     fontFamily,
     setFontFamily: (next) => {
-      localStorage.setItem(`${storageKey}-font-family`, next);
-      setFontFamilyState(next);
-      clearActivePreset();
+      store.setSettings({ fontFamily: next, activePresetId: null });
     },
     fontSize,
     setFontSize: (next) => {
-      localStorage.setItem(`${storageKey}-font-size`, String(next));
-      setFontSizeState(next);
-      clearActivePreset();
+      store.setSettings({ fontSize: next, activePresetId: null });
     },
     presets,
     activePresetId,
@@ -296,52 +156,47 @@ export function ThemeProvider({
         fontFamily,
         fontSize,
       };
-      const existing = presetsRef.current.find((p) => p.name === name);
+      const current = store.getSnapshot().presets;
+      const existing = current.find((p) => p.name === name);
       writePresets(
         existing
-          ? presetsRef.current.map((p) =>
+          ? current.map((p) =>
               p === existing ? { ...preset, id: existing.id } : p,
             )
-          : [...presetsRef.current, preset],
+          : [...current, preset],
       );
     },
     applyPreset: (preset) => {
-      if (preset.base) {
-        lastBaseRef.current = preset.base;
-        localStorage.setItem(`${storageKey}-last-base`, preset.base);
-      }
-      localStorage.setItem(
-        `${storageKey}-colors`,
-        JSON.stringify(preset.colors),
-      );
-      localStorage.setItem(storageKey, "custom");
-      localStorage.setItem(`${storageKey}-font-family`, preset.fontFamily);
-      localStorage.setItem(`${storageKey}-font-size`, String(preset.fontSize));
-      setColors(preset.colors);
-      setThemeState("custom");
-      setFontFamilyState(preset.fontFamily);
-      setFontSizeState(preset.fontSize);
-      localStorage.setItem(`${storageKey}-active-preset`, preset.id);
-      setActivePresetId(preset.id);
+      store.setSettings({
+        ...(preset.base && { lastBase: preset.base }),
+        colors: preset.colors,
+        theme: "custom",
+        fontFamily: preset.fontFamily,
+        fontSize: preset.fontSize,
+        activePresetId: preset.id,
+      });
     },
     deletePreset: (id) => {
-      writePresets(presetsRef.current.filter((p) => p.id !== id));
-      if (activePresetId === id) clearActivePreset();
+      const { presets: current, activePresetId: active } = store.getSnapshot();
+      store.setSettings({
+        presets: current.filter((p) => p.id !== id),
+        ...(active === id && { activePresetId: null }),
+      });
     },
     renamePreset: (id, name) => {
       writePresets(
-        presetsRef.current.map((p) => (p.id === id ? { ...p, name } : p)),
+        store
+          .getSnapshot()
+          .presets.map((p) => (p.id === id ? { ...p, name } : p)),
       );
     },
     reorderPresets: writePresets,
     importPreset: (preset) => {
-      const taken = new Set(presetsRef.current.map((p) => p.name));
+      const current = store.getSnapshot().presets;
+      const taken = new Set(current.map((p) => p.name));
       let name = preset.name;
       for (let n = 2; taken.has(name); n++) name = `${preset.name} ${n}`;
-      writePresets([
-        ...presetsRef.current,
-        { ...preset, name, id: crypto.randomUUID() },
-      ]);
+      writePresets([...current, { ...preset, name, id: crypto.randomUUID() }]);
     },
   };
 

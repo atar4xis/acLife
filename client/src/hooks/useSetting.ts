@@ -1,10 +1,8 @@
-import {
-  defaultCalendarSettings,
-  useCalendarSettings,
-} from "@/context/CalendarSettingsContext";
+import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useSecuritySettings } from "@/context/SecuritySettingsContext";
 import { useTheme } from "@/components/ThemeProvider";
 import {
+  defaultCalendarSettings,
   defaultSecuritySettings,
   defaultSettings,
   defaultThemeSettings,

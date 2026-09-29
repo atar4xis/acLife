@@ -6,10 +6,10 @@ import {
   getTimezoneShortLabel,
 } from "../../src/lib/calendar/timezone.ts";
 import { FIXED_NOW, renderCalendar, setupCalendarTests } from "./helpers";
+import { seedSettings } from "../settingsStorage.ts";
 
 setupCalendarTests();
 
-const STORAGE_KEY = "acl-calendar-settings";
 const DEVICE_TZ = getDeviceTimezone();
 
 if (["Asia/Tokyo", "Australia/Sydney"].includes(DEVICE_TZ)) {
@@ -19,7 +19,7 @@ if (["Asia/Tokyo", "Australia/Sydney"].includes(DEVICE_TZ)) {
 }
 
 const setCalendarSettings = (overrides: Record<string, unknown>) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+  seedSettings(overrides);
 };
 
 const getHourCells = () =>

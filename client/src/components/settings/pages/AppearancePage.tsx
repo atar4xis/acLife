@@ -9,16 +9,14 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 import {
   DARK_COLORS,
   LIGHT_COLORS,
   THEME_COLOR_VARS,
-  useTheme,
-  type Theme,
   type ThemeColorVar,
-  type ThemeColors,
-  type ThemePreset,
-} from "@/components/ThemeProvider";
+} from "@/lib/themeColors";
+import type { Theme, ThemeColors, ThemePreset } from "@/types/Theme";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
 import { useDeferredSliderValue } from "@/hooks/useDeferredSliderValue";

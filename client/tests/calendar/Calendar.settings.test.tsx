@@ -12,13 +12,13 @@ import {
   setupCalendarTests,
   timeToClientY,
 } from "./helpers";
+import { seedSettings } from "../settingsStorage.ts";
 
 setupCalendarTests();
 
-const STORAGE_KEY = "acl-calendar-settings";
 
 const setCalendarSettings = (overrides: Record<string, unknown>) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+  seedSettings(overrides);
 };
 
 describe("Calendar with custom settings", () => {

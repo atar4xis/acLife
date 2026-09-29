@@ -4,12 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { toast } from "sonner";
 import CalendarPage from "../../src/components/settings/pages/CalendarPage.tsx";
-import { CalendarSettingsProvider } from "../../src/context/CalendarSettingsContext.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import type { SectionRefs } from "../../src/components/settings/SettingsSection.tsx";
 import { getDeviceTimezone } from "../../src/lib/calendar/timezone.ts";
 import { dispatchWindowPointer, makeRect } from "./helpers.tsx";
+import { seedSettings, readSettings } from "../settingsStorage.ts";
 
-const STORAGE_KEY = "acl-calendar-settings";
 
 function Harness() {
   const sectionRefs: SectionRefs = useRef(new Map());
@@ -18,23 +18,20 @@ function Harness() {
 
 const renderCalendarPage = () =>
   render(
-    <CalendarSettingsProvider>
+    <SettingsStoreProvider>
       <Harness />
-    </CalendarSettingsProvider>,
+    </SettingsStoreProvider>,
   );
 
 const seedTimezones = (timezones: string[], defaultTimezone: string) => {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ timezones, defaultTimezone }),
-  );
+  seedSettings({ timezones, defaultTimezone });
 };
 
 const getStoredTimezones = (): string[] =>
-  JSON.parse(localStorage.getItem(STORAGE_KEY)!).timezones;
+  readSettings().timezones;
 
 const getStoredDefaultTimezone = (): string =>
-  JSON.parse(localStorage.getItem(STORAGE_KEY)!).defaultTimezone;
+  readSettings().defaultTimezone;
 
 // each additional-time-zone row renders [grip handle, "Set default", remove]
 const getAdditionalRow = (label: string | RegExp) => {

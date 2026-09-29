@@ -14,17 +14,14 @@ vi.mock("../../src/context/UserContext.tsx", () => ({
 }));
 
 import { renderCalendar, setupCalendarTests } from "./helpers";
+import { seedSettings } from "../settingsStorage.ts";
 
 setupCalendarTests();
 
-const STORAGE_KEY = "acl-calendar-settings";
 
 describe("Calendar resync interval", () => {
   it("schedules the resync interval using the configured resyncIntervalMinutes", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ resyncIntervalMinutes: 20 }),
-    );
+    seedSettings({ resyncIntervalMinutes: 20 });
     const setIntervalSpy = vi.spyOn(window, "setInterval");
 
     renderCalendar({ mode: "week" });

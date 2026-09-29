@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import AppearancePage from "../../src/components/settings/pages/AppearancePage.tsx";
 import { ThemeProvider } from "../../src/components/ThemeProvider.tsx";
 import type { SectionRefs } from "../../src/components/settings/SettingsSection.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 
 // jsdom's File/Blob implementation doesn't support .text() yet
 if (typeof File.prototype.text !== "function") {
@@ -19,8 +20,6 @@ if (typeof File.prototype.text !== "function") {
   };
 }
 
-const STORAGE_KEY = "test-appearance-theme";
-
 function Harness() {
   const sectionRefs: SectionRefs = useRef(new Map());
   return <AppearancePage sectionRefs={sectionRefs} />;
@@ -28,9 +27,11 @@ function Harness() {
 
 const renderAppearancePage = () =>
   render(
-    <ThemeProvider storageKey={STORAGE_KEY}>
-      <Harness />
-    </ThemeProvider>,
+    <SettingsStoreProvider>
+      <ThemeProvider>
+        <Harness />
+      </ThemeProvider>
+    </SettingsStoreProvider>,
   );
 
 async function savePresetNamed(name: string) {
@@ -295,13 +296,13 @@ describe("AppearancePage", () => {
       ["T1", "T2", "T3", "T4", "T5", "T6"].map((n) => makeThemeFile(n)),
     );
     await screen.findByText("T5");
+    // imports land one at a time, so wait for the sixth before asserting
+    const pageLabel = await screen.findByText("1 / 2");
 
     expect(screen.getByText("T1")).toBeInTheDocument();
     expect(screen.queryByText("T6")).not.toBeInTheDocument();
-    expect(screen.getByText("1 / 2")).toBeInTheDocument();
 
-    const [prev, next] = screen
-      .getByText("1 / 2")
+    const [prev, next] = pageLabel
       .parentElement!.querySelectorAll("button");
     expect(prev).toBeDisabled();
     await user.click(next);

@@ -3,9 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import TimezoneChangeDialog from "../../src/components/calendar/TimezoneChangeDialog.tsx";
-import { CalendarSettingsProvider } from "../../src/context/CalendarSettingsContext.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 
-const STORAGE_KEY = "acl-calendar-settings";
 
 vi.mock("@/lib/calendar/timezone", async (importOriginal) => {
   const actual =
@@ -17,20 +16,17 @@ vi.mock("@/lib/calendar/timezone", async (importOriginal) => {
 });
 
 import { getDeviceTimezone } from "@/lib/calendar/timezone";
+import { seedSettings, readSettings } from "../settingsStorage.ts";
 
 const mockDetectedTimezone = (tz: string) => {
   vi.mocked(getDeviceTimezone).mockReturnValue(tz);
 };
 
-const seedSettings = (overrides: Record<string, unknown>) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
-};
-
 const renderDialog = () =>
   render(
-    <CalendarSettingsProvider>
+    <SettingsStoreProvider>
       <TimezoneChangeDialog />
-    </CalendarSettingsProvider>,
+    </SettingsStoreProvider>,
   );
 
 describe("TimezoneChangeDialog", () => {
@@ -79,7 +75,7 @@ describe("TimezoneChangeDialog", () => {
       screen.queryByText("Device time zone changed"),
     ).not.toBeInTheDocument();
 
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    const stored = readSettings();
     expect(stored.defaultTimezone).toBe("America/Chicago");
     // remembers the new device zone so it doesn't ask again for it
     expect(stored.lastSeenDeviceTimezone).toBe("Asia/Tokyo");
@@ -112,7 +108,7 @@ describe("TimezoneChangeDialog", () => {
     renderDialog();
     await user.click(screen.getByText("Set as default"));
 
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    const stored = readSettings();
     expect(stored.defaultTimezone).toBe("Asia/Tokyo");
     expect(stored.timezones).toEqual(["Asia/Tokyo", "America/Chicago"]);
     expect(stored.lastSeenDeviceTimezone).toBe("Asia/Tokyo");
@@ -134,7 +130,7 @@ describe("TimezoneChangeDialog", () => {
     renderDialog();
     await user.click(screen.getByText("Set as default"));
 
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    const stored = readSettings();
     expect(stored.timezones).toEqual(["Asia/Tokyo", "America/Chicago"]);
   });
 });

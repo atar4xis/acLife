@@ -4,10 +4,7 @@ import {
   getTimezone,
 } from "countries-and-timezones";
 import { DateTime } from "luxon";
-import type {
-  Weekday,
-  WeekStartsOn,
-} from "@/context/CalendarSettingsContext";
+import type { Weekday, WeekStartsOn } from "@/types/calendar/Settings";
 
 export interface TimezoneOption {
   name: string;

@@ -2,14 +2,15 @@ import { memo, useMemo, useState } from "react";
 import { GripVertical, Plus, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import {
-  defaultCalendarSettings,
   EVENT_COLOR_FALLBACK,
   MAX_CALENDAR_TIMEZONES,
   MAX_EVENT_COLOR_PRESETS,
   useCalendarSettings,
-  type Weekday,
 } from "@/context/CalendarSettingsContext";
-import { DARK_COLORS, LIGHT_COLORS, useTheme } from "@/components/ThemeProvider";
+import { useTheme } from "@/components/ThemeProvider";
+import { defaultCalendarSettings } from "@/lib/settingsDefaults";
+import { DARK_COLORS, LIGHT_COLORS } from "@/lib/themeColors";
+import type { Weekday } from "@/types/calendar/Settings";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
 import { useDeferredSliderValue } from "@/hooks/useDeferredSliderValue";
 import { useWeekStart } from "@/hooks/useWeekStart";

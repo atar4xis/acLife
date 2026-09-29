@@ -20,7 +20,7 @@ vi.mock("../../src/components/ui/sidebar.tsx", () => {
 // sonner is mocked globally in tests/setup.ts
 import AppCalendar from "../../src/components/calendar/Calendar.tsx";
 import { CalendarProvider } from "../../src/context/CalendarContext.tsx";
-import { CalendarSettingsProvider } from "../../src/context/CalendarSettingsContext.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import type { CalendarEvent } from "../../src/types/calendar/Event.ts";
 
 export const FIXED_NOW = DateTime.fromISO("2026-03-18T10:30:00");
@@ -104,7 +104,7 @@ export const renderCalendar = ({
   const user = userEvent.setup();
 
   const renderResult = render(
-    <CalendarSettingsProvider>
+    <SettingsStoreProvider>
       <CalendarProvider>
         <AppCalendar
           events={events}
@@ -116,7 +116,7 @@ export const renderCalendar = ({
           saveDebounceMs={0}
         />
       </CalendarProvider>
-    </CalendarSettingsProvider>,
+    </SettingsStoreProvider>,
   );
 
   return { user, saveEvents, setMode, ...renderResult };

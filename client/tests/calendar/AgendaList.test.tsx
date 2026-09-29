@@ -6,11 +6,11 @@ import { useEffect } from "react";
 import AgendaList from "../../src/components/calendar/AgendaList.tsx";
 import AppCalendar from "../../src/components/calendar/Calendar.tsx";
 import { CalendarProvider, useCalendar } from "../../src/context/CalendarContext.tsx";
-import { CalendarSettingsProvider } from "../../src/context/CalendarSettingsContext.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import { SidebarProvider } from "../../src/components/ui/sidebar.tsx";
 import { buildEvent } from "./helpers.tsx";
+import { seedSettings } from "../settingsStorage.ts";
 
-const STORAGE_KEY = "acl-calendar-settings";
 const FIXED_NOW = DateTime.fromISO("2026-03-18T10:00:00");
 
 function Seed({ events }: { events: ReturnType<typeof buildEvent>[] }) {
@@ -26,21 +26,21 @@ function Seed({ events }: { events: ReturnType<typeof buildEvent>[] }) {
 
 const renderAgendaList = (events: ReturnType<typeof buildEvent>[]) =>
   render(
-    <CalendarSettingsProvider>
+    <SettingsStoreProvider>
       <CalendarProvider>
         <SidebarProvider>
           <Seed events={events} />
           <AgendaList />
         </SidebarProvider>
       </CalendarProvider>
-    </CalendarSettingsProvider>,
+    </SettingsStoreProvider>,
   );
 
 const renderAgendaAndCalendar = (events: ReturnType<typeof buildEvent>[]) => {
   const user = userEvent.setup();
 
   render(
-    <CalendarSettingsProvider>
+    <SettingsStoreProvider>
       <CalendarProvider>
         <SidebarProvider>
           <AgendaList />
@@ -55,7 +55,7 @@ const renderAgendaAndCalendar = (events: ReturnType<typeof buildEvent>[]) => {
           saveDebounceMs={0}
         />
       </CalendarProvider>
-    </CalendarSettingsProvider>,
+    </SettingsStoreProvider>,
   );
 
   return { user };
@@ -95,10 +95,7 @@ describe("AgendaList", () => {
   });
 
   it("includes events further out when agendaRangeDays is increased", () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ agendaRangeDays: 7 }),
-    );
+    seedSettings({ agendaRangeDays: 7 });
 
     const event = buildEvent({
       id: "far",
@@ -113,7 +110,7 @@ describe("AgendaList", () => {
   });
 
   it("excludes an event that falls outside a narrowed agendaRangeDays", () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ agendaRangeDays: 1 }));
+    seedSettings({ agendaRangeDays: 1 });
 
     const event = buildEvent({
       id: "tomorrow",

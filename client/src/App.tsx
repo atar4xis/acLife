@@ -6,7 +6,7 @@ import type { WithChildren } from "@/types/Props";
 import AppShell from "./components/AppShell";
 import { StorageProvider } from "./context/StorageContext";
 import { CalendarProvider } from "./context/CalendarContext";
-import { CalendarSettingsProvider } from "./context/CalendarSettingsContext";
+import { SettingsStoreProvider } from "./context/SettingsStoreContext";
 import { ApiProvider, useApi } from "./context/ApiContext";
 import { useEffect, useRef } from "react";
 import { Toaster } from "./components/ui/sonner";
@@ -53,23 +53,23 @@ export default function App() {
   }, []);
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="ui-theme">
-      <ApiProvider>
-        <StorageProvider>
-          <UserProvider>
-            <CalendarProvider>
-              <CalendarSettingsProvider>
+    <SettingsStoreProvider>
+      <ThemeProvider>
+        <ApiProvider>
+          <StorageProvider>
+            <UserProvider>
+              <CalendarProvider>
                 <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
                   <Toaster position="bottom-center" />
                   <AuthWrapper>
                     <AppShell />
                   </AuthWrapper>
                 </SidebarProvider>
-              </CalendarSettingsProvider>
-            </CalendarProvider>
-          </UserProvider>
-        </StorageProvider>
-      </ApiProvider>
-    </ThemeProvider>
+              </CalendarProvider>
+            </UserProvider>
+          </StorageProvider>
+        </ApiProvider>
+      </ThemeProvider>
+    </SettingsStoreProvider>
   );
 }

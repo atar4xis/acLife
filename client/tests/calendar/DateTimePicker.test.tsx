@@ -1,24 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CalendarSettingsProvider } from "../../src/context/CalendarSettingsContext.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import { DateTimePicker } from "../../src/components/calendar/DateTimePicker.tsx";
+import { seedSettings } from "../settingsStorage.ts";
 
 // 2026-03-15 01:00 in Tokyo, which is still 2026-03-14 in the UTC test environment
 const value = new Date("2026-03-14T16:00:00Z");
 
 const renderPicker = (onChange = vi.fn()) => {
-  localStorage.setItem(
-    "acl-calendar-settings",
-    JSON.stringify({
+  seedSettings({
       timezones: ["Asia/Tokyo"],
       defaultTimezone: "Asia/Tokyo",
-    }),
-  );
+    });
   render(
-    <CalendarSettingsProvider>
+    <SettingsStoreProvider>
       <DateTimePicker value={value} onChange={onChange} />
-    </CalendarSettingsProvider>,
+    </SettingsStoreProvider>,
   );
   return onChange;
 };

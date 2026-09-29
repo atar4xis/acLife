@@ -178,22 +178,17 @@ export function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(value, max));
 }
 
-export function shallowEqual(
-  a: Record<string, unknown> | null | undefined,
-  b: Record<string, unknown> | null | undefined,
-) {
-  if (a === b) return true;
-  if (!a || !b) return false;
+export function shallowEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== "object" || a === null) return false;
+  if (typeof b !== "object" || b === null) return false;
 
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-  if (aKeys.length !== bKeys.length) return false;
+  const aRecord = a as Record<string, unknown>;
+  const bRecord = b as Record<string, unknown>;
+  const aKeys = Object.keys(aRecord);
+  if (aKeys.length !== Object.keys(bRecord).length) return false;
 
-  for (const key of aKeys) {
-    if (a[key] !== b[key]) return false;
-  }
-
-  return true;
+  return aKeys.every((key) => Object.is(aRecord[key], bRecord[key]));
 }
 
 export function browserSupportsPush(): boolean {
