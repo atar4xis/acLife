@@ -7,18 +7,18 @@ import {
   MAX_CALENDAR_TIMEZONES,
   MAX_EVENT_COLOR_PRESETS,
   useCalendarSettings,
+  type Weekday,
 } from "@/context/CalendarSettingsContext";
 import { DARK_COLORS, LIGHT_COLORS, useTheme } from "@/components/ThemeProvider";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
 import { useDeferredSliderValue } from "@/hooks/useDeferredSliderValue";
+import { useWeekStart } from "@/hooks/useWeekStart";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { cn, cssColorToHex } from "@/lib/utils";
 import { generateThemeColorPresets } from "@/lib/calendar/colorPresets";
 import {
   getAllTimezones,
   getFriendlyName,
-  groupTimezonesByRegion,
-  type TimezoneOption,
 } from "@/lib/calendar/timezone";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
@@ -33,12 +33,14 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  SearchableSelect,
+  type SearchableSelectOption,
+} from "@/components/ui/searchable-select";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -51,21 +53,6 @@ import ResetToDefault from "../ResetToDefault";
 import { sectionLabel, settingLabel } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
-
-function TimezoneOptions({ timezones }: { timezones: TimezoneOption[] }) {
-  const grouped = useMemo(() => groupTimezonesByRegion(timezones), [timezones]);
-
-  return grouped.map(({ region, timezones }) => (
-    <SelectGroup key={region}>
-      <SelectLabel>{region}</SelectLabel>
-      {timezones.map((tz) => (
-        <SelectItem key={tz.name} value={tz.name}>
-          {tz.label}
-        </SelectItem>
-      ))}
-    </SelectGroup>
-  ));
-}
 
 const TimezonesField = memo(function TimezonesField() {
   const { timezones, defaultTimezone, setSetting } = useCalendarSettings(
@@ -80,9 +67,19 @@ const TimezonesField = memo(function TimezonesField() {
     () => timezones.filter((tz) => tz !== defaultTimezone),
     [timezones, defaultTimezone],
   );
-  const availableTimezones = useMemo(
-    () => allTimezones.filter((tz) => !timezones.includes(tz.name)),
-    [allTimezones, timezones],
+  const allOptions = useMemo<SearchableSelectOption[]>(
+    () =>
+      allTimezones.map((tz) => ({
+        value: tz.name,
+        label: tz.friendlyName,
+        description: tz.detail,
+        searchText: tz.searchText,
+      })),
+    [allTimezones],
+  );
+  const availableOptions = useMemo(
+    () => allOptions.filter((o) => !timezones.includes(o.value)),
+    [allOptions, timezones],
   );
   const isLimitReached = timezones.length >= MAX_CALENDAR_TIMEZONES;
 
@@ -123,19 +120,18 @@ const TimezonesField = memo(function TimezonesField() {
     allTimezones.find((t) => t.name === tz)?.label ?? tz.replace(/_/g, " ");
 
   return (
-    <FieldGroup className="mb-2 gap-6">
+    <FieldGroup className="mt-1 gap-5">
       <Field orientation="responsive">
         <FieldTitle className="flex-auto font-normal">
           Default time zone
         </FieldTitle>
-        <Select value={defaultTimezone} onValueChange={selectDefaultTimezone}>
-          <SelectTrigger className="w-full @md/field-group:w-[320px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <TimezoneOptions timezones={allTimezones} />
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          className="w-full shrink-0 @md/field-group:w-[250px]!"
+          options={allOptions}
+          value={defaultTimezone}
+          onValueChange={selectDefaultTimezone}
+          searchPlaceholder="Type a city or country to search..."
+        />
       </Field>
 
       <Field orientation="responsive">
@@ -147,14 +143,15 @@ const TimezonesField = memo(function TimezonesField() {
             Shown alongside the default time zone on the grid.
           </FieldDescription>
         </FieldContent>
-        <Select value="" onValueChange={addTimezone} disabled={isLimitReached}>
-          <SelectTrigger className="w-full @md/field-group:w-[320px]">
-            <SelectValue placeholder="Add a time zone..." />
-          </SelectTrigger>
-          <SelectContent>
-            <TimezoneOptions timezones={availableTimezones} />
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          className="w-full shrink-0 @md/field-group:w-[250px]!"
+          options={availableOptions}
+          value=""
+          onValueChange={addTimezone}
+          disabled={isLimitReached}
+          placeholder="Add a time zone..."
+          searchPlaceholder="Type a city or country to search..."
+        />
       </Field>
 
       {isLimitReached && (
@@ -424,11 +421,28 @@ const DefaultTaskNameField = memo(function DefaultTaskNameField() {
   );
 });
 
+const WEEKDAY_NAMES: Record<Weekday, string> = {
+  1: "Monday",
+  2: "Tuesday",
+  3: "Wednesday",
+  4: "Thursday",
+  5: "Friday",
+  6: "Saturday",
+  7: "Sunday",
+};
+
+// listed starting from Saturday
+const WEEK_START_OPTIONS = ([6, 7, 1, 2, 3, 4, 5] as const).map((value) => ({
+  value,
+  label: WEEKDAY_NAMES[value],
+}));
+
 export default function CalendarPage({
   sectionRefs,
 }: {
   sectionRefs: SectionRefs;
 }) {
+  const { weekStart: resolvedWeekStart } = useWeekStart();
   const {
     defaultView,
     weekStartsOn,
@@ -466,10 +480,54 @@ export default function CalendarPage({
       <h2 className="text-lg font-semibold">Calendar</h2>
 
       <Section
-        id="timezones"
-        label={sectionLabel("timezones")}
+        id="region"
+        label={sectionLabel("region")}
         sectionRefs={sectionRefs}
       >
+        <Field orientation="responsive">
+          <div className="flex flex-auto items-center gap-1.5">
+            <FieldTitle>{settingLabel("calendar-week-start")}</FieldTitle>
+            {weekStartsOn !== defaultCalendarSettings.weekStartsOn && (
+              <ResetToDefault
+                onClick={() =>
+                  setSetting(
+                    "weekStartsOn",
+                    defaultCalendarSettings.weekStartsOn,
+                  )
+                }
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-1 @md/field-group:items-end">
+            <Select
+              value={String(weekStartsOn)}
+              onValueChange={(value) =>
+                setSetting(
+                  "weekStartsOn",
+                  value === "inherit" ? value : (Number(value) as Weekday),
+                )
+              }
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inherit">Inherit from time zone</SelectItem>
+                {WEEK_START_OPTIONS.map(({ value, label }) => (
+                  <SelectItem key={value} value={String(value)}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {weekStartsOn === "inherit" && (
+              <span className="text-muted-foreground text-xs">
+                Currently {WEEKDAY_NAMES[resolvedWeekStart]}
+              </span>
+            )}
+          </div>
+        </Field>
+
         <TimezonesField />
       </Section>
 
@@ -499,36 +557,6 @@ export default function CalendarPage({
             <SelectContent>
               <SelectItem value="day">Day</SelectItem>
               <SelectItem value="week">Week</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Field orientation="responsive">
-          <div className="flex flex-auto items-center gap-1.5">
-            <FieldTitle>{settingLabel("calendar-week-start")}</FieldTitle>
-            {weekStartsOn !== defaultCalendarSettings.weekStartsOn && (
-              <ResetToDefault
-                onClick={() =>
-                  setSetting(
-                    "weekStartsOn",
-                    defaultCalendarSettings.weekStartsOn,
-                  )
-                }
-              />
-            )}
-          </div>
-          <Select
-            value={weekStartsOn}
-            onValueChange={(value) =>
-              setSetting("weekStartsOn", value as typeof weekStartsOn)
-            }
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mon">Monday</SelectItem>
-              <SelectItem value="sun">Sunday</SelectItem>
             </SelectContent>
           </Select>
         </Field>

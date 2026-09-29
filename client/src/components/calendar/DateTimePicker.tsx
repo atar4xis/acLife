@@ -5,6 +5,7 @@ import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
+import { useWeekStart } from "@/hooks/useWeekStart";
 
 type DateTimePickerProps = {
   value: Date | undefined;
@@ -13,6 +14,9 @@ type DateTimePickerProps = {
 
 export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
+  const { dayPickerWeekStart } = useWeekStart();
+  const zoned = value && DateTime.fromJSDate(value);
+  const pickerDate = zoned && new Date(zoned.year, zoned.month - 1, zoned.day);
 
   return (
     <div className="flex gap-2">
@@ -25,7 +29,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
           >
             <CalendarIcon />
             {value ? (
-              DateTime.fromJSDate(value).toFormat("dd LLL yyyy")
+              zoned!.toFormat("dd LLL yyyy")
             ) : (
               <span>Pick a date</span>
             )}
@@ -34,18 +38,22 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
         <PopoverContent className="w-auto p-0">
           <Calendar
             mode="single"
-            selected={value}
+            selected={pickerDate}
+            defaultMonth={pickerDate}
+            weekStartsOn={dayPickerWeekStart}
             onSelect={(date) => {
               if (!date) return;
 
-              const newDate = new Date(date);
-
               // preserve the old time
-              if (value) {
-                newDate.setHours(value.getHours(), value.getMinutes());
-              }
-
-              onChange(newDate);
+              onChange(
+                DateTime.fromObject({
+                  year: date.getFullYear(),
+                  month: date.getMonth() + 1,
+                  day: date.getDate(),
+                  hour: zoned?.hour ?? 0,
+                  minute: zoned?.minute ?? 0,
+                }).toJSDate(),
+              );
               setOpen(false);
             }}
           />
@@ -55,13 +63,11 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
       <Input
         type="time"
         step="60"
-        value={value ? DateTime.fromJSDate(value).toFormat("HH:mm") : ""}
+        value={zoned ? zoned.toFormat("HH:mm") : ""}
         onChange={(e) => {
-          if (!value) return;
-          const [hours, minutes] = e.target.value.split(":").map(Number);
-          const newDate = new Date(value);
-          newDate.setHours(hours, minutes);
-          onChange(newDate);
+          if (!zoned) return;
+          const [hour, minute] = e.target.value.split(":").map(Number);
+          onChange(zoned.set({ hour, minute }).toJSDate());
         }}
         className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
       />

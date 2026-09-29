@@ -17,6 +17,7 @@ import { useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import AgendaList from "./calendar/AgendaList";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
+import { useWeekStart } from "@/hooks/useWeekStart";
 
 export default function AppSidebar({
   onOpenSettings,
@@ -24,8 +25,8 @@ export default function AppSidebar({
   onOpenSettings: (categoryId?: string) => void;
 }) {
   const { currentDate, setCurrentDate } = useCalendar();
-  const { weekStartsOn, agendaEnabled } = useCalendarSettings((s) => ({
-    weekStartsOn: s.weekStartsOn,
+  const { dayPickerWeekStart } = useWeekStart();
+  const { agendaEnabled } = useCalendarSettings((s) => ({
     agendaEnabled: s.agendaEnabled,
   }));
   const isMobile = useIsMobile();
@@ -61,7 +62,7 @@ export default function AppSidebar({
               setCurrentDate(DateTime.fromJSDate(date || new Date()));
             }}
             className="w-full rounded-md border"
-            weekStartsOn={weekStartsOn === "sun" ? 0 : 1}
+            weekStartsOn={dayPickerWeekStart}
           />
         </SidebarGroup>
         {agendaEnabled && <AgendaList />}

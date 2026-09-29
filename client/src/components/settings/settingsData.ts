@@ -100,16 +100,18 @@ export const settingsCategories: SettingsCategory[] = [
     label: "Calendar",
     sections: [
       {
-        id: "timezones",
-        label: "Time zones",
-        items: [{ id: "calendar-timezones-list", label: "Time zones" }],
+        id: "region",
+        label: "Region",
+        items: [
+          { id: "calendar-week-start", label: "Week start" },
+          { id: "calendar-timezones-list", label: "Time zones" },
+        ],
       },
       {
         id: "grid",
         label: "Grid",
         items: [
           { id: "calendar-default-view", label: "Default view" },
-          { id: "calendar-week-start", label: "Week start" },
           { id: "calendar-snap-minutes", label: "Snap to minutes" },
         ],
       },

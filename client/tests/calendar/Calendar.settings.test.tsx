@@ -22,8 +22,8 @@ const setCalendarSettings = (overrides: Record<string, unknown>) => {
 };
 
 describe("Calendar with custom settings", () => {
-  it("renders the week starting on Sunday when weekStartsOn is 'sun'", async () => {
-    setCalendarSettings({ weekStartsOn: "sun" });
+  it("renders the week starting on Sunday when weekStartsOn is Sunday", async () => {
+    setCalendarSettings({ weekStartsOn: 7 });
 
     renderCalendar({ mode: "week" });
 

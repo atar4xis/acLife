@@ -15,32 +15,39 @@ describe("getWeekDays", () => {
   });
 
   it("starts the week on Monday when explicitly requested", () => {
-    const days = getWeekDays(wednesday, "mon");
+    const days = getWeekDays(wednesday, 1);
     expect(days[0].date.weekday).toBe(1);
     expect(days[0].date.toISODate()).toBe("2026-03-16");
   });
 
   it("starts the week on Sunday when requested", () => {
-    const days = getWeekDays(wednesday, "sun");
+    const days = getWeekDays(wednesday, 7);
     expect(days[0].date.weekday).toBe(7);
     expect(days[0].date.toISODate()).toBe("2026-03-15");
     expect(days[6].date.toISODate()).toBe("2026-03-21");
   });
 
+  it("starts the week on any weekday, such as Saturday", () => {
+    const days = getWeekDays(wednesday, 6);
+    expect(days[0].date.weekday).toBe(6);
+    expect(days[0].date.toISODate()).toBe("2026-03-14");
+    expect(days[6].date.toISODate()).toBe("2026-03-20");
+  });
+
   it("keeps a Sunday date as the start of its own Sunday-starting week", () => {
     const sunday = DateTime.fromISO("2026-03-15T00:00:00");
-    const days = getWeekDays(sunday, "sun");
+    const days = getWeekDays(sunday, 7);
     expect(days[0].date.toISODate()).toBe("2026-03-15");
   });
 
   it("keeps a Monday date as the start of its own Monday-starting week", () => {
     const monday = DateTime.fromISO("2026-03-16T00:00:00");
-    const days = getWeekDays(monday, "mon");
+    const days = getWeekDays(monday, 1);
     expect(days[0].date.toISODate()).toBe("2026-03-16");
   });
 
   it("truncates the time of day off the start date", () => {
-    const days = getWeekDays(wednesday, "mon");
+    const days = getWeekDays(wednesday, 1);
     expect(days[0].date.hour).toBe(0);
     expect(days[0].date.minute).toBe(0);
   });
@@ -58,17 +65,17 @@ describe("getDateRangeString", () => {
   });
 
   it("formats a Monday-starting week fully inside one month", () => {
-    expect(getDateRangeString("week", wednesday, "mon")).toBe("March 2026");
+    expect(getDateRangeString("week", wednesday, 1)).toBe("March 2026");
   });
 
   it("formats a Sunday-starting week fully inside one month", () => {
-    expect(getDateRangeString("week", wednesday, "sun")).toBe("March 2026");
+    expect(getDateRangeString("week", wednesday, 7)).toBe("March 2026");
   });
 
   it("spans two months when the week start straddles a month boundary", () => {
     // 2026-04-01 is a Wednesday; a Sunday-start week begins 2026-03-29
     const straddling = DateTime.fromISO("2026-04-01T00:00:00");
-    expect(getDateRangeString("week", straddling, "sun")).toBe(
+    expect(getDateRangeString("week", straddling, 7)).toBe(
       "Mar 2026 - Apr 2026",
     );
   });
@@ -76,7 +83,7 @@ describe("getDateRangeString", () => {
   it("defaults to Monday start when weekStartsOn is omitted", () => {
     const straddling = DateTime.fromISO("2026-04-01T00:00:00");
     expect(getDateRangeString("week", straddling)).toBe(
-      getDateRangeString("week", straddling, "mon"),
+      getDateRangeString("week", straddling, 1),
     );
   });
 });

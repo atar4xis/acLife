@@ -8,7 +8,8 @@ import {
   getTimezoneHourLabel,
   getTimezoneOffsetLabel,
   getTimezoneShortLabel,
-  groupTimezonesByRegion,
+  getTimezoneWeekStart,
+  resolveWeekStart,
 } from "../../src/lib/calendar/timezone.ts";
 
 describe("getDeviceTimezone", () => {
@@ -17,9 +18,12 @@ describe("getDeviceTimezone", () => {
   });
 
   it("reads the time zone from Intl.DateTimeFormat", () => {
-    vi.spyOn(Intl, "DateTimeFormat").mockReturnValue({
-      resolvedOptions: () => ({ timeZone: "Asia/Tokyo" }),
-    } as unknown as Intl.DateTimeFormat);
+    vi.spyOn(Intl, "DateTimeFormat").mockImplementation(
+      () =>
+        ({
+          resolvedOptions: () => ({ timeZone: "Asia/Tokyo" }),
+        }) as unknown as Intl.DateTimeFormat,
+    );
 
     expect(getDeviceTimezone()).toBe("Asia/Tokyo");
   });
@@ -83,11 +87,13 @@ describe("getAllTimezones", () => {
   it("builds a friendly, offset-suffixed label and assigns a region", () => {
     const dubai = getAllTimezones().find((tz) => tz.name === "Asia/Dubai");
 
-    expect(dubai).toEqual({
+    expect(dubai).toMatchObject({
       name: "Asia/Dubai",
       region: "Asia",
       label: "Dubai, United Arab Emirates (UTC+04:00)",
+      friendlyName: "Dubai, United Arab Emirates",
     });
+    expect(dubai?.detail).toBe("Gulf Standard Time, UTC+04:00");
   });
 
   it("buckets zones with no real region under Other", () => {
@@ -102,45 +108,29 @@ describe("getAllTimezones", () => {
   });
 });
 
-describe("groupTimezonesByRegion", () => {
-  const all = getAllTimezones();
-  const pick = (name: string) => all.find((tz) => tz.name === name)!;
-
-  it("groups the given time zones under their region label", () => {
-    const grouped = groupTimezonesByRegion([
-      pick("Asia/Tokyo"),
-      pick("Europe/London"),
-      pick("Asia/Tokyo"),
-    ]);
-
-    const asia = grouped.find((g) => g.region === "Asia");
-    expect(asia?.timezones).toEqual([pick("Asia/Tokyo"), pick("Asia/Tokyo")]);
+describe("getTimezoneWeekStart", () => {
+  it("uses Monday for countries that start the week on Monday", () => {
+    expect(getTimezoneWeekStart("Europe/Dublin")).toBe(1);
   });
 
-  it("omits regions that have no time zones in the input", () => {
-    const grouped = groupTimezonesByRegion([pick("Asia/Tokyo")]);
-    expect(grouped).toHaveLength(1);
-    expect(grouped[0].region).toBe("Asia");
+  it("uses Sunday for countries that start the week on Sunday", () => {
+    expect(getTimezoneWeekStart("America/New_York")).toBe(7);
   });
 
-  it("orders regions consistently, with Other last", () => {
-    const grouped = groupTimezonesByRegion([
-      pick("Etc/UTC"),
-      pick("Europe/London"),
-      pick("Asia/Tokyo"),
-      pick("America/New_York"),
-    ]);
+  it("falls back to Monday for zones without a country", () => {
+    expect(getTimezoneWeekStart("Etc/UTC")).toBe(1);
+  });
+});
 
-    expect(grouped.map((g) => g.region)).toEqual([
-      "America",
-      "Asia",
-      "Europe",
-      "Other",
-    ]);
+describe("resolveWeekStart", () => {
+  it("returns explicit settings unchanged", () => {
+    expect(resolveWeekStart(7, "Europe/Dublin")).toBe(7);
+    expect(resolveWeekStart(1, "America/New_York")).toBe(1);
   });
 
-  it("returns an empty list when given no time zones", () => {
-    expect(groupTimezonesByRegion([])).toEqual([]);
+  it("follows the default time zone when set to inherit", () => {
+    expect(resolveWeekStart("inherit", "Europe/Dublin")).toBe(1);
+    expect(resolveWeekStart("inherit", "America/New_York")).toBe(7);
   });
 });
 

@@ -11,7 +11,9 @@ import type { ViewMode } from "@/types/calendar/ViewMode";
 import { readJSON } from "@/lib/utils";
 import { getDeviceTimezone, isValidTimezone } from "@/lib/calendar/timezone";
 
-export type WeekStartsOn = "mon" | "sun";
+// iso weekday: 1 is Monday, 7 is Sunday
+export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type WeekStartsOn = "inherit" | Weekday;
 
 export const MAX_EVENT_COLOR_PRESETS = 45;
 export const MAX_CALENDAR_TIMEZONES = 6;
@@ -41,7 +43,7 @@ const deviceTimezone = getDeviceTimezone();
 // eslint-disable-next-line
 export const defaultCalendarSettings: CalendarSettings = {
   defaultView: "week",
-  weekStartsOn: "mon",
+  weekStartsOn: "inherit",
   snapMinutes: 5,
   defaultEventName: "new event",
   defaultTaskName: "new task",
@@ -73,6 +75,13 @@ function loadSettings(): CalendarSettings {
   );
   const parsed = { ...defaultCalendarSettings, ...stored };
 
+  // week start used to be stored as "mon" | "sun"
+  const legacyWeekStarts: Record<string, Weekday> = { mon: 1, sun: 7 };
+  if (typeof parsed.weekStartsOn === "string" && parsed.weekStartsOn !== "inherit") {
+    parsed.weekStartsOn =
+      legacyWeekStarts[parsed.weekStartsOn] ??
+      defaultCalendarSettings.weekStartsOn;
+  }
   if (!parsed.resyncIntervalMinutes) {
     parsed.resyncIntervalMinutes =
       defaultCalendarSettings.resyncIntervalMinutes;

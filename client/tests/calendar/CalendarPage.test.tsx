@@ -29,7 +29,7 @@ describe("CalendarPage", () => {
     renderCalendarPage();
 
     expect(screen.getByText("Week")).toBeInTheDocument();
-    expect(screen.getByText("Monday")).toBeInTheDocument();
+    expect(screen.getByText("Inherit from time zone")).toBeInTheDocument();
   });
 
   it("renders the current snap minutes and default event duration", () => {
@@ -72,8 +72,8 @@ describe("CalendarPage", () => {
     const user = userEvent.setup();
     renderCalendarPage();
 
-    // index 0/1 are the "Default time zone" and "Add a time zone" selects
-    const [, , viewTrigger] = screen.getAllByRole("combobox");
+    // index 0 is week start, 1/2 are the "Default time zone" and "Add a time zone" selects
+    const [, , , viewTrigger] = screen.getAllByRole("combobox");
     await user.click(viewTrigger);
     const options = await screen.findAllByText("Day");
     await user.click(options[options.length - 1]);
@@ -85,12 +85,45 @@ describe("CalendarPage", () => {
     const user = userEvent.setup();
     renderCalendarPage();
 
-    const [, , , weekStartTrigger] = screen.getAllByRole("combobox");
+    const [weekStartTrigger] = screen.getAllByRole("combobox");
     await user.click(weekStartTrigger);
     const options = await screen.findAllByText("Sunday");
     await user.click(options[options.length - 1]);
 
     expect(await screen.findByText("Sunday")).toBeInTheDocument();
+  });
+
+  it("shows what inherit resolves to below the week start select, hiding it for an explicit day", async () => {
+    const user = userEvent.setup();
+    renderCalendarPage();
+
+    expect(screen.getByText(/^Currently \w+day$/)).toBeInTheDocument();
+
+    const [weekStartTrigger] = screen.getAllByRole("combobox");
+    await user.click(weekStartTrigger);
+    await user.click(await screen.findByRole("option", { name: "Monday" }));
+
+    expect(screen.queryByText(/^Currently /)).not.toBeInTheDocument();
+  });
+
+  it("lists week start days beginning with Saturday", async () => {
+    const user = userEvent.setup();
+    renderCalendarPage();
+
+    const [weekStartTrigger] = screen.getAllByRole("combobox");
+    await user.click(weekStartTrigger);
+    const options = await screen.findAllByRole("option");
+
+    expect(options.map((o) => o.textContent)).toEqual([
+      "Inherit from time zone",
+      "Saturday",
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+    ]);
   });
 
   it("increases the snap minutes slider with the keyboard", async () => {

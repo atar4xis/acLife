@@ -46,6 +46,7 @@ import {
   getTimezoneHourLabel,
   getTimezoneShortLabel,
 } from "@/lib/calendar/timezone";
+import { useWeekStart } from "@/hooks/useWeekStart";
 import {
   eventKey,
   getDayEventStyles,
@@ -358,12 +359,12 @@ export default function AppCalendar({
   const changesMapRef = useRef<Map<string, EventChange[]>>(new Map());
   const pendingSaveRef = useRef<null | number>(null);
   const { user, masterKey, bucketKey } = useUser();
+  const { weekStart: weekStartsOn } = useWeekStart();
   const {
     snapMinutes: snapMins,
     defaultEventName,
     defaultTaskName,
     defaultEventDuration,
-    weekStartsOn,
     resyncIntervalMinutes,
     addColorsAutomatically,
     eventColorPresets,
@@ -375,7 +376,6 @@ export default function AppCalendar({
     defaultEventName: s.defaultEventName,
     defaultTaskName: s.defaultTaskName,
     defaultEventDuration: s.defaultEventDuration,
-    weekStartsOn: s.weekStartsOn,
     resyncIntervalMinutes: s.resyncIntervalMinutes,
     addColorsAutomatically: s.addColorsAutomatically,
     eventColorPresets: s.eventColorPresets,

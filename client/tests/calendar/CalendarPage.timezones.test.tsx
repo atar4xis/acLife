@@ -37,12 +37,24 @@ const getStoredDefaultTimezone = (): string =>
   JSON.parse(localStorage.getItem(STORAGE_KEY)!).defaultTimezone;
 
 // each additional-time-zone row renders [grip handle, "Set default", remove]
-const getAdditionalRow = (label: string) => {
+const getAdditionalRow = (label: string | RegExp) => {
   const row = screen.getByText(label).closest("div")!;
   return {
     row,
     buttons: within(row).getAllByRole("button"),
   };
+};
+
+// options only render once the debounced search has a query
+const pickTimezone = async (
+  user: ReturnType<typeof userEvent.setup>,
+  trigger: HTMLElement,
+  query: string,
+  name: RegExp,
+) => {
+  await user.click(trigger);
+  await user.type(screen.getByPlaceholderText(/search/i), query);
+  await user.click(await screen.findByRole("option", { name }));
 };
 
 describe("CalendarPage time zones", () => {
@@ -55,7 +67,7 @@ describe("CalendarPage time zones", () => {
     renderCalendarPage();
 
     expect(screen.queryByText("Set default")).not.toBeInTheDocument();
-    const [defaultTrigger] = screen.getAllByRole("combobox");
+    const [, defaultTrigger] = screen.getAllByRole("combobox");
     expect(defaultTrigger).toHaveTextContent(
       getDeviceTimezone().split("/").pop()!.replace(/_/g, " "),
     );
@@ -68,12 +80,8 @@ describe("CalendarPage time zones", () => {
 
     expect(screen.queryByText(/tokyo, japan/i)).not.toBeInTheDocument();
 
-    const [, addTrigger] = screen.getAllByRole("combobox");
-    await user.click(addTrigger);
-    const option = await screen.findByRole("option", {
-      name: /tokyo, japan/i,
-    });
-    await user.click(option);
+    const [, , addTrigger] = screen.getAllByRole("combobox");
+    await pickTimezone(user, addTrigger, "tokyo", /tokyo, japan/i);
 
     expect(await screen.findByText(/tokyo, japan/i)).toBeInTheDocument();
     expect(getStoredTimezones()).toEqual(["America/Chicago", "Asia/Tokyo"]);
@@ -84,12 +92,13 @@ describe("CalendarPage time zones", () => {
     seedTimezones(["America/Chicago", "Asia/Tokyo"], "America/Chicago");
     renderCalendarPage();
 
-    const [defaultTrigger] = screen.getAllByRole("combobox");
-    await user.click(defaultTrigger);
-    const option = await screen.findByRole("option", {
-      name: /london, united kingdom/i,
-    });
-    await user.click(option);
+    const [, defaultTrigger] = screen.getAllByRole("combobox");
+    await pickTimezone(
+      user,
+      defaultTrigger,
+      "london",
+      /london, united kingdom/i,
+    );
 
     expect(getStoredDefaultTimezone()).toBe("Europe/London");
     expect(getStoredTimezones()).toEqual(["Europe/London", "Asia/Tokyo"]);
@@ -101,14 +110,12 @@ describe("CalendarPage time zones", () => {
     seedTimezones(["America/Chicago"], "America/Chicago");
     renderCalendarPage();
 
-    const [defaultTrigger] = screen.getAllByRole("combobox");
-    await user.click(defaultTrigger);
-    const option = await screen.findByRole("option", {
-      name: /tokyo, japan/i,
-    });
-    await user.click(option);
+    const [, defaultTrigger] = screen.getAllByRole("combobox");
+    await pickTimezone(user, defaultTrigger, "tokyo", /tokyo, japan/i);
 
-    expect(toast.success).toHaveBeenCalledWith("Time zone set to Tokyo, Japan (also Australia)");
+    expect(toast.success).toHaveBeenCalledWith(
+      "Time zone set to Tokyo, Japan (also Australia)",
+    );
   });
 
   it("promotes an additional time zone to default and demotes the previous default into its slot", async () => {
@@ -161,15 +168,12 @@ describe("CalendarPage time zones", () => {
       screen.getByText("Maximum of 6 time zones reached"),
     ).toBeInTheDocument();
 
-    const [, addTrigger] = screen.getAllByRole("combobox");
+    const [, , addTrigger] = screen.getAllByRole("combobox");
     expect(addTrigger).toBeDisabled();
   });
 
   it("reorders additional time zones by dragging, which updates the grid order", () => {
-    seedTimezones(
-      ["UTC", "Asia/Tokyo", "Europe/London"],
-      "UTC",
-    );
+    seedTimezones(["UTC", "Asia/Tokyo", "Europe/London"], "UTC");
     renderCalendarPage();
 
     // pointer-based drag hit-tests rects, so give each row a distinct one
@@ -186,6 +190,54 @@ describe("CalendarPage time zones", () => {
     expect(getStoredTimezones()).toEqual([
       "UTC",
       "Europe/London",
+      "Asia/Tokyo",
+    ]);
+  });
+
+  it("reorders additional time zones with a realistic multi-step mouse drag over position-based row layout", () => {
+    seedTimezones(
+      ["UTC", "Asia/Tokyo", "Europe/London", "America/Chicago"],
+      "UTC",
+    );
+    renderCalendarPage();
+
+    // rows are laid out by DOM position, like a real flex column
+    const rows = ["tokyo, japan", "london, united kingdom", "chicago"].map(
+      (name) => getAdditionalRow(new RegExp(name, "i")).row,
+    );
+    const container = rows[0].parentElement!;
+    const rowHeight = 40;
+    for (const row of rows) {
+      row.getBoundingClientRect = () => {
+        const top = [...container.children].indexOf(row) * rowHeight;
+        return makeRect(0, top, 300, rowHeight - 6);
+      };
+    }
+    const grip = within(rows[0]).getAllByRole("button")[0];
+
+    fireEvent.pointerDown(grip, {
+      button: 0,
+      pointerType: "mouse",
+      clientX: 10,
+      clientY: 10,
+    });
+    for (let y = 10; y <= 100; y += 10) {
+      dispatchWindowPointer("pointermove", {
+        pointerType: "mouse",
+        clientX: 10,
+        clientY: y,
+      });
+    }
+    dispatchWindowPointer("pointerup", {
+      pointerType: "mouse",
+      clientX: 10,
+      clientY: 100,
+    });
+
+    expect(getStoredTimezones()).toEqual([
+      "UTC",
+      "Europe/London",
+      "America/Chicago",
       "Asia/Tokyo",
     ]);
   });

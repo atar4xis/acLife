@@ -18,6 +18,7 @@ export default ({ mode }: ConfigEnv) => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./tests/setup.ts",
+      env: { TZ: "UTC" },
       server: {
         deps: {
           inline: ["@mzattahri/srp"],

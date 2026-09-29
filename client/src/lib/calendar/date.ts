@@ -8,10 +8,9 @@ export const getDay = (date: DateTime) => [
 
 export const getWeekDays = (
   date: DateTime,
-  weekStartsOn: "mon" | "sun" = "mon",
+  weekStartsOn: number = 1,
 ) => {
-  const offset =
-    weekStartsOn === "sun" ? date.weekday % 7 : date.weekday - 1;
+  const offset = (date.weekday - weekStartsOn + 7) % 7;
   const start = date.startOf("day").minus({ days: offset });
 
   return Array.from({ length: 7 }, (_, i) => {
@@ -41,7 +40,7 @@ export const getMonthCells = (date: DateTime) => {
 export const getDateRangeString = (
   mode: string,
   currentDate: DateTime,
-  weekStartsOn: "mon" | "sun" = "mon",
+  weekStartsOn: number = 1,
 ) => {
   if (mode === "month") {
     return currentDate.toFormat("MMMM yyyy");

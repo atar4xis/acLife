@@ -61,9 +61,10 @@ export function useDragReorder<T>(items: T[], onCommit: (items: T[]) => void) {
 
         const target = indexAtPoint(ev.clientX, ev.clientY);
         if (target !== null && target !== current) {
+          const from = current;
           setOrder((prev) => {
             const next = [...prev];
-            const [item] = next.splice(current, 1);
+            const [item] = next.splice(from, 1);
             next.splice(target, 0, item);
             return next;
           });
