@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ReactNode } from "react";
 import {
@@ -87,14 +87,14 @@ const COLOR_LABELS: Record<ThemeColorVar, string> = {
   border: "Border",
   input: "Input",
   ring: "Ring",
-  sidebar: "Sidebar background",
-  "sidebar-foreground": "Sidebar text",
-  "sidebar-primary": "Sidebar primary",
-  "sidebar-primary-foreground": "Sidebar primary text",
-  "sidebar-accent": "Sidebar accent",
-  "sidebar-accent-foreground": "Sidebar accent text",
-  "sidebar-border": "Sidebar border",
-  "sidebar-ring": "Sidebar ring",
+  sidebar: "Background",
+  "sidebar-foreground": "Text",
+  "sidebar-primary": "Primary",
+  "sidebar-primary-foreground": "Primary text",
+  "sidebar-accent": "Accent",
+  "sidebar-accent-foreground": "Accent text",
+  "sidebar-border": "Border",
+  "sidebar-ring": "Ring",
 };
 
 function isThemeColors(value: unknown): value is ThemeColors {
@@ -643,12 +643,50 @@ const FontSizeField = memo(function FontSizeField() {
   );
 });
 
+const GENERAL_COLOR_VARS = THEME_COLOR_VARS.filter(
+  (variable) => !variable.startsWith("sidebar"),
+);
+const SIDEBAR_COLOR_VARS = THEME_COLOR_VARS.filter((variable) =>
+  variable.startsWith("sidebar"),
+);
+
+function ColorGridItem({ variable }: { variable: ThemeColorVar }) {
+  const { resolvedBase, colors, setColor } = useTheme();
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <ColorPicker
+        className="size-8 shrink-0 p-0"
+        value={currentColorValue(variable, resolvedBase, colors[variable])}
+        onChange={(value) => {
+          clearTimeout(timer.current);
+          timer.current = setTimeout(() => setColor(variable, value), 200);
+        }}
+      />
+      <FieldTitle className="truncate">{COLOR_LABELS[variable]}</FieldTitle>
+    </div>
+  );
+}
+
+function ColorGrid({ variables }: { variables: ThemeColorVar[] }) {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-4 gap-y-3">
+      {variables.map((variable) => (
+        <ColorGridItem key={variable} variable={variable} />
+      ))}
+    </div>
+  );
+}
+
 const ColorsSection = memo(function ColorsSection({
   sectionRefs,
 }: {
   sectionRefs: SectionRefs;
 }) {
-  const { theme, resolvedBase, colors, setColor, resetColors } = useTheme();
+  const { theme, resetColors } = useTheme();
 
   return (
     <Section
@@ -667,15 +705,9 @@ const ColorsSection = memo(function ColorsSection({
         )
       }
     >
-      {THEME_COLOR_VARS.map((variable) => (
-        <Field key={variable} orientation="responsive">
-          <FieldTitle>{COLOR_LABELS[variable]}</FieldTitle>
-          <ColorPicker
-            value={currentColorValue(variable, resolvedBase, colors[variable])}
-            onChange={(value) => setColor(variable, value)}
-          />
-        </Field>
-      ))}
+      <ColorGrid variables={GENERAL_COLOR_VARS} />
+      <div className="text-muted-foreground text-sm font-medium">Sidebar</div>
+      <ColorGrid variables={SIDEBAR_COLOR_VARS} />
     </Section>
   );
 });

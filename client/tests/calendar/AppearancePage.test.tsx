@@ -82,12 +82,21 @@ describe("AppearancePage", () => {
   it("renders sidebar color fields alongside the base palette", () => {
     renderAppearancePage();
 
-    expect(screen.getByText("Sidebar background")).toBeInTheDocument();
-    expect(screen.getByText("Sidebar text")).toBeInTheDocument();
-    expect(screen.getByText("Sidebar primary")).toBeInTheDocument();
-    expect(screen.getByText("Sidebar accent")).toBeInTheDocument();
-    expect(screen.getByText("Sidebar border")).toBeInTheDocument();
-    expect(screen.getByText("Sidebar ring")).toBeInTheDocument();
+    const sidebarGrid = screen.getByText("Sidebar")
+      .nextElementSibling as HTMLElement;
+
+    for (const label of [
+      "Background",
+      "Text",
+      "Primary",
+      "Primary text",
+      "Accent",
+      "Accent text",
+      "Border",
+      "Ring",
+    ]) {
+      expect(within(sidebarGrid).getByText(label)).toBeInTheDocument();
+    }
   });
 
   it("shows an empty state when there are no saved themes", () => {
