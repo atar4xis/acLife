@@ -74,6 +74,7 @@ export default function AppSidebar({
             <Button
               variant="outline"
               size="icon"
+              aria-label="Settings"
               onClick={() => onOpenSettings()}
             >
               <Settings />

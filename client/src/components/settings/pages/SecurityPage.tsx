@@ -34,7 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { sectionLabel, settingLabel } from "../settingsData";
+import { sectionLabel, settingLabel, settingLabelId } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
 import SettingsLabel from "../SettingsLabel";
@@ -444,6 +444,7 @@ function SessionsSection({ sectionRefs }: { sectionRefs: SectionRefs }) {
           variant="ghost"
           size="icon"
           className="size-7"
+          aria-label="Refresh sessions"
           disabled={refreshing}
           onClick={load}
         >
@@ -518,6 +519,7 @@ function SecurityPageContent({ sectionRefs }: { sectionRefs: SectionRefs }) {
         <Field orientation="responsive">
           <SettingsLabel settingKey="unlockMethod" />
           <SettingsSelect
+            labelledBy={settingLabelId("unlockMethod")}
             value={unlockMethod}
             onValueChange={(value) => setUnlockMethod(value as UnlockMethod)}
             footer={
@@ -551,6 +553,7 @@ function SecurityPageContent({ sectionRefs }: { sectionRefs: SectionRefs }) {
         <Field orientation="responsive">
           <SettingsLabel settingKey="autoLock" />
           <SettingsSelect
+            labelledBy={settingLabelId("autoLock")}
             value={autoLock}
             onValueChange={(value) => setAutoLock(value as AutoLockOption)}
             disabled={unlockMethod === "stay-unlocked"}

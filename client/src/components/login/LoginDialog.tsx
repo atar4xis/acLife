@@ -208,6 +208,7 @@ export default function LoginDialog() {
                   <TooltipTrigger asChild>
                     <Button
                       className="p-1"
+                      aria-label="Test connectivity"
                       onClick={testServerConnection}
                       disabled={!pendingServerURL || testing}
                       variant="outline"
@@ -263,12 +264,13 @@ export default function LoginDialog() {
               </DialogTitle>
               <DialogDescription className="text-center">
                 on{" "}
-                <span
+                <button
+                  type="button"
                   className="border-b border-dashed border-gray-500 hover:border-gray-400 hover:border-solid hover:cursor-pointer"
                   onClick={() => setServerSwitcherOpen(true)}
                 >
                   {serverMeta ? domainName(serverMeta.url) : "..."}
-                </span>
+                </button>
               </DialogDescription>
             </DialogHeader>
             {confirmToken ? (

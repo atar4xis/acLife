@@ -227,4 +227,37 @@ describe("CalendarPage", () => {
     const stored = readSettings();
     expect(stored.defaultEventName).toBe("focus block");
   });
+
+  describe("color presets keyboard support", () => {
+    const swatches = () =>
+      screen
+        .getAllByRole("button", { name: /^Remove / })
+        .map((b) => b.getAttribute("aria-label")!);
+
+    it("reorders a color with shift + arrow keys and keeps focus on it", async () => {
+      const user = userEvent.setup();
+      renderCalendarPage();
+      const [first, second] = swatches();
+      const swatch = screen.getByRole("button", { name: first });
+
+      swatch.focus();
+      await user.keyboard("{Shift>}{ArrowRight}{/Shift}");
+
+      expect(swatches().slice(0, 2)).toEqual([second, first]);
+      expect(swatch).toHaveFocus();
+      const stored = readSettings().eventColorPresets as string[];
+      expect(stored[1]).toBe(first.replace("Remove ", ""));
+    });
+
+    it("removes a color with Delete", async () => {
+      const user = userEvent.setup();
+      renderCalendarPage();
+      const before = swatches();
+
+      screen.getByRole("button", { name: before[0] }).focus();
+      await user.keyboard("{Delete}");
+
+      expect(swatches()).toEqual(before.slice(1));
+    });
+  });
 });

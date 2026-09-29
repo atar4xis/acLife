@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Download,
   GripVertical,
+  Pencil,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -43,7 +44,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BUILT_IN_THEMES, BUILT_IN_THEME_ID_PREFIX } from "../builtInThemes";
-import { sectionLabel, settingLabel } from "../settingsData";
+import { sectionLabel, settingLabel, settingLabelId } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
 import SettingsLabel from "../SettingsLabel";
@@ -167,6 +168,7 @@ function IconAction({
           variant="ghost"
           size="icon"
           className="size-7"
+          aria-label={label}
           onClick={onClick}
         >
           {children}
@@ -211,6 +213,7 @@ const PresetsList = memo(function PresetsList() {
     order: orderedPagePresets,
     dragIndex,
     onPointerDown,
+    onKeyDown,
     setItemRef,
   } = useDragReorder(pagePresets, (next) =>
     reorderPresets([
@@ -270,6 +273,7 @@ const PresetsList = memo(function PresetsList() {
             value={presetName}
             onChange={(e) => setPresetName(e.target.value)}
             placeholder="Theme name"
+            aria-label="Theme name"
             className="max-w-[320px] flex-1"
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
           />
@@ -289,6 +293,7 @@ const PresetsList = memo(function PresetsList() {
         <input
           ref={fileInputRef}
           type="file"
+          aria-label="Import theme file"
           accept="application/json"
           multiple
           className="hidden"
@@ -345,11 +350,15 @@ const PresetsList = memo(function PresetsList() {
                   )}
                   <div
                     className="relative flex min-w-0 items-center gap-1.5 rounded bg-background/80 pr-1.5"
+                    role="presentation"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       type="button"
                       style={{ touchAction: "none" }}
+                      aria-label="Reorder theme"
+                      aria-keyshortcuts="Shift+ArrowUp Shift+ArrowDown"
+                      onKeyDown={onKeyDown(index)}
                       className="text-muted-foreground cursor-grab px-1 py-1 active:cursor-grabbing"
                       onPointerDown={(e) => {
                         suppressApply.current = true;
@@ -367,6 +376,7 @@ const PresetsList = memo(function PresetsList() {
                     {renamingId === item.id ? (
                       <Input
                         autoFocus
+                        aria-label="Rename theme"
                         value={renameDraft}
                         className="h-6 w-[200px] px-1.5 py-0 text-sm"
                         onChange={(e) => setRenameDraft(e.target.value)}
@@ -399,6 +409,7 @@ const PresetsList = memo(function PresetsList() {
                   </div>
                   <div
                     className="relative flex items-center gap-0.5 rounded bg-background/80"
+                    role="presentation"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {isActive && (
@@ -406,6 +417,15 @@ const PresetsList = memo(function PresetsList() {
                         Active
                       </span>
                     )}
+                    <IconAction
+                      label="Rename theme"
+                      onClick={() => {
+                        setRenameDraft(item.name);
+                        setRenamingId(item.id);
+                      }}
+                    >
+                      <Pencil />
+                    </IconAction>
                     <IconAction
                       label="Export as .json"
                       onClick={() => downloadPreset(item)}
@@ -439,6 +459,7 @@ const PresetsList = memo(function PresetsList() {
                   variant="ghost"
                   size="icon"
                   className="size-8"
+                  aria-label="Previous page"
                   disabled={currentPage === 0}
                   onClick={() => setPage(currentPage - 1)}
                 >
@@ -452,6 +473,7 @@ const PresetsList = memo(function PresetsList() {
                   variant="ghost"
                   size="icon"
                   className="size-8"
+                  aria-label="Next page"
                   disabled={currentPage === pageCount - 1}
                   onClick={() => setPage(currentPage + 1)}
                 >
@@ -511,8 +533,11 @@ const CustomThemeField = memo(function CustomThemeField() {
 
   return (
     <Field orientation="responsive">
-      <FieldTitle>{settingLabel("custom-theme")}</FieldTitle>
+      <FieldTitle id="custom-theme-label">
+        {settingLabel("custom-theme")}
+      </FieldTitle>
       <SettingsSelect
+        labelledBy="custom-theme-label"
         value={value}
         onValueChange={handleChange}
         placeholder="None"
@@ -550,6 +575,7 @@ const ThemeModeField = memo(function ThemeModeField() {
     <Field orientation="responsive">
       <SettingsLabel settingKey="theme" />
       <ToggleGroup
+        aria-labelledby={settingLabelId("theme")}
         type="single"
         variant="outline"
         value={theme}
@@ -574,6 +600,7 @@ const FontFamilyField = memo(function FontFamilyField() {
       <Field orientation="responsive">
         <SettingsLabel settingKey="fontFamily" onReset={field.cancel} />
         <Input
+          aria-labelledby={settingLabelId("fontFamily")}
           value={field.value}
           onChange={(e) => field.onChange(e.target.value)}
           onBlur={field.flush}
@@ -600,6 +627,7 @@ const FontSizeField = memo(function FontSizeField() {
         </div>
       </FieldContent>
       <Slider
+        aria-labelledby={settingLabelId("fontSize")}
         className="mt-1"
         min={12}
         max={20}
@@ -628,6 +656,7 @@ function ColorGridItem({ variable }: { variable: ThemeColorVar }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
       <ColorPicker
+        aria-label={COLOR_LABELS[variable]}
         className="size-8 shrink-0 p-0"
         value={currentColorValue(variable, resolvedBase, colors[variable])}
         onChange={(value) => {

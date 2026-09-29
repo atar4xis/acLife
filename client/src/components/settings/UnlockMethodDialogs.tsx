@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field, FieldTitle } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -66,15 +66,15 @@ export function PinSetupDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>Set up a PIN code</DialogTitle>
-          <DialogDescription></DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field>
-            <FieldTitle>PIN</FieldTitle>
+            <FieldLabel htmlFor="pin-setup-pin">PIN</FieldLabel>
             <Input
+              id="pin-setup-pin"
               type="password"
               inputMode="numeric"
               maxLength={16}
@@ -84,8 +84,9 @@ export function PinSetupDialog({
             />
           </Field>
           <Field>
-            <FieldTitle>Confirm PIN</FieldTitle>
+            <FieldLabel htmlFor="pin-setup-confirm">Confirm PIN</FieldLabel>
             <Input
+              id="pin-setup-confirm"
               type="password"
               inputMode="numeric"
               maxLength={16}
@@ -94,8 +95,11 @@ export function PinSetupDialog({
             />
           </Field>
           <Field>
-            <FieldTitle>Current password</FieldTitle>
+            <FieldLabel htmlFor="pin-setup-password">
+              Current password
+            </FieldLabel>
             <Input
+              id="pin-setup-password"
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
@@ -175,8 +179,11 @@ export function StayUnlockedDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field>
-            <FieldTitle>Current password</FieldTitle>
+            <FieldLabel htmlFor="stay-unlocked-password">
+              Current password
+            </FieldLabel>
             <Input
+              id="stay-unlocked-password"
               type="password"
               autoFocus
               value={currentPassword}

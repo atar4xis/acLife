@@ -88,5 +88,25 @@ export function useDragReorder<T>(items: T[], onCommit: (items: T[]) => void) {
       window.addEventListener("pointercancel", finish);
     };
 
-  return { order, dragIndex, onPointerDown, setItemRef };
+  const onKeyDown = (index: number) => (e: React.KeyboardEvent) => {
+    if (!e.shiftKey) return;
+    const delta =
+      e.key === "ArrowUp" || e.key === "ArrowLeft"
+        ? -1
+        : e.key === "ArrowDown" || e.key === "ArrowRight"
+          ? 1
+          : 0;
+    if (!delta) return;
+    e.preventDefault();
+
+    const target = index + delta;
+    const next = [...orderRef.current];
+    if (target < 0 || target >= next.length) return;
+    const [item] = next.splice(index, 1);
+    next.splice(target, 0, item);
+    setOrder(next);
+    onCommit(next);
+  };
+
+  return { order, dragIndex, onPointerDown, onKeyDown, setItemRef };
 }

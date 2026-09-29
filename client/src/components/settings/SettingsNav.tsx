@@ -34,6 +34,7 @@ export default function SettingsNav({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search settings..."
+          aria-label="Search settings"
           className="pl-9"
         />
         {results.length > 0 && (

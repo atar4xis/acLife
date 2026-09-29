@@ -25,6 +25,7 @@ interface SearchableSelectProps {
   searchPlaceholder?: string;
   emptyMessage?: string;
   disabled?: boolean;
+  labelledBy?: string;
   className?: string;
   debounceMs?: number;
   maxResults?: number;
@@ -63,10 +64,12 @@ function SearchableSelect({
   searchPlaceholder = "Search...",
   emptyMessage = "No results found",
   disabled,
+  labelledBy,
   className,
   debounceMs = 200,
   maxResults = 50,
 }: SearchableSelectProps) {
+  const listId = React.useId();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -134,6 +137,8 @@ function SearchableSelect({
           type="button"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listId}
+          aria-labelledby={labelledBy}
           data-slot="searchable-select-trigger"
           className={cn(
             "border-input dark:bg-input/30 dark:hover:bg-input/50 flex h-9 w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
@@ -164,6 +169,7 @@ function SearchableSelect({
         {showResults && (
           <div
             ref={listRef}
+            id={listId}
             role="listbox"
             className="max-h-72 overflow-y-auto p-1"
           >

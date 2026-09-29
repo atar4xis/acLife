@@ -30,6 +30,7 @@ const SwatchesPicker = ({
       {presetColors.map((presetColor: string) => (
         <button
           key={presetColor}
+          aria-label={presetColor}
           className="rounded p-3 opacity-90 hover:opacity-100"
           style={{ background: presetColor }}
           onClick={() => onChange(presetColor)}
@@ -85,6 +86,7 @@ const ColorPicker = ({
             />
             <HexColorInput
               className="border-input mt-5 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+              aria-label="Hex color"
               color={parsedValue}
               onChange={onChange}
               prefixed

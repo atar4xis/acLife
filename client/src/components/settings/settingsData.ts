@@ -293,6 +293,10 @@ const keyLabels = new Map(
   ),
 );
 
+export function settingLabelId(settingKey: SettingKey | StoreKey): string {
+  return `setting-label-${settingKey}`;
+}
+
 export function settingLabelByKey(settingKey: SettingKey | StoreKey): string {
   const label = keyLabels.get(settingKey);
   if (!label) throw new Error(`Unknown setting key: ${settingKey}`);

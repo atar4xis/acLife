@@ -238,7 +238,9 @@ describe("AppearancePage", () => {
     const user = await savePresetNamed("Sunset");
 
     const row = getPresetRow("Sunset");
-    const exportButton = within(row).getAllByRole("button")[1];
+    const exportButton = within(row).getByRole("button", {
+      name: "Export as .json",
+    });
     await user.click(exportButton);
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
@@ -388,6 +390,50 @@ describe("AppearancePage", () => {
       const names = screen.getAllByText(/^[AB]$/).map((e) => e.textContent);
       expect(names).toEqual(["B", "A"]);
     });
+  });
+
+  it("reorders themes from the keyboard with shift + arrow keys", async () => {
+    renderAppearancePage();
+    await savePresetNamed("A");
+    await savePresetNamed("B");
+    const user = userEvent.setup();
+    const handle = within(getPresetRow("A")).getByRole("button", {
+      name: "Reorder theme",
+    });
+    const names = () =>
+      screen.getAllByText(/^[AB]$/).map((e) => e.textContent);
+
+    handle.focus();
+    await user.keyboard("{ArrowDown}");
+    expect(names()).toEqual(["A", "B"]);
+
+    await user.keyboard("{Shift>}{ArrowDown}{/Shift}");
+    expect(names()).toEqual(["B", "A"]);
+    expect(handle).toHaveFocus();
+
+    await user.keyboard("{Shift>}{ArrowDown}{/Shift}");
+    expect(names()).toEqual(["B", "A"]);
+
+    await user.keyboard("{Shift>}{ArrowUp}{/Shift}");
+    expect(names()).toEqual(["A", "B"]);
+  });
+
+  it("renames a theme from the keyboard via the rename button", async () => {
+    renderAppearancePage();
+    const user = await savePresetNamed("Sunset");
+
+    await user.click(
+      within(getPresetRow("Sunset")).getByRole("button", {
+        name: "Rename theme",
+      }),
+    );
+    const input = screen.getByRole("textbox", { name: "Rename theme" });
+    expect(input).toHaveFocus();
+    await user.clear(input);
+    await user.type(input, "Dawn{Enter}");
+
+    expect(screen.getByText("Dawn")).toBeInTheDocument();
+    expect(screen.queryByText("Sunset")).not.toBeInTheDocument();
   });
 
   describe("custom theme select", () => {

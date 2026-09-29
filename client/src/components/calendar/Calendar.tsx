@@ -1733,6 +1733,12 @@ export default function AppCalendar({
       )
         return;
 
+      if (
+        e.target instanceof Element &&
+        e.target.closest("[role=dialog], [role=alertdialog]")
+      )
+        return;
+
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         move(-1);
@@ -2215,6 +2221,7 @@ export default function AppCalendar({
             data-testid="prev-btn"
             variant="outline"
             size="icon"
+            aria-label="Previous"
             onClick={() => move(-1)}
           >
             <ArrowLeft />
@@ -2223,6 +2230,7 @@ export default function AppCalendar({
             data-testid="next-btn"
             variant="outline"
             size="icon"
+            aria-label="Next"
             onClick={() => move(1)}
           >
             <ArrowRight />

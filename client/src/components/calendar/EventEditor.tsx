@@ -330,7 +330,12 @@ export default function EventEditor({
               (it conflicts with hold-to-drag), so expose it here instead */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                aria-label="More actions"
+              >
                 <MoreVerticalIcon />
               </Button>
             </DropdownMenuTrigger>
@@ -354,7 +359,12 @@ export default function EventEditor({
               />
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" size="icon" onClick={onCancel}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Close"
+            onClick={onCancel}
+          >
             <XIcon />
           </Button>
         </div>
@@ -587,6 +597,7 @@ export default function EventEditor({
             size="icon"
             variant="secondary"
             type="button"
+            aria-label="Delete event"
             onClick={onDelete}
           >
             <Trash2Icon />
@@ -595,6 +606,7 @@ export default function EventEditor({
             size="icon"
             variant="secondary"
             type="button"
+            aria-label="Duplicate event"
             onClick={onDuplicate}
           >
             <CopyIcon />

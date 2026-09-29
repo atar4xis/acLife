@@ -62,12 +62,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
 
   return (
     <div
-      className={`w-full py-1 px-2 flex justify-between items-center text-foreground hover:bg-secondary hover:cursor-pointer ${event.isTask && event.completed ? "opacity-50" : ""}`}
-      onClick={() => {
-        setCurrentDate(event.start.startOf("day"));
-        setEditingEvent(event);
-        setOpenMobile(false); // close sidebar
-      }}
+      className={`relative w-full py-1 px-2 flex justify-between items-center text-foreground hover:bg-secondary hover:cursor-pointer ${event.isTask && event.completed ? "opacity-50" : ""}`}
     >
       <div className="font-semibold flex items-center">
         <div
@@ -80,20 +75,28 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
         </div>
         {event.isTask && event.start.toMillis() - now <= 86_400_000 && (
           <Checkbox
-            className="mr-2 shrink-0"
+            className="relative z-10 mr-2 shrink-0"
             checked={event.completed ?? false}
             onClick={(e) => e.stopPropagation()}
             onCheckedChange={(c) => toggleCompleted(!!c)}
           />
         )}
-        <div className="flex flex-col">
+        <button
+          type="button"
+          className="flex cursor-pointer flex-col text-left after:absolute after:inset-0"
+          onClick={() => {
+            setCurrentDate(event.start.startOf("day"));
+            setEditingEvent(event);
+            setOpenMobile(false); // close sidebar
+          }}
+        >
           <span
             className={`text-sm ${event.isTask && event.completed ? "line-through" : ""}`}
           >
             {event.title}
           </span>
           <span className="text-xs font-normal">{startsInText}</span>
-        </div>
+        </button>
       </div>
       {!event._continued && (
         <div className="text-xs font-normal truncate text-foreground/50">

@@ -3,7 +3,7 @@ import { useSetting } from "@/hooks/useSetting";
 import type { SettingKey } from "@/lib/settingsDefaults";
 import { isSyncable } from "@/lib/settingsSync";
 import ResetToDefault from "./ResetToDefault";
-import { settingLabelByKey } from "./settingsData";
+import { settingLabelByKey, settingLabelId } from "./settingsData";
 import SyncToggle from "./SyncToggle";
 
 export default function SettingsLabel({
@@ -17,7 +17,9 @@ export default function SettingsLabel({
 
   return (
     <div className="flex flex-auto items-center gap-1.5">
-      <FieldTitle>{settingLabelByKey(settingKey)}</FieldTitle>
+      <FieldTitle id={settingLabelId(settingKey)}>
+        {settingLabelByKey(settingKey)}
+      </FieldTitle>
       {isSyncable(settingKey) && <SyncToggle settingKey={settingKey} />}
       {value !== defaultValue && (
         <ResetToDefault

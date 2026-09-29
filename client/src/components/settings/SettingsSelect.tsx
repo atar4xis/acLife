@@ -8,19 +8,24 @@ import {
 
 export default function SettingsSelect({
   triggerClassName = "w-[160px]",
+  labelledBy,
   placeholder,
   footer,
   children,
   ...props
 }: ComponentProps<typeof Select> & {
   triggerClassName?: string;
+  labelledBy?: string;
   placeholder?: string;
   footer?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1 @md/field-group:items-end">
       <Select {...props}>
-        <SelectTrigger className={triggerClassName}>
+        <SelectTrigger
+          className={triggerClassName}
+          aria-labelledby={labelledBy}
+        >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>{children}</SelectContent>

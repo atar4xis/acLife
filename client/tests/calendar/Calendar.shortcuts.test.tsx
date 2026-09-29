@@ -249,4 +249,22 @@ describe("Calendar keyboard shortcuts", () => {
       FIXED_NOW.startOf("day").plus({ days: 2, hours: 14 }).toISO(),
     );
   });
+
+  it("changes the date with arrow keys, but not while focus is in a dialog", async () => {
+    renderCalendar();
+    expect(await screen.findByText("Wed 18")).toBeInTheDocument();
+
+    const dialog = document.createElement("div");
+    dialog.setAttribute("role", "dialog");
+    const button = document.createElement("button");
+    dialog.append(button);
+    document.body.append(dialog);
+
+    fireEvent.keyDown(button, { key: "ArrowRight", shiftKey: true });
+    expect(screen.getByText("Wed 18")).toBeInTheDocument();
+
+    dialog.remove();
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    expect(await screen.findByText("Thu 19")).toBeInTheDocument();
+  });
 });

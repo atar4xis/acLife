@@ -45,7 +45,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import ResetToDefault from "../ResetToDefault";
-import { sectionLabel, settingLabel } from "../settingsData";
+import { sectionLabel, settingLabel, settingLabelId } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
 import SettingsLabel from "../SettingsLabel";
@@ -109,10 +109,15 @@ const TimezonesField = memo(function TimezonesField() {
     );
   };
 
-  const { order: orderedAdditionalTimezones, dragIndex, onPointerDown, setItemRef } =
-    useDragReorder(additionalTimezones, (next) =>
-      setSetting("timezones", [defaultTimezone, ...next]),
-    );
+  const {
+    order: orderedAdditionalTimezones,
+    dragIndex,
+    onPointerDown,
+    onKeyDown,
+    setItemRef,
+  } = useDragReorder(additionalTimezones, (next) =>
+    setSetting("timezones", [defaultTimezone, ...next]),
+  );
 
   const timezoneLabel = (tz: string) =>
     allTimezones.find((t) => t.name === tz)?.label ?? tz.replace(/_/g, " ");
@@ -121,13 +126,14 @@ const TimezonesField = memo(function TimezonesField() {
     <FieldGroup className="mt-1 gap-5">
       <Field orientation="responsive">
         <div className="flex flex-auto items-center gap-1.5">
-          <FieldTitle className="font-normal">
+          <FieldTitle id="default-timezone-label" className="font-normal">
             {settingLabel("calendar-default-timezone")}
           </FieldTitle>
           <SyncToggle settingKey="defaultTimezone" />
         </div>
         <SearchableSelect
           className="w-full shrink-0 @md/field-group:w-[250px]!"
+          labelledBy="default-timezone-label"
           options={allOptions}
           value={defaultTimezone}
           onValueChange={selectDefaultTimezone}
@@ -138,7 +144,7 @@ const TimezonesField = memo(function TimezonesField() {
       <Field orientation="responsive">
         <FieldContent>
           <div className="flex items-center gap-1.5">
-            <FieldTitle className="font-normal">
+            <FieldTitle id="additional-timezones-label" className="font-normal">
               Additional time zones
             </FieldTitle>
             <SyncToggle settingKey="timezones" />
@@ -149,6 +155,7 @@ const TimezonesField = memo(function TimezonesField() {
         </FieldContent>
         <SearchableSelect
           className="w-full shrink-0 @md/field-group:w-[250px]!"
+          labelledBy="additional-timezones-label"
           options={availableOptions}
           value=""
           onValueChange={addTimezone}
@@ -178,8 +185,11 @@ const TimezonesField = memo(function TimezonesField() {
               <button
                 type="button"
                 style={{ touchAction: "none" }}
+                aria-label="Reorder time zone"
+                aria-keyshortcuts="Shift+ArrowUp Shift+ArrowDown"
                 className="text-muted-foreground cursor-grab active:cursor-grabbing"
                 onPointerDown={onPointerDown(index)}
+                onKeyDown={onKeyDown(index)}
               >
                 <GripVertical className="size-4" />
               </button>
@@ -197,6 +207,7 @@ const TimezonesField = memo(function TimezonesField() {
                 variant="ghost"
                 size="icon"
                 className="size-7"
+                aria-label={`Remove ${tz}`}
                 onClick={() => removeTimezone(tz)}
               >
                 <X className="size-3.5" />
@@ -259,6 +270,7 @@ const ColorPresetsField = memo(function ColorPresetsField() {
     order: orderedColorPresets,
     dragIndex,
     onPointerDown,
+    onKeyDown,
     setItemRef,
   } = useDragReorder(eventColorPresets, (next) =>
     setSetting("eventColorPresets", next),
@@ -280,6 +292,7 @@ const ColorPresetsField = memo(function ColorPresetsField() {
                   variant="ghost"
                   size="icon"
                   className="size-5 text-muted-foreground hover:text-foreground"
+                  aria-label="Generate from theme"
                   onClick={generateFromTheme}
                 >
                   <Sparkles className="size-3.5" />
@@ -304,12 +317,23 @@ const ColorPresetsField = memo(function ColorPresetsField() {
         </FieldContent>
 
         <div className="flex items-center gap-2">
-          <ColorPicker value={newColor} onChange={setNewColor} />
+          <ColorPicker
+            aria-label="New color"
+            value={newColor}
+            onChange={setNewColor}
+          />
           {isDuplicate || isLimitReached ? (
             <Tooltip>
               <TooltipTrigger asChild>
+                {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keeps tooltip reachable by keyboard */}
                 <span tabIndex={0}>
-                  <Button type="button" variant="outline" size="icon" disabled>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="Add color"
+                    disabled
+                  >
                     <Plus />
                   </Button>
                 </span>
@@ -325,6 +349,7 @@ const ColorPresetsField = memo(function ColorPresetsField() {
               type="button"
               variant="outline"
               size="icon"
+              aria-label="Add color"
               onClick={addColor}
             >
               <Plus />
@@ -340,7 +365,16 @@ const ColorPresetsField = memo(function ColorPresetsField() {
               <button
                 ref={setItemRef(index)}
                 type="button"
+                aria-label={`Remove ${presetColor}`}
+                aria-keyshortcuts="Shift+ArrowLeft Shift+ArrowRight"
                 onPointerDown={onPointerDown(index, () => removeColor(index))}
+                onKeyDown={(e) => {
+                  onKeyDown(index)(e);
+                  if (["Enter", " ", "Delete", "Backspace"].includes(e.key)) {
+                    e.preventDefault();
+                    removeColor(index);
+                  }
+                }}
                 className={cn(
                   "size-8 cursor-pointer rounded border opacity-90 transition-opacity hover:opacity-100",
                   dragIndex === index && "opacity-40",
@@ -369,6 +403,7 @@ const DefaultEventNameField = memo(function DefaultEventNameField() {
     <Field orientation="responsive">
       <SettingsLabel settingKey="defaultEventName" onReset={field.cancel} />
       <Input
+        aria-labelledby={settingLabelId("defaultEventName")}
         value={field.value}
         onChange={(e) => field.onChange(e.target.value)}
         onBlur={field.flush}
@@ -391,6 +426,7 @@ const DefaultTaskNameField = memo(function DefaultTaskNameField() {
     <Field orientation="responsive">
       <SettingsLabel settingKey="defaultTaskName" onReset={field.cancel} />
       <Input
+        aria-labelledby={settingLabelId("defaultTaskName")}
         value={field.value}
         onChange={(e) => field.onChange(e.target.value)}
         onBlur={field.flush}
@@ -470,6 +506,7 @@ export default function CalendarPage({
         <Field orientation="responsive">
           <SettingsLabel settingKey="weekStartsOn" />
           <SettingsSelect
+            labelledBy={settingLabelId("weekStartsOn")}
             value={String(weekStartsOn)}
             onValueChange={(value) =>
               setSetting(
@@ -504,6 +541,7 @@ export default function CalendarPage({
         <Field orientation="responsive">
           <SettingsLabel settingKey="defaultView" />
           <SettingsSelect
+            labelledBy={settingLabelId("defaultView")}
             value={defaultView}
             onValueChange={(value) =>
               setSetting("defaultView", value as typeof defaultView)
@@ -517,6 +555,7 @@ export default function CalendarPage({
         <Field orientation="responsive">
           <SettingsLabel settingKey="dayHeaderPosition" />
           <SettingsSelect
+            labelledBy={settingLabelId("dayHeaderPosition")}
             value={dayHeaderPosition}
             onValueChange={(value) =>
               setSetting("dayHeaderPosition", value as typeof dayHeaderPosition)
@@ -530,6 +569,7 @@ export default function CalendarPage({
         <Field orientation="responsive">
           <SettingsLabel settingKey="timeLabelPosition" />
           <SettingsSelect
+            labelledBy={settingLabelId("timeLabelPosition")}
             value={timeLabelPosition}
             onValueChange={(value) =>
               setSetting("timeLabelPosition", value as typeof timeLabelPosition)
@@ -550,6 +590,7 @@ export default function CalendarPage({
             </div>
           </FieldContent>
           <Slider
+            aria-labelledby={settingLabelId("snapMinutes")}
             className="mt-1"
             min={1}
             max={30}
@@ -581,6 +622,7 @@ export default function CalendarPage({
             </div>
           </FieldContent>
           <Slider
+            aria-labelledby={settingLabelId("defaultEventDuration")}
             className="mt-1"
             min={1}
             max={120}
@@ -604,6 +646,7 @@ export default function CalendarPage({
         <Field orientation="responsive">
           <SettingsLabel settingKey="addColorsAutomatically" />
           <Switch
+            aria-labelledby={settingLabelId("addColorsAutomatically")}
             checked={addColorsAutomatically}
             onCheckedChange={(checked) =>
               setSetting("addColorsAutomatically", checked)
@@ -622,6 +665,7 @@ export default function CalendarPage({
         <Field orientation="responsive">
           <SettingsLabel settingKey="agendaEnabled" />
           <Switch
+            aria-labelledby={settingLabelId("agendaEnabled")}
             checked={agendaEnabled}
             onCheckedChange={(checked) => setSetting("agendaEnabled", checked)}
           />
@@ -638,6 +682,7 @@ export default function CalendarPage({
             </div>
           </FieldContent>
           <Slider
+            aria-labelledby={settingLabelId("agendaRangeDays")}
             className="mt-1"
             min={1}
             max={14}

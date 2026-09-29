@@ -24,7 +24,12 @@ import {
 import { SelectItem } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { sectionLabel, settingLabel, settingLabelByKey } from "../settingsData";
+import {
+  sectionLabel,
+  settingLabel,
+  settingLabelByKey,
+  settingLabelId,
+} from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
 import ResetToDefault from "../ResetToDefault";
@@ -159,6 +164,7 @@ export default function SyncPage({
         <Field orientation="responsive">
           <FieldTitle>{settingLabel("sync-push-status")}</FieldTitle>
           <Switch
+            aria-label={settingLabel("sync-push-status")}
             checked={enabled}
             disabled={!supported || loading}
             onCheckedChange={onToggle}
@@ -182,6 +188,7 @@ export default function SyncPage({
         <Field orientation="responsive">
           <SettingsLabel settingKey="resyncIntervalMinutes" />
           <SettingsSelect
+            labelledBy={settingLabelId("resyncIntervalMinutes")}
             value={String(resyncIntervalMinutes)}
             onValueChange={(value) =>
               setSetting("resyncIntervalMinutes", Number(value))
