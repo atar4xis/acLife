@@ -1,4 +1,5 @@
 import { indexedDBAdapter } from "@/lib/adapter/indexedDB";
+import { defaultSecuritySettings } from "@/lib/settingsDefaults";
 import type { WithChildren } from "@/types/Props";
 import type { StorageAdapter, StorageData } from "@/types/Storage";
 import {
@@ -99,10 +100,9 @@ const defaults: StorageData = {
   pushSubscription: null,
   pushDismissed: false,
   sidebarOpen: true,
-  unlockMethod: "password",
+  ...defaultSecuritySettings,
   unlockKeys: null,
   pinWrappedKeys: null,
-  autoLock: "disabled",
 };
 
 export const { StorageProvider, useStorage } =

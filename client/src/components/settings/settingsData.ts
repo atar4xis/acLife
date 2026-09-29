@@ -1,6 +1,9 @@
+import type { SettingKey } from "@/lib/settingsDefaults";
+
 export interface SettingItem {
   id: string;
   label: string;
+  settingKey?: SettingKey;
 }
 
 export interface SettingsSection {
@@ -26,7 +29,7 @@ export const settingsCategories: SettingsCategory[] = [
         id: "theme",
         label: "Theme",
         items: [
-          { id: "theme-mode", label: "Theme mode" },
+          { id: "theme-mode", label: "Theme mode", settingKey: "theme" },
           { id: "custom-theme", label: "Custom theme" },
           { id: "presets-list", label: "User themes" },
         ],
@@ -35,8 +38,8 @@ export const settingsCategories: SettingsCategory[] = [
         id: "font",
         label: "Font",
         items: [
-          { id: "font-family", label: "Font family" },
-          { id: "font-size", label: "Font size" },
+          { id: "font-family", label: "Font family", settingKey: "fontFamily" },
+          { id: "font-size", label: "Font size", settingKey: "fontSize" },
         ],
       },
       {
@@ -84,8 +87,16 @@ export const settingsCategories: SettingsCategory[] = [
         id: "encryption",
         label: "Encryption",
         items: [
-          { id: "security-unlock-method", label: "Data decryption method" },
-          { id: "security-auto-lock", label: "Auto-lock" },
+          {
+            id: "security-unlock-method",
+            label: "Data decryption method",
+            settingKey: "unlockMethod",
+          },
+          {
+            id: "security-auto-lock",
+            label: "Auto-lock",
+            settingKey: "autoLock",
+          },
         ],
       },
       {
@@ -103,7 +114,11 @@ export const settingsCategories: SettingsCategory[] = [
         id: "region",
         label: "Region",
         items: [
-          { id: "calendar-week-start", label: "Week start" },
+          {
+            id: "calendar-week-start",
+            label: "Week start",
+            settingKey: "weekStartsOn",
+          },
           { id: "calendar-timezones-list", label: "Time zones" },
         ],
       },
@@ -111,19 +126,46 @@ export const settingsCategories: SettingsCategory[] = [
         id: "grid",
         label: "Grid",
         items: [
-          { id: "calendar-default-view", label: "Default view" },
-          { id: "calendar-snap-minutes", label: "Snap to minutes" },
+          {
+            id: "calendar-default-view",
+            label: "Default view",
+            settingKey: "defaultView",
+          },
+          {
+            id: "calendar-snap-minutes",
+            label: "Snap to minutes",
+            settingKey: "snapMinutes",
+          },
+          {
+            id: "calendar-day-header-position",
+            label: "Day header position",
+            settingKey: "dayHeaderPosition",
+          },
+          {
+            id: "calendar-time-label-position",
+            label: "Time labels position",
+            settingKey: "timeLabelPosition",
+          },
         ],
       },
       {
         id: "events",
         label: "Event defaults",
         items: [
-          { id: "calendar-default-event-name", label: "Default event name" },
-          { id: "calendar-default-task-name", label: "Default task name" },
+          {
+            id: "calendar-default-event-name",
+            label: "Default event name",
+            settingKey: "defaultEventName",
+          },
+          {
+            id: "calendar-default-task-name",
+            label: "Default task name",
+            settingKey: "defaultTaskName",
+          },
           {
             id: "calendar-default-event-duration",
             label: "Default event duration",
+            settingKey: "defaultEventDuration",
           },
         ],
       },
@@ -138,6 +180,7 @@ export const settingsCategories: SettingsCategory[] = [
           {
             id: "calendar-event-editor-add-colors-automatically",
             label: "Add new colors automatically",
+            settingKey: "addColorsAutomatically",
           },
         ],
       },
@@ -145,8 +188,16 @@ export const settingsCategories: SettingsCategory[] = [
         id: "agenda",
         label: "Agenda view",
         items: [
-          { id: "calendar-agenda-enabled", label: "Enabled" },
-          { id: "calendar-agenda-range", label: "Range" },
+          {
+            id: "calendar-agenda-enabled",
+            label: "Enabled",
+            settingKey: "agendaEnabled",
+          },
+          {
+            id: "calendar-agenda-range",
+            label: "Range",
+            settingKey: "agendaRangeDays",
+          },
         ],
       },
     ],
@@ -164,7 +215,13 @@ export const settingsCategories: SettingsCategory[] = [
       {
         id: "resync",
         label: "Resync",
-        items: [{ id: "sync-resync-interval", label: "Resync interval" }],
+        items: [
+          {
+            id: "sync-resync-interval",
+            label: "Resync interval",
+            settingKey: "resyncIntervalMinutes",
+          },
+        ],
       },
     ],
   },
@@ -202,6 +259,22 @@ const sectionLabels = new Map(
 export function settingLabel(itemId: string): string {
   const label = itemLabels.get(itemId);
   if (!label) throw new Error(`Unknown setting id: ${itemId}`);
+  return label;
+}
+
+const keyLabels = new Map(
+  settingsCategories.flatMap((category) =>
+    category.sections.flatMap((section) =>
+      section.items.flatMap((item) =>
+        item.settingKey ? [[item.settingKey, item.label] as const] : [],
+      ),
+    ),
+  ),
+);
+
+export function settingLabelByKey(settingKey: SettingKey): string {
+  const label = keyLabels.get(settingKey);
+  if (!label) throw new Error(`Unknown setting key: ${settingKey}`);
   return label;
 }
 

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { readJSON } from "@/lib/utils";
+import { defaultThemeSettings } from "@/lib/settingsDefaults";
 
 export type Theme = "dark" | "light" | "system" | "custom";
 
@@ -135,20 +136,16 @@ type ThemeProviderState = {
   importPreset: (preset: Omit<ThemePreset, "id">) => void;
 };
 
-export const DEFAULT_THEME: Theme = "system";
-export const DEFAULT_FONT_FAMILY = "";
-export const DEFAULT_FONT_SIZE = 16;
-
 const initialState: ThemeProviderState = {
-  theme: "system",
+  theme: defaultThemeSettings.theme,
   setTheme: () => null,
   resolvedBase: "light",
   colors: {},
   setColor: () => null,
   resetColors: () => null,
-  fontFamily: "",
+  fontFamily: defaultThemeSettings.fontFamily,
   setFontFamily: () => null,
-  fontSize: DEFAULT_FONT_SIZE,
+  fontSize: defaultThemeSettings.fontSize,
   setFontSize: () => null,
   presets: [],
   activePresetId: null,
@@ -164,7 +161,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  defaultTheme = defaultThemeSettings.theme,
   storageKey = "vite-ui-theme",
 }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(
@@ -174,12 +171,14 @@ export function ThemeProvider({
     readJSON(`${storageKey}-colors`, {}),
   );
   const [fontFamily, setFontFamilyState] = useState<string>(
-    () => localStorage.getItem(`${storageKey}-font-family`) ?? "",
+    () =>
+      localStorage.getItem(`${storageKey}-font-family`) ??
+      defaultThemeSettings.fontFamily,
   );
   const [fontSize, setFontSizeState] = useState<number>(
     () =>
       Number(localStorage.getItem(`${storageKey}-font-size`)) ||
-      DEFAULT_FONT_SIZE,
+      defaultThemeSettings.fontSize,
   );
   const [presets, setPresets] = useState<ThemePreset[]>(() =>
     readJSON(`${storageKey}-presets`, []),

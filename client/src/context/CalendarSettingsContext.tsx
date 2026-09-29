@@ -15,6 +15,9 @@ import { getDeviceTimezone, isValidTimezone } from "@/lib/calendar/timezone";
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type WeekStartsOn = "inherit" | Weekday;
 
+export type DayHeaderPosition = "top" | "bottom";
+export type TimeLabelPosition = "left" | "right";
+
 export const MAX_EVENT_COLOR_PRESETS = 45;
 export const MAX_CALENDAR_TIMEZONES = 6;
 export const EVENT_COLOR_FALLBACK = "#2563eb";
@@ -23,6 +26,8 @@ export interface CalendarSettings {
   defaultView: ViewMode;
   weekStartsOn: WeekStartsOn;
   snapMinutes: number;
+  dayHeaderPosition: DayHeaderPosition;
+  timeLabelPosition: TimeLabelPosition;
   defaultEventName: string;
   defaultTaskName: string;
   defaultEventDuration: number;
@@ -45,6 +50,8 @@ export const defaultCalendarSettings: CalendarSettings = {
   defaultView: "week",
   weekStartsOn: "inherit",
   snapMinutes: 5,
+  dayHeaderPosition: "top",
+  timeLabelPosition: "left",
   defaultEventName: "new event",
   defaultTaskName: "new task",
   defaultEventDuration: 60,
@@ -81,6 +88,12 @@ function loadSettings(): CalendarSettings {
     parsed.weekStartsOn =
       legacyWeekStarts[parsed.weekStartsOn] ??
       defaultCalendarSettings.weekStartsOn;
+  }
+  if (!["top", "bottom"].includes(parsed.dayHeaderPosition)) {
+    parsed.dayHeaderPosition = defaultCalendarSettings.dayHeaderPosition;
+  }
+  if (!["left", "right"].includes(parsed.timeLabelPosition)) {
+    parsed.timeLabelPosition = defaultCalendarSettings.timeLabelPosition;
   }
   if (!parsed.resyncIntervalMinutes) {
     parsed.resyncIntervalMinutes =

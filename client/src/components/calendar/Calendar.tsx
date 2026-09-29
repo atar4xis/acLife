@@ -193,14 +193,22 @@ const getTimezoneColWidth = (timezones: string[], dayCount: number) => {
 
 const GRID_CONFIG = {
   day: {
-    cols: (tzCount: number, tzWidth: string) =>
-      `repeat(${tzCount}, ${tzWidth}) 1fr`,
-    rows: (h: number) => `48px repeat(24, ${h}px)`,
+    cols: (tzCount: number, tzWidth: string, labelsRight: boolean) => {
+      const labels = `repeat(${tzCount}, ${tzWidth})`;
+      return labelsRight ? `1fr ${labels}` : `${labels} 1fr`;
+    },
+    rows: (h: number, headerBottom: boolean) =>
+      headerBottom ? `repeat(24, ${h}px) 48px` : `48px repeat(24, ${h}px)`,
   },
   week: {
-    cols: (tzCount: number, tzWidth: string) =>
-      `repeat(${tzCount}, ${tzWidth}) repeat(7, 1fr)`,
-    rows: (h: number) => `48px repeat(24, ${h}px)`,
+    cols: (tzCount: number, tzWidth: string, labelsRight: boolean) => {
+      const labels = `repeat(${tzCount}, ${tzWidth})`;
+      return labelsRight
+        ? `repeat(7, 1fr) ${labels}`
+        : `${labels} repeat(7, 1fr)`;
+    },
+    rows: (h: number, headerBottom: boolean) =>
+      headerBottom ? `repeat(24, ${h}px) 48px` : `48px repeat(24, ${h}px)`,
   },
 } as const;
 
@@ -382,6 +390,8 @@ export default function AppCalendar({
     eventColorPresets,
     timezones,
     defaultTimezone,
+    dayHeaderPosition,
+    timeLabelPosition,
     setSetting: setCalendarSetting,
   } = useCalendarSettings((s) => ({
     snapMinutes: s.snapMinutes,
@@ -393,6 +403,8 @@ export default function AppCalendar({
     eventColorPresets: s.eventColorPresets,
     timezones: s.timezones,
     defaultTimezone: s.defaultTimezone,
+    dayHeaderPosition: s.dayHeaderPosition,
+    timeLabelPosition: s.timeLabelPosition,
     setSetting: s.setSetting,
   }));
   const [searchOpen, setSearchOpen] = useState(false);
@@ -436,6 +448,9 @@ export default function AppCalendar({
   );
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
+  const headerBottom = dayHeaderPosition === "bottom";
+  const labelsRight = timeLabelPosition === "right";
+  const gridHeaderOffset = headerBottom ? 0 : GRID_HEADER_HEIGHT;
 
   const gridRef = useRef<HTMLDivElement>(null);
   const [scrollThumb, setScrollThumb] = useState<{
@@ -1348,7 +1363,7 @@ export default function AppCalendar({
     const rect = container.getBoundingClientRect();
     const y = pointer.y + container.scrollTop;
     const minutes = snapMinutes(
-      yToMinutes(y - rect.top - GRID_HEADER_HEIGHT, hourHeight),
+      yToMinutes(y - rect.top - gridHeaderOffset, hourHeight),
       snapMins,
     );
     const anchorTime = dayDate.plus({ minutes });
@@ -1390,6 +1405,7 @@ export default function AppCalendar({
   }, [
     visibleDays,
     hourHeight,
+    gridHeaderOffset,
     snapMins,
     dispatch,
     updateChange,
@@ -1418,7 +1434,7 @@ export default function AppCalendar({
       const startY = e.clientY + container.scrollTop;
 
       const startMinutes = yToMinutes(
-        startY - rect.top - GRID_HEADER_HEIGHT,
+        startY - rect.top - gridHeaderOffset,
         hourHeight,
       );
 
@@ -1473,6 +1489,7 @@ export default function AppCalendar({
     },
     [
       hourHeight,
+      gridHeaderOffset,
       snapMins,
       defaultEventDuration,
       defaultEventName,
@@ -2000,12 +2017,12 @@ export default function AppCalendar({
       visibleDays.map((d) => (
         <HeaderCell
           key={d.label}
-          className={`select-none ${isSameDate(d.date, now) ? "bg-card font-bold" : ""}`}
+          className={`select-none ${headerBottom ? "top-auto bottom-0" : ""} ${isSameDate(d.date, now) ? "bg-card font-bold" : ""}`}
         >
           {d.label}
         </HeaderCell>
       )),
-    [visibleDays, now],
+    [visibleDays, now, headerBottom],
   );
 
   const tzColWidth = useMemo(
@@ -2013,104 +2030,140 @@ export default function AppCalendar({
     [timezones, visibleDays.length],
   );
 
+  const tzStickyStyle = useCallback(
+    (i: number) =>
+      labelsRight
+        ? { right: `calc(${tzColWidth} * ${timezones.length - 1 - i})` }
+        : { left: `calc(${tzColWidth} * ${i})` },
+    [labelsRight, tzColWidth, timezones.length],
+  );
+
   const timezoneHeaderCells = useMemo(
     () =>
       timezones.map((tz, i) => (
         <div
           key={tz}
-          className="select-none sticky top-0 z-16 hover:z-20 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex items-center justify-center bg-background text-xs text-muted-foreground px-1"
-          style={{ left: `calc(${tzColWidth} * ${i})` }}
+          className={`select-none sticky ${headerBottom ? "bottom-0" : "top-0"} z-16 hover:z-20 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex items-center justify-center bg-background text-xs text-muted-foreground px-1`}
+          style={tzStickyStyle(i)}
         >
           {timezones.length > 1 ? (
-            <span className="truncate hover:absolute hover:inset-y-0 hover:left-0 hover:w-max hover:min-w-full hover:overflow-visible hover:bg-background hover:ring-1 hover:ring-inset hover:ring-border hover:px-1 hover:flex hover:items-center hover:justify-center">
+            <span
+              className={`truncate hover:absolute hover:inset-y-0 ${labelsRight ? "hover:right-0" : "hover:left-0"} hover:w-max hover:min-w-full hover:overflow-visible hover:bg-background hover:ring-1 hover:ring-inset hover:ring-border hover:px-1 hover:flex hover:items-center hover:justify-center`}
+            >
               {getTimezoneShortLabel(tz)}
             </span>
           ) : null}
         </div>
       )),
-    [timezones, tzColWidth],
+    [timezones, headerBottom, labelsRight, tzStickyStyle],
+  );
+
+  const headerRow = labelsRight ? (
+    <>
+      {dayWeekHeaders}
+      {timezoneHeaderCells}
+    </>
+  ) : (
+    <>
+      {timezoneHeaderCells}
+      {dayWeekHeaders}
+    </>
   );
 
   // grid in day/week view
   const timeGrid = useMemo(
     () =>
-      HOURS.map((_label, hour) => (
-        <Fragment key={hour}>
-          {timezones.map((tz, i) => (
-            <div
-              key={tz}
-              className={`select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex text-sm items-center justify-center ${tz === timezones[0] && hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
-              style={{ left: `calc(${tzColWidth} * ${i})` }}
-            >
-              {getTimezoneHourLabel(visibleDays[0]?.date ?? currentDate, hour, tz)}
-            </div>
-          ))}
-
-          {visibleDays.map((d, dayIndex) => {
-            const key = d.date.toISODate()!;
-            const dayEvents = eventMap.get(key) || [];
-            const styles = stylesMap.get(key) || {};
-
-            return (
-              <GridCell
-                key={`${d.label}-${hour}`}
-                day={dayIndex}
-                onCellTap={startNewEvent}
+      HOURS.map((_label, hour) => {
+        const timeLabels = (
+          <>
+            {timezones.map((tz, i) => (
+              <div
+                key={tz}
+                className={`select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex text-sm items-center justify-center ${tz === timezones[0] && hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
+                style={tzStickyStyle(i)}
               >
-                {hour === 0 && (
-                  <div className="pointer-events-none relative h-full">
-                    <div
-                      className="pointer-events-none"
-                      style={{ height: hourHeight * 24 }}
-                    />
+                {getTimezoneHourLabel(
+                  visibleDays[0]?.date ?? currentDate,
+                  hour,
+                  tz,
+                )}
+              </div>
+            ))}
+          </>
+        );
 
-                    {/* current time indicator line */}
-                    {isSameDate(d.date, now) && (
+        return (
+          <Fragment key={hour}>
+            {!labelsRight && timeLabels}
+
+            {visibleDays.map((d, dayIndex) => {
+              const key = d.date.toISODate()!;
+              const dayEvents = eventMap.get(key) || [];
+              const styles = stylesMap.get(key) || {};
+
+              return (
+                <GridCell
+                  key={`${d.label}-${hour}`}
+                  day={dayIndex}
+                  onCellTap={startNewEvent}
+                >
+                  {hour === 0 && (
+                    <div className="pointer-events-none relative h-full">
                       <div
-                        className="pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-foreground
+                        className="pointer-events-none"
+                        style={{ height: hourHeight * 24 }}
+                      />
+
+                      {/* current time indicator line */}
+                      {isSameDate(d.date, now) && (
+                        <div
+                          className="pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-foreground
                     before:absolute before:-left-1 before:top-1/2
                     before:h-2 before:w-2 before:-translate-y-1/2
                     before:rounded-full before:bg-foreground"
-                        style={{
-                          top: getNowY(),
-                          height: 2,
-                        }}
-                      />
-                    )}
+                          style={{
+                            top: getNowY(),
+                            height: 2,
+                          }}
+                        />
+                      )}
 
-                    {/* today's events */}
-                    {dayEvents.map((event, idx) => (
-                      <EventBlock
-                        key={(event._instanceId ?? event.id) + "_" + idx}
-                        event={event}
-                        day={dayIndex}
-                        date={d.date}
-                        style={
-                          styles[event._instanceId ?? event.id] ??
-                          styles[event.id]
-                        }
-                        editing={
-                          (editingEvent?._instanceId ?? editingEvent?.id) ===
-                            (event._instanceId ?? event.id) &&
-                          (editingEventDay == null
-                            ? editingEventFirstDayIndex === dayIndex
-                            : editingEventDay === dayIndex)
-                        }
-                        selected={selectedEvents.has(eventKey(event))}
-                        onPointerDown={onEventPointerDown}
-                        onEventEdit={onEventEdit}
-                        onEventMove={onEventMove}
-                        onEventDelete={onEventDelete}
-                        onDuplicate={onEventDuplicate}
-                      />
-                    ))}
-                  </div>
-                )}
-              </GridCell>
-            );
-          })}
-        </Fragment>
-      )),
+                      {/* today's events */}
+                      {dayEvents.map((event, idx) => (
+                        <EventBlock
+                          key={(event._instanceId ?? event.id) + "_" + idx}
+                          event={event}
+                          day={dayIndex}
+                          date={d.date}
+                          style={
+                            styles[event._instanceId ?? event.id] ??
+                            styles[event.id]
+                          }
+                          editing={
+                            (editingEvent?._instanceId ?? editingEvent?.id) ===
+                              (event._instanceId ?? event.id) &&
+                            (editingEventDay == null
+                              ? editingEventFirstDayIndex === dayIndex
+                              : editingEventDay === dayIndex)
+                          }
+                          selected={selectedEvents.has(eventKey(event))}
+                          onPointerDown={onEventPointerDown}
+                          onEventEdit={onEventEdit}
+                          onEventMove={onEventMove}
+                          onEventDelete={onEventDelete}
+                          onDuplicate={onEventDuplicate}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </GridCell>
+              );
+            })}
+
+            {labelsRight && timeLabels}
+          </Fragment>
+        );
+      }),
     [
       eventMap,
       stylesMap,
@@ -2129,7 +2182,8 @@ export default function AppCalendar({
       editingEventFirstDayIndex,
       selectedEvents,
       timezones,
-      tzColWidth,
+      tzStickyStyle,
+      labelsRight,
       currentDate,
     ],
   );
@@ -2326,8 +2380,12 @@ export default function AppCalendar({
           ref={gridRef}
           className="touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
           style={{
-            gridTemplateColumns: cols(timezones.length, tzColWidth),
-            gridTemplateRows: rows(hourHeight),
+            gridTemplateColumns: cols(
+              timezones.length,
+              tzColWidth,
+              labelsRight,
+            ),
+            gridTemplateRows: rows(hourHeight, headerBottom),
           }}
           onTouchStart={gridTouchStart}
           onTouchMove={gridTouchMove}
@@ -2337,10 +2395,9 @@ export default function AppCalendar({
             showScrollThumb();
           }}
         >
-          {timezoneHeaderCells}
-
-          {dayWeekHeaders}
+          {!headerBottom && headerRow}
           {timeGrid}
+          {headerBottom && headerRow}
 
           {isDragging && <DragOverlay move={move} dragRef={dragRef} />}
 

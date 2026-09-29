@@ -11,9 +11,6 @@ import {
 } from "lucide-react";
 import {
   DARK_COLORS,
-  DEFAULT_FONT_FAMILY,
-  DEFAULT_FONT_SIZE,
-  DEFAULT_THEME,
   LIGHT_COLORS,
   THEME_COLOR_VARS,
   useTheme,
@@ -43,23 +40,16 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SelectGroup, SelectItem, SelectLabel } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BUILT_IN_THEMES, BUILT_IN_THEME_ID_PREFIX } from "../builtInThemes";
-import ResetToDefault from "../ResetToDefault";
 import { sectionLabel, settingLabel } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
+import SettingsLabel from "../SettingsLabel";
+import SettingsSelect from "../SettingsSelect";
 
 const THEME_OPTIONS: { value: Theme; label: string }[] = [
   { value: "light", label: "Light" },
@@ -520,25 +510,22 @@ const CustomThemeField = memo(function CustomThemeField() {
   return (
     <Field orientation="responsive">
       <FieldTitle>{settingLabel("custom-theme")}</FieldTitle>
-      <Select value={value} onValueChange={handleChange}>
-        <SelectTrigger>
-          <SelectValue placeholder="None" />
-        </SelectTrigger>
-        <SelectContent>
-          {CUSTOM_THEME_GROUPS.map((group) => (
-            <SelectGroup key={group.label}>
-              <SelectLabel className="text-sm">
-                {group.label} themes
-              </SelectLabel>
-              {group.themes.map((theme) => (
-                <SelectItem key={theme.id} value={theme.id}>
-                  {theme.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          ))}
-        </SelectContent>
-      </Select>
+      <SettingsSelect
+        value={value}
+        onValueChange={handleChange}
+        placeholder="None"
+      >
+        {CUSTOM_THEME_GROUPS.map((group) => (
+          <SelectGroup key={group.label}>
+            <SelectLabel className="text-sm">{group.label} themes</SelectLabel>
+            {group.themes.map((theme) => (
+              <SelectItem key={theme.id} value={theme.id}>
+                {theme.name}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+      </SettingsSelect>
     </Field>
   );
 });
@@ -559,12 +546,7 @@ const ThemeModeField = memo(function ThemeModeField() {
 
   return (
     <Field orientation="responsive">
-      <div className="flex flex-auto items-center gap-1.5">
-        <FieldTitle>{settingLabel("theme-mode")}</FieldTitle>
-        {theme !== DEFAULT_THEME && (
-          <ResetToDefault onClick={() => setTheme(DEFAULT_THEME)} />
-        )}
-      </div>
+      <SettingsLabel settingKey="theme" />
       <ToggleGroup
         type="single"
         variant="outline"
@@ -588,17 +570,7 @@ const FontFamilyField = memo(function FontFamilyField() {
   return (
     <div className="flex flex-col gap-1.5">
       <Field orientation="responsive">
-        <div className="flex flex-auto items-center gap-1.5">
-          <FieldTitle>{settingLabel("font-family")}</FieldTitle>
-          {fontFamily !== DEFAULT_FONT_FAMILY && (
-            <ResetToDefault
-              onClick={() => {
-                field.cancel();
-                setFontFamily(DEFAULT_FONT_FAMILY);
-              }}
-            />
-          )}
-        </div>
+        <SettingsLabel settingKey="fontFamily" onReset={field.cancel} />
         <Input
           value={field.value}
           onChange={(e) => field.onChange(e.target.value)}
@@ -619,12 +591,7 @@ const FontSizeField = memo(function FontSizeField() {
     <Field>
       <FieldContent>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <FieldTitle>{settingLabel("font-size")}</FieldTitle>
-            {fontSize !== DEFAULT_FONT_SIZE && (
-              <ResetToDefault onClick={() => setFontSize(DEFAULT_FONT_SIZE)} />
-            )}
-          </div>
+          <SettingsLabel settingKey="fontSize" />
           <span className="text-muted-foreground text-sm">
             {fontSizeSlider.value}px
           </span>

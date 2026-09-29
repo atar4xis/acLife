@@ -30,13 +30,7 @@ import {
   FieldTitle,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SelectItem } from "@/components/ui/select";
 import {
   SearchableSelect,
   type SearchableSelectOption,
@@ -53,6 +47,8 @@ import ResetToDefault from "../ResetToDefault";
 import { sectionLabel, settingLabel } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
+import SettingsLabel from "../SettingsLabel";
+import SettingsSelect from "../SettingsSelect";
 
 const TimezonesField = memo(function TimezonesField() {
   const { timezones, defaultTimezone, setSetting } = useCalendarSettings(
@@ -362,20 +358,7 @@ const DefaultEventNameField = memo(function DefaultEventNameField() {
 
   return (
     <Field orientation="responsive">
-      <div className="flex flex-auto items-center gap-1.5">
-        <FieldTitle>{settingLabel("calendar-default-event-name")}</FieldTitle>
-        {defaultEventName !== defaultCalendarSettings.defaultEventName && (
-          <ResetToDefault
-            onClick={() => {
-              field.cancel();
-              setSetting(
-                "defaultEventName",
-                defaultCalendarSettings.defaultEventName,
-              );
-            }}
-          />
-        )}
-      </div>
+      <SettingsLabel settingKey="defaultEventName" onReset={field.cancel} />
       <Input
         value={field.value}
         onChange={(e) => field.onChange(e.target.value)}
@@ -397,20 +380,7 @@ const DefaultTaskNameField = memo(function DefaultTaskNameField() {
 
   return (
     <Field orientation="responsive">
-      <div className="flex flex-auto items-center gap-1.5">
-        <FieldTitle>{settingLabel("calendar-default-task-name")}</FieldTitle>
-        {defaultTaskName !== defaultCalendarSettings.defaultTaskName && (
-          <ResetToDefault
-            onClick={() => {
-              field.cancel();
-              setSetting(
-                "defaultTaskName",
-                defaultCalendarSettings.defaultTaskName,
-              );
-            }}
-          />
-        )}
-      </div>
+      <SettingsLabel settingKey="defaultTaskName" onReset={field.cancel} />
       <Input
         value={field.value}
         onChange={(e) => field.onChange(e.target.value)}
@@ -447,6 +417,8 @@ export default function CalendarPage({
     defaultView,
     weekStartsOn,
     snapMinutes,
+    dayHeaderPosition,
+    timeLabelPosition,
     defaultEventDuration,
     agendaEnabled,
     agendaRangeDays,
@@ -456,6 +428,8 @@ export default function CalendarPage({
     defaultView: s.defaultView,
     weekStartsOn: s.weekStartsOn,
     snapMinutes: s.snapMinutes,
+    dayHeaderPosition: s.dayHeaderPosition,
+    timeLabelPosition: s.timeLabelPosition,
     defaultEventDuration: s.defaultEventDuration,
     agendaEnabled: s.agendaEnabled,
     agendaRangeDays: s.agendaRangeDays,
@@ -485,47 +459,31 @@ export default function CalendarPage({
         sectionRefs={sectionRefs}
       >
         <Field orientation="responsive">
-          <div className="flex flex-auto items-center gap-1.5">
-            <FieldTitle>{settingLabel("calendar-week-start")}</FieldTitle>
-            {weekStartsOn !== defaultCalendarSettings.weekStartsOn && (
-              <ResetToDefault
-                onClick={() =>
-                  setSetting(
-                    "weekStartsOn",
-                    defaultCalendarSettings.weekStartsOn,
-                  )
-                }
-              />
-            )}
-          </div>
-          <div className="flex flex-col gap-1 @md/field-group:items-end">
-            <Select
-              value={String(weekStartsOn)}
-              onValueChange={(value) =>
-                setSetting(
-                  "weekStartsOn",
-                  value === "inherit" ? value : (Number(value) as Weekday),
-                )
-              }
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="inherit">Inherit from time zone</SelectItem>
-                {WEEK_START_OPTIONS.map(({ value, label }) => (
-                  <SelectItem key={value} value={String(value)}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {weekStartsOn === "inherit" && (
-              <span className="text-muted-foreground text-xs">
-                Currently {WEEKDAY_NAMES[resolvedWeekStart]}
-              </span>
-            )}
-          </div>
+          <SettingsLabel settingKey="weekStartsOn" />
+          <SettingsSelect
+            value={String(weekStartsOn)}
+            onValueChange={(value) =>
+              setSetting(
+                "weekStartsOn",
+                value === "inherit" ? value : (Number(value) as Weekday),
+              )
+            }
+            triggerClassName="w-[200px]"
+            footer={
+              weekStartsOn === "inherit" && (
+                <span className="text-muted-foreground text-xs">
+                  Currently {WEEKDAY_NAMES[resolvedWeekStart]}
+                </span>
+              )
+            }
+          >
+            <SelectItem value="inherit">Inherit from time zone</SelectItem>
+            {WEEK_START_OPTIONS.map(({ value, label }) => (
+              <SelectItem key={value} value={String(value)}>
+                {label}
+              </SelectItem>
+            ))}
+          </SettingsSelect>
         </Field>
 
         <TimezonesField />
@@ -535,48 +493,48 @@ export default function CalendarPage({
 
       <Section id="grid" label={sectionLabel("grid")} sectionRefs={sectionRefs}>
         <Field orientation="responsive">
-          <div className="flex flex-auto items-center gap-1.5">
-            <FieldTitle>{settingLabel("calendar-default-view")}</FieldTitle>
-            {defaultView !== defaultCalendarSettings.defaultView && (
-              <ResetToDefault
-                onClick={() =>
-                  setSetting("defaultView", defaultCalendarSettings.defaultView)
-                }
-              />
-            )}
-          </div>
-          <Select
+          <SettingsLabel settingKey="defaultView" />
+          <SettingsSelect
             value={defaultView}
             onValueChange={(value) =>
               setSetting("defaultView", value as typeof defaultView)
             }
           >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="day">Day</SelectItem>
-              <SelectItem value="week">Week</SelectItem>
-            </SelectContent>
-          </Select>
+            <SelectItem value="day">Day</SelectItem>
+            <SelectItem value="week">Week</SelectItem>
+          </SettingsSelect>
+        </Field>
+
+        <Field orientation="responsive">
+          <SettingsLabel settingKey="dayHeaderPosition" />
+          <SettingsSelect
+            value={dayHeaderPosition}
+            onValueChange={(value) =>
+              setSetting("dayHeaderPosition", value as typeof dayHeaderPosition)
+            }
+          >
+            <SelectItem value="top">Top</SelectItem>
+            <SelectItem value="bottom">Bottom</SelectItem>
+          </SettingsSelect>
+        </Field>
+
+        <Field orientation="responsive">
+          <SettingsLabel settingKey="timeLabelPosition" />
+          <SettingsSelect
+            value={timeLabelPosition}
+            onValueChange={(value) =>
+              setSetting("timeLabelPosition", value as typeof timeLabelPosition)
+            }
+          >
+            <SelectItem value="left">Left</SelectItem>
+            <SelectItem value="right">Right</SelectItem>
+          </SettingsSelect>
         </Field>
 
         <Field>
           <FieldContent>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <FieldTitle>{settingLabel("calendar-snap-minutes")}</FieldTitle>
-                {snapMinutes !== defaultCalendarSettings.snapMinutes && (
-                  <ResetToDefault
-                    onClick={() =>
-                      setSetting(
-                        "snapMinutes",
-                        defaultCalendarSettings.snapMinutes,
-                      )
-                    }
-                  />
-                )}
-              </div>
+              <SettingsLabel settingKey="snapMinutes" />
               <span className="text-muted-foreground text-sm">
                 {snapMinutesSlider.value} min
               </span>
@@ -607,22 +565,7 @@ export default function CalendarPage({
         <Field>
           <FieldContent>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <FieldTitle>
-                  {settingLabel("calendar-default-event-duration")}
-                </FieldTitle>
-                {defaultEventDuration !==
-                  defaultCalendarSettings.defaultEventDuration && (
-                  <ResetToDefault
-                    onClick={() =>
-                      setSetting(
-                        "defaultEventDuration",
-                        defaultCalendarSettings.defaultEventDuration,
-                      )
-                    }
-                  />
-                )}
-              </div>
+              <SettingsLabel settingKey="defaultEventDuration" />
               <span className="text-muted-foreground text-sm">
                 {defaultEventDurationSlider.value} min
               </span>
@@ -650,22 +593,7 @@ export default function CalendarPage({
         <ColorPresetsField />
 
         <Field orientation="responsive">
-          <div className="flex flex-auto items-center gap-1.5">
-            <FieldTitle>
-              {settingLabel("calendar-event-editor-add-colors-automatically")}
-            </FieldTitle>
-            {addColorsAutomatically !==
-              defaultCalendarSettings.addColorsAutomatically && (
-              <ResetToDefault
-                onClick={() =>
-                  setSetting(
-                    "addColorsAutomatically",
-                    defaultCalendarSettings.addColorsAutomatically,
-                  )
-                }
-              />
-            )}
-          </div>
+          <SettingsLabel settingKey="addColorsAutomatically" />
           <Switch
             checked={addColorsAutomatically}
             onCheckedChange={(checked) =>
@@ -683,19 +611,7 @@ export default function CalendarPage({
         sectionRefs={sectionRefs}
       >
         <Field orientation="responsive">
-          <div className="flex flex-auto items-center gap-1.5">
-            <FieldTitle>{settingLabel("calendar-agenda-enabled")}</FieldTitle>
-            {agendaEnabled !== defaultCalendarSettings.agendaEnabled && (
-              <ResetToDefault
-                onClick={() =>
-                  setSetting(
-                    "agendaEnabled",
-                    defaultCalendarSettings.agendaEnabled,
-                  )
-                }
-              />
-            )}
-          </div>
+          <SettingsLabel settingKey="agendaEnabled" />
           <Switch
             checked={agendaEnabled}
             onCheckedChange={(checked) => setSetting("agendaEnabled", checked)}
@@ -705,20 +621,7 @@ export default function CalendarPage({
         <Field>
           <FieldContent>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <FieldTitle>{settingLabel("calendar-agenda-range")}</FieldTitle>
-                {agendaRangeDays !==
-                  defaultCalendarSettings.agendaRangeDays && (
-                  <ResetToDefault
-                    onClick={() =>
-                      setSetting(
-                        "agendaRangeDays",
-                        defaultCalendarSettings.agendaRangeDays,
-                      )
-                    }
-                  />
-                )}
-              </div>
+              <SettingsLabel settingKey="agendaRangeDays" />
               <span className="text-muted-foreground text-sm">
                 {agendaRangeDaysSlider.value}{" "}
                 {agendaRangeDaysSlider.value === 1 ? "day" : "days"}

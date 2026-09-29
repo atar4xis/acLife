@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  defaultCalendarSettings,
-  useCalendarSettings,
-} from "@/context/CalendarSettingsContext";
+import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { usePushService } from "@/hooks/usePushService";
 import {
   Field,
@@ -11,19 +8,14 @@ import {
   FieldGroup,
   FieldTitle,
 } from "@/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SelectItem } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import ResetToDefault from "../ResetToDefault";
 import { sectionLabel, settingLabel } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
+import SettingsLabel from "../SettingsLabel";
+import SettingsSelect from "../SettingsSelect";
 
 export default function SyncPage({
   sectionRefs,
@@ -87,36 +79,18 @@ export default function SyncPage({
         sectionRefs={sectionRefs}
       >
         <Field orientation="responsive">
-          <div className="flex flex-auto items-center gap-1.5">
-            <FieldTitle>{settingLabel("sync-resync-interval")}</FieldTitle>
-            {resyncIntervalMinutes !==
-              defaultCalendarSettings.resyncIntervalMinutes && (
-              <ResetToDefault
-                onClick={() =>
-                  setSetting(
-                    "resyncIntervalMinutes",
-                    defaultCalendarSettings.resyncIntervalMinutes,
-                  )
-                }
-              />
-            )}
-          </div>
-          <Select
+          <SettingsLabel settingKey="resyncIntervalMinutes" />
+          <SettingsSelect
             value={String(resyncIntervalMinutes)}
             onValueChange={(value) =>
               setSetting("resyncIntervalMinutes", Number(value))
             }
           >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 minute</SelectItem>
-              <SelectItem value="3">3 minutes</SelectItem>
-              <SelectItem value="5">5 minutes</SelectItem>
-              <SelectItem value="10">10 minutes</SelectItem>
-            </SelectContent>
-          </Select>
+            <SelectItem value="1">1 minute</SelectItem>
+            <SelectItem value="3">3 minutes</SelectItem>
+            <SelectItem value="5">5 minutes</SelectItem>
+            <SelectItem value="10">10 minutes</SelectItem>
+          </SettingsSelect>
         </Field>
 
         <FieldDescription>

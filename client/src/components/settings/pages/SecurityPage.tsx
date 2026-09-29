@@ -3,14 +3,12 @@ import { DateTime } from "luxon";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, TriangleAlert } from "lucide-react";
 import { useUser } from "@/context/UserContext";
-import { useStorage } from "@/context/StorageContext";
 import { useApi } from "@/context/ApiContext";
 import {
-  exportKeyPair,
-  generateSRPTriplet,
-  rewrapMasterKeyEnvelope,
-  wrapKeyPairWithPin,
-} from "@/lib/crypt";
+  SecuritySettingsProvider,
+  useSecuritySettings,
+} from "@/context/SecuritySettingsContext";
+import { generateSRPTriplet, rewrapMasterKeyEnvelope } from "@/lib/crypt";
 import { unlockAccount } from "@/lib/unlockAccount";
 import { validatePassword } from "@/lib/validators";
 import { bytesToBase64, uint8ArrayFromBase64 } from "@/lib/utils";
@@ -25,13 +23,7 @@ import {
   FieldTitle,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SelectItem } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -42,204 +34,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import ResetToDefault from "../ResetToDefault";
 import { sectionLabel, settingLabel } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
-
-const DEFAULT_UNLOCK_METHOD: UnlockMethod = "password";
-const DEFAULT_AUTO_LOCK: AutoLockOption = "disabled";
-
-function PinSetupDialog({
-  open,
-  onCancel,
-  onConfirm,
-}: {
-  open: boolean;
-  onCancel: () => void;
-  onConfirm: (pin: string, currentPassword: string) => Promise<void>;
-}) {
-  const [pin, setPin] = useState("");
-  const [confirmPin, setConfirmPin] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) {
-      setPin("");
-      setConfirmPin("");
-      setCurrentPassword("");
-      setError(null);
-      setSubmitting(false);
-    }
-  }, [open]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!/^\d{4,16}$/.test(pin)) {
-      setError("PIN must be 4 to 16 digits.");
-      return;
-    }
-    if (pin !== confirmPin) {
-      setError("PINs do not match.");
-      return;
-    }
-    if (!currentPassword) {
-      setError("Please enter your current password.");
-      return;
-    }
-
-    setError(null);
-    setSubmitting(true);
-    try {
-      await onConfirm(pin, currentPassword);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to set up PIN.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Set up a PIN code</DialogTitle>
-          <DialogDescription></DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Field>
-            <FieldTitle>PIN</FieldTitle>
-            <Input
-              type="password"
-              inputMode="numeric"
-              maxLength={16}
-              autoFocus
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-            />
-          </Field>
-          <Field>
-            <FieldTitle>Confirm PIN</FieldTitle>
-            <Input
-              type="password"
-              inputMode="numeric"
-              maxLength={16}
-              value={confirmPin}
-              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
-            />
-          </Field>
-          <Field>
-            <FieldTitle>Current password</FieldTitle>
-            <Input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
-          </Field>
-          {error && <span className="text-sm text-destructive">{error}</span>}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? <Loader2 className="animate-spin" /> : <>Set PIN</>}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function StayUnlockedDialog({
-  open,
-  onCancel,
-  onConfirm,
-}: {
-  open: boolean;
-  onCancel: () => void;
-  onConfirm: (currentPassword: string) => Promise<void>;
-}) {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) {
-      setCurrentPassword("");
-      setError(null);
-      setSubmitting(false);
-    }
-  }, [open]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!currentPassword) {
-      setError("Please enter your current password.");
-      return;
-    }
-
-    setError(null);
-    setSubmitting(true);
-    try {
-      await onConfirm(currentPassword);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to enable stay unlocked.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Stay unlocked</DialogTitle>
-          <DialogDescription>
-            Your master key will be stored on this device. Anyone with access
-            to your device can access your data.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Field>
-            <FieldTitle>Current password</FieldTitle>
-            <Input
-              type="password"
-              autoFocus
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
-          </Field>
-          {error && <span className="text-sm text-destructive">{error}</span>}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? <Loader2 className="animate-spin" /> : "Enable"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
+import SettingsLabel from "../SettingsLabel";
+import SettingsSelect from "../SettingsSelect";
 
 function ChangeEmailDialog({
   open,
@@ -699,106 +498,9 @@ function SessionsSection({ sectionRefs }: { sectionRefs: SectionRefs }) {
   );
 }
 
-export default function SecurityPage({
-  sectionRefs,
-}: {
-  sectionRefs: SectionRefs;
-}) {
-  const { user, masterKey, bucketKey } = useUser();
-  const { post } = useApi();
-  const storage = useStorage();
-
-  const [unlockMethod, setUnlockMethod] = useState<UnlockMethod>(
-    storage.get("unlockMethod") || DEFAULT_UNLOCK_METHOD,
-  );
-  const [autoLock, setAutoLock] = useState<AutoLockOption>(
-    storage.get("autoLock") || DEFAULT_AUTO_LOCK,
-  );
-  const [pinDialogOpen, setPinDialogOpen] = useState(false);
-  const [stayUnlockedDialogOpen, setStayUnlockedDialogOpen] = useState(false);
-
-  const commit = async (
-    method: UnlockMethod,
-    opts?: { pin?: string; currentPassword?: string },
-  ) => {
-    if (!masterKey || !bucketKey) {
-      toast.error("Your data must be decrypted to change this setting.");
-      return;
-    }
-    if (!user || user.type !== "online") return;
-
-    try {
-      if (method === "stay-unlocked" || method === "pin") {
-        if (!opts?.currentPassword) return;
-
-        const exportableKeys = await unlockAccount(
-          opts.currentPassword,
-          user,
-          post,
-          undefined,
-          true,
-        );
-        const exported = await exportKeyPair(
-          exportableKeys.masterKey,
-          exportableKeys.bucketKey,
-        );
-
-        if (method === "stay-unlocked") {
-          storage.set("unlockKeys", exported);
-          storage.set("pinWrappedKeys", null);
-        } else {
-          if (!opts.pin) return;
-          const wrapped = await wrapKeyPairWithPin(
-            opts.pin,
-            exported.masterKeyB64,
-            exported.bucketKeyB64,
-          );
-          storage.set("pinWrappedKeys", wrapped);
-          storage.set("unlockKeys", null);
-        }
-      } else {
-        storage.set("unlockKeys", null);
-        storage.set("pinWrappedKeys", null);
-      }
-
-      storage.set("unlockMethod", method);
-      setUnlockMethod(method);
-      setPinDialogOpen(false);
-      setStayUnlockedDialogOpen(false);
-      toast.success("Security settings updated.");
-    } catch (err) {
-      console.error("Failed to update unlock method:", err);
-      throw err;
-    }
-  };
-
-  const onUnlockMethodChange = (value: UnlockMethod) => {
-    if (value === "pin") {
-      setPinDialogOpen(true);
-      return;
-    }
-    if (value === "stay-unlocked") {
-      setStayUnlockedDialogOpen(true);
-      return;
-    }
-
-    commit(value).catch(() => {
-      toast.error("Failed to update security settings.");
-    });
-  };
-
-  const onAutoLockChange = (value: AutoLockOption) => {
-    storage.set("autoLock", value);
-    setAutoLock(value);
-  };
-
-  useEffect(() => {
-    if (unlockMethod === "stay-unlocked" && autoLock !== "disabled") {
-      storage.set("autoLock", "disabled");
-      setAutoLock("disabled");
-    }
-    // eslint-disable-next-line
-  }, [unlockMethod]);
+function SecurityPageContent({ sectionRefs }: { sectionRefs: SectionRefs }) {
+  const { unlockMethod, autoLock, setUnlockMethod, setAutoLock } =
+    useSecuritySettings();
 
   return (
     <FieldGroup className="gap-8">
@@ -814,41 +516,26 @@ export default function SecurityPage({
         sectionRefs={sectionRefs}
       >
         <Field orientation="responsive">
-          <div className="flex flex-auto items-center gap-1.5">
-            <FieldTitle>{settingLabel("security-unlock-method")}</FieldTitle>
-            {unlockMethod !== DEFAULT_UNLOCK_METHOD && (
-              <ResetToDefault
-                onClick={() => onUnlockMethodChange(DEFAULT_UNLOCK_METHOD)}
-              />
-            )}
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <Select
-              value={unlockMethod}
-              onValueChange={(value) =>
-                onUnlockMethodChange(value as UnlockMethod)
-              }
-            >
-              <SelectTrigger className="w-full @md/field-group:w-[160px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="password">Password</SelectItem>
-                <SelectItem value="pin">PIN code</SelectItem>
-                <SelectItem value="stay-unlocked">Stay unlocked</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {unlockMethod === "pin" && (
-              <button
-                type="button"
-                onClick={() => setPinDialogOpen(true)}
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                Change PIN
-              </button>
-            )}
-          </div>
+          <SettingsLabel settingKey="unlockMethod" />
+          <SettingsSelect
+            value={unlockMethod}
+            onValueChange={(value) => setUnlockMethod(value as UnlockMethod)}
+            footer={
+              unlockMethod === "pin" && (
+                <button
+                  type="button"
+                  onClick={() => setUnlockMethod("pin")}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Change PIN
+                </button>
+              )
+            }
+          >
+            <SelectItem value="password">Password</SelectItem>
+            <SelectItem value="pin">PIN code</SelectItem>
+            <SelectItem value="stay-unlocked">Stay unlocked</SelectItem>
+          </SettingsSelect>
         </Field>
 
         {unlockMethod === "stay-unlocked" && (
@@ -862,54 +549,35 @@ export default function SecurityPage({
         )}
 
         <Field orientation="responsive">
-          <div className="flex flex-auto items-center gap-1.5">
-            <FieldTitle>{settingLabel("security-auto-lock")}</FieldTitle>
-            {autoLock !== DEFAULT_AUTO_LOCK && (
-              <ResetToDefault
-                onClick={() => onAutoLockChange(DEFAULT_AUTO_LOCK)}
-              />
-            )}
-          </div>
-          <Select
+          <SettingsLabel settingKey="autoLock" />
+          <SettingsSelect
             value={autoLock}
-            onValueChange={(value) => onAutoLockChange(value as AutoLockOption)}
+            onValueChange={(value) => setAutoLock(value as AutoLockOption)}
             disabled={unlockMethod === "stay-unlocked"}
           >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="disabled">Disabled</SelectItem>
-              <SelectItem value="focus">When focus lost</SelectItem>
-              <SelectItem value="5m">5 minutes</SelectItem>
-              <SelectItem value="10m">10 minutes</SelectItem>
-              <SelectItem value="15m">15 minutes</SelectItem>
-              <SelectItem value="30m">30 minutes</SelectItem>
-              <SelectItem value="45m">45 minutes</SelectItem>
-              <SelectItem value="1h">1 hour</SelectItem>
-            </SelectContent>
-          </Select>
+            <SelectItem value="disabled">Disabled</SelectItem>
+            <SelectItem value="focus">When focus lost</SelectItem>
+            <SelectItem value="5m">5 minutes</SelectItem>
+            <SelectItem value="10m">10 minutes</SelectItem>
+            <SelectItem value="15m">15 minutes</SelectItem>
+            <SelectItem value="30m">30 minutes</SelectItem>
+            <SelectItem value="45m">45 minutes</SelectItem>
+            <SelectItem value="1h">1 hour</SelectItem>
+          </SettingsSelect>
         </Field>
       </Section>
 
       <Separator />
 
       <SessionsSection sectionRefs={sectionRefs} />
-
-      <PinSetupDialog
-        open={pinDialogOpen}
-        onCancel={() => setPinDialogOpen(false)}
-        onConfirm={(pin, currentPassword) =>
-          commit("pin", { pin, currentPassword })
-        }
-      />
-      <StayUnlockedDialog
-        open={stayUnlockedDialogOpen}
-        onCancel={() => setStayUnlockedDialogOpen(false)}
-        onConfirm={(currentPassword) =>
-          commit("stay-unlocked", { currentPassword })
-        }
-      />
     </FieldGroup>
+  );
+}
+
+export default function SecurityPage(props: { sectionRefs: SectionRefs }) {
+  return (
+    <SecuritySettingsProvider>
+      <SecurityPageContent {...props} />
+    </SecuritySettingsProvider>
   );
 }
