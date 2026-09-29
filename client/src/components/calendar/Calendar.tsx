@@ -162,6 +162,18 @@ const applyBatchField = (
 
 /* -------------------------------------------------------------------------- */
 
+const blockTouchMove = (e: Event) => {
+  if (e.cancelable) e.preventDefault();
+};
+
+const touchBlockTarget: { current: EventTarget | null } = { current: null };
+
+const releaseTouchBlock = () => {
+  touchBlockTarget.current?.removeEventListener("touchmove", blockTouchMove);
+  touchBlockTarget.current = null;
+  window.removeEventListener("touchmove", blockTouchMove);
+};
+
 const GRID_HEADER_HEIGHT = 48;
 
 const SELECT_DRAG_THRESHOLD = 4;
@@ -656,6 +668,23 @@ export default function AppCalendar({
     [visibleDays, hourHeight, snapMins],
   );
 
+  const pointerUpRef = useRef<(e: PointerEvent) => void>(null);
+  const onGlobalPointerCancel = useCallback(
+    (e: PointerEvent) => {
+      if (dragRef.current?.pointerId !== e.pointerId) return;
+      dragRef.current = null;
+      setIsDragging(false);
+      forceRender((tick) => tick + 1);
+      window.removeEventListener("pointermove", onGlobalPointerMove);
+      window.removeEventListener("pointerup", pointerUpRef.current!);
+      window.removeEventListener("pointercancel", pointerCancelRef.current!);
+      releaseTouchBlock();
+    },
+    [onGlobalPointerMove],
+  );
+  const pointerCancelRef = useRef(onGlobalPointerCancel);
+  pointerCancelRef.current = onGlobalPointerCancel;
+
   const onGlobalPointerUp = useCallback(
     (e: PointerEvent) => {
       // make sure the same pointer was released, then reset drag state and remove listeners
@@ -777,10 +806,13 @@ export default function AppCalendar({
 
         window.removeEventListener("pointermove", onGlobalPointerMove);
         window.removeEventListener("pointerup", onGlobalPointerUp);
+        window.removeEventListener("pointercancel", onGlobalPointerCancel);
+        releaseTouchBlock();
       }
     },
     [
       onGlobalPointerMove,
+      onGlobalPointerCancel,
       updateChange,
       dispatch,
       save,
@@ -789,6 +821,8 @@ export default function AppCalendar({
       pushHistory,
     ],
   );
+
+  pointerUpRef.current = onGlobalPointerUp;
 
   const onSelectionPointerMove = useCallback(
     (e: PointerEvent) => {
@@ -908,6 +942,16 @@ export default function AppCalendar({
 
       window.addEventListener("pointermove", onGlobalPointerMove);
       window.addEventListener("pointerup", onGlobalPointerUp);
+      window.addEventListener("pointercancel", onGlobalPointerCancel);
+      if (e.pointerType === "touch") {
+        window.addEventListener("touchmove", blockTouchMove, {
+          passive: false,
+        });
+        touchBlockTarget.current = e.target;
+        e.target.addEventListener("touchmove", blockTouchMove, {
+          passive: false,
+        });
+      }
     },
 
     // visibleDays is needed here for getDayRects to work
@@ -916,6 +960,7 @@ export default function AppCalendar({
       visibleDays,
       onGlobalPointerMove,
       onGlobalPointerUp,
+      onGlobalPointerCancel,
       beginSelectionBox,
       clearSelection,
     ],
@@ -1463,6 +1508,15 @@ export default function AppCalendar({
 
   const gridTouchMove = useCallback((e: React.TouchEvent) => {
     if (gridTouchRef.current === null) return;
+
+    // dragging an event must not count towards swipe/pinch gestures
+    if (dragRef.current) {
+      if (gridTouchRef.current.raf)
+        cancelAnimationFrame(gridTouchRef.current.raf);
+      gridTouchRef.current = null;
+      forceRender((tick) => tick + 1);
+      return;
+    }
 
     // pinch to zoom
     if (e.touches.length === 2) {

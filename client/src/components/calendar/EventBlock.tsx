@@ -145,10 +145,7 @@ export default memo(
         // context-menu callout on the long-press used for hold-to-drag
         WebkitTouchCallout: "none" as const,
         WebkitUserSelect: "none" as const,
-        // touch-action must be set statically (not toggled once the drag
-        // starts) for browsers to reliably honor it instead of scrolling;
-        // scrolling can still be done by starting the touch on empty grid
-        touchAction: "none" as const,
+        touchAction: "pan-y" as const,
         height: popOut ? popOutHeight : style.height,
         width: style.width + "%",
         backgroundColor: eventColor,
