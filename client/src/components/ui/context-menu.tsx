@@ -128,6 +128,10 @@ function ContextMenuItem({
         className
       )}
       {...props}
+      onPointerUp={(event) => {
+        props.onPointerUp?.(event);
+        event.preventDefault();
+      }}
     />
   )
 }
@@ -147,6 +151,10 @@ function ContextMenuCheckboxItem({
       )}
       checked={checked}
       {...props}
+      onPointerUp={(event) => {
+        props.onPointerUp?.(event);
+        event.preventDefault();
+      }}
     >
       <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
         <ContextMenuPrimitive.ItemIndicator>
@@ -171,6 +179,10 @@ function ContextMenuRadioItem({
         className
       )}
       {...props}
+      onPointerUp={(event) => {
+        props.onPointerUp?.(event);
+        event.preventDefault();
+      }}
     >
       <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
         <ContextMenuPrimitive.ItemIndicator>
