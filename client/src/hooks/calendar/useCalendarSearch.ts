@@ -7,6 +7,7 @@ import {
   MAX_SYNC_BUCKETS_PER_REQUEST,
   computeExpandedRangeBuckets,
 } from "@/lib/calendar/buckets";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { normalize, sleep, tokenize } from "@/lib/utils";
 
 export const SEARCH_DEBOUNCE_MS = 500;
@@ -39,19 +40,11 @@ export const useCalendarSearch = (
   onExpandedEvents: (events: CalendarEvent[]) => void,
 ) => {
   const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const [isExpanding, setIsExpanding] = useState(false);
 
   const syncedRangeRef = useRef(SYNC_RANGE_WEEKS);
   const searchGenRef = useRef(0);
-
-  useEffect(() => {
-    const timeout = setTimeout(
-      () => setDebouncedQuery(query),
-      SEARCH_DEBOUNCE_MS,
-    );
-    return () => clearTimeout(timeout);
-  }, [query]);
 
   const tokens = useMemo(() => tokenize(debouncedQuery), [debouncedQuery]);
 
