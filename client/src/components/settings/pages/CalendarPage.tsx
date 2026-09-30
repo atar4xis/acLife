@@ -489,7 +489,6 @@ export default function CalendarPage({
                 value === "inherit" ? value : (Number(value) as Weekday),
               )
             }
-            triggerClassName="w-[200px]"
             footer={
               weekStartsOn === "inherit" && (
                 <span className="text-muted-foreground text-xs">
