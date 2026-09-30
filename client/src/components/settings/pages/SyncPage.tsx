@@ -51,7 +51,7 @@ import SettingsSelect from "../SettingsSelect";
 import SyncToggle from "../SyncToggle";
 
 function SyncGroup({ label, keys }: { label: string; keys: SyncableKey[] }) {
-  const { isSynced, resetSynced } = useSyncSettings();
+  const { enabled, isSynced, resetSynced } = useSyncSettings();
   const [open, setOpen] = useState(false);
   const syncedCount = keys.filter(isSynced).length;
   const modified = keys.some((key) => isSynced(key) !== syncByDefault[key]);
@@ -68,7 +68,7 @@ function SyncGroup({ label, keys }: { label: string; keys: SyncableKey[] }) {
           label={`Sync ${label.toLowerCase()} settings`}
         />
         <div className="ml-auto flex items-center gap-2">
-          {syncedCount > 0 && syncedCount < keys.length && (
+          {enabled && syncedCount > 0 && syncedCount < keys.length && (
             <span className="text-xs text-muted-foreground">
               {syncedCount}/{keys.length} synced
             </span>
