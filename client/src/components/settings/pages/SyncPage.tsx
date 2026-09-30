@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronRight, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
@@ -107,6 +107,9 @@ export default function SyncPage({
   const { enabled: syncEnabled, setEnabled: setSyncEnabled } =
     useSyncSettings();
   const [loading, setLoading] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [manageTipOpen, setManageTipOpen] = useState(false);
+  const manageRef = useRef<HTMLButtonElement>(null);
 
   const onToggle = (checked: boolean) => {
     setLoading(true);
@@ -134,14 +137,21 @@ export default function SyncPage({
         label={sectionLabel("settings-sync")}
         sectionRefs={sectionRefs}
       >
-        <Dialog>
+        <Dialog
+          open={manageOpen}
+          onOpenChange={(next) => {
+            setManageOpen(next);
+            setManageTipOpen(false);
+          }}
+        >
           <Field orientation="responsive">
             <div className="flex flex-auto items-center gap-1.5">
               <FieldTitle>{settingLabel("sync-settings-enabled")}</FieldTitle>
-              <Tooltip>
+              <Tooltip open={manageTipOpen} onOpenChange={setManageTipOpen}>
                 <TooltipTrigger asChild>
                   <DialogTrigger asChild>
                     <Button
+                      ref={manageRef}
                       type="button"
                       variant="ghost"
                       size="icon"
@@ -161,7 +171,14 @@ export default function SyncPage({
               onCheckedChange={setSyncEnabled}
             />
           </Field>
-          <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogContent
+            className="max-h-[80vh] overflow-y-auto"
+            onCloseAutoFocus={(e) => {
+              e.preventDefault();
+              manageRef.current?.focus();
+              setManageTipOpen(false);
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Manage synced settings</DialogTitle>
               <DialogDescription>
