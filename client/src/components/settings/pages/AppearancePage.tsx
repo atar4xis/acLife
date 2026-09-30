@@ -20,13 +20,11 @@ import {
 import type { Theme, ThemeColors, ThemePreset } from "@/types/Theme";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
-import { useDeferredSliderValue } from "@/hooks/useDeferredSliderValue";
 import { cssColorToHex } from "@/lib/utils";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Button } from "@/components/ui/button";
 import {
   Field,
-  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldTitle,
@@ -41,7 +39,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { SelectGroup, SelectItem, SelectLabel } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BUILT_IN_THEMES, BUILT_IN_THEME_ID_PREFIX } from "../builtInThemes";
 import { sectionLabel, settingLabel, settingLabelId } from "../settingsData";
@@ -50,6 +47,7 @@ import Section from "../SettingsSection";
 import SettingsLabel from "../SettingsLabel";
 import SyncToggle from "../SyncToggle";
 import SettingsSelect from "../SettingsSelect";
+import SettingsSlider from "../SettingsSlider";
 
 const THEME_OPTIONS: { value: Theme; label: string }[] = [
   { value: "light", label: "Light" },
@@ -613,30 +611,16 @@ const FontFamilyField = memo(function FontFamilyField() {
 });
 
 const FontSizeField = memo(function FontSizeField() {
-  const { fontSize, setFontSize } = useTheme();
-  const fontSizeSlider = useDeferredSliderValue(fontSize, setFontSize);
+  const { setFontSize } = useTheme();
 
   return (
-    <Field>
-      <FieldContent>
-        <div className="flex items-center justify-between">
-          <SettingsLabel settingKey="fontSize" />
-          <span className="text-muted-foreground text-sm">
-            {fontSizeSlider.value}px
-          </span>
-        </div>
-      </FieldContent>
-      <Slider
-        aria-labelledby={settingLabelId("fontSize")}
-        className="mt-1"
-        min={12}
-        max={20}
-        step={1}
-        value={[fontSizeSlider.value]}
-        onValueChange={fontSizeSlider.onValueChange}
-        onValueCommit={fontSizeSlider.onValueCommit}
-      />
-    </Field>
+    <SettingsSlider
+      settingKey="fontSize"
+      min={12}
+      max={20}
+      format={(v) => `${v}px`}
+      onCommit={setFontSize}
+    />
   );
 });
 

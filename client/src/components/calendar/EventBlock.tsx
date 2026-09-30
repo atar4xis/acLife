@@ -476,6 +476,12 @@ export default memo(
       prev.day === next.day &&
       prev.editing === next.editing &&
       prev.selected === next.selected &&
+      prev.restoreFocus === next.restoreFocus &&
+      prev.onPointerDown === next.onPointerDown &&
+      prev.onEventEdit === next.onEventEdit &&
+      prev.onEventMove === next.onEventMove &&
+      prev.onEventDelete === next.onEventDelete &&
+      prev.onDuplicate === next.onDuplicate &&
       shallowEqual(prev.style, next.style)
     );
   },

@@ -448,20 +448,7 @@ export default function AppCalendar({
   const pendingSaveRef = useRef<null | number>(null);
   const { user, masterKey, bucketKey } = useUser();
   const { weekStart: weekStartsOn } = useWeekStart();
-  const {
-    snapMinutes: snapMins,
-    defaultEventName,
-    defaultTaskName,
-    defaultEventDuration,
-    resyncIntervalMinutes,
-    addColorsAutomatically,
-    eventColorPresets,
-    timezones,
-    defaultTimezone,
-    dayHeaderPosition,
-    timeLabelPosition,
-    setSetting: setCalendarSetting,
-  } = useCalendarSettings((s) => ({
+  const settings = useCalendarSettings((s) => ({
     snapMinutes: s.snapMinutes,
     defaultEventName: s.defaultEventName,
     defaultTaskName: s.defaultTaskName,
@@ -516,8 +503,8 @@ export default function AppCalendar({
   );
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
-  const headerBottom = dayHeaderPosition === "bottom";
-  const labelsRight = timeLabelPosition === "right";
+  const headerBottom = settings.dayHeaderPosition === "bottom";
+  const labelsRight = settings.timeLabelPosition === "right";
   const gridHeaderOffset = headerBottom ? 0 : GRID_HEADER_HEIGHT;
 
   const gridRef = useRef<HTMLDivElement>(null);
@@ -686,7 +673,7 @@ export default function AppCalendar({
       // calculate minutes based on pointer Y within the grid
       const deltaMinutes = snapMinutes(
         yToMinutes(e.clientY + container.scrollTop - state.startY, hourHeight),
-        snapMins,
+        settings.snapMinutes,
       );
 
       const dayDelta = dayIndex - state.originalDay;
@@ -695,7 +682,7 @@ export default function AppCalendar({
         state,
         dayDelta,
         deltaMinutes,
-        snapMins,
+        settings.snapMinutes,
       );
 
       // when dragging, label tells the new start/end times and follows the pointer
@@ -712,7 +699,7 @@ export default function AppCalendar({
         forceRender((tick) => tick + 1);
       }
     },
-    [visibleDays, hourHeight, snapMins],
+    [visibleDays, hourHeight, settings.snapMinutes],
   );
 
   const pointerUpRef = useRef<(e: PointerEvent) => void>(null);
@@ -1056,8 +1043,13 @@ export default function AppCalendar({
 
       state.type = type;
       if (
-        applyDragDelta(state, dayDelta, deltaMinutes, snapMins, "current")
-          .changed
+        applyDragDelta(
+          state,
+          dayDelta,
+          deltaMinutes,
+          settings.snapMinutes,
+          "current",
+        ).changed
       ) {
         state.moved = true;
         state.label = describeDragLabel(
@@ -1070,7 +1062,7 @@ export default function AppCalendar({
 
       return state.event;
     },
-    [snapMins],
+    [settings.snapMinutes],
   );
 
   const cancelKeyboardMove = useCallback(() => {
@@ -1116,16 +1108,16 @@ export default function AppCalendar({
       if (eventUnchanged(originalEvent, event)) return;
 
       if (
-        addColorsAutomatically &&
+        settings.addColorsAutomatically &&
         event.color &&
-        eventColorPresets.length < MAX_EVENT_COLOR_PRESETS &&
-        !eventColorPresets.some(
+        settings.eventColorPresets.length < MAX_EVENT_COLOR_PRESETS &&
+        !settings.eventColorPresets.some(
           (presetColor) =>
             presetColor.toLowerCase() === event.color!.toLowerCase(),
         )
       ) {
-        setCalendarSetting("eventColorPresets", [
-          ...eventColorPresets,
+        settings.setSetting("eventColorPresets", [
+          ...settings.eventColorPresets,
           event.color,
         ]);
       }
@@ -1304,9 +1296,7 @@ export default function AppCalendar({
       getBatch,
       clearSelection,
       pushHistory,
-      addColorsAutomatically,
-      eventColorPresets,
-      setCalendarSetting,
+      settings,
     ],
   );
 
@@ -1482,7 +1472,7 @@ export default function AppCalendar({
     const y = pointer.y + container.scrollTop;
     const minutes = snapMinutes(
       yToMinutes(y - rect.top - gridHeaderOffset, hourHeight),
-      snapMins,
+      settings.snapMinutes,
     );
     const anchorTime = dayDate.plus({ minutes });
 
@@ -1524,7 +1514,7 @@ export default function AppCalendar({
     visibleDays,
     hourHeight,
     gridHeaderOffset,
-    snapMins,
+    settings.snapMinutes,
     dispatch,
     updateChange,
     save,
@@ -1538,10 +1528,10 @@ export default function AppCalendar({
     (start: DateTime, isTask: boolean) => {
       const newEvent = {
         id: crypto.randomUUID(),
-        title: isTask ? defaultTaskName : defaultEventName,
-        color: eventColorPresets[0] ?? EVENT_COLOR_FALLBACK,
+        title: isTask ? settings.defaultTaskName : settings.defaultEventName,
+        color: settings.eventColorPresets[0] ?? EVENT_COLOR_FALLBACK,
         start,
-        end: start.plus({ minutes: defaultEventDuration }),
+        end: start.plus({ minutes: settings.defaultEventDuration }),
         timestamp: Date.now(),
         isTask,
       } as CalendarEvent;
@@ -1553,10 +1543,10 @@ export default function AppCalendar({
       return newEvent;
     },
     [
-      defaultEventName,
-      defaultTaskName,
-      defaultEventDuration,
-      eventColorPresets,
+      settings.defaultEventName,
+      settings.defaultTaskName,
+      settings.defaultEventDuration,
+      settings.eventColorPresets,
       dispatch,
       updateChange,
       pushHistory,
@@ -1601,7 +1591,7 @@ export default function AppCalendar({
       );
 
       const start = visibleDays[dayIndex].date.plus({
-        minutes: snapMinutes(startMinutes, snapMins),
+        minutes: snapMinutes(startMinutes, settings.snapMinutes),
       });
       const newEvent = addNewEvent(start, e.altKey);
 
@@ -1630,7 +1620,7 @@ export default function AppCalendar({
     [
       hourHeight,
       gridHeaderOffset,
-      snapMins,
+      settings.snapMinutes,
       addNewEvent,
       visibleDays,
       onGlobalPointerMove,
@@ -1959,8 +1949,8 @@ export default function AppCalendar({
 
   // re-zone explicitly, since the state holds a DateTime in the previous zone
   useEffect(() => {
-    setNow(DateTime.now().setZone(defaultTimezone));
-  }, [defaultTimezone]);
+    setNow(DateTime.now().setZone(settings.defaultTimezone));
+  }, [settings.defaultTimezone]);
 
   const resyncSeqRef = useRef(0);
 
@@ -2004,7 +1994,10 @@ export default function AppCalendar({
       navigator.serviceWorker.addEventListener("message", message);
     }
 
-    const resyncInterval = setInterval(resync, resyncIntervalMinutes * 60000);
+    const resyncInterval = setInterval(
+      resync,
+      settings.resyncIntervalMinutes * 60000,
+    );
     return () => {
       clearInterval(resyncInterval);
 
@@ -2012,7 +2005,7 @@ export default function AppCalendar({
         navigator.serviceWorker.removeEventListener("message", message);
       }
     };
-  }, [resync, user, masterKey, bucketKey, resyncIntervalMinutes]);
+  }, [resync, user, masterKey, bucketKey, settings.resyncIntervalMinutes]);
 
   const syncedWeekRef = useRef<string | null>(null);
   useEffect(() => {
@@ -2091,7 +2084,7 @@ export default function AppCalendar({
     eventMap,
     mode,
     weekStartsOn,
-    snapMins,
+    snapMins: settings.snapMinutes,
     hourHeight,
     headerHeight: GRID_HEADER_HEIGHT,
     now,
@@ -2190,29 +2183,31 @@ export default function AppCalendar({
   );
 
   const tzColWidth = useMemo(
-    () => getTimezoneColWidth(timezones, visibleDays.length),
-    [timezones, visibleDays.length],
+    () => getTimezoneColWidth(settings.timezones, visibleDays.length),
+    [settings.timezones, visibleDays.length],
   );
 
   const tzStickyStyle = useCallback(
     (i: number) =>
       labelsRight
-        ? { right: `calc(${tzColWidth} * ${timezones.length - 1 - i})` }
+        ? {
+            right: `calc(${tzColWidth} * ${settings.timezones.length - 1 - i})`,
+          }
         : { left: `calc(${tzColWidth} * ${i})` },
-    [labelsRight, tzColWidth, timezones.length],
+    [labelsRight, tzColWidth, settings.timezones.length],
   );
 
   const timezoneHeaderCells = useMemo(
     () =>
-      timezones.map((tz, i) => (
+      settings.timezones.map((tz, i) => (
         <div
           key={tz}
-          role={timezones.length > 1 ? "columnheader" : "presentation"}
-          aria-label={timezones.length > 1 ? tz : undefined}
+          role={settings.timezones.length > 1 ? "columnheader" : "presentation"}
+          aria-label={settings.timezones.length > 1 ? tz : undefined}
           className={`select-none sticky ${headerBottom ? "bottom-0" : "top-0"} z-16 hover:z-20 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex items-center justify-center bg-background text-xs text-muted-foreground px-1`}
           style={tzStickyStyle(i)}
         >
-          {timezones.length > 1 ? (
+          {settings.timezones.length > 1 ? (
             <span
               className={`truncate hover:absolute hover:inset-y-0 ${labelsRight ? "hover:right-0" : "hover:left-0"} hover:w-max hover:min-w-full hover:overflow-visible hover:bg-background hover:ring-1 hover:ring-inset hover:ring-border hover:px-1 hover:flex hover:items-center hover:justify-center`}
             >
@@ -2221,7 +2216,7 @@ export default function AppCalendar({
           ) : null}
         </div>
       )),
-    [timezones, headerBottom, labelsRight, tzStickyStyle],
+    [settings.timezones, headerBottom, labelsRight, tzStickyStyle],
   );
 
   const headerRow = labelsRight ? (
@@ -2242,11 +2237,11 @@ export default function AppCalendar({
       HOURS.map((_label, hour) => {
         const timeLabels = (
           <>
-            {timezones.map((tz, i) => (
+            {settings.timezones.map((tz, i) => (
               <div
                 key={tz}
                 role="rowheader"
-                className={`select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex text-sm items-center justify-center ${tz === timezones[0] && hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
+                className={`select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex text-sm items-center justify-center ${tz === settings.timezones[0] && hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
                 style={tzStickyStyle(i)}
               >
                 {getTimezoneHourLabel(
@@ -2305,7 +2300,7 @@ export default function AppCalendar({
                         isToday={isSameDate(d.date, now)}
                         events={dayEvents}
                         hourHeight={hourHeight}
-                        snapMins={snapMins}
+                        snapMins={settings.snapMinutes}
                       />
 
                       {/* today's events */}
@@ -2361,12 +2356,12 @@ export default function AppCalendar({
       startNewEvent,
       focusStore,
       restoreFocus,
-      snapMins,
+      settings.snapMinutes,
       editingEvent,
       editingEventDay,
       editingEventFirstDayIndex,
       selectedEvents,
-      timezones,
+      settings.timezones,
       tzStickyStyle,
       labelsRight,
       currentDate,
@@ -2572,7 +2567,7 @@ export default function AppCalendar({
           className="group/grid outline-none touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
           style={{
             gridTemplateColumns: cols(
-              timezones.length,
+              settings.timezones.length,
               tzColWidth,
               labelsRight,
             ),

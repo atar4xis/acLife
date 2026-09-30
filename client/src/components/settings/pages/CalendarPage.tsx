@@ -12,15 +12,11 @@ import { defaultCalendarSettings } from "@/lib/settingsDefaults";
 import { DARK_COLORS, LIGHT_COLORS } from "@/lib/themeColors";
 import type { Weekday } from "@/types/calendar/Settings";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
-import { useDeferredSliderValue } from "@/hooks/useDeferredSliderValue";
 import { useWeekStart } from "@/hooks/useWeekStart";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { cn, cssColorToHex } from "@/lib/utils";
 import { generateThemeColorPresets } from "@/lib/calendar/colorPresets";
-import {
-  getAllTimezones,
-  getFriendlyName,
-} from "@/lib/calendar/timezone";
+import { getAllTimezones, getFriendlyName } from "@/lib/calendar/timezone";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
 import {
@@ -37,7 +33,6 @@ import {
   type SearchableSelectOption,
 } from "@/components/ui/searchable-select";
 import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
@@ -51,15 +46,10 @@ import Section from "../SettingsSection";
 import SettingsLabel from "../SettingsLabel";
 import SyncToggle from "../SyncToggle";
 import SettingsSelect from "../SettingsSelect";
+import SettingsSlider from "../SettingsSlider";
 
 const TimezonesField = memo(function TimezonesField() {
-  const { timezones, defaultTimezone, setSetting } = useCalendarSettings(
-    (s) => ({
-      timezones: s.timezones,
-      defaultTimezone: s.defaultTimezone,
-      setSetting: s.setSetting,
-    }),
-  );
+  const { timezones, defaultTimezone, setSetting } = useCalendarSettings();
   const allTimezones = useMemo(() => getAllTimezones(), []);
   const additionalTimezones = useMemo(
     () => timezones.filter((tz) => tz !== defaultTimezone),
@@ -83,7 +73,10 @@ const TimezonesField = memo(function TimezonesField() {
 
   const selectDefaultTimezone = (tz: string) => {
     setSetting("defaultTimezone", tz);
-    setSetting("timezones", [tz, ...additionalTimezones.filter((t) => t !== tz)]);
+    setSetting("timezones", [
+      tz,
+      ...additionalTimezones.filter((t) => t !== tz),
+    ]);
     toast.success(`Time zone set to ${getFriendlyName(tz)}`);
   };
 
@@ -222,10 +215,7 @@ const TimezonesField = memo(function TimezonesField() {
 });
 
 const ColorPresetsField = memo(function ColorPresetsField() {
-  const { eventColorPresets, setSetting } = useCalendarSettings((s) => ({
-    eventColorPresets: s.eventColorPresets,
-    setSetting: s.setSetting,
-  }));
+  const { eventColorPresets, setSetting } = useCalendarSettings();
   const { resolvedBase, colors } = useTheme();
   const [newColor, setNewColor] = useState(EVENT_COLOR_FALLBACK);
 
@@ -392,10 +382,7 @@ const ColorPresetsField = memo(function ColorPresetsField() {
 });
 
 const DefaultEventNameField = memo(function DefaultEventNameField() {
-  const { defaultEventName, setSetting } = useCalendarSettings((s) => ({
-    defaultEventName: s.defaultEventName,
-    setSetting: s.setSetting,
-  }));
+  const { defaultEventName, setSetting } = useCalendarSettings();
   const field = useDebouncedSetting(defaultEventName, (value) =>
     setSetting("defaultEventName", value),
   );
@@ -415,10 +402,7 @@ const DefaultEventNameField = memo(function DefaultEventNameField() {
 });
 
 const DefaultTaskNameField = memo(function DefaultTaskNameField() {
-  const { defaultTaskName, setSetting } = useCalendarSettings((s) => ({
-    defaultTaskName: s.defaultTaskName,
-    setSetting: s.setSetting,
-  }));
+  const { defaultTaskName, setSetting } = useCalendarSettings();
   const field = useDebouncedSetting(defaultTaskName, (value) =>
     setSetting("defaultTaskName", value),
   );
@@ -462,38 +446,12 @@ export default function CalendarPage({
   const {
     defaultView,
     weekStartsOn,
-    snapMinutes,
     dayHeaderPosition,
     timeLabelPosition,
-    defaultEventDuration,
     agendaEnabled,
-    agendaRangeDays,
     addColorsAutomatically,
     setSetting,
-  } = useCalendarSettings((s) => ({
-    defaultView: s.defaultView,
-    weekStartsOn: s.weekStartsOn,
-    snapMinutes: s.snapMinutes,
-    dayHeaderPosition: s.dayHeaderPosition,
-    timeLabelPosition: s.timeLabelPosition,
-    defaultEventDuration: s.defaultEventDuration,
-    agendaEnabled: s.agendaEnabled,
-    agendaRangeDays: s.agendaRangeDays,
-    addColorsAutomatically: s.addColorsAutomatically,
-    setSetting: s.setSetting,
-  }));
-
-  const snapMinutesSlider = useDeferredSliderValue(snapMinutes, (value) =>
-    setSetting("snapMinutes", value),
-  );
-  const defaultEventDurationSlider = useDeferredSliderValue(
-    defaultEventDuration,
-    (value) => setSetting("defaultEventDuration", value),
-  );
-  const agendaRangeDaysSlider = useDeferredSliderValue(
-    agendaRangeDays,
-    (value) => setSetting("agendaRangeDays", value),
-  );
+  } = useCalendarSettings();
 
   return (
     <FieldGroup className="gap-8">
@@ -581,26 +539,12 @@ export default function CalendarPage({
           </SettingsSelect>
         </Field>
 
-        <Field>
-          <FieldContent>
-            <div className="flex items-center justify-between">
-              <SettingsLabel settingKey="snapMinutes" />
-              <span className="text-muted-foreground text-sm">
-                {snapMinutesSlider.value} min
-              </span>
-            </div>
-          </FieldContent>
-          <Slider
-            aria-labelledby={settingLabelId("snapMinutes")}
-            className="mt-1"
-            min={1}
-            max={30}
-            step={1}
-            value={[snapMinutesSlider.value]}
-            onValueChange={snapMinutesSlider.onValueChange}
-            onValueCommit={snapMinutesSlider.onValueCommit}
-          />
-        </Field>
+        <SettingsSlider
+          settingKey="snapMinutes"
+          min={1}
+          max={60}
+          format={(v) => `${v} min`}
+        />
       </Section>
 
       <Separator />
@@ -613,26 +557,12 @@ export default function CalendarPage({
         <DefaultEventNameField />
         <DefaultTaskNameField />
 
-        <Field>
-          <FieldContent>
-            <div className="flex items-center justify-between">
-              <SettingsLabel settingKey="defaultEventDuration" />
-              <span className="text-muted-foreground text-sm">
-                {defaultEventDurationSlider.value} min
-              </span>
-            </div>
-          </FieldContent>
-          <Slider
-            aria-labelledby={settingLabelId("defaultEventDuration")}
-            className="mt-1"
-            min={1}
-            max={120}
-            step={1}
-            value={[defaultEventDurationSlider.value]}
-            onValueChange={defaultEventDurationSlider.onValueChange}
-            onValueCommit={defaultEventDurationSlider.onValueCommit}
-          />
-        </Field>
+        <SettingsSlider
+          settingKey="defaultEventDuration"
+          min={1}
+          max={120}
+          format={(v) => `${v} min`}
+        />
       </Section>
 
       <Separator />
@@ -672,28 +602,13 @@ export default function CalendarPage({
           />
         </Field>
 
-        <Field>
-          <FieldContent>
-            <div className="flex items-center justify-between">
-              <SettingsLabel settingKey="agendaRangeDays" />
-              <span className="text-muted-foreground text-sm">
-                {agendaRangeDaysSlider.value}{" "}
-                {agendaRangeDaysSlider.value === 1 ? "day" : "days"}
-              </span>
-            </div>
-          </FieldContent>
-          <Slider
-            aria-labelledby={settingLabelId("agendaRangeDays")}
-            className="mt-1"
-            min={1}
-            max={14}
-            step={1}
-            disabled={!agendaEnabled}
-            value={[agendaRangeDaysSlider.value]}
-            onValueChange={agendaRangeDaysSlider.onValueChange}
-            onValueCommit={agendaRangeDaysSlider.onValueCommit}
-          />
-        </Field>
+        <SettingsSlider
+          settingKey="agendaRangeDays"
+          min={1}
+          max={14}
+          format={(v) => `${v} ${v === 1 ? "day" : "days"}`}
+          disabled={!agendaEnabled}
+        />
       </Section>
     </FieldGroup>
   );

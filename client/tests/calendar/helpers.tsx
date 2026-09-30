@@ -20,7 +20,11 @@ vi.mock("../../src/components/ui/sidebar.tsx", () => {
 // sonner is mocked globally in tests/setup.ts
 import AppCalendar from "../../src/components/calendar/Calendar.tsx";
 import { CalendarProvider } from "../../src/context/CalendarContext.tsx";
-import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
+import {
+  SettingsStoreProvider,
+  useSettingsStore,
+} from "../../src/context/SettingsStoreContext.tsx";
+import type { SettingsStore } from "../../src/lib/settingsStore.ts";
 import type { CalendarEvent } from "../../src/types/calendar/Event.ts";
 
 export const FIXED_NOW = DateTime.fromISO("2026-03-18T10:30:00");
@@ -90,6 +94,13 @@ export const buildRecurringEvent = (
     ...overrides,
   });
 
+// hands the settings store to the test so it can change settings while mounted
+// eslint-disable-next-line
+const StoreSpy = ({ onStore }: { onStore: (store: SettingsStore) => void }) => {
+  onStore(useSettingsStore());
+  return null;
+};
+
 export const renderCalendar = ({
   events = [],
   mode = "day",
@@ -102,9 +113,11 @@ export const renderCalendar = ({
   setMode?: Mock<(mode: ViewMode) => void>;
 } = {}) => {
   const user = userEvent.setup();
+  let store!: SettingsStore;
 
   const renderResult = render(
     <SettingsStoreProvider>
+      <StoreSpy onStore={(s) => (store = s)} />
       <CalendarProvider>
         <AppCalendar
           events={events}
@@ -119,7 +132,7 @@ export const renderCalendar = ({
     </SettingsStoreProvider>,
   );
 
-  return { user, saveEvents, setMode, ...renderResult };
+  return { user, saveEvents, setMode, store, ...renderResult };
 };
 
 export const advanceSave = async () => {
