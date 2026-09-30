@@ -36,6 +36,7 @@ import {
 } from "@/lib/calendar/date";
 import { getDayRects, getEventRects } from "@/lib/calendar/dom";
 import { describeFullDay } from "@/lib/calendar/a11y";
+import { shortcutsApply } from "@/lib/calendar/shortcutScope";
 import {
   getTimezoneHourLabel,
   getTimezoneShortLabel,
@@ -1721,17 +1722,7 @@ export default function AppCalendar({
   // keyboard shortcuts: arrows, escape, delete, undo/redo, cut/copy/paste
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      )
-        return;
-
-      if (
-        e.target instanceof Element &&
-        e.target.closest("[role=dialog], [role=alertdialog]")
-      )
-        return;
+      if (!shortcutsApply(e.target)) return;
 
       if (e.key === "ArrowLeft") {
         e.preventDefault();
