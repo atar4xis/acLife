@@ -22,6 +22,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MoveMenuItems } from "./MoveMenuItems";
 import { Checkbox } from "../ui/checkbox";
 import { describeEvent } from "@/lib/calendar/a11y";
+import { eventDomId } from "@/lib/calendar/gridFocus";
+import { useEventFocused } from "@/hooks/useGridFocus";
 
 // how long (ms) a touch must be held roughly still before it starts a drag
 const LONG_PRESS_MS = 450;
@@ -38,6 +40,8 @@ export default memo(
     style,
     editing,
     selected,
+    focusStore,
+    restoreFocus,
     onPointerDown,
     onEventEdit,
     onEventMove,
@@ -46,6 +50,7 @@ export default memo(
   }: EventBlockProps) {
     const { setEditingEvent, setLastPointer } = useCalendar();
     const isMobile = useIsMobile();
+    const keyboardFocused = useEventFocused(focusStore, eventKey(event), day);
 
     const { startsToday, endsToday } = useMemo(
       () => ({
@@ -303,9 +308,11 @@ export default memo(
             {/* visible event block */}
             {/* not focusable on purpose, keyboard focus belongs to the grid */}
             <div
-              className={`pointer-events-auto event-block ${padding} absolute left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)] ${isHeld ? "scale-[1.03] shadow-lg ring-2 ring-white/80 z-30 transition-transform" : ""} ${popOut ? "z-20 shadow-lg" : ""} ${event.isTask && event.completed ? "opacity-50" : ""}`}
+              className={`pointer-events-auto event-block ${padding} absolute left-0 right-0 z-10 text-xs ${textColor} cursor-pointer select-none overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)] ${isHeld ? "scale-[1.03] shadow-lg ring-2 ring-white/80 z-30 transition-transform" : ""} ${popOut ? "z-20 shadow-lg" : ""} ${keyboardFocused ? "group-data-[keyboard-mode]/grid:outline-2 group-data-[keyboard-mode]/grid:-outline-offset-2 group-data-[keyboard-mode]/grid:outline-foreground" : ""} ${event.isTask && event.completed ? "opacity-50" : ""}`}
               role={event.isTask ? "group" : "button"}
               aria-label={describeEvent(event, selected)}
+              aria-keyshortcuts={event.isTask ? "M Control+Enter" : "M"}
+              id={eventDomId(event, day)}
               data-event-key={eventKey(event)}
               style={blockStyle}
               onMouseEnter={handleMouseEnter}
@@ -361,6 +368,7 @@ export default memo(
                       <Checkbox
                         className="mt-0.5 shrink-0 border-current/50"
                         aria-label={`${event.title} completed`}
+                        tabIndex={-1}
                         checked={event.completed ?? false}
                         onPointerDown={stopPropagation}
                         onCheckedChange={(c) => toggleCompleted(!!c)}
@@ -398,7 +406,12 @@ export default memo(
               )}
             </div>
           </ContextMenuTrigger>
-          <ContextMenuContent onPointerDown={stopPropagation}>
+          <ContextMenuContent
+            onPointerDown={stopPropagation}
+            onCloseAutoFocus={(e) => {
+              if (editing) e.preventDefault();
+            }}
+          >
             {/* context menu items */}
             <ContextMenuLabel>{event.title}</ContextMenuLabel>
 
@@ -438,7 +451,9 @@ export default memo(
         {editing ? (
           <EventEditor
             event={event}
+            day={day}
             eventRef={eventRef}
+            restoreFocus={restoreFocus}
             onSave={(originalEvent, newEvent) => {
               onEventEdit(originalEvent, newEvent);
               setEditingEvent(null);

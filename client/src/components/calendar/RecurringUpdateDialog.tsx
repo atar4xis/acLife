@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useLayoutEffect, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ type RecurringUpdateDialogOptions = {
   setOpen: (open: boolean) => void;
   onSubmit: (option: string) => void;
   onCancel: () => void;
+  onFocusReturned?: (toOpener: boolean) => void;
 };
 
 export default memo(function RecurringUpdateDialog({
@@ -27,12 +28,29 @@ export default memo(function RecurringUpdateDialog({
   setOpen,
   onSubmit,
   onCancel,
+  onFocusReturned,
 }: RecurringUpdateDialogOptions) {
   const [option, setOption] = useState<string>(defaultOption);
+  const openerRef = useRef<Element | null>(null);
+
+  // the dialog has no trigger, so remember what had focus to give it back on close
+  useLayoutEffect(() => {
+    if (open) openerRef.current = document.activeElement;
+  }, [open]);
 
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent className="w-auto text-center">
+      <AlertDialogContent
+        className="w-auto text-center"
+        data-recurring-dialog=""
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          const opener = openerRef.current;
+          const toOpener = opener instanceof HTMLElement && opener.isConnected;
+          if (toOpener) opener.focus({ preventScroll: true });
+          onFocusReturned?.(toOpener);
+        }}
+      >
         <AlertDialogTitle>{action} recurring event</AlertDialogTitle>
         <AlertDialogDescription>
           Which event would you like to {action.toLowerCase()}?

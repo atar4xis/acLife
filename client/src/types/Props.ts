@@ -3,6 +3,7 @@ import type { CalendarEvent, EventChange } from "@/types/calendar/Event";
 import type { ReactNode, PointerEvent } from "react";
 import type { User } from "./User";
 import type { DateTime } from "luxon";
+import type { GridFocusStore } from "@/lib/calendar/gridFocus";
 
 export interface WithChildren {
   children?: ReactNode;
@@ -37,6 +38,12 @@ export interface EventBlockProps {
   style: { top: number; left: number; width: number; height: number };
   editing: boolean;
   selected: boolean;
+  focusStore: GridFocusStore;
+  restoreFocus: (
+    opener: Element | null,
+    event: CalendarEvent,
+    day: number,
+  ) => void;
   onPointerDown: (
     e: PointerEvent,
     type: "move" | "resize_start" | "resize_end",

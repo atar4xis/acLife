@@ -5,6 +5,7 @@ import { ArrowLeftCircle, ArrowRightCircle } from "lucide-react";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type RefObject,
@@ -13,9 +14,11 @@ import {
 export default (function DragOverlay({
   dragRef,
   move,
+  anchored = false,
 }: {
   dragRef: RefObject<EventDragRef>;
   move: (steps: number) => void;
+  anchored?: boolean;
 }) {
   const isMobile = useIsMobile();
   const edgeWidth = isMobile ? 32 : 64;
@@ -23,6 +26,12 @@ export default (function DragOverlay({
   const [y, setY] = useState(0);
   const myRef = useRef<HTMLDivElement>(null);
   const [direction, setDirection] = useState<null | number>(null);
+  const [, remeasure] = useState(0);
+
+  // the event block has moved by now, so measure it again
+  useLayoutEffect(() => {
+    if (anchored) remeasure((tick) => tick + 1);
+  }, [anchored, dragRef.current?.label]);
 
   useEffect(() => {
     const listener = (e: PointerEvent) => {
@@ -71,7 +80,7 @@ export default (function DragOverlay({
   let top = y - 16;
   let left = x + myWidth + 32 > window.innerWidth ? x - myWidth - 32 : x + 32;
 
-  if (isMobile) {
+  if (isMobile || anchored) {
     const key = eventKey(dragRef.current.event);
     const rects = Array.from(
       document.querySelectorAll(`[data-event-key="${key}"]`),
@@ -94,24 +103,28 @@ export default (function DragOverlay({
 
   return (
     <>
-      <div
-        aria-hidden="true"
-        className={`fixed flex items-center justify-center z-20 left-0 top-0 bottom-0 ${isMobile ? "w-8" : "w-16"} bg-background hover:opacity-100 ${direction === -1 ? "opacity-100" : "opacity-30"}`}
-        data-steps="-1"
-        onPointerEnter={handleMoveEnter}
-        onPointerLeave={handleMoveExit}
-      >
-        <ArrowLeftCircle size={isMobile ? 16 : 32} />
-      </div>
-      <div
-        aria-hidden="true"
-        className={`fixed flex items-center justify-center z-20 right-0 top-0 bottom-0 ${isMobile ? "w-8" : "w-16"} bg-background hover:opacity-100 ${direction === 1 ? "opacity-100" : "opacity-30"}`}
-        data-steps="1"
-        onPointerEnter={handleMoveEnter}
-        onPointerLeave={handleMoveExit}
-      >
-        <ArrowRightCircle size={isMobile ? 16 : 32} />
-      </div>
+      {!anchored && (
+        <>
+          <div
+            aria-hidden="true"
+            className={`fixed flex items-center justify-center z-20 left-0 top-0 bottom-0 ${isMobile ? "w-8" : "w-16"} bg-background hover:opacity-100 ${direction === -1 ? "opacity-100" : "opacity-30"}`}
+            data-steps="-1"
+            onPointerEnter={handleMoveEnter}
+            onPointerLeave={handleMoveExit}
+          >
+            <ArrowLeftCircle size={isMobile ? 16 : 32} />
+          </div>
+          <div
+            aria-hidden="true"
+            className={`fixed flex items-center justify-center z-20 right-0 top-0 bottom-0 ${isMobile ? "w-8" : "w-16"} bg-background hover:opacity-100 ${direction === 1 ? "opacity-100" : "opacity-30"}`}
+            data-steps="1"
+            onPointerEnter={handleMoveEnter}
+            onPointerLeave={handleMoveExit}
+          >
+            <ArrowRightCircle size={isMobile ? 16 : 32} />
+          </div>
+        </>
+      )}
       <div
         aria-hidden="true"
         ref={myRef}

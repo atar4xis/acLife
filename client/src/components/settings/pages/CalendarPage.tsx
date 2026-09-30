@@ -185,7 +185,7 @@ const TimezonesField = memo(function TimezonesField() {
               <button
                 type="button"
                 style={{ touchAction: "none" }}
-                aria-label="Reorder time zone"
+                aria-label={`Reorder time zone ${timezoneLabel(tz)}`}
                 aria-keyshortcuts="Shift+ArrowUp Shift+ArrowDown"
                 className="text-muted-foreground cursor-grab active:cursor-grabbing"
                 onPointerDown={onPointerDown(index)}
@@ -198,6 +198,7 @@ const TimezonesField = memo(function TimezonesField() {
                 type="button"
                 variant="outline"
                 size="sm"
+                aria-label={`Set default ${timezoneLabel(tz)}`}
                 onClick={() => promoteAdditionalTimezone(tz)}
               >
                 Set default
@@ -207,7 +208,7 @@ const TimezonesField = memo(function TimezonesField() {
                 variant="ghost"
                 size="icon"
                 className="size-7"
-                aria-label={`Remove ${tz}`}
+                aria-label={`Remove ${timezoneLabel(tz)}`}
                 onClick={() => removeTimezone(tz)}
               >
                 <X className="size-3.5" />

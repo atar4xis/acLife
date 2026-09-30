@@ -37,6 +37,10 @@ import {
 import { getDayRects, getEventRects } from "@/lib/calendar/dom";
 import { describeFullDay } from "@/lib/calendar/a11y";
 import { shortcutsApply } from "@/lib/calendar/shortcutScope";
+import { createGridFocusStore } from "@/lib/calendar/gridFocus";
+import useGridKeyboard from "@/hooks/useGridKeyboard";
+import { useKeyboardMode } from "@/hooks/useGridFocus";
+import { SpokenMessage, SlotIndicator } from "./GridFocus";
 import {
   getTimezoneHourLabel,
   getTimezoneShortLabel,
@@ -339,6 +343,75 @@ const getDraggedTimes = (
   return { newStart, newEnd };
 };
 
+// pointerId stand-in for drags started from the keyboard
+const KEYBOARD_DRAG_ID = -1;
+
+const describeDragLabel = (start: DateTime, end: DateTime, extraCount = 0) => {
+  const diff = end.diff(start).shiftTo("hours", "minutes");
+  const hours = Math.floor(diff.hours);
+  const minutes = Math.round(diff.minutes);
+  const durText = [];
+  if (hours > 0) durText.push(`${hours} hr${hours !== 1 ? "s" : ""}`);
+  if (minutes > 0) durText.push(`${minutes} min`);
+
+  let label = `${start.toFormat("t")} - ${end.toFormat("t")}\n${durText.join(" ")}`;
+  if (extraCount) label += `\n${extraCount + 1} events`;
+  return label;
+};
+
+const isAtOriginal = (
+  ev: CalendarEvent,
+  originalStart: DateTime,
+  originalEnd: DateTime,
+) =>
+  ev.start.toMillis() === originalStart.toMillis() &&
+  ev.end.toMillis() === originalEnd.toMillis();
+
+const applyTimes = (
+  target: { start: DateTime; end: DateTime },
+  times: { newStart: DateTime; newEnd: DateTime },
+) => {
+  if (
+    target.start.toMillis() === times.newStart.toMillis() &&
+    target.end.toMillis() === times.newEnd.toMillis()
+  )
+    return false;
+
+  target.start = times.newStart;
+  target.end = times.newEnd;
+  return true;
+};
+
+const applyDragDelta = (
+  state: NonNullable<EventDragRef>,
+  dayDelta: number,
+  deltaMinutes: number,
+  snapMins: number,
+  from: "original" | "current" = "original",
+) => {
+  const timesFor = (
+    target: { start: DateTime; end: DateTime },
+    original: { originalStart: DateTime; originalEnd: DateTime },
+  ) =>
+    getDraggedTimes(
+      state.type,
+      from === "original" ? original.originalStart : target.start,
+      from === "original" ? original.originalEnd : target.end,
+      dayDelta,
+      deltaMinutes,
+      snapMins,
+    );
+
+  const primary = timesFor(state.event, state);
+  let changed = applyTimes(state.event, primary);
+
+  for (const entry of state.selection ?? []) {
+    if (applyTimes(entry.event, timesFor(entry.event, entry))) changed = true;
+  }
+
+  return { ...primary, changed };
+};
+
 /* -------------------------------------------------------------------------- */
 
 // TODO: clean this up, separate into smaller components and hooks
@@ -448,6 +521,8 @@ export default function AppCalendar({
   const gridHeaderOffset = headerBottom ? 0 : GRID_HEADER_HEIGHT;
 
   const gridRef = useRef<HTMLDivElement>(null);
+  const [focusStore] = useState(createGridFocusStore);
+  const keyboardMode = useKeyboardMode(focusStore);
   const [scrollThumb, setScrollThumb] = useState<{
     top: number;
     height: number;
@@ -616,59 +691,21 @@ export default function AppCalendar({
 
       const dayDelta = dayIndex - state.originalDay;
 
-      const { newStart, newEnd } = getDraggedTimes(
-        state.type,
-        state.originalStart,
-        state.originalEnd,
+      const { newStart, newEnd, changed } = applyDragDelta(
+        state,
         dayDelta,
         deltaMinutes,
         snapMins,
       );
 
       // when dragging, label tells the new start/end times and follows the pointer
-      const diff = newEnd.diff(newStart).shiftTo("hours", "minutes");
-      const hours = Math.floor(diff.hours);
-      const minutes = Math.round(diff.minutes);
-      const durText = [];
-      if (hours > 0) durText.push(`${hours} hr${hours !== 1 ? "s" : ""}`);
-      if (minutes > 0) durText.push(`${minutes} min`);
-      state.label = `${newStart.toFormat("t")} - ${newEnd.toFormat("t")}\n${durText.join(" ")}`;
-      if (state.selection?.length) {
-        state.label += `\n${state.selection.length + 1} events`;
-      }
+      state.label = describeDragLabel(
+        newStart,
+        newEnd,
+        state.selection?.length,
+      );
       state.x = e.clientX;
       state.y = e.clientY;
-
-      let changed = false;
-
-      if (
-        state.event.start.toMillis() != newStart.toMillis() ||
-        state.event.end.toMillis() != newEnd.toMillis()
-      ) {
-        state.event.start = newStart;
-        state.event.end = newEnd;
-        changed = true;
-      }
-
-      for (const entry of state.selection ?? []) {
-        const times = getDraggedTimes(
-          state.type,
-          entry.originalStart,
-          entry.originalEnd,
-          dayDelta,
-          deltaMinutes,
-          snapMins,
-        );
-
-        if (
-          entry.event.start.toMillis() != times.newStart.toMillis() ||
-          entry.event.end.toMillis() != times.newEnd.toMillis()
-        ) {
-          entry.event.start = times.newStart;
-          entry.event.end = times.newEnd;
-          changed = true;
-        }
-      }
 
       if (changed) {
         state.moved = true;
@@ -695,141 +732,137 @@ export default function AppCalendar({
   const pointerCancelRef = useRef(onGlobalPointerCancel);
   pointerCancelRef.current = onGlobalPointerCancel;
 
+  const commitSelectionDrag = useCallback(
+    (state: NonNullable<EventDragRef>) => {
+      if (!state.moved) {
+        dragRef.current = null;
+        return;
+      }
+
+      pushHistory();
+
+      const entries = [
+        {
+          event: state.event,
+          originalStart: state.originalStart,
+          originalEnd: state.originalEnd,
+        },
+        ...(state.selection ?? []),
+      ].sort(
+        (a, b) =>
+          Number(isChainParent(a.event)) - Number(isChainParent(b.event)),
+      );
+
+      let detached = false;
+      let working = calendarEvents;
+
+      for (const entry of entries) {
+        const moved = { ...entry.event, timestamp: Date.now() };
+
+        if (!moved._parent && !moved.repeat) {
+          dispatch({
+            type: "update",
+            id: moved.id,
+            data: { start: moved.start, end: moved.end },
+          });
+
+          updateChange({ type: "updated", event: moved });
+        } else {
+          const parent = detachSingleOccurrence(
+            moved,
+            entry.originalStart,
+            entry.originalEnd,
+            working,
+            dispatch,
+            updateChange,
+          );
+
+          if (parent) {
+            working = working.map((e) => (e.id === parent.id ? parent : e));
+          }
+
+          detached = true;
+        }
+      }
+
+      dragRef.current = null;
+      if (detached) clearSelection();
+      save();
+    },
+    [updateChange, dispatch, save, calendarEvents, clearSelection, pushHistory],
+  );
+
+  const commitSingleDrag = useCallback(
+    (state: NonNullable<EventDragRef>) => {
+      const event = state.event;
+
+      // update the edited event in state
+      if (!event._parent && !event.repeat) {
+        if (
+          event.start.toMillis() !== state.originalStart.toMillis() ||
+          event.end.toMillis() !== state.originalEnd.toMillis()
+        ) {
+          // creating a new event already pushed history in startNewEvent
+          if (state.type !== "new") pushHistory();
+
+          const newEvent = { ...event, timestamp: Date.now() };
+
+          dispatch({
+            type: "update",
+            id: event.id,
+            data: {
+              start: newEvent.start,
+              end: newEvent.end,
+            },
+          });
+
+          updateChange({
+            type: "updated",
+            event: newEvent,
+          });
+        }
+
+        dragRef.current = null;
+        save();
+      } else if (state.moved) {
+        if (
+          event.start.toMillis() !== state.originalStart.toMillis() ||
+          event.end.toMillis() !== state.originalEnd.toMillis()
+        ) {
+          // if the event has or is a parent, ask what to do
+          evPendingUpdateRef.current = event;
+          setUpdateRepeatDialogOpen(true);
+        } else {
+          // if it didn't actually update, just revert
+          dragRef.current = null;
+        }
+      }
+    },
+    [updateChange, dispatch, save, pushHistory],
+  );
+
+  const commitDrag = useCallback(
+    (state: NonNullable<EventDragRef>) =>
+      state.selection?.length
+        ? commitSelectionDrag(state)
+        : commitSingleDrag(state),
+    [commitSelectionDrag, commitSingleDrag],
+  );
+
   const onGlobalPointerUp = useCallback(
     (e: PointerEvent) => {
       // make sure the same pointer was released, then reset drag state and remove listeners
       if (dragRef.current?.pointerId === e.pointerId) {
-        const state = dragRef.current;
-        const event = state.event;
-
-        if (!event) return;
-
-        const newEvent = {
-          ...event,
-          timestamp: Date.now(),
-        };
-
-        if (state.selection?.length) {
-          if (!state.moved) {
-            dragRef.current = null;
-          } else {
-            pushHistory();
-
-            const entries = [
-              {
-                event,
-                originalStart: state.originalStart,
-                originalEnd: state.originalEnd,
-              },
-              ...state.selection,
-            ].sort(
-              (a, b) =>
-                Number(isChainParent(a.event)) - Number(isChainParent(b.event)),
-            );
-
-            let detached = false;
-            let working = calendarEvents;
-
-            for (const entry of entries) {
-              const moved = { ...entry.event, timestamp: Date.now() };
-
-              if (!moved._parent && !moved.repeat) {
-                dispatch({
-                  type: "update",
-                  id: moved.id,
-                  data: { start: moved.start, end: moved.end },
-                });
-
-                updateChange({ type: "updated", event: moved });
-              } else {
-                const parent = detachSingleOccurrence(
-                  moved,
-                  entry.originalStart,
-                  entry.originalEnd,
-                  working,
-                  dispatch,
-                  updateChange,
-                );
-
-                if (parent) {
-                  working = working.map((e) =>
-                    e.id === parent.id ? parent : e,
-                  );
-                }
-
-                detached = true;
-              }
-            }
-
-            dragRef.current = null;
-            if (detached) clearSelection();
-            save();
-          }
-
-          setIsDragging(false);
-          window.removeEventListener("pointermove", onGlobalPointerMove);
-          window.removeEventListener("pointerup", onGlobalPointerUp);
-          return;
-        }
-
-        // update the edited event in state
-        if (!event._parent && !event.repeat) {
-          if (
-            newEvent.start.toMillis() !== state.originalStart.toMillis() ||
-            newEvent.end.toMillis() !== state.originalEnd.toMillis()
-          ) {
-            // creating a new event already pushed history in startNewEvent
-            if (state.type !== "new") pushHistory();
-
-            dispatch({
-              type: "update",
-              id: event.id,
-              data: {
-                start: newEvent.start,
-                end: newEvent.end,
-              },
-            });
-
-            updateChange({
-              type: "updated",
-              event: newEvent,
-            });
-          }
-
-          dragRef.current = null;
-          save();
-        } else if (dragRef.current.moved) {
-          if (
-            event.start.toMillis() !== state.originalStart.toMillis() ||
-            event.end.toMillis() !== state.originalEnd.toMillis()
-          ) {
-            // if the event has or is a parent, ask what to do
-            evPendingUpdateRef.current = event;
-            setUpdateRepeatDialogOpen(true);
-          } else {
-            // if it didn't actually update, just revert
-            dragRef.current = null;
-          }
-        }
+        commitDrag(dragRef.current);
 
         setIsDragging(false);
-
         window.removeEventListener("pointermove", onGlobalPointerMove);
         window.removeEventListener("pointerup", onGlobalPointerUp);
         window.removeEventListener("pointercancel", onGlobalPointerCancel);
         releaseTouchBlock();
       }
     },
-    [
-      onGlobalPointerMove,
-      onGlobalPointerCancel,
-      updateChange,
-      dispatch,
-      save,
-      calendarEvents,
-      clearSelection,
-      pushHistory,
-    ],
+    [commitDrag, onGlobalPointerMove, onGlobalPointerCancel],
   );
 
   pointerUpRef.current = onGlobalPointerUp;
@@ -899,6 +932,18 @@ export default function AppCalendar({
     [onSelectionPointerMove, onSelectionPointerUp],
   );
 
+  const getDragSelection = useCallback(
+    (selected: Map<string, CalendarEvent>, key: string) =>
+      selected.size > 1 && selected.has(key)
+        ? resolveSelection(eventMapRef.current, selected, key).map((ev) => ({
+            event: { ...ev },
+            originalStart: ev.start,
+            originalEnd: ev.end,
+          }))
+        : undefined,
+    [],
+  );
+
   const onEventPointerDown = useCallback(
     (
       e: React.PointerEvent,
@@ -923,14 +968,7 @@ export default function AppCalendar({
         clearSelection();
       }
 
-      const selection =
-        selected.size > 1 && selected.has(key)
-          ? resolveSelection(eventMapRef.current, selected, key).map((ev) => ({
-              event: { ...ev },
-              originalStart: ev.start,
-              originalEnd: ev.end,
-            }))
-          : undefined;
+      const selection = getDragSelection(selected, key);
 
       setIsDragging(true);
 
@@ -973,8 +1011,93 @@ export default function AppCalendar({
       onGlobalPointerCancel,
       beginSelectionBox,
       clearSelection,
+      getDragSelection,
     ],
   );
+
+  const beginKeyboardMove = useCallback(
+    (event: CalendarEvent, dayIndex: number) => {
+      const selected = selectedEventsRef.current;
+      const key = eventKey(event);
+      if (selected.size > 0 && !selected.has(key)) clearSelection();
+
+      const selection = getDragSelection(selected, key);
+
+      dragRef.current = {
+        pointerId: KEYBOARD_DRAG_ID,
+        type: "move",
+        startY: 0,
+        x: 0,
+        y: 0,
+        event: { ...event },
+        originalDay: dayIndex,
+        originalStart: event.start,
+        originalEnd: event.end,
+        label: describeDragLabel(event.start, event.end, selection?.length),
+        dayRects: [],
+        moved: false,
+        selection,
+      };
+      setIsDragging(true);
+
+      return 1 + (selection?.length ?? 0);
+    },
+    [clearSelection, getDragSelection],
+  );
+
+  const stepKeyboardMove = useCallback(
+    (
+      type: "move" | "resize_start" | "resize_end",
+      dayDelta: number,
+      deltaMinutes: number,
+    ) => {
+      const state = dragRef.current;
+      if (state?.pointerId !== KEYBOARD_DRAG_ID) return null;
+
+      state.type = type;
+      if (
+        applyDragDelta(state, dayDelta, deltaMinutes, snapMins, "current")
+          .changed
+      ) {
+        state.moved = true;
+        state.label = describeDragLabel(
+          state.event.start,
+          state.event.end,
+          state.selection?.length,
+        );
+        forceRender((tick) => tick + 1);
+      }
+
+      return state.event;
+    },
+    [snapMins],
+  );
+
+  const cancelKeyboardMove = useCallback(() => {
+    if (dragRef.current?.pointerId !== KEYBOARD_DRAG_ID) return;
+    dragRef.current = null;
+    setIsDragging(false);
+  }, []);
+
+  const confirmKeyboardMove = useCallback(() => {
+    const state = dragRef.current;
+    if (state?.pointerId !== KEYBOARD_DRAG_ID) return "unchanged";
+
+    const unchanged =
+      isAtOriginal(state.event, state.originalStart, state.originalEnd) &&
+      (state.selection ?? []).every((entry) =>
+        isAtOriginal(entry.event, entry.originalStart, entry.originalEnd),
+      );
+
+    if (unchanged) {
+      cancelKeyboardMove();
+      return "unchanged";
+    }
+
+    commitDrag(state);
+    setIsDragging(false);
+    return dragRef.current ? "pending" : "moved";
+  }, [commitDrag, cancelKeyboardMove]);
 
   const getBatch = useCallback((event: CalendarEvent) => {
     const selected = selectedEventsRef.current;
@@ -1411,6 +1534,50 @@ export default function AppCalendar({
 
   /* -------------------------------------------------------------------------- */
 
+  const addNewEvent = useCallback(
+    (start: DateTime, isTask: boolean) => {
+      const newEvent = {
+        id: crypto.randomUUID(),
+        title: isTask ? defaultTaskName : defaultEventName,
+        color: eventColorPresets[0] ?? EVENT_COLOR_FALLBACK,
+        start,
+        end: start.plus({ minutes: defaultEventDuration }),
+        timestamp: Date.now(),
+        isTask,
+      } as CalendarEvent;
+
+      pushHistory();
+      dispatch({ type: "add", event: newEvent });
+      updateChange({ type: "added", event: newEvent });
+
+      return newEvent;
+    },
+    [
+      defaultEventName,
+      defaultTaskName,
+      defaultEventDuration,
+      eventColorPresets,
+      dispatch,
+      updateChange,
+      pushHistory,
+    ],
+  );
+
+  const createEventAtSlot = useCallback(
+    (dayIndex: number, minutes: number) => {
+      clearSelection();
+
+      const newEvent = addNewEvent(
+        visibleDays[dayIndex].date.plus({ minutes }),
+        false,
+      );
+      save();
+
+      return newEvent;
+    },
+    [visibleDays, addNewEvent, save, clearSelection],
+  );
+
   const startNewEvent = useCallback(
     (e: React.PointerEvent, dayIndex: number) => {
       const container = gridRef.current;
@@ -1436,29 +1603,7 @@ export default function AppCalendar({
       const start = visibleDays[dayIndex].date.plus({
         minutes: snapMinutes(startMinutes, snapMins),
       });
-      const end = start.plus({ minutes: defaultEventDuration });
-
-      const newEvent = {
-        id: crypto.randomUUID(),
-        title: e.altKey ? defaultTaskName : defaultEventName,
-        color: eventColorPresets[0] ?? EVENT_COLOR_FALLBACK,
-        start,
-        end,
-        timestamp: Date.now(),
-        isTask: e.altKey,
-      } as CalendarEvent;
-
-      pushHistory();
-
-      dispatch({
-        type: "add",
-        event: newEvent,
-      });
-
-      updateChange({
-        type: "added",
-        event: newEvent,
-      });
+      const newEvent = addNewEvent(start, e.altKey);
 
       if (e.pointerType !== "touch") {
         setIsDragging(true);
@@ -1486,18 +1631,12 @@ export default function AppCalendar({
       hourHeight,
       gridHeaderOffset,
       snapMins,
-      defaultEventDuration,
-      defaultEventName,
-      defaultTaskName,
-      eventColorPresets,
-      dispatch,
-      updateChange,
+      addNewEvent,
       visibleDays,
       onGlobalPointerMove,
       onGlobalPointerUp,
       beginSelectionBox,
       clearSelection,
-      pushHistory,
     ],
   );
 
@@ -1941,6 +2080,37 @@ export default function AppCalendar({
 
   eventMapRef.current = eventMap;
 
+  const {
+    gridProps: gridKeyboardProps,
+    restoreFocus,
+    onDialogFocusReturned,
+  } = useGridKeyboard({
+    gridRef,
+    store: focusStore,
+    visibleDays,
+    eventMap,
+    mode,
+    weekStartsOn,
+    snapMins,
+    hourHeight,
+    headerHeight: GRID_HEADER_HEIGHT,
+    now,
+    move,
+    setCurrentDate,
+    selectedEventsRef,
+    selectEvents,
+    toggleSelection,
+    createEventAt: createEventAtSlot,
+    openEvent: setEditingEvent,
+    deleteEvent: onEventDelete,
+    beginMove: beginKeyboardMove,
+    stepMove: stepKeyboardMove,
+    confirmMove: confirmKeyboardMove,
+    cancelMove: cancelKeyboardMove,
+    toggleCompleted: (event) =>
+      onEventEdit(event, { ...event, completed: !event.completed }),
+  });
+
   const selectionBox = (() => {
     const state = selectionBoxRef.current;
     const container = gridRef.current;
@@ -2126,6 +2296,18 @@ export default function AppCalendar({
                         />
                       )}
 
+                      <SpokenMessage store={focusStore} day={dayIndex} />
+
+                      <SlotIndicator
+                        store={focusStore}
+                        day={dayIndex}
+                        date={d.date}
+                        isToday={isSameDate(d.date, now)}
+                        events={dayEvents}
+                        hourHeight={hourHeight}
+                        snapMins={snapMins}
+                      />
+
                       {/* today's events */}
                       {dayEvents.map((event, idx) => (
                         <EventBlock
@@ -2145,6 +2327,8 @@ export default function AppCalendar({
                               : editingEventDay === dayIndex)
                           }
                           selected={selectedEvents.has(eventKey(event))}
+                          focusStore={focusStore}
+                          restoreFocus={restoreFocus}
                           onPointerDown={onEventPointerDown}
                           onEventEdit={onEventEdit}
                           onEventMove={onEventMove}
@@ -2175,6 +2359,9 @@ export default function AppCalendar({
       onEventDuplicate,
       onEventPointerDown,
       startNewEvent,
+      focusStore,
+      restoreFocus,
+      snapMins,
       editingEvent,
       editingEventDay,
       editingEventFirstDayIndex,
@@ -2380,7 +2567,9 @@ export default function AppCalendar({
           ref={gridRef}
           role="grid"
           aria-label="Calendar"
-          className="touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
+          {...gridKeyboardProps}
+          data-keyboard-mode={keyboardMode ? "" : undefined}
+          className="group/grid outline-none touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
           style={{
             gridTemplateColumns: cols(
               timezones.length,
@@ -2401,7 +2590,13 @@ export default function AppCalendar({
           {timeGrid}
           {headerBottom && headerRow}
 
-          {isDragging && <DragOverlay move={move} dragRef={dragRef} />}
+          {isDragging && (
+            <DragOverlay
+              move={move}
+              dragRef={dragRef}
+              anchored={dragRef.current?.pointerId === KEYBOARD_DRAG_ID}
+            />
+          )}
 
           {selectionBox && (
             <div
@@ -2426,6 +2621,7 @@ export default function AppCalendar({
         defaultOption="this"
         open={updateRepeatDialogOpen}
         setOpen={setUpdateRepeatDialogOpen}
+        onFocusReturned={onDialogFocusReturned}
         onSubmit={(option: string) => {
           const event = evPendingUpdateRef.current;
 
@@ -2616,6 +2812,7 @@ export default function AppCalendar({
         defaultOption="this"
         open={deleteRepeatDialogOpen}
         setOpen={setDeleteRepeatDialogOpen}
+        onFocusReturned={onDialogFocusReturned}
         onSubmit={(option: string) => {
           const event = evPendingUpdateRef?.current;
 

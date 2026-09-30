@@ -28,6 +28,18 @@ vi.mock("../src/context/ApiContext.tsx", () => {
   };
 });
 
+Element.prototype.scrollTo = function (this: Element, options) {
+  if (typeof options === "object")
+    this.scrollTop = options.top ?? this.scrollTop;
+};
+
+const nativeMatches = Element.prototype.matches;
+Element.prototype.matches = function (this: Element, selector: string) {
+  return selector === ":focus-visible"
+    ? this === document.activeElement
+    : nativeMatches.call(this, selector);
+};
+
 beforeEach(() => {
   // mock localStorage
   const store: Record<string, string> = {};
@@ -55,6 +67,7 @@ beforeEach(() => {
   );
 
   vi.stubGlobal("matchMedia", () => ({
+    matches: false,
     addEventListener: () => {},
     removeEventListener: () => {},
   }));

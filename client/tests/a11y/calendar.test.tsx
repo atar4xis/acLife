@@ -77,12 +77,12 @@ describe("Calendar grid a11y", () => {
     expect(screen.getAllByRole("gridcell").length).toBeGreaterThan(0);
     expect(
       screen.getByRole("button", {
-        name: "Planning, Wednesday 18 March, 9:00 to 10:00 AM",
+        name: "Planning, Wednesday 18 March, 9 to 10 AM",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("group", {
-        name: "Pay rent, Wednesday 18 March, 12:00 to 1:00 PM, task, not completed",
+        name: "Pay rent, Wednesday 18 March, 12 to 1 PM, task, not completed",
       }),
     ).toBeInTheDocument();
     expect(
@@ -94,8 +94,7 @@ describe("Calendar grid a11y", () => {
     renderCalendar({ mode: "week", events: events() });
     await screen.findByText("Planning");
 
-    const label =
-      "Trip, Wednesday 18 March 10:00 PM to Thursday 19 March 2:00 AM";
+    const label = "Trip, Wednesday 18 March 10 PM to Thursday 19 March 2 AM";
     expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
@@ -110,7 +109,7 @@ describe("Calendar grid a11y", () => {
     });
     const block = await getEventBlock("Planning");
     expect(block).toHaveAccessibleName(
-      "Planning, Wednesday 18 March, 9:00 to 10:00 AM, repeating",
+      "Planning, Wednesday 18 March, 9 to 10 AM, repeating",
     );
 
     await user.keyboard("{Control>}");
@@ -170,12 +169,12 @@ describe("Calendar grid a11y", () => {
 
     expect(
       await screen.findByRole("group", {
-        name: "Workshop, Wednesday 18 March, 11:00 AM to 1:30 PM, task, completed",
+        name: "Workshop, Wednesday 18 March, 11 AM to 1:30 PM, task, completed",
       }),
     ).toBeInTheDocument();
   });
 
-  it("exposes task blocks as groups with a reachable, toggleable checkbox", async () => {
+  it("exposes task blocks as groups with a named checkbox that stays out of the tab order", async () => {
     const saveEvents = vi.fn();
     const { user } = renderCalendar({ events: events(), saveEvents });
 
@@ -185,11 +184,10 @@ describe("Calendar grid a11y", () => {
     const checkbox = within(group).getByRole("checkbox", {
       name: "Pay rent completed",
     });
-    expect(checkbox).not.toHaveAttribute("tabindex", "-1");
+    expect(checkbox).toHaveAttribute("tabindex", "-1");
+    expect(group).toHaveAttribute("aria-keyshortcuts", "M Control+Enter");
 
-    checkbox.focus();
-    expect(checkbox).toHaveFocus();
-    await user.keyboard(" ");
+    await user.click(checkbox);
     await advanceSave();
 
     expect(

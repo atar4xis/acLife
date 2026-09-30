@@ -1,9 +1,12 @@
 import type { CalendarEvent, RepeatInterval } from "@/types/calendar/Event";
 import type { EventBlockProps } from "@/types/Props";
 import { MAX_EVENT_DURATION_MINUTES } from "@/lib/calendar/event";
+import { lastInputModality } from "@/lib/inputModality";
+import useFocusTrap from "@/hooks/useFocusTrap";
 import {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -98,7 +101,9 @@ const parseRepeatValue = (value: RepeatInterval) => {
 
 export default function EventEditor({
   event,
+  day,
   eventRef,
+  restoreFocus,
   onSave,
   onMove,
   onDelete,
@@ -116,6 +121,11 @@ export default function EventEditor({
 
   const originalEvent = useRef(event);
   const editorRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const titleId = useId();
+  const [openedByKeyboard] = useState(() => lastInputModality() === "keyboard");
+  const [opener] = useState(() => document.activeElement);
+  const skipFocusRestore = useRef(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
@@ -262,6 +272,41 @@ export default function EventEditor({
     return () => ro.disconnect();
   }, [isMobile, eventRef]);
 
+  useEffect(() => {
+    if (!openedByKeyboard) return;
+
+    const focusTitle = () => titleRef.current?.focus({ preventScroll: true });
+    focusTitle();
+
+    // a menu that is still closing keeps focus trapped, so check again once it is gone
+    const timer = setTimeout(() => {
+      if (!editorRef.current?.contains(document.activeElement)) focusTitle();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [openedByKeyboard]);
+
+  const closing = useRef({ restoreFocus, day, event });
+  closing.current = { restoreFocus, day, event };
+
+  useLayoutEffect(() => {
+    return () => {
+      if (!openedByKeyboard || skipFocusRestore.current) return;
+
+      const active = document.activeElement;
+      if (
+        active &&
+        active !== document.body &&
+        !active.closest("[role=dialog], [role=alertdialog]")
+      )
+        return;
+
+      const latest = closing.current;
+      latest.restoreFocus?.(opener, latest.event, latest.day ?? 0);
+    };
+  }, [openedByKeyboard, opener]);
+
+  useFocusTrap(editorRef);
+
   // keybindings
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
@@ -292,6 +337,8 @@ export default function EventEditor({
         !el.closest('[data-slot^="dropdown-menu"]')
       ) {
         e.stopPropagation();
+        // a press inside the recurring dialog is not the user going elsewhere
+        skipFocusRestore.current = !el.closest("[role=alertdialog]");
         onCancel();
       }
     };
@@ -322,9 +369,14 @@ export default function EventEditor({
         left: pos.left,
       }}
       ref={editorRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
     >
       <div className="flex justify-between mb-5 items-center">
-        <h3 className="text-xl font-semibold">Edit Event</h3>
+        <h3 id={titleId} className="text-xl font-semibold">
+          Edit Event
+        </h3>
         <div className="flex items-center gap-1">
           {/* the context menu on the event block is disabled on mobile
               (it conflicts with hold-to-drag), so expose it here instead */}
@@ -380,6 +432,7 @@ export default function EventEditor({
           <FieldLabel>Title &amp; Color</FieldLabel>
           <div className="flex">
             <Input
+              ref={titleRef}
               type="text"
               className="mr-2"
               placeholder={originalEvent.current.title}
