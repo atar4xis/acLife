@@ -12,15 +12,19 @@ import type { SyncableKey } from "@/lib/settingsSync";
 
 export default function SyncToggle({
   settingKey,
+  keys = [settingKey as SyncableKey],
+  label = "Sync this setting",
 }: {
-  settingKey: SyncableKey;
+  settingKey?: SyncableKey;
+  keys?: SyncableKey[];
+  label?: string;
 }) {
   const { user } = useUser();
   const { enabled, overrides, isSynced, setSynced } = useSyncSettings();
 
   if (user?.type !== "online") return null;
 
-  const synced = isSynced(settingKey);
+  const synced = enabled && keys.some(isSynced);
 
   return (
     <Tooltip>
@@ -30,14 +34,15 @@ export default function SyncToggle({
           variant="ghost"
           size="icon"
           aria-pressed={synced}
-          aria-label="Sync this setting"
+          aria-label={label}
+          disabled={!enabled}
           className={cn(
             "size-5 text-muted-foreground hover:text-foreground",
             // highlight choices that differ from the default
-            settingKey in overrides && "text-primary hover:text-primary",
-            !enabled && "opacity-50",
+            keys.some((key) => key in overrides) &&
+              "text-primary hover:text-primary",
           )}
-          onClick={() => setSynced([settingKey], !synced)}
+          onClick={() => setSynced(keys, !synced)}
         >
           {synced ? (
             <Cloud className="size-3.5" />
@@ -47,7 +52,7 @@ export default function SyncToggle({
         </Button>
       </TooltipTrigger>
       <TooltipContent>
-        {synced ? "Synced to all devices" : "This device only"}
+        {synced ? "Synced across devices" : "This device only"}
         {!enabled && " (settings sync is off)"}
       </TooltipContent>
     </Tooltip>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { usePushService } from "@/hooks/usePushService";
@@ -16,11 +16,24 @@ import {
 } from "@/components/ui/collapsible";
 import {
   Field,
-  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldTitle,
 } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { SelectItem } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -35,51 +48,45 @@ import Section from "../SettingsSection";
 import ResetToDefault from "../ResetToDefault";
 import SettingsLabel from "../SettingsLabel";
 import SettingsSelect from "../SettingsSelect";
+import SyncToggle from "../SyncToggle";
 
-function SyncGroup({
-  label,
-  keys,
-  disabled,
-}: {
-  label: string;
-  keys: SyncableKey[];
-  disabled: boolean;
-}) {
-  const { isSynced, setSynced, resetSynced } = useSyncSettings();
+function SyncGroup({ label, keys }: { label: string; keys: SyncableKey[] }) {
+  const { isSynced, resetSynced } = useSyncSettings();
   const [open, setOpen] = useState(false);
   const syncedCount = keys.filter(isSynced).length;
   const modified = keys.some((key) => isSynced(key) !== syncByDefault[key]);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-auto items-center gap-1.5">
-          <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm font-medium">
-            <ChevronRight className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
-            {label}
-          </CollapsibleTrigger>
+      <div className="flex items-center gap-1.5">
+        <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm font-medium">
+          <ChevronRight className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
+          {label}
+        </CollapsibleTrigger>
+        <SyncToggle
+          keys={keys}
+          label={`Sync ${label.toLowerCase()} settings`}
+        />
+        <div className="ml-auto flex items-center gap-2">
+          {syncedCount > 0 && syncedCount < keys.length && (
+            <span className="text-xs text-muted-foreground">
+              {syncedCount}/{keys.length} synced
+            </span>
+          )}
           {modified && <ResetToDefault onClick={() => resetSynced(keys)} />}
         </div>
-        <Switch
-          aria-label={`Sync ${label.toLowerCase()} settings`}
-          checked={syncedCount === keys.length}
-          disabled={disabled}
-          onCheckedChange={(checked) => setSynced(keys, checked)}
-        />
       </div>
-      <CollapsibleContent className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-4 gap-y-3 pt-3 pl-5.5">
+      <CollapsibleContent className="flex flex-col pt-2 pb-1 pl-5.5">
         {keys.map((key) => (
-          <div key={key} className="flex min-w-0 items-center gap-2">
-            <Switch
-              size="sm"
-              aria-label={`Sync ${settingLabelByKey(key).toLowerCase()}`}
-              checked={isSynced(key)}
-              disabled={disabled}
-              onCheckedChange={(checked) => setSynced([key], checked)}
+          <div
+            key={key}
+            className="flex items-center justify-between gap-4 rounded-md px-2 py-1.5 odd:bg-muted/50"
+          >
+            <FieldTitle>{settingLabelByKey(key)}</FieldTitle>
+            <SyncToggle
+              settingKey={key}
+              label={`Sync ${settingLabelByKey(key).toLowerCase()}`}
             />
-            <FieldTitle className="truncate">
-              {settingLabelByKey(key)}
-            </FieldTitle>
           </div>
         ))}
       </CollapsibleContent>
@@ -127,31 +134,51 @@ export default function SyncPage({
         label={sectionLabel("settings-sync")}
         sectionRefs={sectionRefs}
       >
-        <Field orientation="responsive">
-          <FieldContent>
-            <FieldTitle>{settingLabel("sync-settings-enabled")}</FieldTitle>
-            <FieldDescription>
-              Choose what to sync below, or use the cloud icon next to a
-              setting.
-            </FieldDescription>
-          </FieldContent>
-          <Switch
-            aria-label="Sync settings"
-            checked={syncEnabled}
-            onCheckedChange={setSyncEnabled}
-          />
-        </Field>
-
-        <div className="flex flex-col gap-4">
-          {syncGroups.map((group) => (
-            <SyncGroup
-              key={group.id}
-              label={group.label}
-              keys={group.keys}
-              disabled={!syncEnabled}
+        <Dialog>
+          <Field orientation="responsive">
+            <div className="flex flex-auto items-center gap-1.5">
+              <FieldTitle>{settingLabel("sync-settings-enabled")}</FieldTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Manage synced settings"
+                      className="size-5 text-muted-foreground hover:text-foreground"
+                    >
+                      <Settings className="size-3.5" />
+                    </Button>
+                  </DialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Manage synced settings</TooltipContent>
+              </Tooltip>
+            </div>
+            <Switch
+              aria-label="Sync across devices"
+              checked={syncEnabled}
+              onCheckedChange={setSyncEnabled}
             />
-          ))}
-        </div>
+          </Field>
+          <DialogContent className="max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Manage synced settings</DialogTitle>
+              <DialogDescription>
+                Use the cloud icons to choose what syncs across devices.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-4">
+              {syncGroups.map((group) => (
+                <SyncGroup
+                  key={group.id}
+                  label={group.label}
+                  keys={group.keys}
+                />
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </Section>
 
       <Separator />

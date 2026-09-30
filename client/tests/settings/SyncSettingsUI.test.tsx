@@ -125,9 +125,13 @@ function Harness() {
 
 const renderSyncPage = () => renderInProvider(<Harness />);
 
-const master = () => screen.getByRole("switch", { name: "Sync settings" });
+const openManage = (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(screen.getByRole("button", { name: "Manage synced settings" }));
+
+const master = () =>
+  screen.getByRole("switch", { name: "Sync across devices" });
 const groupSwitch = (name: string) =>
-  screen.getByRole("switch", { name: `Sync ${name.toLowerCase()} settings` });
+  screen.getByRole("button", { name: `Sync ${name.toLowerCase()} settings` });
 
 describe("SyncPage settings sync section", () => {
   it("has sync turned on to start with", () => {
@@ -139,6 +143,7 @@ describe("SyncPage settings sync section", () => {
   it("shows a reset button only on groups that differ from their defaults", async () => {
     const user = userEvent.setup();
     renderSyncPage();
+    await openManage(user);
     expect(
       screen.queryByRole("button", { name: "Reset to default" }),
     ).not.toBeInTheDocument();
@@ -153,6 +158,7 @@ describe("SyncPage settings sync section", () => {
   it("resets a group's sync choices to the defaults", async () => {
     const user = userEvent.setup();
     renderSyncPage();
+    await openManage(user);
     await user.click(groupSwitch("Events"));
     await user.click(groupSwitch("Appearance"));
 
@@ -161,8 +167,8 @@ describe("SyncPage settings sync section", () => {
     );
 
     // Appearance is listed first, so its reset was clicked and Events is untouched
-    expect(groupSwitch("Appearance")).not.toBeChecked();
-    expect(groupSwitch("Events")).not.toBeChecked();
+    expect(groupSwitch("Appearance")).toHaveAttribute("aria-pressed", "true");
+    expect(groupSwitch("Events")).toHaveAttribute("aria-pressed", "false");
     expect(storedOverrides()).toEqual({
       defaultEventName: false,
       defaultTaskName: false,
@@ -178,6 +184,7 @@ describe("SyncPage settings sync section", () => {
   it("hides the reset button again once a group is back at its defaults", async () => {
     const user = userEvent.setup();
     renderSyncPage();
+    await openManage(user);
     await user.click(groupSwitch("Events"));
     await user.click(groupSwitch("Events"));
 
@@ -187,21 +194,28 @@ describe("SyncPage settings sync section", () => {
     expect(storedOverrides()).toEqual({});
   });
 
-  it("checks a group switch only when every setting in it syncs", () => {
-    renderSyncPage();
-
-    expect(groupSwitch("Events")).toBeChecked();
-    expect(groupSwitch("Calendar")).not.toBeChecked();
-    expect(groupSwitch("Appearance")).not.toBeChecked();
-  });
-
-  it("turns a whole group on and stores only the differences from the defaults", async () => {
+  it("shows a group as synced when any setting in it syncs", async () => {
     const user = userEvent.setup();
     renderSyncPage();
+    await openManage(user);
+
+    expect(groupSwitch("Events")).toHaveAttribute("aria-pressed", "true");
+    expect(groupSwitch("Calendar")).toHaveAttribute("aria-pressed", "true");
+    expect(groupSwitch("Appearance")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("turns a partly synced group off, then on, storing only the differences", async () => {
+    const user = userEvent.setup();
+    renderSyncPage();
+    await openManage(user);
+
+    // presets is the only appearance setting that syncs by default
+    await user.click(groupSwitch("Appearance"));
+    expect(groupSwitch("Appearance")).toHaveAttribute("aria-pressed", "false");
+    expect(storedOverrides()).toEqual({ presets: false });
 
     await user.click(groupSwitch("Appearance"));
-
-    expect(groupSwitch("Appearance")).toBeChecked();
+    expect(groupSwitch("Appearance")).toHaveAttribute("aria-pressed", "true");
     expect(storedOverrides()).toEqual({
       theme: true,
       colors: true,
@@ -213,10 +227,11 @@ describe("SyncPage settings sync section", () => {
   it("turns a whole group off", async () => {
     const user = userEvent.setup();
     renderSyncPage();
+    await openManage(user);
 
     await user.click(groupSwitch("Events"));
 
-    expect(groupSwitch("Events")).not.toBeChecked();
+    expect(groupSwitch("Events")).toHaveAttribute("aria-pressed", "false");
     expect(storedOverrides()).toEqual({
       defaultEventName: false,
       defaultTaskName: false,
@@ -229,34 +244,24 @@ describe("SyncPage settings sync section", () => {
     });
   });
 
-  it("finishes a partly synced group when its switch is turned on", async () => {
-    const user = userEvent.setup();
-    renderSyncPage();
-
-    // snapMinutes is the one calendar setting that does not sync by default
-    await user.click(groupSwitch("Calendar"));
-
-    expect(groupSwitch("Calendar")).toBeChecked();
-    expect(storedOverrides()).toEqual({ snapMinutes: true });
-  });
-
   it("lists a group's settings when it is expanded and toggles them one by one", async () => {
     const user = userEvent.setup();
     renderSyncPage();
+    await openManage(user);
 
     expect(
-      screen.queryByRole("switch", { name: "Sync snap to minutes" }),
+      screen.queryByRole("button", { name: "Sync snap to minutes" }),
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Calendar/ }));
-    const snap = screen.getByRole("switch", { name: "Sync snap to minutes" });
-    expect(snap).not.toBeChecked();
+    const snap = screen.getByRole("button", { name: "Sync snap to minutes" });
+    expect(snap).toHaveAttribute("aria-pressed", "false");
 
     await user.click(snap);
 
-    expect(snap).toBeChecked();
+    expect(snap).toHaveAttribute("aria-pressed", "true");
     expect(storedOverrides()).toEqual({ snapMinutes: true });
-    expect(groupSwitch("Calendar")).toBeChecked();
+    expect(groupSwitch("Calendar")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("turns everything off with the master switch and disables the other switches", async () => {
@@ -267,6 +272,7 @@ describe("SyncPage settings sync section", () => {
 
     expect(master()).not.toBeChecked();
     expect(readSettingsMeta().syncEnabled).toBe(false);
+    await openManage(user);
     for (const name of ["Appearance", "Calendar", "Events", "Time zones"]) {
       expect(groupSwitch(name)).toBeDisabled();
     }
@@ -275,20 +281,22 @@ describe("SyncPage settings sync section", () => {
   it("also disables the per-setting switches while the master switch is off", async () => {
     const user = userEvent.setup();
     renderSyncPage();
-    await user.click(screen.getByRole("button", { name: /Calendar/ }));
-    const snap = screen.getByRole("switch", { name: "Sync snap to minutes" });
-    expect(snap).toBeEnabled();
-
     await user.click(master());
+    await openManage(user);
+    await user.click(screen.getByRole("button", { name: /Calendar/ }));
 
-    expect(snap).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Sync snap to minutes" }),
+    ).toBeDisabled();
   });
 
   it("keeps the individual choices while the master switch is off", async () => {
     const user = userEvent.setup();
     renderSyncPage();
+    await openManage(user);
     await user.click(groupSwitch("Events"));
     const overrides = storedOverrides();
+    await user.keyboard("{Escape}");
 
     await user.click(master());
     expect(storedOverrides()).toEqual(overrides);
@@ -296,6 +304,7 @@ describe("SyncPage settings sync section", () => {
     await user.click(master());
     expect(master()).toBeChecked();
     expect(storedOverrides()).toEqual(overrides);
-    expect(groupSwitch("Events")).not.toBeChecked();
+    await openManage(user);
+    expect(groupSwitch("Events")).toHaveAttribute("aria-pressed", "false");
   });
 });

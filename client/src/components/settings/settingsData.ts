@@ -246,7 +246,7 @@ export const settingsCategories: SettingsCategory[] = [
       {
         id: "settings-sync",
         label: "Settings",
-        items: [{ id: "sync-settings-enabled", label: "Sync settings" }],
+        items: [{ id: "sync-settings-enabled", label: "Sync across devices" }],
       },
       {
         id: "push-service",
