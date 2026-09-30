@@ -11,6 +11,7 @@ export interface CalendarSettings {
   defaultView: ViewMode;
   weekStartsOn: WeekStartsOn;
   snapMinutes: number;
+  lineOpacity: number;
   dayHeaderPosition: DayHeaderPosition;
   timeLabelPosition: TimeLabelPosition;
   defaultEventName: string;
@@ -21,6 +22,9 @@ export interface CalendarSettings {
   agendaRangeDays: number;
   eventColorPresets: string[];
   addColorsAutomatically: boolean;
+  eventEditorOpacity: number;
+  eventEditorBlur: number;
+  eventEditorRadius: number;
   timezones: string[];
   defaultTimezone: string;
   lastSeenDeviceTimezone: string;

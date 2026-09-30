@@ -47,6 +47,7 @@ import SettingsLabel from "../SettingsLabel";
 import SyncToggle from "../SyncToggle";
 import SettingsSelect from "../SettingsSelect";
 import SettingsSlider from "../SettingsSlider";
+import EventEditorPreview from "../EventEditorPreview";
 
 const TimezonesField = memo(function TimezonesField() {
   const { timezones, defaultTimezone, setSetting } = useCalendarSettings();
@@ -446,12 +447,27 @@ export default function CalendarPage({
   const {
     defaultView,
     weekStartsOn,
+    lineOpacity,
     dayHeaderPosition,
     timeLabelPosition,
     agendaEnabled,
     addColorsAutomatically,
+    eventEditorOpacity,
+    eventEditorBlur,
+    eventEditorRadius,
     setSetting,
   } = useCalendarSettings();
+
+  const [preview, setPreview] = useState({
+    lineOpacity,
+    eventEditorOpacity,
+    eventEditorBlur,
+    eventEditorRadius,
+  });
+  const trackPreview = (key: keyof typeof preview) => (value: number) =>
+    setPreview((prev) =>
+      prev[key] === value ? prev : { ...prev, [key]: value },
+    );
 
   return (
     <FieldGroup className="gap-8">
@@ -545,6 +561,14 @@ export default function CalendarPage({
           max={60}
           format={(v) => `${v} min`}
         />
+
+        <SettingsSlider
+          settingKey="lineOpacity"
+          min={0}
+          max={100}
+          format={(v) => `${v}%`}
+          onLiveChange={trackPreview("lineOpacity")}
+        />
       </Section>
 
       <Separator />
@@ -584,6 +608,40 @@ export default function CalendarPage({
             }
           />
         </Field>
+
+        <div className="@container mt-4">
+          <div className="grid gap-6 @min-[40rem]:grid-cols-[minmax(0,1fr)_auto] @min-[40rem]:items-start">
+            <div className="flex flex-col gap-6">
+              <SettingsSlider
+                settingKey="eventEditorOpacity"
+                min={0}
+                max={100}
+                format={(v) => `${v}%`}
+                onLiveChange={trackPreview("eventEditorOpacity")}
+              />
+              <SettingsSlider
+                settingKey="eventEditorBlur"
+                min={0}
+                max={40}
+                format={(v) => `${v} px`}
+                onLiveChange={trackPreview("eventEditorBlur")}
+              />
+              <SettingsSlider
+                settingKey="eventEditorRadius"
+                min={0}
+                max={24}
+                format={(v) => `${v} px`}
+                onLiveChange={trackPreview("eventEditorRadius")}
+              />
+            </div>
+            <EventEditorPreview
+              opacity={preview.eventEditorOpacity}
+              blur={preview.eventEditorBlur}
+              radius={preview.eventEditorRadius}
+              lineOpacity={preview.lineOpacity}
+            />
+          </div>
+        </div>
       </Section>
 
       <Separator />

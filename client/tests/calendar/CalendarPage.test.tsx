@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import CalendarPage from "../../src/components/settings/pages/CalendarPage.tsx";
+import { CalendarProvider } from "../../src/context/CalendarContext.tsx";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import type { SectionRefs } from "../../src/components/settings/SettingsSection.tsx";
 import { readSettings } from "../settingsStorage.ts";
@@ -15,7 +16,9 @@ function Harness() {
 const renderCalendarPage = () =>
   render(
     <SettingsStoreProvider>
-      <Harness />
+      <CalendarProvider>
+        <Harness />
+      </CalendarProvider>
     </SettingsStoreProvider>,
   );
 
@@ -143,7 +146,7 @@ describe("CalendarPage", () => {
     renderCalendarPage();
 
     const sliders = screen.getAllByRole("slider");
-    sliders[1].focus();
+    sliders[2].focus();
     await user.keyboard("[ArrowRight]");
 
     expect(screen.getByText("61 min")).toBeInTheDocument();

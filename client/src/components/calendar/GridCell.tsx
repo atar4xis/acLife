@@ -22,7 +22,7 @@ export default memo(function GridCell({
     <div
       role="gridcell"
       className={cn(
-        "pointer-events-auto grid-cell relative shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10",
+        "pointer-events-auto grid-cell relative shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)]",
         className,
       )}
       data-day-index={day}

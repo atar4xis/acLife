@@ -6,6 +6,7 @@ import {
   buildPlainEvent,
   dispatchWindowPointer,
   getDayCell,
+  openEventEditor,
   dayCenterX,
   dragEvent,
   getLastSavedEvents,
@@ -95,5 +96,35 @@ describe("settings apply immediately", () => {
     expect(getLastSavedEvents(saveEvents)[0].start.toISO()).toBe(
       FIXED_NOW.startOf("week").plus({ days: 4, hours: 11 }).toISO(),
     );
+  });
+
+  it("restyles the grid lines when lineOpacity changes", () => {
+    const { store } = renderCalendar({ mode: "week" });
+    const grid = document.querySelector("[role=grid]") as HTMLElement;
+
+    act(() => store.setSetting("lineOpacity", 40));
+
+    expect(grid.style.getPropertyValue("--line-opacity")).toBe("40");
+  });
+
+  it("restyles an open event editor when its appearance settings change", async () => {
+    const { store, user } = renderCalendar({
+      mode: "week",
+      events: [buildPlainEvent()],
+    });
+    await openEventEditor(user, "Planning");
+    const editor = document.querySelector(".event-editor") as HTMLElement;
+
+    act(() => {
+      store.setSettings({
+        eventEditorOpacity: 35,
+        eventEditorBlur: 4,
+        eventEditorRadius: 18,
+      });
+    });
+
+    expect(editor.style.backgroundColor).toContain("35%");
+    expect(editor.style.backdropFilter).toBe("blur(4px)");
+    expect(editor.style.getPropertyValue("--editor-radius")).toBe("18px");
   });
 });

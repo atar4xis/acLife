@@ -1,4 +1,11 @@
-import { useRef, useState, useMemo, useEffect, useCallback } from "react";
+import {
+  useRef,
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  type CSSProperties,
+} from "react";
 import { DateTime } from "luxon";
 import { ArrowLeft, ArrowRight, SearchIcon, X } from "lucide-react";
 
@@ -450,6 +457,7 @@ export default function AppCalendar({
   const { weekStart: weekStartsOn } = useWeekStart();
   const settings = useCalendarSettings((s) => ({
     snapMinutes: s.snapMinutes,
+    lineOpacity: s.lineOpacity,
     defaultEventName: s.defaultEventName,
     defaultTaskName: s.defaultTaskName,
     defaultEventDuration: s.defaultEventDuration,
@@ -2204,7 +2212,7 @@ export default function AppCalendar({
           key={tz}
           role={settings.timezones.length > 1 ? "columnheader" : "presentation"}
           aria-label={settings.timezones.length > 1 ? tz : undefined}
-          className={`select-none sticky ${headerBottom ? "bottom-0" : "top-0"} z-16 hover:z-20 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex items-center justify-center bg-background text-xs text-muted-foreground px-1`}
+          className={`select-none sticky ${headerBottom ? "bottom-0" : "top-0"} z-16 hover:z-20 shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)] flex items-center justify-center bg-background text-xs text-muted-foreground px-1`}
           style={tzStickyStyle(i)}
         >
           {settings.timezones.length > 1 ? (
@@ -2241,7 +2249,7 @@ export default function AppCalendar({
               <div
                 key={tz}
                 role="rowheader"
-                className={`select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex text-sm items-center justify-center ${tz === settings.timezones[0] && hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
+                className={`select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)] flex text-sm items-center justify-center ${tz === settings.timezones[0] && hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
                 style={tzStickyStyle(i)}
               >
                 {getTimezoneHourLabel(
@@ -2566,6 +2574,7 @@ export default function AppCalendar({
           data-keyboard-mode={keyboardMode ? "" : undefined}
           className="group/grid outline-none touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
           style={{
+            ...({ "--line-opacity": settings.lineOpacity } as CSSProperties),
             gridTemplateColumns: cols(
               settings.timezones.length,
               tzColWidth,

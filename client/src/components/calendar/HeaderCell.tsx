@@ -11,7 +11,7 @@ export default memo(function HeaderCell({
     <div
       role="columnheader"
       className={cn(
-        "sticky top-0 z-16 shadow-[inset_-1px_-1px_0_0_var(--foreground)]/10 flex items-center justify-center bg-background min-w-0",
+        "sticky top-0 z-16 shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)] flex items-center justify-center bg-background min-w-0",
         className,
       )}
       {...props}

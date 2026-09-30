@@ -13,8 +13,13 @@ const isRendered = (el: HTMLElement, root: HTMLElement) => {
   return true;
 };
 
-export default function useFocusTrap(ref: RefObject<HTMLElement | null>) {
+export default function useFocusTrap(
+  ref: RefObject<HTMLElement | null>,
+  enabled = true,
+) {
   useEffect(() => {
+    if (!enabled) return;
+
     const listener = (e: KeyboardEvent) => {
       const container = ref.current;
       if (e.key !== "Tab" || !container) return;
@@ -42,5 +47,5 @@ export default function useFocusTrap(ref: RefObject<HTMLElement | null>) {
 
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
-  }, [ref]);
+  }, [ref, enabled]);
 }

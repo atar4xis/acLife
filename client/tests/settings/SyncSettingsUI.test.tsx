@@ -169,6 +169,9 @@ describe("SyncPage settings sync section", () => {
       defaultEventDuration: false,
       eventColorPresets: false,
       addColorsAutomatically: false,
+      eventEditorOpacity: false,
+      eventEditorBlur: false,
+      eventEditorRadius: false,
     });
   });
 
@@ -220,6 +223,9 @@ describe("SyncPage settings sync section", () => {
       defaultEventDuration: false,
       eventColorPresets: false,
       addColorsAutomatically: false,
+      eventEditorOpacity: false,
+      eventEditorBlur: false,
+      eventEditorRadius: false,
     });
   });
 

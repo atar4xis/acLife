@@ -10,6 +10,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
@@ -109,8 +110,10 @@ export default function EventEditor({
   onDelete,
   onCancel,
   onDuplicate,
+  preview,
 }: Partial<EventBlockProps> & {
-  eventRef: RefObject<HTMLDivElement | null>;
+  eventRef?: RefObject<HTMLDivElement | null>;
+  preview?: { opacity: number; blur: number; radius: number };
   onSave: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   onMove: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   onDelete: () => void;
@@ -123,15 +126,25 @@ export default function EventEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
-  const [openedByKeyboard] = useState(() => lastInputModality() === "keyboard");
+  const [openedByKeyboard] = useState(
+    () => !preview && lastInputModality() === "keyboard",
+  );
   const [opener] = useState(() => document.activeElement);
   const skipFocusRestore = useRef(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
-  const eventColorPresets = useCalendarSettings((s) => s.eventColorPresets);
+  const settings = useCalendarSettings((s) => ({
+    colorPresets: s.eventColorPresets,
+    opacity: s.eventEditorOpacity,
+    blur: s.eventEditorBlur,
+    radius: s.eventEditorRadius,
+  }));
+  const opacity = preview?.opacity ?? settings.opacity;
+  const blur = preview?.blur ?? settings.blur;
+  const radius = preview?.radius ?? settings.radius;
   const [color, setColor] = useState(
-    event.color || eventColorPresets[0] || EVENT_COLOR_FALLBACK,
+    event.color || settings.colorPresets[0] || EVENT_COLOR_FALLBACK,
   );
   const [start, setStart] = useState<Date | undefined>(event.start.toJSDate());
   const [end, setEnd] = useState<Date | undefined>(event.end.toJSDate());
@@ -152,10 +165,6 @@ export default function EventEditor({
     end: DateTime.fromJSDate(end || new Date()),
     timestamp: Date.now(),
   });
-
-  const { eventColorPresets: presetColors } = useCalendarSettings((s) => ({
-    eventColorPresets: s.eventColorPresets,
-  }));
 
   const copyID = useCallback(() => {
     navigator.clipboard.writeText(event._parent || event.id);
@@ -245,7 +254,7 @@ export default function EventEditor({
 
   useLayoutEffect(() => {
     const editor = editorRef.current;
-    const anchor = eventRef.current;
+    const anchor = eventRef?.current;
 
     if (!editor || !anchor) return;
 
@@ -305,10 +314,12 @@ export default function EventEditor({
     };
   }, [openedByKeyboard, opener]);
 
-  useFocusTrap(editorRef);
+  useFocusTrap(editorRef, !preview);
 
   // keybindings
   useEffect(() => {
+    if (preview) return;
+
     const listener = (e: KeyboardEvent) => {
       // close the editor with escape
       if (e.key === "Escape") onCancel();
@@ -322,10 +333,12 @@ export default function EventEditor({
 
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
-  }, [onCancel, handleSave]);
+  }, [onCancel, handleSave, preview]);
 
   // close on outside click
   useEffect(() => {
+    if (preview) return;
+
     const listener = (e: MouseEvent) => {
       const el = e.target as Element;
       if (
@@ -346,7 +359,7 @@ export default function EventEditor({
     window.addEventListener("pointerdown", listener, { capture: true });
     return () =>
       window.removeEventListener("pointerdown", listener, { capture: true });
-  }, [onCancel]);
+  }, [onCancel, preview]);
 
   // sync ref with state
   useEffect(() => {
@@ -361,17 +374,28 @@ export default function EventEditor({
     newEvent.current.timestamp = Date.now();
   }, [title, description, color, start, end, repeat, isTask, completed]);
 
-  return createPortal(
+  const editor = (
     <div
-      className="pointer-events-auto event-editor fixed z-20 left-0 top-0 flex flex-col justify-center md:block bg-card/80 backdrop-blur-[10px] p-3 px-5 md:px-3 shadow-lg border md:rounded-lg w-full h-full md:w-auto md:h-auto"
-      style={{
-        top: pos.top,
-        left: pos.left,
-      }}
+      className={
+        preview
+          ? "event-editor relative pointer-events-none select-none p-3 px-3 shadow-lg border rounded-(--editor-radius)"
+          : "pointer-events-auto event-editor fixed z-20 left-0 top-0 flex flex-col justify-center md:block p-3 px-5 md:px-3 shadow-lg border md:rounded-(--editor-radius) w-full h-full md:w-auto md:h-auto"
+      }
+      style={
+        {
+          top: preview ? undefined : pos.top,
+          left: preview ? undefined : pos.left,
+          backgroundColor: `color-mix(in srgb, var(--card) ${opacity}%, transparent)`,
+          backdropFilter: `blur(${blur}px)`,
+          "--editor-radius": `${radius}px`,
+        } as CSSProperties
+      }
       ref={editorRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
+      role={preview ? undefined : "dialog"}
+      aria-modal={preview ? undefined : "true"}
+      aria-labelledby={preview ? undefined : titleId}
+      aria-hidden={preview ? true : undefined}
+      inert={!!preview}
     >
       <div className="flex justify-between mb-5 items-center">
         <h3 id={titleId} className="text-xl font-semibold">
@@ -441,7 +465,7 @@ export default function EventEditor({
             />
             <ColorPicker
               aria-label="Event color"
-              presetColors={presetColors}
+              presetColors={settings.colorPresets}
               onChange={(v) => {
                 setColor(v as string);
               }}
@@ -674,7 +698,8 @@ export default function EventEditor({
           <Button onClick={handleSave}>Save</Button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   );
+
+  return preview ? editor : createPortal(editor, document.body);
 }

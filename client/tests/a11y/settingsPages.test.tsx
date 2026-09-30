@@ -56,6 +56,7 @@ import SecurityPage from "../../src/components/settings/pages/SecurityPage.tsx";
 import SyncPage from "../../src/components/settings/pages/SyncPage.tsx";
 import { ThemeProvider } from "../../src/components/ThemeProvider.tsx";
 import { SecuritySettingsProvider } from "../../src/context/SecuritySettingsContext.tsx";
+import { CalendarProvider } from "../../src/context/CalendarContext.tsx";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import type { SectionRefs } from "../../src/components/settings/SettingsSection.tsx";
 
@@ -71,7 +72,9 @@ const renderPage = (Page: Page) =>
     <SettingsStoreProvider>
       <ThemeProvider>
         <SecuritySettingsProvider>
-          <Harness Page={Page} />
+          <CalendarProvider>
+            <Harness Page={Page} />
+          </CalendarProvider>
         </SecuritySettingsProvider>
       </ThemeProvider>
     </SettingsStoreProvider>,

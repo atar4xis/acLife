@@ -152,6 +152,11 @@ export const settingsCategories: SettingsCategory[] = [
             settingKey: "snapMinutes",
           },
           {
+            id: "calendar-line-opacity",
+            label: "Line opacity",
+            settingKey: "lineOpacity",
+          },
+          {
             id: "calendar-day-header-position",
             label: "Day header position",
             settingKey: "dayHeaderPosition",
@@ -197,6 +202,21 @@ export const settingsCategories: SettingsCategory[] = [
             id: "calendar-event-editor-add-colors-automatically",
             label: "Add new colors automatically",
             settingKey: "addColorsAutomatically",
+          },
+          {
+            id: "calendar-event-editor-opacity",
+            label: "Background opacity",
+            settingKey: "eventEditorOpacity",
+          },
+          {
+            id: "calendar-event-editor-blur",
+            label: "Background blur",
+            settingKey: "eventEditorBlur",
+          },
+          {
+            id: "calendar-event-editor-radius",
+            label: "Border radius",
+            settingKey: "eventEditorRadius",
           },
         ],
       },

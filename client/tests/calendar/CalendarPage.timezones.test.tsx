@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { toast } from "sonner";
 import CalendarPage from "../../src/components/settings/pages/CalendarPage.tsx";
+import { CalendarProvider } from "../../src/context/CalendarContext.tsx";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import type { SectionRefs } from "../../src/components/settings/SettingsSection.tsx";
 import { getDeviceTimezone } from "../../src/lib/calendar/timezone.ts";
@@ -19,7 +20,9 @@ function Harness() {
 const renderCalendarPage = () =>
   render(
     <SettingsStoreProvider>
-      <Harness />
+      <CalendarProvider>
+        <Harness />
+      </CalendarProvider>
     </SettingsStoreProvider>,
   );
 
