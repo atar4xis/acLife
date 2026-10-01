@@ -47,6 +47,12 @@ export default function AppSidebar({
     miniCalendarDropdowns: s.miniCalendarDropdowns,
   }));
   const [month, setMonth] = useState(() => toPickerDate(currentDate));
+
+  // keep the mini calendar on the month being viewed
+  useEffect(() => {
+    setMonth(toPickerDate(currentDate));
+  }, [currentDate]);
+
   const isMobile = useIsMobile();
   const { open, setOpen, setOpenMobile } = useSidebar();
   const storage = useStorage();

@@ -575,6 +575,21 @@ export default function AppCalendar({
     return (minutes / 60) * hourHeight;
   }, [now, hourHeight]);
 
+  const goToToday = useCallback(() => {
+    setCurrentDate(DateTime.now());
+
+    // align with current time indicator
+    const container = gridRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: Math.max(
+        0,
+        getNowY() + gridHeaderOffset - container.clientHeight / 2,
+      ),
+      behavior: "smooth",
+    });
+  }, [setCurrentDate, getNowY, gridHeaderOffset]);
+
   const updateChange = useCallback(
     (change: EventChange) => {
       if (user?.type === "offline") return; // offline users save all events locally
@@ -2415,10 +2430,7 @@ export default function AppCalendar({
         {isMobile && <SidebarTrigger />}
 
         <div className="items-center gap-2 hidden md:flex">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentDate(DateTime.now())}
-          >
+          <Button variant="outline" onClick={goToToday}>
             Today
           </Button>
           <Button
