@@ -221,6 +221,37 @@ export const settingsCategories: SettingsCategory[] = [
         ],
       },
       {
+        id: "mini-calendar",
+        label: "Mini calendar",
+        items: [
+          {
+            id: "mini-calendar-enabled",
+            label: "Enabled",
+            settingKey: "miniCalendarEnabled",
+          },
+          {
+            id: "mini-calendar-event-bars",
+            label: "Show event bars",
+            settingKey: "miniCalendarEventBars",
+          },
+          {
+            id: "mini-calendar-week-numbers",
+            label: "Show week numbers",
+            settingKey: "miniCalendarWeekNumbers",
+          },
+          {
+            id: "mini-calendar-bold-day-numbers",
+            label: "Bold day numbers",
+            settingKey: "miniCalendarBoldDayNumbers",
+          },
+          {
+            id: "mini-calendar-dropdowns",
+            label: "Month and year dropdowns",
+            settingKey: "miniCalendarDropdowns",
+          },
+        ],
+      },
+      {
         id: "agenda",
         label: "Agenda view",
         items: [

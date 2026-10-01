@@ -20,6 +20,11 @@ export interface CalendarSettings {
   resyncIntervalMinutes: number;
   agendaEnabled: boolean;
   agendaRangeDays: number;
+  miniCalendarEnabled: boolean;
+  miniCalendarEventBars: boolean;
+  miniCalendarWeekNumbers: boolean;
+  miniCalendarBoldDayNumbers: boolean;
+  miniCalendarDropdowns: boolean;
   eventColorPresets: string[];
   addColorsAutomatically: boolean;
   eventEditorOpacity: number;

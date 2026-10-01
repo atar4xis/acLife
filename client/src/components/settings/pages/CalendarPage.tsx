@@ -462,6 +462,11 @@ export default function CalendarPage({
     dayHeaderPosition,
     timeLabelPosition,
     agendaEnabled,
+    miniCalendarEnabled,
+    miniCalendarEventBars,
+    miniCalendarWeekNumbers,
+    miniCalendarBoldDayNumbers,
+    miniCalendarDropdowns,
     addColorsAutomatically,
     eventEditorOpacity,
     eventEditorBlur,
@@ -653,6 +658,75 @@ export default function CalendarPage({
               />
             </div>
           </div>
+        </DeferredContent>
+      </Section>
+
+      <Separator />
+
+      <Section
+        id="mini-calendar"
+        label={sectionLabel("mini-calendar")}
+        sectionRefs={sectionRefs}
+      >
+        <DeferredContent skeletonClassName="h-60">
+          <Field orientation="responsive">
+            <SettingsLabel settingKey="miniCalendarEnabled" />
+            <Switch
+              aria-labelledby={settingLabelId("miniCalendarEnabled")}
+              checked={miniCalendarEnabled}
+              onCheckedChange={(checked) =>
+                setSetting("miniCalendarEnabled", checked)
+              }
+            />
+          </Field>
+
+          <Field orientation="responsive">
+            <SettingsLabel settingKey="miniCalendarEventBars" />
+            <Switch
+              aria-labelledby={settingLabelId("miniCalendarEventBars")}
+              checked={miniCalendarEventBars}
+              disabled={!miniCalendarEnabled}
+              onCheckedChange={(checked) =>
+                setSetting("miniCalendarEventBars", checked)
+              }
+            />
+          </Field>
+
+          <Field orientation="responsive">
+            <SettingsLabel settingKey="miniCalendarWeekNumbers" />
+            <Switch
+              aria-labelledby={settingLabelId("miniCalendarWeekNumbers")}
+              checked={miniCalendarWeekNumbers}
+              disabled={!miniCalendarEnabled}
+              onCheckedChange={(checked) =>
+                setSetting("miniCalendarWeekNumbers", checked)
+              }
+            />
+          </Field>
+
+          <Field orientation="responsive">
+            <SettingsLabel settingKey="miniCalendarBoldDayNumbers" />
+            <Switch
+              aria-labelledby={settingLabelId("miniCalendarBoldDayNumbers")}
+              checked={miniCalendarBoldDayNumbers}
+              disabled={!miniCalendarEnabled}
+              onCheckedChange={(checked) =>
+                setSetting("miniCalendarBoldDayNumbers", checked)
+              }
+            />
+          </Field>
+
+          <Field orientation="responsive">
+            <SettingsLabel settingKey="miniCalendarDropdowns" />
+            <Switch
+              aria-labelledby={settingLabelId("miniCalendarDropdowns")}
+              checked={miniCalendarDropdowns}
+              disabled={!miniCalendarEnabled}
+              onCheckedChange={(checked) =>
+                setSetting("miniCalendarDropdowns", checked)
+              }
+            />
+          </Field>
         </DeferredContent>
       </Section>
 
