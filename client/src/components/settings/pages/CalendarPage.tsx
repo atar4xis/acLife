@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { GripVertical, Plus, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -16,7 +16,12 @@ import { useWeekStart } from "@/hooks/useWeekStart";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { cn, cssColorToHex } from "@/lib/utils";
 import { generateThemeColorPresets } from "@/lib/calendar/colorPresets";
-import { getAllTimezones, getFriendlyName } from "@/lib/calendar/timezone";
+import {
+  getCachedTimezones,
+  getFriendlyName,
+  loadTimezones,
+  type TimezoneOption,
+} from "@/lib/calendar/timezone";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
 import {
@@ -48,10 +53,20 @@ import SyncToggle from "../SyncToggle";
 import SettingsSelect from "../SettingsSelect";
 import SettingsSlider from "../SettingsSlider";
 import EventEditorPreview from "../EventEditorPreview";
+import DeferredContent from "../DeferredContent";
 
 const TimezonesField = memo(function TimezonesField() {
   const { timezones, defaultTimezone, setSetting } = useCalendarSettings();
-  const allTimezones = useMemo(() => getAllTimezones(), []);
+  const [allTimezones, setAllTimezones] = useState<TimezoneOption[]>(
+    () => getCachedTimezones() ?? [],
+  );
+  useEffect(() => {
+    let cancelled = false;
+    loadTimezones().then((tzs) => !cancelled && setAllTimezones(tzs));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const additionalTimezones = useMemo(
     () => timezones.filter((tz) => tz !== defaultTimezone),
     [timezones, defaultTimezone],
@@ -591,52 +606,54 @@ export default function CalendarPage({
         label={sectionLabel("event-editor")}
         sectionRefs={sectionRefs}
       >
-        <ColorPresetsField />
+        <DeferredContent skeletonClassName="h-96">
+          <ColorPresetsField />
 
-        <Field orientation="responsive">
-          <SettingsLabel settingKey="addColorsAutomatically" />
-          <Switch
-            aria-labelledby={settingLabelId("addColorsAutomatically")}
-            checked={addColorsAutomatically}
-            onCheckedChange={(checked) =>
-              setSetting("addColorsAutomatically", checked)
-            }
-          />
-        </Field>
+          <Field orientation="responsive">
+            <SettingsLabel settingKey="addColorsAutomatically" />
+            <Switch
+              aria-labelledby={settingLabelId("addColorsAutomatically")}
+              checked={addColorsAutomatically}
+              onCheckedChange={(checked) =>
+                setSetting("addColorsAutomatically", checked)
+              }
+            />
+          </Field>
 
-        <div className="@container mt-4">
-          <div className="grid gap-6 @min-[40rem]:grid-cols-[minmax(0,1fr)_auto] @min-[40rem]:items-start">
-            <div className="flex flex-col gap-6">
-              <SettingsSlider
-                settingKey="eventEditorOpacity"
-                min={0}
-                max={100}
-                format={(v) => `${v}%`}
-                onLiveChange={trackPreview("eventEditorOpacity")}
-              />
-              <SettingsSlider
-                settingKey="eventEditorBlur"
-                min={0}
-                max={40}
-                format={(v) => `${v} px`}
-                onLiveChange={trackPreview("eventEditorBlur")}
-              />
-              <SettingsSlider
-                settingKey="eventEditorRadius"
-                min={0}
-                max={24}
-                format={(v) => `${v} px`}
-                onLiveChange={trackPreview("eventEditorRadius")}
+          <div className="@container mt-4">
+            <div className="grid gap-6 @min-[40rem]:grid-cols-[minmax(0,1fr)_auto] @min-[40rem]:items-start">
+              <div className="flex flex-col gap-6">
+                <SettingsSlider
+                  settingKey="eventEditorOpacity"
+                  min={0}
+                  max={100}
+                  format={(v) => `${v}%`}
+                  onLiveChange={trackPreview("eventEditorOpacity")}
+                />
+                <SettingsSlider
+                  settingKey="eventEditorBlur"
+                  min={0}
+                  max={40}
+                  format={(v) => `${v}px`}
+                  onLiveChange={trackPreview("eventEditorBlur")}
+                />
+                <SettingsSlider
+                  settingKey="eventEditorRadius"
+                  min={0}
+                  max={24}
+                  format={(v) => `${v}px`}
+                  onLiveChange={trackPreview("eventEditorRadius")}
+                />
+              </div>
+              <EventEditorPreview
+                opacity={preview.eventEditorOpacity}
+                blur={preview.eventEditorBlur}
+                radius={preview.eventEditorRadius}
+                lineOpacity={preview.lineOpacity}
               />
             </div>
-            <EventEditorPreview
-              opacity={preview.eventEditorOpacity}
-              blur={preview.eventEditorBlur}
-              radius={preview.eventEditorRadius}
-              lineOpacity={preview.lineOpacity}
-            />
           </div>
-        </div>
+        </DeferredContent>
       </Section>
 
       <Separator />
@@ -646,22 +663,26 @@ export default function CalendarPage({
         label={sectionLabel("agenda")}
         sectionRefs={sectionRefs}
       >
-        <Field orientation="responsive">
-          <SettingsLabel settingKey="agendaEnabled" />
-          <Switch
-            aria-labelledby={settingLabelId("agendaEnabled")}
-            checked={agendaEnabled}
-            onCheckedChange={(checked) => setSetting("agendaEnabled", checked)}
-          />
-        </Field>
+        <DeferredContent skeletonClassName="h-24">
+          <Field orientation="responsive">
+            <SettingsLabel settingKey="agendaEnabled" />
+            <Switch
+              aria-labelledby={settingLabelId("agendaEnabled")}
+              checked={agendaEnabled}
+              onCheckedChange={(checked) =>
+                setSetting("agendaEnabled", checked)
+              }
+            />
+          </Field>
 
-        <SettingsSlider
-          settingKey="agendaRangeDays"
-          min={1}
-          max={14}
-          format={(v) => `${v} ${v === 1 ? "day" : "days"}`}
-          disabled={!agendaEnabled}
-        />
+          <SettingsSlider
+            settingKey="agendaRangeDays"
+            min={1}
+            max={14}
+            format={(v) => `${v} ${v === 1 ? "day" : "days"}`}
+            disabled={!agendaEnabled}
+          />
+        </DeferredContent>
       </Section>
     </FieldGroup>
   );

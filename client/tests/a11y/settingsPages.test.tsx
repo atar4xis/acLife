@@ -1,6 +1,6 @@
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { useRef } from "react";
-import { beforeEach, describe, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { expectNoViolations } from "./axe.ts";
 
 const userMock = vi.hoisted(() => ({
@@ -67,8 +67,8 @@ function Harness({ Page }: { Page: Page }) {
   return <Page sectionRefs={sectionRefs} />;
 }
 
-const renderPage = (Page: Page) =>
-  render(
+const renderPage = async (Page: Page, deferred: boolean) => {
+  const result = render(
     <SettingsStoreProvider>
       <ThemeProvider>
         <SecuritySettingsProvider>
@@ -79,6 +79,14 @@ const renderPage = (Page: Page) =>
       </ThemeProvider>
     </SettingsStoreProvider>,
   );
+  if (deferred)
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="skeleton"]'),
+      ).not.toBeInTheDocument(),
+    );
+  return result;
+};
 
 describe("settings pages a11y", () => {
   beforeEach(() => {
@@ -87,12 +95,12 @@ describe("settings pages a11y", () => {
   });
 
   it.each([
-    ["Appearance", AppearancePage],
-    ["Calendar", CalendarPage],
-    ["Sync", SyncPage],
-    ["Security", SecurityPage],
-  ])("%s page has no axe violations", async (_name, Page) => {
-    const { container } = renderPage(Page);
+    ["Appearance", AppearancePage, true],
+    ["Calendar", CalendarPage, true],
+    ["Sync", SyncPage, false],
+    ["Security", SecurityPage, false],
+  ])("%s page has no axe violations", async (_name, Page, deferred) => {
+    const { container } = await renderPage(Page, deferred);
     await expectNoViolations(container);
   });
 });

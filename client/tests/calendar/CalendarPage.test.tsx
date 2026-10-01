@@ -22,6 +22,17 @@ const renderCalendarPage = () =>
     </SettingsStoreProvider>,
   );
 
+// below-the-fold sections mount after idle, so wait for their skeletons to go
+const renderLoadedCalendarPage = async () => {
+  const result = renderCalendarPage();
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-slot="skeleton"]'),
+    ).not.toBeInTheDocument(),
+  );
+  return result;
+};
+
 describe("CalendarPage", () => {
   beforeEach(() => {
     // radix Select relies on pointer capture, which jsdom doesn't implement
@@ -152,8 +163,8 @@ describe("CalendarPage", () => {
     expect(screen.getByText("61 min")).toBeInTheDocument();
   });
 
-  it("renders the agenda enabled switch on by default and the default range", () => {
-    renderCalendarPage();
+  it("renders the agenda enabled switch on by default and the default range", async () => {
+    await renderLoadedCalendarPage();
 
     const switches = screen.getAllByRole("switch");
     expect(switches[switches.length - 1]).toBeChecked();
@@ -162,7 +173,7 @@ describe("CalendarPage", () => {
 
   it("toggles the agenda enabled switch off", async () => {
     const user = userEvent.setup();
-    renderCalendarPage();
+    await renderLoadedCalendarPage();
 
     const switches = screen.getAllByRole("switch");
     const agendaSwitch = switches[switches.length - 1];
@@ -176,7 +187,7 @@ describe("CalendarPage", () => {
 
   it("increases the agenda range slider with the keyboard", async () => {
     const user = userEvent.setup();
-    renderCalendarPage();
+    await renderLoadedCalendarPage();
 
     const sliders = screen.getAllByRole("slider");
     sliders[sliders.length - 1].focus();
@@ -190,7 +201,7 @@ describe("CalendarPage", () => {
 
   it("clamps the agenda range slider between 1 and 14 days", async () => {
     const user = userEvent.setup();
-    renderCalendarPage();
+    await renderLoadedCalendarPage();
 
     const sliders = screen.getAllByRole("slider");
     const rangeSlider = sliders[sliders.length - 1];
@@ -239,7 +250,7 @@ describe("CalendarPage", () => {
 
     it("reorders a color with shift + arrow keys and keeps focus on it", async () => {
       const user = userEvent.setup();
-      renderCalendarPage();
+      await renderLoadedCalendarPage();
       const [first, second] = swatches();
       const swatch = screen.getByRole("button", { name: first });
 
@@ -254,7 +265,7 @@ describe("CalendarPage", () => {
 
     it("removes a color with Delete", async () => {
       const user = userEvent.setup();
-      renderCalendarPage();
+      await renderLoadedCalendarPage();
       const before = swatches();
 
       screen.getByRole("button", { name: before[0] }).focus();

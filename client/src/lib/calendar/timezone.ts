@@ -4,6 +4,7 @@ import {
   getTimezone,
 } from "countries-and-timezones";
 import { DateTime } from "luxon";
+import { flatMapInBatches } from "@/lib/batch";
 import type { Weekday, WeekStartsOn } from "@/types/calendar/Settings";
 
 export interface TimezoneOption {
@@ -78,8 +79,11 @@ const getTimezoneNamePart = (
     .formatToParts(new Date())
     .find((part) => part.type === "timeZoneName")?.value ?? "";
 
-export const getTimezoneDetail = (tz: string): string => {
-  const offset = `UTC${getTimezoneOffsetLabel(tz)}`;
+export const getTimezoneDetail = (
+  tz: string,
+  offsetLabel = getTimezoneOffsetLabel(tz),
+): string => {
+  const offset = `UTC${offsetLabel}`;
   const long = getTimezoneNamePart(tz, "long");
   const short = getTimezoneNamePart(tz, "short");
   // intl only has real abbreviations for some zones, others fall back to GMT+9
@@ -88,29 +92,46 @@ export const getTimezoneDetail = (tz: string): string => {
 };
 
 // matches offsets typed loosely, e.g. "+9", "utc+9", "gmt+09:00"
-const getOffsetSearchTerms = (tz: string): string => {
-  const offset = getTimezoneOffsetLabel(tz);
+const getOffsetSearchTerms = (offset: string): string => {
   const sign = offset[0];
   const [hours, minutes] = offset.slice(1).split(":");
   const short = `${sign}${Number(hours)}${minutes === "00" ? "" : `:${minutes}`}`;
   return [offset, short].flatMap((o) => [o, `utc${o}`, `gmt${o}`]).join(" ");
 };
 
-export const getAllTimezones = (): TimezoneOption[] =>
-  Object.keys(getAllIANATimezones())
-    .filter(isValidTimezone)
-    .map((name) => {
-      const friendlyName = getFriendlyName(name);
-      return {
-        name,
-        region: getRegion(name),
-        label: `${friendlyName} (UTC${getTimezoneOffsetLabel(name)})`,
-        friendlyName,
-        detail: getTimezoneDetail(name),
-        searchText: `${name.replace(/_/g, " ")} ${getOffsetSearchTerms(name)}`,
-      };
-    })
-    .sort((a, b) => a.label.localeCompare(b.label));
+const toTimezoneOption = (name: string): TimezoneOption[] => {
+  if (!isValidTimezone(name)) return [];
+  const friendlyName = getFriendlyName(name);
+  const offset = getTimezoneOffsetLabel(name);
+  return [
+    {
+      name,
+      region: getRegion(name),
+      label: `${friendlyName} (UTC${offset})`,
+      friendlyName,
+      detail: getTimezoneDetail(name, offset),
+      searchText: `${name.replace(/_/g, " ")} ${getOffsetSearchTerms(offset)}`,
+    },
+  ];
+};
+
+const TIMEZONE_BATCH_SIZE = 20;
+let timezonesCache: TimezoneOption[] | null = null;
+let timezonesPromise: Promise<TimezoneOption[]> | null = null;
+
+export const getCachedTimezones = (): TimezoneOption[] | null => timezonesCache;
+
+export const loadTimezones = (): Promise<TimezoneOption[]> => {
+  timezonesPromise ??= flatMapInBatches(
+    Object.keys(getAllIANATimezones()),
+    toTimezoneOption,
+    TIMEZONE_BATCH_SIZE,
+  ).then(
+    (options) =>
+      (timezonesCache = options.sort((a, b) => a.label.localeCompare(b.label))),
+  );
+  return timezonesPromise;
+};
 
 export const getTimezoneHourLabel = (
   reference: DateTime,

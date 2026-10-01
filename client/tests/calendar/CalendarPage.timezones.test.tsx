@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { toast } from "sonner";
@@ -10,7 +16,6 @@ import type { SectionRefs } from "../../src/components/settings/SettingsSection.
 import { getDeviceTimezone } from "../../src/lib/calendar/timezone.ts";
 import { dispatchWindowPointer, makeRect } from "./helpers.tsx";
 import { seedSettings, readSettings } from "../settingsStorage.ts";
-
 
 function Harness() {
   const sectionRefs: SectionRefs = useRef(new Map());
@@ -30,11 +35,9 @@ const seedTimezones = (timezones: string[], defaultTimezone: string) => {
   seedSettings({ timezones, defaultTimezone });
 };
 
-const getStoredTimezones = (): string[] =>
-  readSettings().timezones;
+const getStoredTimezones = (): string[] => readSettings().timezones;
 
-const getStoredDefaultTimezone = (): string =>
-  readSettings().defaultTimezone;
+const getStoredDefaultTimezone = (): string => readSettings().defaultTimezone;
 
 // each additional-time-zone row renders [grip handle, "Set default", remove]
 const getAdditionalRow = (label: string | RegExp) => {
@@ -63,13 +66,16 @@ describe("CalendarPage time zones", () => {
     Element.prototype.scrollIntoView = () => {};
   });
 
-  it("defaults to the device time zone with no additional time zones", () => {
+  it("defaults to the device time zone with no additional time zones", async () => {
     renderCalendarPage();
 
     expect(screen.queryByText("Set default")).not.toBeInTheDocument();
     const [, defaultTrigger] = screen.getAllByRole("combobox");
-    expect(defaultTrigger).toHaveTextContent(
-      getDeviceTimezone().split("/").pop()!.replace(/_/g, " "),
+    // the time zone list loads in the background
+    await waitFor(() =>
+      expect(defaultTrigger).toHaveTextContent(
+        getDeviceTimezone().split("/").pop()!.replace(/_/g, " "),
+      ),
     );
   });
 

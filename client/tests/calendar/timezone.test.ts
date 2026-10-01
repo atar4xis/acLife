@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DateTime } from "luxon";
 import { getAllTimezones as getAllIANATimezones } from "countries-and-timezones";
 import {
-  getAllTimezones,
+  loadTimezones,
   getDeviceTimezone,
   getFriendlyName,
   getTimezoneHourLabel,
@@ -70,22 +70,24 @@ describe("getFriendlyName", () => {
   });
 });
 
-describe("getAllTimezones", () => {
-  it("includes every IANA time zone that resolves to a valid offset", () => {
+describe("loadTimezones", () => {
+  it("includes every IANA time zone that resolves to a valid offset", async () => {
     const expectedCount = Object.keys(getAllIANATimezones()).filter(
       (name) => DateTime.now().setZone(name).isValid,
     ).length;
-    expect(getAllTimezones()).toHaveLength(expectedCount);
+    expect(await loadTimezones()).toHaveLength(expectedCount);
   });
 
-  it("excludes zones the runtime can't resolve to a valid offset, like Factory", () => {
+  it("excludes zones the runtime can't resolve to a valid offset, like Factory", async () => {
     expect(
-      getAllTimezones().find((tz) => tz.name === "Factory"),
+      (await loadTimezones()).find((tz) => tz.name === "Factory"),
     ).toBeUndefined();
   });
 
-  it("builds a friendly, offset-suffixed label and assigns a region", () => {
-    const dubai = getAllTimezones().find((tz) => tz.name === "Asia/Dubai");
+  it("builds a friendly, offset-suffixed label and assigns a region", async () => {
+    const dubai = (await loadTimezones()).find(
+      (tz) => tz.name === "Asia/Dubai",
+    );
 
     expect(dubai).toMatchObject({
       name: "Asia/Dubai",
@@ -96,13 +98,13 @@ describe("getAllTimezones", () => {
     expect(dubai?.detail).toBe("Gulf Standard Time, UTC+04:00");
   });
 
-  it("buckets zones with no real region under Other", () => {
-    const etcUtc = getAllTimezones().find((tz) => tz.name === "Etc/UTC");
+  it("buckets zones with no real region under Other", async () => {
+    const etcUtc = (await loadTimezones()).find((tz) => tz.name === "Etc/UTC");
     expect(etcUtc?.region).toBe("Other");
   });
 
-  it("sorts the results alphabetically by label", () => {
-    const labels = getAllTimezones().map((tz) => tz.label);
+  it("sorts the results alphabetically by label", async () => {
+    const labels = (await loadTimezones()).map((tz) => tz.label);
     const sorted = [...labels].sort((a, b) => a.localeCompare(b));
     expect(labels).toEqual(sorted);
   });
@@ -146,8 +148,6 @@ describe("getTimezoneHourLabel", () => {
     const reference = DateTime.fromISO("2026-03-18T00:00:00", { zone: "UTC" });
 
     // 1 AM UTC is still the previous day at 9 PM in New York (EDT, UTC-4)
-    expect(getTimezoneHourLabel(reference, 1, "America/New_York")).toBe(
-      "9 PM",
-    );
+    expect(getTimezoneHourLabel(reference, 1, "America/New_York")).toBe("9 PM");
   });
 });

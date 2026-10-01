@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { loadTimezones } from "@/lib/calendar/timezone";
 import { normalize, tokenize } from "@/lib/utils";
 import SettingsNav from "./SettingsNav";
 import {
@@ -67,6 +68,11 @@ export default function SettingsDialog({
     visibleCategories[0].id,
   );
 
+  // warms the time zone cache in the background before the calendar page needs it
+  useEffect(() => {
+    loadTimezones();
+  }, []);
+
   useEffect(() => {
     if (open && initialCategoryId) setActiveCategoryId(initialCategoryId);
   }, [open, initialCategoryId]);
@@ -78,7 +84,25 @@ export default function SettingsDialog({
   const activeCategory =
     visibleCategories.find((category) => category.id === activeCategoryId) ??
     visibleCategories[0];
-  const ActivePage = PAGES[activeCategory.id];
+
+  // visited pages stay mounted so switching back is instant
+  const [visitedIds, setVisitedIds] = useState(new Set<string>());
+  const pagesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setVisitedIds((prev) => {
+      if (!open) return prev.size ? new Set() : prev;
+      return prev.has(activeCategory.id)
+        ? prev
+        : new Set(prev).add(activeCategory.id);
+    });
+  }, [open, activeCategory.id]);
+
+  useEffect(() => {
+    pagesRef.current
+      ?.closest('[data-slot="scroll-area-viewport"]')
+      ?.scrollTo(0, 0);
+  }, [activeCategory.id]);
 
   const results = useMemo(() => {
     const tokens = tokenize(query);
@@ -168,8 +192,24 @@ export default function SettingsDialog({
           <div className="flex min-h-0 flex-1 flex-col">
             {isMobile && <div className="h-12 shrink-0 border-b" />}
             <ScrollArea className="min-h-0 flex-1">
-              <div className="p-6">
-                <ActivePage sectionRefs={sectionRefs} />
+              <div ref={pagesRef} className="p-6">
+                {visibleCategories
+                  .filter(
+                    (category) =>
+                      category.id === activeCategory.id ||
+                      visitedIds.has(category.id),
+                  )
+                  .map((category) => {
+                    const Page = PAGES[category.id];
+                    return (
+                      <div
+                        key={category.id}
+                        hidden={category.id !== activeCategory.id}
+                      >
+                        <Page sectionRefs={sectionRefs} />
+                      </div>
+                    );
+                  })}
               </div>
             </ScrollArea>
           </div>

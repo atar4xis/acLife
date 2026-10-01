@@ -37,14 +37,22 @@ function Harness() {
   return <AppearancePage sectionRefs={sectionRefs} />;
 }
 
-const renderAppearancePage = () =>
-  render(
+// below-the-fold sections mount after idle, so wait for their skeletons to go
+const renderAppearancePage = async () => {
+  const result = render(
     <SettingsStoreProvider>
       <ThemeProvider>
         <Harness />
       </ThemeProvider>
     </SettingsStoreProvider>,
   );
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-slot="skeleton"]'),
+    ).not.toBeInTheDocument(),
+  );
+  return result;
+};
 
 async function savePresetNamed(name: string) {
   const user = userEvent.setup();
@@ -94,8 +102,8 @@ describe("AppearancePage", () => {
     Element.prototype.scrollIntoView = () => {};
   });
 
-  it("renders the theme mode options", () => {
-    renderAppearancePage();
+  it("renders the theme mode options", async () => {
+    await renderAppearancePage();
 
     expect(screen.getByText("Light")).toBeInTheDocument();
     expect(screen.getByText("Dark")).toBeInTheDocument();
@@ -103,8 +111,8 @@ describe("AppearancePage", () => {
     expect(screen.getByText("Custom")).toBeInTheDocument();
   });
 
-  it("renders sidebar color fields alongside the base palette", () => {
-    renderAppearancePage();
+  it("renders sidebar color fields alongside the base palette", async () => {
+    await renderAppearancePage();
 
     const sidebarGrid = screen.getByText("Sidebar")
       .nextElementSibling as HTMLElement;
@@ -123,14 +131,14 @@ describe("AppearancePage", () => {
     }
   });
 
-  it("shows an empty state when there are no saved themes", () => {
-    renderAppearancePage();
+  it("shows an empty state when there are no saved themes", async () => {
+    await renderAppearancePage();
 
     expect(screen.getByText("No saved themes yet.")).toBeInTheDocument();
   });
 
   it("disables the save button until a theme name is entered", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
 
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
 
@@ -141,7 +149,7 @@ describe("AppearancePage", () => {
   });
 
   it("saves the current theme and lists it, without marking it active", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     await savePresetNamed("Sunset");
 
     expect(screen.getByText("Sunset")).toBeInTheDocument();
@@ -150,14 +158,14 @@ describe("AppearancePage", () => {
   });
 
   it("clears the name input after saving", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     await savePresetNamed("Sunset");
 
     expect(screen.getByPlaceholderText("Theme name")).toHaveValue("");
   });
 
   it("marks a theme as active after clicking it", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = await savePresetNamed("Sunset");
 
     const row = getPresetRow("Sunset");
@@ -169,7 +177,7 @@ describe("AppearancePage", () => {
   });
 
   it("removes a theme when deleted", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = await savePresetNamed("Sunset");
 
     const row = getPresetRow("Sunset");
@@ -181,7 +189,7 @@ describe("AppearancePage", () => {
   });
 
   it("imports a valid theme file and lists it", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = userEvent.setup();
 
     const file = new File(
@@ -209,7 +217,7 @@ describe("AppearancePage", () => {
   });
 
   it("rejects a malformed theme file", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = userEvent.setup();
 
     const file = new File(["not json"], "bad.json", {
@@ -228,7 +236,7 @@ describe("AppearancePage", () => {
   });
 
   it("rejects a theme file missing required fields", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = userEvent.setup();
 
     const file = new File(
@@ -255,7 +263,7 @@ describe("AppearancePage", () => {
       .spyOn(HTMLAnchorElement.prototype, "click")
       .mockImplementation(() => {});
 
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = await savePresetNamed("Sunset");
 
     const row = getPresetRow("Sunset");
@@ -270,7 +278,7 @@ describe("AppearancePage", () => {
   });
 
   it("switches Save to Overwrite when the name already exists and replaces the theme", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = await savePresetNamed("Sunset");
 
     await user.type(screen.getByPlaceholderText("Theme name"), "Sunset");
@@ -281,7 +289,7 @@ describe("AppearancePage", () => {
   });
 
   it("imports multiple theme files at once", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = userEvent.setup();
 
     await user.upload(fileInput(), [
@@ -294,7 +302,7 @@ describe("AppearancePage", () => {
   });
 
   it("imports a theme whose name exists with a numeric suffix", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = await savePresetNamed("catppuccin");
 
     await user.upload(fileInput(), makeThemeFile("catppuccin"));
@@ -304,7 +312,7 @@ describe("AppearancePage", () => {
   });
 
   it("rejects an import with an invalid base", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = userEvent.setup();
 
     await user.upload(fileInput(), makeThemeFile("Bad", { base: "sepia" }));
@@ -315,7 +323,7 @@ describe("AppearancePage", () => {
   });
 
   it("paginates saved themes, 5 per page", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = userEvent.setup();
     await user.upload(
       fileInput(),
@@ -338,7 +346,7 @@ describe("AppearancePage", () => {
   });
 
   it("renames a theme by double clicking its name", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = await savePresetNamed("Sunset");
 
     await user.dblClick(screen.getByText("Sunset"));
@@ -351,7 +359,7 @@ describe("AppearancePage", () => {
   });
 
   it("does not rename to a name used by another theme", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     await savePresetNamed("A");
     const user = await savePresetNamed("B");
 
@@ -367,7 +375,7 @@ describe("AppearancePage", () => {
   });
 
   it("cancels a rename with Escape", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = await savePresetNamed("Sunset");
 
     await user.dblClick(screen.getByText("Sunset"));
@@ -377,7 +385,7 @@ describe("AppearancePage", () => {
   });
 
   it("does not apply a theme when a drag ends over its row", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     await savePresetNamed("Sunset");
     const row = getPresetRow("Sunset");
     const handle = within(row).getAllByRole("button")[0];
@@ -394,7 +402,7 @@ describe("AppearancePage", () => {
   });
 
   it("reorders themes by dragging the handle", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     await savePresetNamed("A");
     await savePresetNamed("B");
     const rowA = getPresetRow("A");
@@ -418,7 +426,7 @@ describe("AppearancePage", () => {
   });
 
   it("reorders themes from the keyboard with shift + arrow keys", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     await savePresetNamed("A");
     await savePresetNamed("B");
     const user = userEvent.setup();
@@ -443,7 +451,7 @@ describe("AppearancePage", () => {
   });
 
   it("renames a theme from the keyboard via the rename button", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = await savePresetNamed("Sunset");
 
     await user.click(
@@ -488,7 +496,7 @@ describe("AppearancePage", () => {
           ),
       }));
       vi.stubGlobal("fetch", fetchMock);
-      renderAppearancePage();
+      await renderAppearancePage();
       const user = userEvent.setup();
 
       await pick(user, "Catppuccin Latte");
@@ -518,7 +526,7 @@ describe("AppearancePage", () => {
         "fetch",
         vi.fn(async () => ({ ok: false, text: async () => "" })),
       );
-      renderAppearancePage();
+      await renderAppearancePage();
 
       await pick(userEvent.setup(), "Catppuccin Frappé");
 
@@ -533,7 +541,7 @@ describe("AppearancePage", () => {
 
   it("refuses to save or import past the theme limit", async () => {
     seedSettings({ presets: makePresets() });
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = userEvent.setup();
 
     await user.type(screen.getByPlaceholderText("Theme name"), "One too many");
@@ -552,7 +560,7 @@ describe("AppearancePage", () => {
 
   it("still overwrites an existing theme at the limit", async () => {
     seedSettings({ presets: makePresets() });
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = userEvent.setup();
 
     await user.type(screen.getByPlaceholderText("Theme name"), "Theme 0");
@@ -563,7 +571,7 @@ describe("AppearancePage", () => {
   });
 
   it("refuses to save or import a theme over the size limit", async () => {
-    renderAppearancePage();
+    await renderAppearancePage();
     const user = await savePresetNamed("Small");
     vi.mocked(toast.error).mockClear();
 

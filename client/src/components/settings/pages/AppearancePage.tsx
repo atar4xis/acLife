@@ -45,6 +45,7 @@ import { BUILT_IN_THEMES, BUILT_IN_THEME_ID_PREFIX } from "../builtInThemes";
 import { sectionLabel, settingLabel, settingLabelId } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
+import DeferredContent from "../DeferredContent";
 import SettingsLabel from "../SettingsLabel";
 import SyncToggle from "../SyncToggle";
 import SettingsSelect from "../SettingsSelect";
@@ -709,9 +710,11 @@ const ColorsSection = memo(function ColorsSection({
         </div>
       }
     >
-      <ColorGrid variables={GENERAL_COLOR_VARS} />
-      <div className="text-muted-foreground text-sm font-medium">Sidebar</div>
-      <ColorGrid variables={SIDEBAR_COLOR_VARS} />
+      <DeferredContent skeletonClassName="h-96">
+        <ColorGrid variables={GENERAL_COLOR_VARS} />
+        <div className="text-muted-foreground text-sm font-medium">Sidebar</div>
+        <ColorGrid variables={SIDEBAR_COLOR_VARS} />
+      </DeferredContent>
     </Section>
   );
 });
@@ -735,7 +738,9 @@ export default function AppearancePage({
       </Section>
 
       <Separator />
-      <PresetsList />
+      <DeferredContent skeletonClassName="h-64">
+        <PresetsList />
+      </DeferredContent>
 
       <Separator />
 
