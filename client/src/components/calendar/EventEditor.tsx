@@ -23,7 +23,7 @@ import {
   EVENT_COLOR_FALLBACK,
   useCalendarSettings,
 } from "@/context/CalendarSettingsContext";
-import { clamp } from "@/lib/utils";
+import { clamp, cn } from "@/lib/utils";
 import { DateTimePicker } from "./DateTimePicker";
 import { DateTime } from "luxon";
 import { toast } from "sonner";
@@ -132,6 +132,7 @@ export default function EventEditor({
   const [opener] = useState(() => document.activeElement);
   const skipFocusRestore = useRef(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const dragged = useRef(false);
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
   const settings = useCalendarSettings((s) => ({
@@ -267,6 +268,14 @@ export default function EventEditor({
         ? window.innerWidth / 2 - myRect.width / 2
         : rect.left + rect.width / 2 - myRect.width / 2;
 
+      if (dragged.current) {
+        setPos((p) => ({
+          top: clamp(p.top, 0, window.innerHeight - myRect.height),
+          left: clamp(p.left, 0, window.innerWidth - myRect.width),
+        }));
+        return;
+      }
+
       setPos({
         top: clamp(top, 0, window.innerHeight - myRect.height),
         left: clamp(left, 0, window.innerWidth - myRect.width),
@@ -397,8 +406,41 @@ export default function EventEditor({
       aria-hidden={preview ? true : undefined}
       inert={!!preview}
     >
-      <div className="flex justify-between mb-5 items-center">
-        <h3 id={titleId} className="text-xl font-semibold">
+      <div
+        className={cn(
+          "flex justify-between mb-5 items-center",
+          !preview && !isMobile && "cursor-grab active:cursor-grabbing",
+        )}
+        onPointerDown={(e) => {
+          const editor = editorRef.current;
+          if (
+            preview ||
+            isMobile ||
+            e.button !== 0 ||
+            !editor ||
+            (e.target as Element).closest("button")
+          )
+            return;
+
+          const { width, height } = editor.getBoundingClientRect();
+          const dx = e.clientX - pos.left;
+          const dy = e.clientY - pos.top;
+          const onMove = (m: PointerEvent) => {
+            dragged.current = true;
+            setPos({
+              top: clamp(m.clientY - dy, 0, window.innerHeight - height),
+              left: clamp(m.clientX - dx, 0, window.innerWidth - width),
+            });
+          };
+          const onUp = () => {
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+          };
+          window.addEventListener("pointermove", onMove);
+          window.addEventListener("pointerup", onUp);
+        }}
+      >
+        <h3 id={titleId} className="text-xl font-semibold select-none">
           Edit Event
         </h3>
         <div className="flex items-center gap-1">
