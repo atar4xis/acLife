@@ -131,7 +131,7 @@ export default function AppShell() {
         initialCategoryId={settingsCategory}
       />
       {user.type === "online" && offline && (
-        <div className="fixed z-50 top-0 left-0 p-1 right-0 text-center bg-red-500/75 dark:bg-red-700/75 text-white font-semibold">
+        <div className="fixed z-50 top-0 left-0 p-1 right-0 text-center bg-destructive text-background font-semibold">
           You are offline. Check your connection.
         </div>
       )}

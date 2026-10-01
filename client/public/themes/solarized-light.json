@@ -17,6 +17,8 @@
     "accent": "#dcd5bf",
     "accent-foreground": "#586e75",
     "destructive": "#dc322f",
+    "success": "#859900",
+    "warning": "#b58900",
     "border": "#d3cbb4",
     "input": "#d3cbb4",
     "ring": "#2aa198",

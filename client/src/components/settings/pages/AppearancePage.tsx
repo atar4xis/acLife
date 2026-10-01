@@ -73,6 +73,8 @@ const COLOR_LABELS: Record<ThemeColorVar, string> = {
   accent: "Accent",
   "accent-foreground": "Accent text",
   destructive: "Destructive",
+  success: "Success",
+  warning: "Warning",
   border: "Border",
   input: "Input",
   ring: "Ring",

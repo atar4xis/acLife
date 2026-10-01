@@ -225,17 +225,17 @@ export default function LoginDialog() {
               </div>
               <FieldDescription>
                 {testResult === "success" && (
-                  <span className="text-green-700 dark:text-green-400">
+                  <span className="text-success">
                     Connection successful. Save to apply changes.
                   </span>
                 )}
                 {testResult === "failure" && (
-                  <span className="text-red-700 dark:text-red-400">
+                  <span className="text-destructive">
                     Connection failed. Please try again.
                   </span>
                 )}
                 {testResult === "invalid" && (
-                  <span className="text-orange-700 dark:text-orange-400">
+                  <span className="text-warning">
                     Invalid metadata response. Please confirm the URL.
                   </span>
                 )}
@@ -266,7 +266,7 @@ export default function LoginDialog() {
                 on{" "}
                 <button
                   type="button"
-                  className="border-b border-dashed border-gray-500 hover:border-gray-400 hover:border-solid hover:cursor-pointer"
+                  className="border-b border-dashed border-muted-foreground hover:border-foreground hover:border-solid hover:cursor-pointer"
                   onClick={() => setServerSwitcherOpen(true)}
                 >
                   {serverMeta ? domainName(serverMeta.url) : "..."}

@@ -69,12 +69,12 @@ export function EmailVerificationRequired({
             )}
           </Button>
           {error && (
-            <span className="text-sm text-red-700 dark:text-red-400">
+            <span className="text-sm text-destructive">
               {error}
             </span>
           )}
           {success && !error && (
-            <span className="text-sm text-green-700 dark:text-green-400">
+            <span className="text-sm text-success">
               {success}
             </span>
           )}

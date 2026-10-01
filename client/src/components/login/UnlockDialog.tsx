@@ -141,7 +141,7 @@ export default function UnlockDialog() {
                       />
                     </Field>
                     {error && (
-                      <span className="text-sm text-red-700 dark:text-red-400 text-left">
+                      <span className="text-sm text-destructive text-left">
                         Invalid PIN.
                       </span>
                     )}
@@ -167,7 +167,7 @@ export default function UnlockDialog() {
                       />
                     </Field>
                     {error && (
-                      <span className="text-sm text-red-700 dark:text-red-400 text-left">
+                      <span className="text-sm text-destructive text-left">
                         Invalid password.
                       </span>
                     )}

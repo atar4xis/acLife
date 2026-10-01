@@ -323,12 +323,12 @@ export function LoginForm({
                 </>
               ) : null}
               {error && (
-                <span className="text-sm text-red-700 dark:text-red-400 text-left">
+                <span className="text-sm text-destructive text-left">
                   {error}
                 </span>
               )}
               {success && !error && (
-                <span className="text-sm text-green-700 dark:text-green-400 text-left">
+                <span className="text-sm text-success text-left">
                   {success}
                 </span>
               )}
