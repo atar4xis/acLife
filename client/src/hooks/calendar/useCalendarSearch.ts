@@ -7,6 +7,7 @@ import {
   MAX_SYNC_BUCKETS_PER_REQUEST,
   computeExpandedRangeBuckets,
 } from "@/lib/calendar/buckets";
+import { nearbyOccurrences } from "@/lib/calendar/recurrence";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { normalize, sleep, tokenize } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ export const MAX_EXPAND_STEP_WEEKS = Math.floor(
 );
 export const REQUEST_DELAY_MS = 1000;
 export const SEARCH_RADIUS_CHECKPOINTS = [53, 106, 159];
+export const OCCURRENCES_PER_SIDE = 3;
 
 const matchesQuery = (event: CalendarEvent, tokens: string[]) => {
   const haystack = normalize(`${event.title} ${event.description ?? ""}`);
@@ -50,9 +52,11 @@ export const useCalendarSearch = (
 
   const results = useMemo(() => {
     if (tokens.length === 0) return [];
-    const now = DateTime.now().toMillis();
+    const nowDate = DateTime.now();
+    const now = nowDate.toMillis();
     return events
       .filter((ev) => matchesQuery(ev, tokens))
+      .flatMap((ev) => nearbyOccurrences(ev, nowDate, OCCURRENCES_PER_SIDE))
       .sort(
         (a, b) =>
           Math.abs(a.start.toMillis() - now) -

@@ -2,8 +2,9 @@ import type {
   CalendarEvent,
   EventStyle,
   PositionedEvent,
+  RepeatInterval,
 } from "@/types/calendar/Event";
-import type { DateTime } from "luxon";
+import type { DateTime, Duration } from "luxon";
 
 export const eventKey = (event: CalendarEvent) => event._instanceId ?? event.id;
 
@@ -147,6 +148,24 @@ export const resolveInstanceCompleted = (
     ? (event.completedInstances?.includes(dateKey) ?? false)
     : event.completed;
 
+export const isOccurrenceExcluded = (repeat: RepeatInterval, start: DateTime) =>
+  !!repeat.except?.includes(start.weekday) ||
+  !!repeat.skip?.includes(start.toUTC().toISODate()!);
+
+export const makeOccurrence = (
+  event: CalendarEvent,
+  start: DateTime,
+  key: string,
+  duration: Duration,
+): CalendarEvent => ({
+  ...event,
+  _instanceId: `${event.id}_${key}`,
+  start,
+  end: start.plus(duration),
+  _parent: event.id,
+  completed: event.isTask ? resolveInstanceCompleted(event, key) : undefined,
+});
+
 export function mapEventToDate(
   map: Map<string, CalendarEvent[]>,
   key: string,
@@ -195,49 +214,35 @@ function processRepeats(
   // the repeat series ends before the visible range even starts
   if (until && until < firstVisibleDayStart.toMillis()) return;
 
-  let cursor = e.start;
+  let index = 0;
 
-  if (cursor < firstVisibleDayStart) {
+  if (e.start < firstVisibleDayStart) {
     const unitsElapsed = firstVisibleDayStart.diff(e.start, unit).as(unit);
-    const intervalsToSkip = Math.max(0, Math.floor(unitsElapsed / interval));
-
-    if (intervalsToSkip > 0) {
-      cursor = e.start.plus({ [unit]: intervalsToSkip * interval });
-    }
+    index = Math.max(0, Math.floor(unitsElapsed / interval));
   }
+
+  let cursor = e.start.plus({ [unit]: index * interval });
 
   while (cursor <= lastVisibleDayEnd) {
     const millis = cursor.toMillis();
 
     if (millis !== startMillis) {
       const key = cursor.toISODate()!;
-      const keyUTC = cursor.toUTC().toISODate()!;
-      const weekday = cursor.weekday;
       const instanceId = `${e.id}_${key}`;
 
       if (
         visibleDates.has(key) &&
         (!until || millis < until) &&
-        !e.repeat.except?.includes(weekday) &&
-        !e.repeat.skip?.includes(keyUTC) &&
+        !isOccurrenceExcluded(e.repeat, cursor) &&
         !excludeSet.has(instanceId)
       ) {
-        const newEvent = {
-          ...e,
-          _instanceId: instanceId,
-          start: cursor,
-          end: cursor.plus(duration),
-          _parent: e.id,
-          completed: e.isTask ? resolveInstanceCompleted(e, key) : undefined,
-        };
+        const newEvent = makeOccurrence(e, cursor, key, duration);
 
         mapEventToDates(map, newEvent, visibleDates);
       }
     }
 
-    cursor = cursor.plus({
-      [e.repeat.unit]: e.repeat.interval,
-    });
+    cursor = e.start.plus({ [unit]: ++index * interval });
   }
 }
 

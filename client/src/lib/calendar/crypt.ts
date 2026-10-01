@@ -110,8 +110,11 @@ export const migrateToKeyEnvelope = async (
   storage?: CacheStorage,
   exportable: boolean = false,
 ): Promise<DerivedKeys> => {
-  const { masterKey: newMasterKey, bucketKey: newBucketKey, envelope } =
-    await generateMasterKeyEnvelope(password, exportable);
+  const {
+    masterKey: newMasterKey,
+    bucketKey: newBucketKey,
+    envelope,
+  } = await generateMasterKeyEnvelope(password, exportable);
 
   // migration needs every event regardless of week
   const syncRes = await post<EventSyncResponse>("calendar/events/sync", {

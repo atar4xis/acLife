@@ -85,9 +85,7 @@ describe("useCalendarSearch", () => {
       });
 
     let rerenderFn:
-      | ((props: {
-          syncBuckets: ReturnType<typeof makeSyncBuckets>;
-        }) => void)
+      | ((props: { syncBuckets: ReturnType<typeof makeSyncBuckets> }) => void)
       | null = null;
 
     const onExpandedEvents = () => {
@@ -199,7 +197,9 @@ describe("useCalendarSearch", () => {
       await vi.advanceTimersByTimeAsync(REQUEST_DELAY_MS);
     });
 
-    expect(calls).toHaveLength(firstCheckpointChunks.length + secondCheckpointChunks.length);
+    expect(calls).toHaveLength(
+      firstCheckpointChunks.length + secondCheckpointChunks.length,
+    );
     expect(result.current.canExpandMore).toBe(true);
   });
 
@@ -296,5 +296,77 @@ describe("useCalendarSearch", () => {
     expect(calls[firstCheckpointChunks.length + 1]).toHaveLength(
       firstCheckpointChunks[1],
     );
+  });
+
+  describe("repeating events", () => {
+    const standup = (repeat: CalendarEvent["repeat"]): CalendarEvent => ({
+      id: "standup",
+      title: "Standup",
+      start: DateTime.now().minus({ days: 100 }).startOf("day"),
+      end: DateTime.now()
+        .minus({ days: 100 })
+        .startOf("day")
+        .plus({ hours: 1 }),
+      timestamp: 0,
+      repeat,
+    });
+
+    const search = async (events: CalendarEvent[]) => {
+      const { result } = renderHook(() =>
+        useCalendarSearch(
+          events,
+          null,
+          null,
+          null,
+          DateTime.now(),
+          vi.fn(),
+          vi.fn(),
+        ),
+      );
+      act(() => {
+        result.current.setQuery("standup");
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+      });
+      return result.current.results;
+    };
+
+    it("returns occurrences around now instead of only the first start", async () => {
+      const results = await search([standup({ interval: 1, unit: "day" })]);
+      const now = DateTime.now().toMillis();
+      expect(results).toHaveLength(6);
+      expect(results.filter((e) => e.start.toMillis() > now)).toHaveLength(3);
+      expect(new Set(results.map((e) => e._instanceId)).size).toBe(6);
+      expect(results.every((e) => e._parent === "standup")).toBe(true);
+    });
+
+    it("honours except, skip and until", async () => {
+      const today = DateTime.now().startOf("day");
+      const results = await search([
+        standup({
+          interval: 1,
+          unit: "day",
+          except: [today.plus({ days: 1 }).weekday],
+          skip: [today.plus({ days: 2 }).toUTC().toISODate()!],
+          until: today.plus({ days: 4 }).toMillis(),
+        }),
+      ]);
+      const upcoming = results
+        .filter((e) => e.start.toMillis() >= Date.now())
+        .map((e) => e.start.toISODate());
+      expect(upcoming).not.toContain(today.plus({ days: 1 }).toISODate());
+      expect(upcoming).not.toContain(today.plus({ days: 2 }).toISODate());
+      expect(
+        upcoming.every((d) => d! < today.plus({ days: 4 }).toISODate()!),
+      ).toBe(true);
+    });
+
+    it("keeps non-repeating events as a single result", async () => {
+      const results = await search([
+        { ...standup(undefined), repeat: undefined },
+      ]);
+      expect(results).toHaveLength(1);
+    });
   });
 });

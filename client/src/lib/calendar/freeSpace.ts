@@ -89,7 +89,9 @@ export function findFreeSlot(
       : target.start.minus({ days: SEARCH_HORIZON_DAYS });
 
   for (let i = 0; i < MAX_CANDIDATES; i++) {
-    if (direction === "forward" ? candidateStart > limit : candidateStart < limit) {
+    if (
+      direction === "forward" ? candidateStart > limit : candidateStart < limit
+    ) {
       return null;
     }
 
@@ -108,9 +110,7 @@ export function findFreeSlot(
     // skip straight past the conflicting occurrence instead of stepping
     // minute-by-minute
     candidateStart =
-      direction === "forward"
-        ? conflict.end
-        : conflict.start.minus(duration);
+      direction === "forward" ? conflict.end : conflict.start.minus(duration);
   }
 
   return null;

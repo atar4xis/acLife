@@ -16,10 +16,7 @@ export const getDay = (date: DateTime) => [
   { date: date.startOf("day"), label: date.toFormat("EEE d") },
 ];
 
-export const getWeekDays = (
-  date: DateTime,
-  weekStartsOn: number = 1,
-) => {
+export const getWeekDays = (date: DateTime, weekStartsOn: number = 1) => {
   const offset = (date.weekday - weekStartsOn + 7) % 7;
   const start = date.startOf("day").minus({ days: offset });
 
@@ -57,7 +54,9 @@ export const getDateRangeString = (
   }
 
   const days =
-    mode === "day" ? getDay(currentDate) : getWeekDays(currentDate, weekStartsOn);
+    mode === "day"
+      ? getDay(currentDate)
+      : getWeekDays(currentDate, weekStartsOn);
 
   const first = days[0].date;
   const last = days[days.length - 1].date;
