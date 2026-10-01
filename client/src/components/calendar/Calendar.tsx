@@ -75,7 +75,7 @@ import {
   skipSingleOccurrence,
 } from "@/lib/calendar/recurrence";
 import type { PushEvent } from "@/types/Push";
-import { CLIENT_ID } from "@/hooks/calendar/useCalendarEvents";
+import { CLIENT_ID } from "@/lib/clientId";
 import { useCalendarSearch } from "@/hooks/calendar/useCalendarSearch";
 import { EMPTY_ARRAY } from "@/lib/constants";
 import type { RepeatInterval } from "@/types/calendar/Event";

@@ -1,11 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { toast } from "sonner";
 import AppearancePage from "../../src/components/settings/pages/AppearancePage.tsx";
 import { ThemeProvider } from "../../src/components/ThemeProvider.tsx";
 import type { SectionRefs } from "../../src/components/settings/SettingsSection.tsx";
+import { MAX_PRESETS } from "../../src/lib/constants.ts";
+import {
+  MAX_PRESET_BYTES,
+  PRESET_ERROR_MESSAGES,
+} from "../../src/lib/themePresets.ts";
+import { readSettings, seedSettings } from "../settingsStorage.ts";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 
 // jsdom's File/Blob implementation doesn't support .text() yet
@@ -65,8 +77,19 @@ function getPresetRow(name: string) {
   return screen.getByText(name).closest("div")!.parentElement as HTMLElement;
 }
 
+const makePresets = () =>
+  Array.from({ length: MAX_PRESETS }, (_, i) => ({
+    id: `p${i}`,
+    name: `Theme ${i}`,
+    colors: {},
+    fontFamily: "",
+    fontSize: 16,
+  }));
+
 describe("AppearancePage", () => {
   beforeEach(() => {
+    vi.mocked(toast.error).mockClear();
+    vi.mocked(toast.success).mockClear();
     Element.prototype.hasPointerCapture = () => false;
     Element.prototype.scrollIntoView = () => {};
   });
@@ -225,9 +248,7 @@ describe("AppearancePage", () => {
   });
 
   it("exports a theme as a downloadable .json file", async () => {
-    const createObjectURL = vi
-      .fn()
-      .mockReturnValue("blob:mock-url");
+    const createObjectURL = vi.fn().mockReturnValue("blob:mock-url");
     const revokeObjectURL = vi.fn();
     vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL });
     const clickSpy = vi
@@ -263,7 +284,10 @@ describe("AppearancePage", () => {
     renderAppearancePage();
     const user = userEvent.setup();
 
-    await user.upload(fileInput(), [makeThemeFile("One"), makeThemeFile("Two")]);
+    await user.upload(fileInput(), [
+      makeThemeFile("One"),
+      makeThemeFile("Two"),
+    ]);
 
     expect(await screen.findByText("One")).toBeInTheDocument();
     expect(await screen.findByText("Two")).toBeInTheDocument();
@@ -304,8 +328,7 @@ describe("AppearancePage", () => {
     expect(screen.getByText("T1")).toBeInTheDocument();
     expect(screen.queryByText("T6")).not.toBeInTheDocument();
 
-    const [prev, next] = pageLabel
-      .parentElement!.querySelectorAll("button");
+    const [prev, next] = pageLabel.parentElement!.querySelectorAll("button");
     expect(prev).toBeDisabled();
     await user.click(next);
 
@@ -376,8 +399,10 @@ describe("AppearancePage", () => {
     await savePresetNamed("B");
     const rowA = getPresetRow("A");
     const rowB = getPresetRow("B");
-    rowA.getBoundingClientRect = () => ({ left: 0, right: 100, top: 0, bottom: 40 }) as DOMRect;
-    rowB.getBoundingClientRect = () => ({ left: 0, right: 100, top: 40, bottom: 80 }) as DOMRect;
+    rowA.getBoundingClientRect = () =>
+      ({ left: 0, right: 100, top: 0, bottom: 40 }) as DOMRect;
+    rowB.getBoundingClientRect = () =>
+      ({ left: 0, right: 100, top: 40, bottom: 80 }) as DOMRect;
 
     fireEvent.pointerDown(within(rowA).getAllByRole("button")[0], {
       clientX: 10,
@@ -400,8 +425,7 @@ describe("AppearancePage", () => {
     const handle = within(getPresetRow("A")).getByRole("button", {
       name: "Reorder theme",
     });
-    const names = () =>
-      screen.getAllByText(/^[AB]$/).map((e) => e.textContent);
+    const names = () => screen.getAllByText(/^[AB]$/).map((e) => e.textContent);
 
     handle.focus();
     await user.keyboard("{ArrowDown}");
@@ -445,7 +469,10 @@ describe("AppearancePage", () => {
       fontSize: 16,
     });
 
-    async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
+    async function pick(
+      user: ReturnType<typeof userEvent.setup>,
+      name: string,
+    ) {
       await user.click(screen.getByRole("combobox"));
       await user.click(await screen.findByRole("option", { name }));
     }
@@ -466,20 +493,31 @@ describe("AppearancePage", () => {
 
       await pick(user, "Catppuccin Latte");
       await waitFor(() =>
-        expect(document.documentElement.style.getPropertyValue("--background")).toBe("#123456"),
+        expect(
+          document.documentElement.style.getPropertyValue("--background"),
+        ).toBe("#123456"),
       );
       await pick(user, "Catppuccin Mocha");
-      await waitFor(() => expect(document.documentElement.classList.contains("dark")).toBe(true));
+      await waitFor(() =>
+        expect(document.documentElement.classList.contains("dark")).toBe(true),
+      );
       await pick(user, "Catppuccin Latte");
-      await waitFor(() => expect(document.documentElement.classList.contains("light")).toBe(true));
+      await waitFor(() =>
+        expect(document.documentElement.classList.contains("light")).toBe(true),
+      );
 
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(fetchMock.mock.calls[0][0]).toContain("themes/catppuccin-latte.json");
+      expect(fetchMock.mock.calls[0][0]).toContain(
+        "themes/catppuccin-latte.json",
+      );
       vi.unstubAllGlobals();
     });
 
     it("shows an error toast when the theme fails to load", async () => {
-      vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, text: async () => "" })));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: false, text: async () => "" })),
+      );
       renderAppearancePage();
 
       await pick(userEvent.setup(), "Catppuccin Frappé");
@@ -491,5 +529,60 @@ describe("AppearancePage", () => {
       );
       vi.unstubAllGlobals();
     });
+  });
+
+  it("refuses to save or import past the theme limit", async () => {
+    seedSettings({ presets: makePresets() });
+    renderAppearancePage();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByPlaceholderText("Theme name"), "One too many");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    const fileInput = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await user.upload(fileInput, makeThemeFile("Imported too many"));
+
+    expect(vi.mocked(toast.error)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      `You can save up to ${MAX_PRESETS} themes.`,
+    );
+    expect(readSettings().presets).toHaveLength(MAX_PRESETS);
+  });
+
+  it("still overwrites an existing theme at the limit", async () => {
+    seedSettings({ presets: makePresets() });
+    renderAppearancePage();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByPlaceholderText("Theme name"), "Theme 0");
+    await user.click(screen.getByRole("button", { name: "Overwrite" }));
+
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled();
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("Theme updated.");
+  });
+
+  it("refuses to save or import a theme over the size limit", async () => {
+    renderAppearancePage();
+    const user = await savePresetNamed("Small");
+    vi.mocked(toast.error).mockClear();
+
+    fireEvent.change(screen.getByPlaceholderText("Theme name"), {
+      target: { value: "a".repeat(MAX_PRESET_BYTES) },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    const fileInput = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await user.upload(
+      fileInput,
+      makeThemeFile("Big", { fontFamily: "f".repeat(MAX_PRESET_BYTES) }),
+    );
+
+    expect(vi.mocked(toast.error)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      PRESET_ERROR_MESSAGES["too-large"],
+    );
+    expect(readSettings().presets.map((p) => p.name)).toEqual(["Small"]);
   });
 });

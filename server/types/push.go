@@ -16,6 +16,6 @@ type PushEvent struct {
 	Title string `json:"title,omitempty"`
 	Body  string `json:"body,omitempty"`
 
-	// For type == "sync"
+	// For type == "sync" or "settings"
 	OriginClientID string `json:"originClientId,omitempty"`
 }

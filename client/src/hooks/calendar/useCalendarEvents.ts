@@ -22,8 +22,7 @@ import type { User } from "@/types/User";
 import type { DateTime } from "luxon";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-
-export const CLIENT_ID = Math.random().toString(36).slice(2, 8);
+import { CLIENT_ID } from "@/lib/clientId";
 
 export const useCalendarEvents = (
   user: User | null,

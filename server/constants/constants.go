@@ -56,6 +56,8 @@ const (
 	MaxEventBuckets = 60  // caps the number of weeks a single event may span
 	MaxSyncBuckets  = 100 // caps the number of buckets requested in a single sync
 
+	MaxSettingsBytes = 128 << 10 // caps the encrypted settings blob
+
 	MaxBucketBackfillPerSync = 800
 
 	EmailVerificationTTL             = 1 * Day

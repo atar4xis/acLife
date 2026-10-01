@@ -19,6 +19,8 @@ import {
   syncByDefault,
   syncGroups,
 } from "../../src/lib/settingsSync.ts";
+import { MAX_PRESETS } from "../../src/lib/constants.ts";
+import { MAX_PRESET_BYTES } from "../../src/lib/themePresets.ts";
 import { readSettingsMeta, seedSettings } from "../settingsStorage.ts";
 
 describe("settings store", () => {
@@ -255,6 +257,22 @@ describe("settings store", () => {
     expect(settings.presets.map((p) => p.id)).toEqual(["a"]);
   });
 
+  it("keeps at most MAX_PRESETS stored presets", () => {
+    seedSettings({
+      presets: Array.from({ length: MAX_PRESETS + 5 }, (_, i) => ({
+        id: `p${i}`,
+        name: `P${i}`,
+        colors: {},
+        fontFamily: "",
+        fontSize: 16,
+      })),
+    });
+
+    expect(createSettingsStore().getSnapshot().presets).toHaveLength(
+      MAX_PRESETS,
+    );
+  });
+
   it("keeps a stored active preset id and drops one of the wrong type", () => {
     seedSettings({ activePresetId: "preset-1" });
     expect(createSettingsStore().getSnapshot().activePresetId).toBe("preset-1");
@@ -481,5 +499,52 @@ describe("shared store between hooks", () => {
 
     // the selected slice (view and setter) is unchanged
     expect(renders.mock.calls.length).toBe(before);
+  });
+
+  it("applies remote settings with their timestamps", () => {
+    const store = createSettingsStore();
+    const listener = vi.fn();
+    store.subscribe(listener);
+
+    store.applyRemote({ snapMinutes: 15 }, { snapMinutes: 42 });
+
+    expect(store.getSnapshot().snapMinutes).toBe(15);
+    expect(store.getMeta().updatedAt).toEqual({ snapMinutes: 42 });
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(createSettingsStore().getSnapshot().snapMinutes).toBe(15);
+  });
+
+  it("ignores remote values of the wrong type and does not stamp them", () => {
+    const store = createSettingsStore();
+    const listener = vi.fn();
+    store.subscribe(listener);
+
+    store.applyRemote({ snapMinutes: "soon" } as never, { snapMinutes: 42 });
+
+    expect(store.getSnapshot()).toEqual(defaultStoreSettings);
+    expect(store.getMeta().updatedAt).toEqual({});
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("drops stored presets over the size limit", () => {
+    const preset = (id: string, name: string) => ({
+      id,
+      name,
+      colors: {},
+      fontFamily: "",
+      fontSize: 16,
+    });
+    seedSettings({
+      presets: [
+        preset("a", "Small"),
+        preset("b", "x".repeat(MAX_PRESET_BYTES)),
+      ],
+    });
+
+    expect(
+      createSettingsStore()
+        .getSnapshot()
+        .presets.map((p) => p.id),
+    ).toEqual(["a"]);
   });
 });

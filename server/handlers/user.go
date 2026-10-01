@@ -333,6 +333,111 @@ func SaveEnvelopes(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// fetchSettings returns the stored settings blob, or version 0 with no data if none exists.
+func fetchSettings(ctx context.Context, owner string) (types.EncryptedSettings, error) {
+	var s types.EncryptedSettings
+	err := database.QueryRow(ctx,
+		"SELECT data, version FROM user_settings WHERE owner = ?",
+		owner,
+	).Scan(&s.Data, &s.Version)
+	if errors.Is(err, sql.ErrNoRows) {
+		return types.EncryptedSettings{}, nil
+	}
+	return s, err
+}
+
+// writeSettings reports false when the stored version no longer matches req.BaseVersion.
+func writeSettings(ctx context.Context, owner string, req types.SaveSettingsRequest) (bool, error) {
+	if req.BaseVersion == 0 {
+		_, err := database.Exec(ctx,
+			"INSERT INTO user_settings (owner, data) VALUES (?, ?)",
+			owner, req.Data,
+		)
+		if database.IsDuplicateEntry(err) {
+			return false, nil
+		}
+		return err == nil, err
+	}
+
+	res, err := database.Exec(ctx,
+		"UPDATE user_settings SET data = ?, version = version + 1 WHERE owner = ? AND version = ?",
+		req.Data, owner, req.BaseVersion,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+// GetSettings returns the caller's encrypted settings blob.
+func GetSettings(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	settings, err := fetchSettings(r.Context(), user.UUID)
+	if err != nil {
+		utils.LogError("GetSettings", "fetchSettings", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[types.EncryptedSettings]{
+		Success: true,
+		Data:    settings,
+	})
+}
+
+// SaveSettings replaces the caller's encrypted settings blob, rejecting stale writes with 409.
+func SaveSettings(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	var req types.SaveSettingsRequest
+	if err := utils.ParseJSON(r.Body, &req); err != nil {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	if len(req.Data) == 0 || len(req.Data) > constants.MaxSettingsBytes || req.BaseVersion < 0 {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	ctx := r.Context()
+	saved, err := writeSettings(ctx, user.UUID, req)
+	if err != nil {
+		utils.LogError("SaveSettings", "writeSettings", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if !saved {
+		current, err := fetchSettings(ctx, user.UUID)
+		if err != nil {
+			utils.LogError("SaveSettings", "fetchSettings", err)
+			utils.SendInternalError(w)
+			return
+		}
+
+		utils.SendJSON(w, http.StatusConflict, types.Reply[types.EncryptedSettings]{
+			Message: "version conflict",
+			Data:    current,
+		})
+		return
+	}
+
+	originClientID := r.URL.Query().Get("c")
+	if len(originClientID) == 6 {
+		go push.SendToUser(context.Background(), user.UUID, push.SettingsEvent(originClientID))
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
+		Success: true,
+	})
+}
+
 // MigrateEnvelope atomically saves re-encrypted calendar events with the envelope that decrypts them.
 func MigrateEnvelope(w http.ResponseWriter, r *http.Request) {
 	user := session.GetLoggedInUser(r)

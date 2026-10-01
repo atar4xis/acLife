@@ -10,6 +10,7 @@ import { useUser } from "@/context/UserContext";
 import { Button } from "../ui/button";
 import { useApi } from "@/context/ApiContext";
 import { formatPrice } from "@/lib/utils";
+import { hasActiveSubscription } from "@/lib/subscription";
 import { useCallback, useEffect, useState } from "react";
 import type { Price } from "@/types/Subscription";
 import { Skeleton } from "../ui/skeleton";
@@ -56,11 +57,7 @@ export default function SubscriptionDialog() {
     setLoading(true);
     const newUser = await checkLogin();
 
-    if (
-      newUser &&
-      newUser.type === "online" &&
-      newUser.subscription_status === "active"
-    ) {
+    if (hasActiveSubscription(newUser || null)) {
       toast.success("Payment confirmed.");
     } else {
       toast.warning("It doesn't look like you paid yet.");

@@ -17,8 +17,11 @@ import PushService from "./PushService";
 import AutoLockService from "./AutoLockService";
 import SettingsDialog from "./settings/SettingsDialog";
 import TimezoneChangeDialog from "./calendar/TimezoneChangeDialog";
+import { isSubscriptionMissing } from "@/lib/subscription";
+import { useSettingsSync } from "@/hooks/useSettingsSync";
 
 export default function AppShell() {
+  useSettingsSync();
   const { defaultView } = useCalendarSettings((s) => ({
     defaultView: s.defaultView,
   }));
@@ -28,9 +31,9 @@ export default function AppShell() {
   const [calEvents, setCalEvents] = useState<CalendarEvent[] | null>(null);
   const [offline, setOffline] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsCategory, setSettingsCategory] = useState<
-    string | undefined
-  >(undefined);
+  const [settingsCategory, setSettingsCategory] = useState<string | undefined>(
+    undefined,
+  );
   const { masterKey, bucketKey, user } = useUser();
   const { currentDate, setCurrentDate } = useCalendar();
   const { defaultTimezone } = useCalendarSettings((s) => ({
@@ -39,25 +42,16 @@ export default function AppShell() {
   const { serverMeta } = useApi();
   const storage = useStorage();
   const { saving, loadEvents, saveEvents, syncEvents, syncBuckets } =
-    useCalendarEvents(
-    user,
-    masterKey,
-    bucketKey,
-  );
+    useCalendarEvents(user, masterKey, bucketKey);
 
-  const activeSub =
-    user?.type === "online" &&
-    ["active", "trialing"].includes(user.subscription_status || "");
-
-  const subRequired =
-    user?.type === "online" && serverMeta?.registration.subscriptionRequired;
+  const subscriptionMissing = isSubscriptionMissing(user, serverMeta);
 
   // load calendar events
   useEffect(() => {
     if (!user) return;
     if (masterKey === null) return;
     if (user.type === "online" && bucketKey === null) return;
-    if (!activeSub && subRequired) return;
+    if (subscriptionMissing) return;
 
     toast.promise(
       (async () => {
@@ -77,7 +71,7 @@ export default function AppShell() {
     );
 
     // eslint-disable-next-line
-  }, [user, masterKey, bucketKey, activeSub, subRequired]);
+  }, [user, masterKey, bucketKey, subscriptionMissing]);
 
   // re-zone the visible date so day/week boundaries follow the new default
   useEffect(() => {
@@ -113,7 +107,7 @@ export default function AppShell() {
 
   if (!storage || !user) return null;
 
-  if (!activeSub && subRequired) {
+  if (subscriptionMissing) {
     return <SubscriptionDialog />;
   }
 

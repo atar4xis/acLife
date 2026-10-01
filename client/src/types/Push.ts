@@ -9,4 +9,10 @@ type PushSyncEvent = {
   originClientId: string;
 };
 
-export type PushEvent = PushSyncEvent | PushNotificationEvent;
+type PushSettingsEvent = {
+  type: "settings";
+  originClientId: string;
+};
+
+export type PushEvent =
+  PushSyncEvent | PushSettingsEvent | PushNotificationEvent;

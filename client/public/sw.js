@@ -10,6 +10,7 @@ self.addEventListener("push", async (event) => {
       break;
 
     case "sync":
+    case "settings":
       const clients = await self.clients.matchAll({
         type: "window",
         includeUncontrolled: false,

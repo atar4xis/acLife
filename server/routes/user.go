@@ -11,11 +11,19 @@ import (
 
 // User contains routes related to user accounts.
 func User(r *mux.Router) {
-	sr := r.PathPrefix("/user").Subrouter()
+	ur := r.PathPrefix("/user").Subrouter()
 
-	sr.Use(handlers.AuthMiddleware())                    // must be logged in
-	sr.Use(handlers.MaxBodySizeMiddleware(8 << 10))      // 8 KB
-	sr.Use(handlers.RateLimitMiddleware(5, time.Second)) // 5 reqs/sec
+	ur.Use(handlers.AuthMiddleware())                    // must be logged in
+	ur.Use(handlers.RateLimitMiddleware(5, time.Second)) // 5 reqs/sec
+
+	ss := ur.PathPrefix("/settings").Subrouter()
+	ss.Use(handlers.SubscriptionMiddleware())         // must have a valid subscription
+	ss.Use(handlers.MaxBodySizeMiddleware(192 << 10)) // 192 KB
+	ss.HandleFunc("", handlers.GetSettings).Methods("GET")
+	ss.HandleFunc("", handlers.SaveSettings).Methods("POST")
+
+	sr := ur.NewRoute().Subrouter()
+	sr.Use(handlers.MaxBodySizeMiddleware(8 << 10)) // 8 KB
 
 	sr.HandleFunc("", handlers.UserInfo).Methods("GET")
 	sr.HandleFunc("/challenge", handlers.UpdateChallenge).Methods("POST")

@@ -12,6 +12,8 @@ import {
   type SyncableKey,
   type SyncOverrides,
 } from "@/lib/settingsSync";
+import { MAX_PRESETS } from "@/lib/constants";
+import { fitsPresetLimit } from "@/lib/themePresets";
 import { readJSON, shallowEqual } from "@/lib/utils";
 
 export const SETTINGS_STORAGE_KEY = "acl-settings";
@@ -40,6 +42,10 @@ export interface SettingsStore {
   subscribe: (listener: () => void) => () => void;
   setSetting: <K extends StoreKey>(key: K, value: StoreSettings[K]) => void;
   setSettings: (patch: Partial<StoreSettings>) => void;
+  applyRemote: (
+    patch: Partial<StoreSettings>,
+    updatedAt: Partial<Record<StoreKey, number>>,
+  ) => void;
   setSyncOverrides: (patch: Partial<Record<SyncableKey, boolean>>) => void;
   setSyncEnabled: (enabled: boolean) => void;
 }
@@ -159,15 +165,18 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
       ([, color]) => typeof color === "string",
     ),
   );
-  parsed.presets = parsed.presets.filter(
-    (preset) =>
-      isPlainObject(preset) &&
-      typeof preset.id === "string" &&
-      typeof preset.name === "string" &&
-      isPlainObject(preset.colors) &&
-      typeof preset.fontFamily === "string" &&
-      Number.isFinite(preset.fontSize),
-  );
+  parsed.presets = parsed.presets
+    .filter(
+      (preset) =>
+        isPlainObject(preset) &&
+        typeof preset.id === "string" &&
+        typeof preset.name === "string" &&
+        isPlainObject(preset.colors) &&
+        typeof preset.fontFamily === "string" &&
+        Number.isFinite(preset.fontSize) &&
+        fitsPresetLimit(preset),
+    )
+    .slice(0, MAX_PRESETS);
 
   return parsed;
 }
@@ -260,6 +269,26 @@ export function createSettingsStore(): SettingsStore {
     },
     setSetting: (key, value) => setSettings({ [key]: value }),
     setSettings,
+    applyRemote: (patch, updatedAt) => {
+      const keys = (Object.keys(patch) as StoreKey[]).filter((key) =>
+        hasValidType(key, patch[key]),
+      );
+      if (!keys.length) return;
+
+      values = normalizeSettings({
+        ...values,
+        ...Object.fromEntries(keys.map((key) => [key, patch[key]])),
+      });
+      meta = {
+        ...meta,
+        updatedAt: {
+          ...meta.updatedAt,
+          ...Object.fromEntries(keys.map((key) => [key, updatedAt[key]])),
+        },
+      };
+      applyTimezone();
+      commit();
+    },
     setSyncOverrides: (patch) => {
       const syncOverrides = { ...meta.syncOverrides };
       for (const key of Object.keys(patch) as SyncableKey[]) {

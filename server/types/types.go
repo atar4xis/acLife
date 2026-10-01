@@ -70,3 +70,15 @@ type SRPSession struct {
 	CreatedAt time.Time
 	Email     string
 }
+
+// EncryptedSettings is the user's encrypted settings blob.
+type EncryptedSettings struct {
+	Data    []byte `json:"data"`
+	Version int    `json:"version"`
+}
+
+// SaveSettingsRequest replaces the settings blob if BaseVersion still matches the stored version.
+type SaveSettingsRequest struct {
+	Data        []byte `json:"data"`
+	BaseVersion int    `json:"baseVersion"`
+}

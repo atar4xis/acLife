@@ -10,6 +10,8 @@ import {
   THEME_COLOR_VARS,
   type ThemeColorVar,
 } from "@/lib/themeColors";
+import { MAX_PRESETS } from "@/lib/constants";
+import { fitsPresetLimit, type PresetResult } from "@/lib/themePresets";
 import type { Theme, ThemeColors, ThemePreset } from "@/types/Theme";
 
 type ThemeProviderProps = {
@@ -29,12 +31,12 @@ type ThemeProviderState = {
   setFontSize: (fontSize: number) => void;
   presets: ThemePreset[];
   activePresetId: string | null;
-  savePreset: (name: string) => void;
+  savePreset: (name: string) => PresetResult;
   applyPreset: (preset: ThemePreset) => void;
   deletePreset: (id: string) => void;
-  renamePreset: (id: string, name: string) => void;
+  renamePreset: (id: string, name: string) => PresetResult;
   reorderPresets: (presets: ThemePreset[]) => void;
-  importPreset: (preset: Omit<ThemePreset, "id">) => void;
+  importPreset: (preset: Omit<ThemePreset, "id">) => PresetResult;
 };
 
 const initialState: ThemeProviderState = {
@@ -50,12 +52,12 @@ const initialState: ThemeProviderState = {
   setFontSize: () => null,
   presets: [],
   activePresetId: null,
-  savePreset: () => null,
+  savePreset: () => "ok",
   applyPreset: () => null,
   deletePreset: () => null,
-  renamePreset: () => null,
+  renamePreset: () => "ok",
   reorderPresets: () => null,
-  importPreset: () => null,
+  importPreset: () => "ok",
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
@@ -156,8 +158,12 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         fontFamily,
         fontSize,
       };
+      if (!fitsPresetLimit(preset)) return "too-large";
+
       const current = store.getSnapshot().presets;
       const existing = current.find((p) => p.name === name);
+      if (!existing && current.length >= MAX_PRESETS) return "limit";
+
       writePresets(
         existing
           ? current.map((p) =>
@@ -165,6 +171,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
             )
           : [...current, preset],
       );
+      return "ok";
     },
     applyPreset: (preset) => {
       store.setSettings({
@@ -184,19 +191,26 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       });
     },
     renamePreset: (id, name) => {
-      writePresets(
-        store
-          .getSnapshot()
-          .presets.map((p) => (p.id === id ? { ...p, name } : p)),
-      );
+      const current = store.getSnapshot().presets;
+      const target = current.find((p) => p.id === id);
+      if (!target) return "ok";
+      if (!fitsPresetLimit({ ...target, name })) return "too-large";
+
+      writePresets(current.map((p) => (p === target ? { ...p, name } : p)));
+      return "ok";
     },
     reorderPresets: writePresets,
     importPreset: (preset) => {
       const current = store.getSnapshot().presets;
+      if (current.length >= MAX_PRESETS) return "limit";
+
       const taken = new Set(current.map((p) => p.name));
       let name = preset.name;
       for (let n = 2; taken.has(name); n++) name = `${preset.name} ${n}`;
+      if (!fitsPresetLimit({ ...preset, name })) return "too-large";
+
       writePresets([...current, { ...preset, name, id: crypto.randomUUID() }]);
+      return "ok";
     },
   };
 

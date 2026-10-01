@@ -21,6 +21,7 @@ import type { Theme, ThemeColors, ThemePreset } from "@/types/Theme";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
 import { cssColorToHex } from "@/lib/utils";
+import { PRESET_ERROR_MESSAGES } from "@/lib/themePresets";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -227,7 +228,8 @@ const PresetsList = memo(function PresetsList() {
       if (presets.some((p) => p.id !== renamingId && p.name === name)) {
         toast.error("A theme with that name already exists.");
       } else {
-        renamePreset(renamingId, name);
+        const result = renamePreset(renamingId, name);
+        if (result !== "ok") toast.error(PRESET_ERROR_MESSAGES[result]);
       }
     }
     setRenamingId(null);
@@ -239,7 +241,12 @@ const PresetsList = memo(function PresetsList() {
     const name = presetName.trim();
     if (!name) return;
 
-    savePreset(name);
+    const result = savePreset(name);
+    if (result !== "ok") {
+      toast.error(PRESET_ERROR_MESSAGES[result]);
+      return;
+    }
+
     setPresetName("");
     toast.success(nameExists ? "Theme updated." : "Theme saved.");
   };
@@ -254,7 +261,17 @@ const PresetsList = memo(function PresetsList() {
         continue;
       }
 
-      importPreset(parsed);
+      const result = importPreset(parsed);
+      if (result === "limit") {
+        toast.error(PRESET_ERROR_MESSAGES.limit);
+        break;
+      }
+
+      if (result === "too-large") {
+        toast.error(`${PRESET_ERROR_MESSAGES[result]} Skipped: ${file.name}`);
+        continue;
+      }
+
       toast.success(`Imported theme "${parsed.name}".`);
     }
   };
