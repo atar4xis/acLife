@@ -57,6 +57,7 @@ import {
   eventKey,
   getDayEventStyles,
   getEventMap,
+  getEventPixelPosition,
   MAX_EVENT_DURATION_MINUTES,
 } from "@/lib/calendar/event";
 import { weekLabel } from "@/lib/calendar/buckets";
@@ -502,13 +503,15 @@ export default function AppCalendar({
     onExpandedSearchEvents,
   );
 
+  const pendingScrollRef = useRef<CalendarEvent | null>(null);
+
   const onSelectSearchResult = useCallback(
     (event: CalendarEvent) => {
+      pendingScrollRef.current = event;
       setCurrentDate(event.start);
-      selectEvents([event]);
       setSearchOpen(false);
     },
-    [setCurrentDate, selectEvents],
+    [setCurrentDate],
   );
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
@@ -2043,6 +2046,19 @@ export default function AppCalendar({
   useEffect(() => {
     clearSelection();
   }, [visibleDays, clearSelection]);
+
+  // select and scroll to the search result after navigating
+  useEffect(() => {
+    const event = pendingScrollRef.current;
+    const container = gridRef.current;
+    if (!event || !container) return;
+
+    pendingScrollRef.current = null;
+    selectEvents([event]);
+
+    const { top } = getEventPixelPosition(event, event.start, hourHeight);
+    container.scrollTop = Math.max(0, top - container.clientHeight / 3);
+  }, [currentDate, hourHeight, selectEvents]);
 
   /* -------------------------------------------------------------------------- */
 
