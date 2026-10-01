@@ -66,10 +66,6 @@ const TimezonesField = memo(function TimezonesField() {
       })),
     [allTimezones],
   );
-  const availableOptions = useMemo(
-    () => allOptions.filter((o) => !timezones.includes(o.value)),
-    [allOptions, timezones],
-  );
   const isLimitReached = timezones.length >= MAX_CALENDAR_TIMEZONES;
 
   const selectDefaultTimezone = (tz: string) => {
@@ -150,7 +146,7 @@ const TimezonesField = memo(function TimezonesField() {
         <SearchableSelect
           className="w-full shrink-0 @md/field-group:w-[250px]!"
           labelledBy="additional-timezones-label"
-          options={availableOptions}
+          options={allOptions}
           value=""
           onValueChange={addTimezone}
           disabled={isLimitReached}
