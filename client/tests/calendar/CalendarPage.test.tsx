@@ -274,4 +274,49 @@ describe("CalendarPage", () => {
       expect(swatches()).toEqual(before.slice(1));
     });
   });
+
+  describe("mini calendar section", () => {
+    // "Enabled" also labels the agenda switch, so look the switches up by setting key
+    const miniSwitch = (key: string) =>
+      document.querySelector<HTMLElement>(
+        `[role="switch"][aria-labelledby="setting-label-${key}"]`,
+      )!;
+
+    const dependents = [
+      "miniCalendarEventBars",
+      "miniCalendarWeekNumbers",
+      "miniCalendarBoldDayNumbers",
+      "miniCalendarDropdowns",
+    ];
+
+    it("starts enabled with everything else off", async () => {
+      await renderLoadedCalendarPage();
+
+      expect(miniSwitch("miniCalendarEnabled")).toBeChecked();
+      dependents.forEach((key) => expect(miniSwitch(key)).not.toBeChecked());
+    });
+
+    it.each(dependents)("toggles %s and stores it", async (key) => {
+      const user = userEvent.setup();
+      await renderLoadedCalendarPage();
+
+      await user.click(miniSwitch(key));
+
+      expect(miniSwitch(key)).toBeChecked();
+      expect(readSettings()[key as keyof ReturnType<typeof readSettings>]).toBe(
+        true,
+      );
+    });
+
+    it("disables the other switches while the mini calendar is off", async () => {
+      const user = userEvent.setup();
+      await renderLoadedCalendarPage();
+      dependents.forEach((key) => expect(miniSwitch(key)).toBeEnabled());
+
+      await user.click(miniSwitch("miniCalendarEnabled"));
+
+      expect(readSettings().miniCalendarEnabled).toBe(false);
+      dependents.forEach((key) => expect(miniSwitch(key)).toBeDisabled());
+    });
+  });
 });

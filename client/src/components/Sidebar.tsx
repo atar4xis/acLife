@@ -21,8 +21,8 @@ import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useWeekStart } from "@/hooks/useWeekStart";
 import { fromPickerDate, toPickerDate } from "@/lib/calendar/date";
 import { getEventMap } from "@/lib/calendar/event";
+import { type BarSlots, barKey, layoutBars } from "@/lib/calendar/eventBars";
 import { EMPTY_ARRAY } from "@/lib/constants";
-import type { CalendarEvent } from "@/types/calendar/Event";
 
 export default function AppSidebar({
   onOpenSettings,
@@ -175,46 +175,6 @@ export default function AppSidebar({
   );
 }
 
-type BarSlots = (CalendarEvent | undefined)[];
-
-const BAR_SLOTS = 3;
-const barKey = (e?: CalendarEvent) => e && (e._instanceId ?? e.id);
-
-// assigns each event a fixed row so multi-day events line up across days
-function layoutBars(
-  dateKeys: string[],
-  eventMap: Map<string, CalendarEvent[]>,
-) {
-  const result = new Map<string, { slots: BarSlots; overflow: number }>();
-  let prev: BarSlots = [];
-
-  for (const date of dateKeys) {
-    const slots: BarSlots = new Array(BAR_SLOTS).fill(undefined);
-    const pending: CalendarEvent[] = [];
-    const events = [...(eventMap.get(date) ?? [])].sort(
-      (a, b) => a.start.toMillis() - b.start.toMillis(),
-    );
-
-    for (const e of events) {
-      const i = prev.findIndex((p) => barKey(p) === barKey(e));
-      if (e._continued && i !== -1) slots[i] = e;
-      else pending.push(e);
-    }
-    for (const e of pending) {
-      const i = slots.indexOf(undefined);
-      if (i !== -1) slots[i] = e;
-    }
-
-    result.set(date, {
-      slots,
-      overflow: events.length - slots.filter(Boolean).length,
-    });
-    prev = slots;
-  }
-
-  return result;
-}
-
 function EventBars({
   layout,
   prev,
@@ -228,7 +188,11 @@ function EventBars({
   const { slots, overflow } = layout;
 
   return (
-    <span aria-hidden className="pointer-events-none absolute inset-0">
+    <span
+      aria-hidden
+      data-testid="event-bars"
+      className="pointer-events-none absolute inset-0"
+    >
       <span className="absolute inset-x-0 bottom-[24%] flex h-[26%] flex-col gap-[11%]">
         {slots.map((e, i) => {
           const joinPrev = !!e && barKey(prev?.[i]) === barKey(e);
@@ -237,6 +201,7 @@ function EventBars({
           return (
             <span
               key={i}
+              data-testid={e ? "event-bar" : undefined}
               className={cn(
                 "h-[26%]",
                 !joinPrev && "ml-[12%] rounded-l-full",
