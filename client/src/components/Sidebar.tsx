@@ -23,8 +23,10 @@ import {
   memo,
   useCallback,
   useContext,
+  useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -33,7 +35,12 @@ import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useWeekStart } from "@/hooks/useWeekStart";
 import { fromPickerDate, toPickerDate } from "@/lib/calendar/date";
 import { getEventMap } from "@/lib/calendar/event";
-import { type BarSlots, barKey, layoutBars } from "@/lib/calendar/eventBars";
+import {
+  type BarSlots,
+  barKey,
+  layoutBars,
+  sameBars,
+} from "@/lib/calendar/eventBars";
 import { EMPTY_ARRAY } from "@/lib/constants";
 
 const START_MONTH = new Date(1900, 0);
@@ -75,7 +82,55 @@ function MiniDayButton(props: React.ComponentProps<typeof CalendarDayButton>) {
 }
 
 // module scope keeps DayButton identity stable so day buttons keep focus
-const MINI_COMPONENTS ={ DayButton: MiniDayButton };
+const MINI_COMPONENTS = { DayButton: MiniDayButton };
+
+// owns the events subscription so event changes never re-render the day picker
+function DayBarsProvider({
+  month,
+  enabled,
+  bold,
+  children,
+}: {
+  month: Date;
+  enabled: boolean;
+  bold: boolean;
+  children: React.ReactNode;
+}) {
+  // deferred so the grid paints before the bars are recomputed
+  const calendarEvents = useDeferredValue(useEventList());
+  const barsRef = useRef<ReturnType<typeof layoutBars> | null>(null);
+
+  const bars = useMemo(() => {
+    if (!enabled) return null;
+
+    // visible grid incl. outside days
+    const days = Array.from({ length: 49 }, (_, i) =>
+      fromPickerDate(month)
+        .startOf("month")
+        .plus({ days: i - 7 }),
+    );
+    const next = layoutBars(
+      days.map((d) => d.toISODate()!),
+      getEventMap(calendarEvents, days, EMPTY_ARRAY, EMPTY_ARRAY),
+    );
+
+    // keep the previous reference when nothing visible changed
+    const prev = barsRef.current;
+    return prev && sameBars(prev, next) ? prev : next;
+  }, [enabled, calendarEvents, month]);
+
+  useEffect(() => {
+    barsRef.current = bars;
+  }, [bars]);
+
+  const dayBars = useMemo(() => ({ bars, bold }), [bars, bold]);
+
+  return (
+    <DayBarsContext.Provider value={dayBars}>
+      {children}
+    </DayBarsContext.Provider>
+  );
+}
 
 const MiniCalendar = memo(function MiniCalendar({
   onPick,
@@ -83,7 +138,6 @@ const MiniCalendar = memo(function MiniCalendar({
   onPick: () => void;
 }) {
   const currentDate = useCurrentDate();
-  const calendarEvents = useEventList();
   const { setCurrentDate } = useCalendarActions();
   const { dayPickerWeekStart } = useWeekStart();
   const {
@@ -120,28 +174,12 @@ const MiniCalendar = memo(function MiniCalendar({
     [onPick, setCurrentDate],
   );
 
-  const bars = useMemo(() => {
-    if (!miniCalendarEventBars) return null;
-
-    // visible grid incl. outside days
-    const days = Array.from({ length: 49 }, (_, i) =>
-      fromPickerDate(month)
-        .startOf("month")
-        .plus({ days: i - 7 }),
-    );
-    return layoutBars(
-      days.map((d) => d.toISODate()!),
-      getEventMap(calendarEvents, days, EMPTY_ARRAY, EMPTY_ARRAY),
-    );
-  }, [miniCalendarEventBars, calendarEvents, month]);
-
-  const dayBars = useMemo(
-    () => ({ bars, bold: miniCalendarBoldDayNumbers }),
-    [bars, miniCalendarBoldDayNumbers],
-  );
-
   return (
-    <DayBarsContext.Provider value={dayBars}>
+    <DayBarsProvider
+      month={month}
+      enabled={miniCalendarEventBars}
+      bold={miniCalendarBoldDayNumbers}
+    >
       <Calendar
         mode="single"
         selected={selected}
@@ -157,7 +195,7 @@ const MiniCalendar = memo(function MiniCalendar({
         onMonthChange={setMonth}
         components={MINI_COMPONENTS}
       />
-    </DayBarsContext.Provider>
+    </DayBarsProvider>
   );
 });
 

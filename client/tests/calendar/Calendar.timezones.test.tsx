@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
+import { DateTime } from "luxon";
 import {
   getDeviceTimezone,
   getTimezoneHourLabel,
   getTimezoneShortLabel,
 } from "../../src/lib/calendar/timezone.ts";
-import { FIXED_NOW, renderCalendar, setupCalendarTests } from "./helpers";
+import {
+  FIXED_NOW,
+  buildEvent,
+  renderCalendar,
+  setupCalendarTests,
+} from "./helpers";
 import { seedSettings } from "../settingsStorage.ts";
 
 setupCalendarTests();
@@ -117,5 +123,38 @@ describe("Calendar with multiple time zones", () => {
 
     expect(getHourCells()).toHaveLength(24 * 3);
     expect(await screen.findByText("Sydney")).toBeInTheDocument();
+  });
+});
+
+describe("Calendar default time zone changes", () => {
+  it("moves events to the new default time zone and back without a resync", async () => {
+    const start = DateTime.fromISO("2026-03-18T10:00:00", { zone: "UTC" });
+    const { store } = renderCalendar({
+      mode: "week",
+      events: [
+        buildEvent({
+          id: "zoned",
+          title: "Zoned",
+          start,
+          end: start.plus({ hours: 1 }),
+        }),
+      ],
+    });
+    const top = async () =>
+      (
+        (await screen.findByText("Zoned")).closest(
+          "[data-event-key]",
+        ) as HTMLElement
+      ).style.top;
+
+    expect(await top()).toBe("600px");
+
+    act(() => store.setSetting("timezones", ["Asia/Tokyo"]));
+    act(() => store.setSetting("defaultTimezone", "Asia/Tokyo"));
+    expect(await top()).toBe("1140px");
+
+    act(() => store.setSetting("timezones", ["UTC"]));
+    act(() => store.setSetting("defaultTimezone", "UTC"));
+    expect(await top()).toBe("600px");
   });
 });

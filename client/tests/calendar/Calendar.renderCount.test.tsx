@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import * as a11y from "../../src/lib/calendar/a11y.ts";
 import * as CalendarContext from "../../src/context/CalendarContext.tsx";
 import { focusGrid } from "./gridKeyboardHelpers";
@@ -65,5 +65,33 @@ describe("navigation renders", () => {
 
     expect(cell.isConnected).toBe(true);
     expect(header.isConnected).toBe(true);
+  });
+});
+
+describe("event creation renders", () => {
+  it("leaves the other event blocks alone when an event is created", async () => {
+    const events = Array.from({ length: 6 }, (_, i) =>
+      buildEvent({
+        id: `event-${i}`,
+        title: `Event ${i}`,
+        start: FIXED_NOW.startOf("day").plus({ hours: 1 + i * 2 }),
+        end: FIXED_NOW.startOf("day").plus({ hours: 2 + i * 2 }),
+      }),
+    );
+    renderCalendar({ mode: "week", events });
+    await getEventBlock("Event 3");
+
+    const describeEvent = vi.spyOn(a11y, "describeEvent");
+    act(() => {
+      fireEvent.pointerDown(getDayCell(1), {
+        clientX: 100,
+        clientY: 400,
+        pointerId: 1,
+        button: 0,
+      });
+    });
+
+    // only the new event's block renders, not the six existing ones
+    expect(describeEvent.mock.calls.length).toBeLessThanOrEqual(2);
   });
 });

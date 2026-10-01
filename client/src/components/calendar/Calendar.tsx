@@ -774,7 +774,7 @@ export default memo(function AppCalendar({
       );
 
       let detached = false;
-      let working = calendarEvents;
+      let working = calendarEventsRef.current;
 
       for (const entry of entries) {
         const moved = { ...entry.event, timestamp: Date.now() };
@@ -809,7 +809,7 @@ export default memo(function AppCalendar({
       if (detached) clearSelection();
       save();
     },
-    [updateChange, dispatch, save, calendarEvents, clearSelection, pushHistory],
+    [updateChange, dispatch, save, clearSelection, pushHistory],
   );
 
   const commitSingleDrag = useCallback(
@@ -1350,14 +1350,14 @@ export default memo(function AppCalendar({
         event,
         originalEvent.start,
         originalEvent.end,
-        calendarEvents,
+        calendarEventsRef.current,
         dispatch,
         updateChange,
       );
 
       save();
     },
-    [calendarEvents, dispatch, updateChange, save, pushHistory],
+    [dispatch, updateChange, save, pushHistory],
   );
 
   const deleteSelectionBatch = useCallback(
@@ -1782,6 +1782,22 @@ export default memo(function AppCalendar({
     calendarEventsRef.current = calendarEvents;
   }, [calendarEvents]);
 
+  // events keep the zone they were parsed in, so re-zone them when the default changes
+  useEffect(() => {
+    const tz = settings.defaultTimezone;
+    const current = calendarEventsRef.current;
+    if (current.every((e) => e.start.zoneName === tz)) return;
+
+    dispatch({
+      type: "set",
+      events: current.map((e) => ({
+        ...e,
+        start: e.start.setZone(tz),
+        end: e.end.setZone(tz),
+      })),
+    });
+  }, [settings.defaultTimezone, dispatch]);
+
   // keyboard shortcuts: arrows, escape, delete, undo/redo, cut/copy/paste
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -2175,33 +2191,45 @@ export default memo(function AppCalendar({
     </div>
   );
 
+  // hour labels don't depend on events, so event changes reuse these elements
+  const hourLabels = useMemo(
+    () =>
+      HOURS.map((_label, hour) => (
+        <>
+          {settings.timezones.map((tz, i) => (
+            <div
+              key={tz}
+              role="rowheader"
+              className={cn(
+                "select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)] flex text-sm items-center justify-center",
+                tz === settings.timezones[0] && hour == now.hour
+                  ? "bg-card font-bold"
+                  : "bg-background",
+              )}
+              style={tzStickyStyle(i)}
+            >
+              {getTimezoneHourLabel(
+                visibleDays[0]?.date ?? currentDate,
+                hour,
+                tz,
+              )}
+            </div>
+          ))}
+        </>
+      )),
+    [settings.timezones, now.hour, tzStickyStyle, visibleDays, currentDate],
+  );
+
+  const dateRange = useMemo(
+    () => getDateRangeString(mode, currentDate, weekStartsOn),
+    [mode, currentDate, weekStartsOn],
+  );
+
   // grid in day/week view
   const timeGrid = useMemo(
     () =>
       HOURS.map((_label, hour) => {
-        const timeLabels = (
-          <>
-            {settings.timezones.map((tz, i) => (
-              <div
-                key={tz}
-                role="rowheader"
-                className={cn(
-                  "select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)] flex text-sm items-center justify-center",
-                  tz === settings.timezones[0] && hour == now.hour
-                    ? "bg-card font-bold"
-                    : "bg-background",
-                )}
-                style={tzStickyStyle(i)}
-              >
-                {getTimezoneHourLabel(
-                  visibleDays[0]?.date ?? currentDate,
-                  hour,
-                  tz,
-                )}
-              </div>
-            ))}
-          </>
-        );
+        const timeLabels = hourLabels[hour];
 
         return (
           <div key={hour} role="row" className="contents">
@@ -2312,10 +2340,8 @@ export default memo(function AppCalendar({
       editingEventDay,
       editingEventFirstDayIndex,
       selection,
-      settings.timezones,
-      tzStickyStyle,
+      hourLabels,
       labelsRight,
-      currentDate,
     ],
   );
 
@@ -2360,14 +2386,10 @@ export default memo(function AppCalendar({
           >
             <ArrowRight />
           </Button>
-          <h2 className="ml-2 text-xl">
-            {getDateRangeString(mode, currentDate, weekStartsOn)}
-          </h2>
+          <h2 className="ml-2 text-xl">{dateRange}</h2>
         </div>
 
-        <h2 className="flex-1 text-xl ml-6 md:hidden">
-          {getDateRangeString(mode, currentDate, weekStartsOn)}
-        </h2>
+        <h2 className="flex-1 text-xl ml-6 md:hidden">{dateRange}</h2>
 
         <ModeSwitcher mode={mode} setMode={setMode} />
 

@@ -39,3 +39,25 @@ export function layoutBars(
 
   return result;
 }
+
+type BarLayout = ReturnType<typeof layoutBars>;
+
+// true when both layouts render the same bars (event copies differ by identity)
+export function sameBars(a: BarLayout, b: BarLayout) {
+  if (a.size !== b.size) return false;
+
+  for (const [date, x] of a) {
+    const y = b.get(date);
+    if (
+      !y ||
+      x.overflow !== y.overflow ||
+      x.slots.some(
+        (e, i) =>
+          barKey(e) !== barKey(y.slots[i]) || e?.color !== y.slots[i]?.color,
+      )
+    )
+      return false;
+  }
+
+  return true;
+}

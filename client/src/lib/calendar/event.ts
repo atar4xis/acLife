@@ -241,6 +241,8 @@ function processRepeats(
   }
 }
 
+type Placement = [key: string, event: CalendarEvent];
+
 type BaseEventMapCache = {
   events?: CalendarEvent[];
   dates?: DateTime[];
@@ -250,6 +252,53 @@ type BaseEventMapCache = {
 const baseEventMapCache: BaseEventMapCache = {};
 
 const WINDOW_PAD_MS = 4 * 24 * 60 * 60 * 1000;
+const MAX_CACHED_WINDOWS = 4;
+
+// per source event and window: reducer keeps unchanged events' identity, so only changed events are expanded again
+const placementCache = new WeakMap<CalendarEvent, Map<string, Placement[]>>();
+
+// last result per window: day arrays with unchanged contents keep identity so memoized consumers skip work
+const windowResults = new Map<string, Map<string, CalendarEvent[]>>();
+
+const sameItems = (a: CalendarEvent[], b: CalendarEvent[]) =>
+  a.length === b.length && a.every((e, i) => e === b[i]);
+
+function expandEvent(
+  e: CalendarEvent,
+  visibleDates: Set<string>,
+  firstVisibleDayStart: DateTime,
+  lastVisibleDayEnd: DateTime,
+  outsideWindow: boolean,
+) {
+  const map = new Map<string, CalendarEvent[]>();
+
+  if (!outsideWindow) {
+    const base =
+      e.isTask && e.repeat
+        ? {
+            ...e,
+            completed: resolveInstanceCompleted(e, e.start.toISODate()!),
+          }
+        : e;
+
+    mapEventToDates(map, base, visibleDates);
+  }
+
+  processRepeats(
+    map,
+    e,
+    visibleDates,
+    firstVisibleDayStart,
+    lastVisibleDayEnd,
+    new Set(),
+  );
+
+  const placements: Placement[] = [];
+  for (const [key, dayEvents] of map) {
+    for (const ev of dayEvents) placements.push([key, ev]);
+  }
+  return placements;
+}
 
 function getBaseEventMap(events: CalendarEvent[], dates: DateTime[]) {
   if (
@@ -260,20 +309,18 @@ function getBaseEventMap(events: CalendarEvent[], dates: DateTime[]) {
     return baseEventMapCache.result;
   }
 
-  const map = new Map<string, CalendarEvent[]>();
+  const keys = dates.map((d) => d.toISODate()!);
+  const visibleDates = new Set(keys);
+  const windowKey = `${dates[0].zoneName}|${keys.join()}`;
 
-  const visibleDates = new Set<string>();
-  for (const d of dates) {
-    visibleDates.add(d.toISODate()!);
-  }
-
-  const noExclusions = new Set<string>();
   const firstVisibleDayStart = dates[0].startOf("day");
   const lastVisibleDayEnd = dates[dates.length - 1].endOf("day");
 
   // padded so events near the edge survive whatever zone their days are in
   const windowStart = firstVisibleDayStart.toMillis() - WINDOW_PAD_MS;
   const windowEnd = lastVisibleDayEnd.toMillis() + WINDOW_PAD_MS;
+
+  const map = new Map<string, CalendarEvent[]>();
 
   for (const e of events) {
     if (!e.id) continue;
@@ -283,27 +330,37 @@ function getBaseEventMap(events: CalendarEvent[], dates: DateTime[]) {
       e.end.toMillis() < windowStart || e.start.toMillis() > windowEnd;
     if (outsideWindow && !e.repeat) continue;
 
-    if (!outsideWindow) {
-      const base =
-        e.isTask && e.repeat
-          ? {
-              ...e,
-              completed: resolveInstanceCompleted(e, e.start.toISODate()!),
-            }
-          : e;
+    let windows = placementCache.get(e);
+    if (!windows) placementCache.set(e, (windows = new Map()));
 
-      mapEventToDates(map, base, visibleDates);
+    let placements = windows.get(windowKey);
+    if (!placements) {
+      placements = expandEvent(
+        e,
+        visibleDates,
+        firstVisibleDayStart,
+        lastVisibleDayEnd,
+        outsideWindow,
+      );
+      if (windows.size >= MAX_CACHED_WINDOWS)
+        windows.delete(windows.keys().next().value!);
+      windows.set(windowKey, placements);
     }
 
-    processRepeats(
-      map,
-      e,
-      visibleDates,
-      firstVisibleDayStart,
-      lastVisibleDayEnd,
-      noExclusions,
-    );
+    for (const [key, ev] of placements) mapEventToDate(map, key, ev);
   }
+
+  const previous = windowResults.get(windowKey);
+  if (previous) {
+    for (const [key, dayEvents] of map) {
+      const before = previous.get(key);
+      if (before && sameItems(before, dayEvents)) map.set(key, before);
+    }
+  }
+  windowResults.delete(windowKey);
+  windowResults.set(windowKey, map);
+  if (windowResults.size > MAX_CACHED_WINDOWS)
+    windowResults.delete(windowResults.keys().next().value!);
 
   baseEventMapCache.events = events;
   baseEventMapCache.dates = dates;
