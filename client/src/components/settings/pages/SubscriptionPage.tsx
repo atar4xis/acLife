@@ -65,15 +65,19 @@ export default function SubscriptionPage({
             </Button>
           </Field>
           <FieldDescription>
-            Change plan, update payment details, or cancel your subscription
-            via Stripe.
+            Change plan, update payment details, or cancel your subscription via
+            Stripe.
           </FieldDescription>
         </div>
       </Section>
 
       <Separator />
 
-      <Section id="invoices" label={sectionLabel("invoices")} sectionRefs={sectionRefs}>
+      <Section
+        id="invoices"
+        label={sectionLabel("invoices")}
+        sectionRefs={sectionRefs}
+      >
         <div className="flex flex-col gap-1.5">
           <Field orientation="responsive">
             <FieldTitle>{settingLabel("subscription-invoices")}</FieldTitle>

@@ -208,9 +208,7 @@ function ChangePasswordDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field>
-            <FieldLabel htmlFor="current-password">
-              Current password
-            </FieldLabel>
+            <FieldLabel htmlFor="current-password">Current password</FieldLabel>
             <Input
               id="current-password"
               type="password"
@@ -371,10 +369,7 @@ function AccountSection({ sectionRefs }: { sectionRefs: SectionRefs }) {
           <div className="flex flex-auto items-center gap-1.5">
             <FieldTitle>{settingLabel("account-password")}</FieldTitle>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setPasswordDialogOpen(true)}
-          >
+          <Button variant="outline" onClick={() => setPasswordDialogOpen(true)}>
             Change password
           </Button>
         </Field>

@@ -12,14 +12,7 @@ export interface StorageAdapter<T extends object> {
 export type UnlockMethod = "password" | "pin" | "stay-unlocked";
 
 export type AutoLockOption =
-  | "disabled"
-  | "focus"
-  | "5m"
-  | "10m"
-  | "15m"
-  | "30m"
-  | "45m"
-  | "1h";
+  "disabled" | "focus" | "5m" | "10m" | "15m" | "30m" | "45m" | "1h";
 
 export interface WrappedKeyPair {
   salt: string;

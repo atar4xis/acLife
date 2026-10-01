@@ -68,15 +68,9 @@ export function EmailVerificationRequired({
               "Resend email"
             )}
           </Button>
-          {error && (
-            <span className="text-sm text-destructive">
-              {error}
-            </span>
-          )}
+          {error && <span className="text-sm text-destructive">{error}</span>}
           {success && !error && (
-            <span className="text-sm text-success">
-              {success}
-            </span>
+            <span className="text-sm text-success">{success}</span>
           )}
           <Button variant="outline" onClick={onBack}>
             Back to login

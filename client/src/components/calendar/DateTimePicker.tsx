@@ -34,11 +34,7 @@ export function DateTimePicker({
             className="data-[empty=true]:text-muted-foreground justify-start text-left font-normal"
           >
             <CalendarIcon />
-            {value ? (
-              zoned!.toFormat("dd LLL yyyy")
-            ) : (
-              <span>Pick a date</span>
-            )}
+            {value ? zoned!.toFormat("dd LLL yyyy") : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">

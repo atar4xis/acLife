@@ -20,9 +20,7 @@ export default function TimezoneChangeDialog() {
       setSetting: s.setSetting,
     }),
   );
-  const [detectedTimezone, setDetectedTimezone] = useState<string | null>(
-    null,
-  );
+  const [detectedTimezone, setDetectedTimezone] = useState<string | null>(null);
 
   useEffect(() => {
     const current = getDeviceTimezone();
@@ -33,7 +31,8 @@ export default function TimezoneChangeDialog() {
   }, []);
 
   const dismiss = () => {
-    if (detectedTimezone) setSetting("lastSeenDeviceTimezone", detectedTimezone);
+    if (detectedTimezone)
+      setSetting("lastSeenDeviceTimezone", detectedTimezone);
     setDetectedTimezone(null);
   };
 

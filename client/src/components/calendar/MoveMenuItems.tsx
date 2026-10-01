@@ -137,7 +137,10 @@ export function MoveMenuItems({
           <SubTrigger>Next...</SubTrigger>
           <SubContent>
             {MOVE_UNIT_STEPS.map(({ label, unit }) => (
-              <Item key={`next-${unit}`} onClick={() => moveBy("forward", unit, 1)}>
+              <Item
+                key={`next-${unit}`}
+                onClick={() => moveBy("forward", unit, 1)}
+              >
                 {label}
               </Item>
             ))}
@@ -148,7 +151,10 @@ export function MoveMenuItems({
           <SubTrigger>Previous...</SubTrigger>
           <SubContent>
             {MOVE_UNIT_STEPS.map(({ label, unit }) => (
-              <Item key={`prev-${unit}`} onClick={() => moveBy("backward", unit, 1)}>
+              <Item
+                key={`prev-${unit}`}
+                onClick={() => moveBy("backward", unit, 1)}
+              >
                 {label}
               </Item>
             ))}
@@ -158,7 +164,9 @@ export function MoveMenuItems({
         <Separator />
 
         <Item onClick={() => moveToFreeSlot("forward")}>Next free slot</Item>
-        <Item onClick={() => moveToFreeSlot("backward")}>Previous free slot</Item>
+        <Item onClick={() => moveToFreeSlot("backward")}>
+          Previous free slot
+        </Item>
       </SubContent>
     </Sub>
   );

@@ -23,8 +23,7 @@ export function ConfirmEmailPrompt({
       if (res.success) {
         toast.success("Email verified. You can now log in.");
       } else {
-        toast.error(
-          res.message || "Email verification failed.");
+        toast.error(res.message || "Email verification failed.");
       }
     } finally {
       setLoading(false);
