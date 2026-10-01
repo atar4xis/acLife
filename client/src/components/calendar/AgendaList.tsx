@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { SidebarGroup, SidebarGroupLabel } from "../ui/sidebar";
-import { useCalendar } from "@/context/CalendarContext";
+import { useEventList } from "@/context/CalendarContext";
 import { getRelativeDays } from "@/lib/calendar/date";
 import { DateTime } from "luxon";
 import { getEventMap } from "@/lib/calendar/event";
@@ -10,11 +10,12 @@ import type { CalendarEvent } from "@/types/calendar/Event";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 
 export default memo(function AgendaList() {
-  const { calendarEvents } = useCalendar();
-  const { agendaRangeDays } = useCalendarSettings((s) => ({
+  const calendarEvents = useEventList();
+  const { agendaRangeDays, defaultTimezone } = useCalendarSettings((s) => ({
     agendaRangeDays: s.agendaRangeDays,
+    defaultTimezone: s.defaultTimezone,
   }));
-  const [now, setNow] = useState(DateTime.now());
+  const [now, setNow] = useState(() => DateTime.now().setZone(defaultTimezone));
   const visibleDays = useMemo(
     () => getRelativeDays(now, agendaRangeDays),
     [now, agendaRangeDays],
@@ -54,9 +55,13 @@ export default memo(function AgendaList() {
   }, [eventMap]);
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(DateTime.now()), 60000);
+    setNow((prev) => prev.setZone(defaultTimezone));
+    const interval = setInterval(
+      () => setNow(DateTime.now().setZone(defaultTimezone)),
+      60000,
+    );
     return () => clearInterval(interval);
-  }, []);
+  }, [defaultTimezone]);
 
   return visibleDays.map((d) => {
     const key = d.date.toISODate()!;

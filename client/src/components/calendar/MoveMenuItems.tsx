@@ -2,7 +2,8 @@ import type { ComponentType, ReactNode } from "react";
 import { toast } from "sonner";
 import { MoveIcon } from "lucide-react";
 import type { CalendarEvent } from "@/types/calendar/Event";
-import { useCalendar } from "@/context/CalendarContext";
+import { useCalendarActions, useEventList } from "@/context/CalendarContext";
+import { useSelectedEvents } from "@/hooks/useSelection";
 import { eventKey } from "@/lib/calendar/event";
 import { isChainParent } from "@/lib/calendar/recurrence";
 import {
@@ -32,7 +33,10 @@ export function MoveMenuItems({
   onMove: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   menu: MoveMenuKit;
 }) {
-  const { calendarEvents, selectedEvents, clearSelection } = useCalendar();
+  const calendarEvents = useEventList();
+  const { selection } = useCalendarActions();
+  const selectedEvents = useSelectedEvents(selection);
+  const clearSelection = selection.clear;
   const { Sub, SubTrigger, SubContent, Item, Separator } = menu;
 
   const batch =

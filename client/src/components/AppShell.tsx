@@ -1,11 +1,11 @@
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { ViewMode } from "@/types/calendar/ViewMode";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AppCalendar from "@/components/calendar/Calendar";
 import AppSidebar from "@/components/Sidebar";
 import { useStorage } from "@/context/StorageContext";
 import { useUser } from "@/context/UserContext";
-import { useCalendar } from "@/context/CalendarContext";
+import { useCalendarActions } from "@/context/CalendarContext";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { Spinner } from "./ui/spinner";
 import { useCalendarEvents } from "@/hooks/calendar/useCalendarEvents";
@@ -35,7 +35,7 @@ export default function AppShell() {
     undefined,
   );
   const { masterKey, bucketKey, user } = useUser();
-  const { currentDate, setCurrentDate } = useCalendar();
+  const { setCurrentDate, getCurrentDate } = useCalendarActions();
   const { defaultTimezone } = useCalendarSettings((s) => ({
     defaultTimezone: s.defaultTimezone,
   }));
@@ -45,6 +45,11 @@ export default function AppShell() {
     useCalendarEvents(user, masterKey, bucketKey);
 
   const subscriptionMissing = isSubscriptionMissing(user, serverMeta);
+
+  const openSettings = useCallback((categoryId?: string) => {
+    setSettingsCategory(categoryId);
+    setSettingsOpen(true);
+  }, []);
 
   // load calendar events
   useEffect(() => {
@@ -59,7 +64,7 @@ export default function AppShell() {
           user,
           masterKey,
           bucketKey,
-          currentDate,
+          getCurrentDate(),
         );
         setCalEvents(events);
       })(),
@@ -75,7 +80,7 @@ export default function AppShell() {
 
   // re-zone the visible date so day/week boundaries follow the new default
   useEffect(() => {
-    setCurrentDate(currentDate.setZone(defaultTimezone));
+    setCurrentDate((date) => date.setZone(defaultTimezone));
 
     // eslint-disable-next-line
   }, [defaultTimezone]);
@@ -117,12 +122,7 @@ export default function AppShell() {
 
   return (
     <>
-      <AppSidebar
-        onOpenSettings={(categoryId) => {
-          setSettingsCategory(categoryId);
-          setSettingsOpen(true);
-        }}
-      />
+      <AppSidebar onOpenSettings={openSettings} />
       <SettingsDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}

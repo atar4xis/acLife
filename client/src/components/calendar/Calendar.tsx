@@ -1,4 +1,5 @@
 import {
+  memo,
   useRef,
   useState,
   useMemo,
@@ -27,7 +28,12 @@ import type {
 } from "@/types/calendar/Event";
 import EventBlock from "./EventBlock";
 import DragOverlay from "./DragOverlay";
-import { useCalendar } from "@/context/CalendarContext";
+import {
+  useCalendarActions,
+  useCurrentDate,
+  useEditing,
+  useEventList,
+} from "@/context/CalendarContext";
 import {
   EVENT_COLOR_FALLBACK,
   MAX_EVENT_COLOR_PRESETS,
@@ -48,6 +54,7 @@ import { createGridFocusStore } from "@/lib/calendar/gridFocus";
 import useGridKeyboard from "@/hooks/useGridKeyboard";
 import { useKeyboardMode } from "@/hooks/useGridFocus";
 import { SpokenMessage, SlotIndicator } from "./GridFocus";
+import ScrollThumb from "./ScrollThumb";
 import {
   getTimezoneHourLabel,
   getTimezoneShortLabel,
@@ -424,7 +431,7 @@ const applyDragDelta = (
 /* -------------------------------------------------------------------------- */
 
 // TODO: clean this up, separate into smaller components and hooks
-export default function AppCalendar({
+export default memo(function AppCalendar({
   events,
   mode,
   setMode,
@@ -434,19 +441,20 @@ export default function AppCalendar({
   saveDebounceMs = 100,
 }: CalendarProps) {
   const {
-    editingEvent,
-    editingEventDay,
-    currentDate,
-    calendarEvents,
     setCurrentDate,
     dispatch,
     setEditingEvent,
-    selectedEvents,
-    toggleSelection,
-    selectEvents,
-    clearSelection,
+    selection,
     setOnEventEdit,
-  } = useCalendar();
+  } = useCalendarActions();
+  const currentDate = useCurrentDate();
+  const calendarEvents = useEventList();
+  const { event: editingEvent, day: editingEventDay } = useEditing();
+  const {
+    toggle: toggleSelection,
+    select: selectEvents,
+    clear: clearSelection,
+  } = selection;
   const [isDragging, setIsDragging] = useState(false);
   const [hourHeight, setHourHeight] = useState(60);
   const [updateRepeatDialogOpen, setUpdateRepeatDialogOpen] = useState(false);
@@ -522,14 +530,6 @@ export default function AppCalendar({
   const gridRef = useRef<HTMLDivElement>(null);
   const [focusStore] = useState(createGridFocusStore);
   const keyboardMode = useKeyboardMode(focusStore);
-  const [scrollThumb, setScrollThumb] = useState<{
-    top: number;
-    height: number;
-  } | null>(null);
-  const scrollThumbDragRef = useRef<{
-    startY: number;
-    startScrollTop: number;
-  } | null>(null);
   const dragRef = useRef<EventDragRef>(null);
   const gridTouchRef = useRef<GridTouchRef | null>(null);
   const eventMapRef = useRef<Map<string, CalendarEvent[]> | null>(null);
@@ -538,8 +538,14 @@ export default function AppCalendar({
 
   const evPendingUpdateRef = useRef<CalendarEvent | null>(null);
   const calendarEventsRef = useRef(calendarEvents);
-  const selectedEventsRef = useRef(selectedEvents);
-  selectedEventsRef.current = selectedEvents;
+  const selectedEventsRef = useRef(selection.get());
+
+  useEffect(() => {
+    selectedEventsRef.current = selection.get();
+    return selection.subscribe(() => {
+      selectedEventsRef.current = selection.get();
+    });
+  }, [selection]);
 
   const historyRef = useRef<{
     past: CalendarEvent[][];
@@ -1771,105 +1777,6 @@ export default function AppCalendar({
     hourHeightRef.current = hourHeight;
   }, [hourHeight]);
 
-  // custom scrollbar thumb
-  const [scrollThumbVisible, setScrollThumbVisible] = useState(false);
-  const scrollThumbHideTimerRef = useRef<number | null>(null);
-
-  const showScrollThumb = useCallback(() => {
-    setScrollThumbVisible(true);
-    if (scrollThumbHideTimerRef.current !== null) {
-      window.clearTimeout(scrollThumbHideTimerRef.current);
-    }
-    scrollThumbHideTimerRef.current = window.setTimeout(() => {
-      setScrollThumbVisible(false);
-    }, 1500);
-  }, []);
-
-  useEffect(
-    () => () => {
-      if (scrollThumbHideTimerRef.current !== null) {
-        window.clearTimeout(scrollThumbHideTimerRef.current);
-      }
-    },
-    [],
-  );
-
-  const updateScrollThumb = useCallback(() => {
-    const container = gridRef.current;
-    if (!container) return;
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    if (scrollHeight <= clientHeight) {
-      setScrollThumb(null);
-      return;
-    }
-    const height = Math.max((clientHeight / scrollHeight) * clientHeight, 24);
-    const top =
-      (scrollTop / (scrollHeight - clientHeight)) * (clientHeight - height);
-    setScrollThumb({ top, height });
-    showScrollThumb();
-  }, [showScrollThumb]);
-
-  useEffect(() => {
-    updateScrollThumb();
-  }, [updateScrollThumb, hourHeight, mode, visibleDays]);
-
-  useEffect(() => {
-    const container = gridRef.current;
-    if (!container) return;
-    container.addEventListener("scroll", updateScrollThumb);
-    const observer = new ResizeObserver(updateScrollThumb);
-    observer.observe(container);
-    return () => {
-      container.removeEventListener("scroll", updateScrollThumb);
-      observer.disconnect();
-    };
-  }, [updateScrollThumb]);
-
-  const handleScrollThumbPointerDown = useCallback((e: React.PointerEvent) => {
-    const container = gridRef.current;
-    if (!container) return;
-    e.preventDefault();
-    e.stopPropagation();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    scrollThumbDragRef.current = {
-      startY: e.clientY,
-      startScrollTop: container.scrollTop,
-    };
-    setScrollThumbVisible(true);
-    if (scrollThumbHideTimerRef.current !== null) {
-      window.clearTimeout(scrollThumbHideTimerRef.current);
-      scrollThumbHideTimerRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    const handlePointerMove = (e: PointerEvent) => {
-      const drag = scrollThumbDragRef.current;
-      const container = gridRef.current;
-      if (!drag || !container) return;
-      const { scrollHeight, clientHeight } = container;
-      const trackHeight = clientHeight - (scrollThumb?.height ?? 0);
-      if (trackHeight <= 0) return;
-      const deltaY = e.clientY - drag.startY;
-      const deltaScroll =
-        (deltaY / trackHeight) * (scrollHeight - clientHeight);
-      container.scrollTop = Math.min(
-        Math.max(drag.startScrollTop + deltaScroll, 0),
-        scrollHeight - clientHeight,
-      );
-    };
-    const handlePointerUp = () => {
-      if (scrollThumbDragRef.current) showScrollThumb();
-      scrollThumbDragRef.current = null;
-    };
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-  }, [scrollThumb, showScrollThumb]);
-
   // and calendar events
   useEffect(() => {
     calendarEventsRef.current = calendarEvents;
@@ -2208,9 +2115,9 @@ export default function AppCalendar({
   // headers in day/week view, one for every visibleDay
   const dayWeekHeaders = useMemo(
     () =>
-      visibleDays.map((d) => (
+      visibleDays.map((d, dayIndex) => (
         <HeaderCell
-          key={d.label}
+          key={dayIndex}
           className={cn(
             "select-none",
             headerBottom && "top-auto bottom-0",
@@ -2307,7 +2214,7 @@ export default function AppCalendar({
 
               return (
                 <GridCell
-                  key={`${d.label}-${hour}`}
+                  key={`${dayIndex}-${hour}`}
                   day={dayIndex}
                   onCellTap={startNewEvent}
                 >
@@ -2346,9 +2253,9 @@ export default function AppCalendar({
                       />
 
                       {/* today's events */}
-                      {dayEvents.map((event, idx) => (
+                      {dayEvents.map((event) => (
                         <EventBlock
-                          key={(event._instanceId ?? event.id) + "_" + idx}
+                          key={eventKey(event)}
                           event={event}
                           day={dayIndex}
                           date={d.date}
@@ -2363,7 +2270,7 @@ export default function AppCalendar({
                               ? editingEventFirstDayIndex === dayIndex
                               : editingEventDay === dayIndex)
                           }
-                          selected={selectedEvents.has(eventKey(event))}
+                          selection={selection}
                           focusStore={focusStore}
                           restoreFocus={restoreFocus}
                           onPointerDown={onEventPointerDown}
@@ -2371,6 +2278,7 @@ export default function AppCalendar({
                           onEventMove={onEventMove}
                           onEventDelete={onEventDelete}
                           onDuplicate={onEventDuplicate}
+                          setEditingEvent={setEditingEvent}
                         />
                       ))}
                     </div>
@@ -2394,6 +2302,7 @@ export default function AppCalendar({
       onEventMove,
       onEventDelete,
       onEventDuplicate,
+      setEditingEvent,
       onEventPointerDown,
       startNewEvent,
       focusStore,
@@ -2402,7 +2311,7 @@ export default function AppCalendar({
       editingEvent,
       editingEventDay,
       editingEventFirstDayIndex,
-      selectedEvents,
+      selection,
       settings.timezones,
       tzStickyStyle,
       labelsRight,
@@ -2621,7 +2530,6 @@ export default function AppCalendar({
           onTouchEnd={gridTouchEnd}
           onPointerMove={(e) => {
             gridPointerRef.current = { x: e.clientX, y: e.clientY };
-            showScrollThumb();
           }}
         >
           {!headerBottom && headerRow}
@@ -2645,18 +2553,12 @@ export default function AppCalendar({
           )}
         </div>
 
-        {scrollThumb && (
-          <div
-            className={cn(
-              "absolute right-0.5 w-1 rounded-full bg-foreground/20 hover:bg-foreground/40 z-40 transition-opacity duration-300",
-              scrollThumbVisible
-                ? "opacity-100"
-                : "opacity-0 pointer-events-none",
-            )}
-            style={{ top: scrollThumb.top, height: scrollThumb.height }}
-            onPointerDown={handleScrollThumbPointerDown}
-          />
-        )}
+        <ScrollThumb
+          gridRef={gridRef}
+          hourHeight={hourHeight}
+          mode={mode}
+          visibleDays={visibleDays}
+        />
       </div>
 
       <RecurringUpdateDialog
@@ -2990,4 +2892,4 @@ export default function AppCalendar({
       />
     </main>
   );
-}
+});

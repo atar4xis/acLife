@@ -3,6 +3,7 @@ import { DateTime } from "luxon";
 import EventBlock from "@/components/calendar/EventBlock";
 import EventEditor from "@/components/calendar/EventEditor";
 import { createGridFocusStore } from "@/lib/calendar/gridFocus";
+import { createSelectionStore } from "@/lib/calendar/selection";
 import type { CalendarEvent } from "@/types/calendar/Event";
 
 const PREVIEW_EVENT: CalendarEvent = {
@@ -31,6 +32,7 @@ export default memo(function EventEditorPreview({
   lineOpacity: number;
 }) {
   const [focusStore] = useState(createGridFocusStore);
+  const [selection] = useState(createSelectionStore);
 
   return (
     <div
@@ -52,7 +54,7 @@ export default memo(function EventEditorPreview({
                 date={PREVIEW_EVENT.start}
                 style={PREVIEW_BLOCK_STYLE}
                 editing={false}
-                selected={false}
+                selection={selection}
                 focusStore={focusStore}
                 restoreFocus={noop}
                 onPointerDown={noop}
@@ -60,6 +62,7 @@ export default memo(function EventEditorPreview({
                 onEventMove={noop}
                 onEventDelete={noop}
                 onDuplicate={noop}
+                setEditingEvent={noop}
               />
             )}
           </div>

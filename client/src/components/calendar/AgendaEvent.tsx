@@ -1,4 +1,4 @@
-import { useCalendar } from "@/context/CalendarContext";
+import { useCalendarActions } from "@/context/CalendarContext";
 import { cn } from "@/lib/utils";
 import { EVENT_COLOR_FALLBACK } from "@/context/CalendarSettingsContext";
 import type { CalendarEvent } from "@/types/calendar/Event";
@@ -10,7 +10,7 @@ type AgendaEventProps = {
   event: CalendarEvent;
 };
 export default function AgendaEvent({ event }: AgendaEventProps) {
-  const { setEditingEvent, setCurrentDate, onEventEdit } = useCalendar();
+  const { setEditingEvent, setCurrentDate, onEventEdit } = useCalendarActions();
   const { setOpenMobile } = useSidebar();
   const [now, setNow] = useState(Date.now());
   const { eventColor, startTimeFormat, endTimeFormat } = useMemo(() => {

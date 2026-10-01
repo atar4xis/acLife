@@ -24,20 +24,23 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { CLIENT_ID } from "@/lib/clientId";
 
+const withoutPrivateKeys = (event: CalendarEvent) =>
+  Object.fromEntries(
+    Object.entries(event).filter(([key]) => !key.startsWith("_")),
+  ) as WithoutPrivateKeys<CalendarEvent>;
+
 export const useCalendarEvents = (
   user: User | null,
   masterKey: CryptoKey | null,
   bucketKey: CryptoKey | null,
 ) => {
   const [saving, setSaving] = useState(false);
-  const storage = useStorage();
+  const { get: getStored, set: setStored } = useStorage();
   const { post } = useApi();
 
   const getCachedEvents = useCallback(
     async (masterKey: CryptoKey): Promise<CalendarEvent[]> => {
-      if (!storage) return [];
-
-      const cached = storage.get("cachedEvents");
+      const cached = getStored("cachedEvents");
       const cachedEvents: CalendarEvent[] = [];
 
       if (cached) {
@@ -56,7 +59,7 @@ export const useCalendarEvents = (
 
       return cachedEvents;
     },
-    [storage],
+    [getStored],
   );
 
   const syncBuckets = useCallback(
@@ -65,7 +68,6 @@ export const useCalendarEvents = (
       masterKey: CryptoKey,
       bucketKey: CryptoKey,
     ): Promise<CalendarEvent[]> => {
-      if (!storage) return [];
       // get cached events
       const cachedEvents = await getCachedEvents(masterKey);
 
@@ -125,7 +127,7 @@ export const useCalendarEvents = (
         const finalEvents = Array.from(cachedMap.values());
 
         // save the new cache
-        storage.set(
+        setStored(
           "cachedEvents",
           await encryptOfflineEvents(finalEvents, masterKey),
         );
@@ -153,7 +155,7 @@ export const useCalendarEvents = (
         return [];
       }
     },
-    [post, storage, getCachedEvents],
+    [post, setStored, getCachedEvents],
   );
 
   const syncEvents = useCallback(
@@ -183,8 +185,6 @@ export const useCalendarEvents = (
       bucketKey: CryptoKey | null,
       currentDate: DateTime,
     ): Promise<CalendarEvent[]> => {
-      if (!storage) return [];
-
       // for online users, we sync events with the server
       if (user.type === "online") {
         try {
@@ -199,14 +199,14 @@ export const useCalendarEvents = (
 
       // for offline users, we just decrypt from storage
       try {
-        const events = storage.get("offlineEvents");
+        const events = getStored("offlineEvents");
         return events ? await decryptOfflineEvents(events, masterKey) : [];
       } catch {
         toast.error("Failed to decrypt calendar events.");
         return [];
       }
     },
-    [storage, syncEvents, getCachedEvents],
+    [getStored, syncEvents, getCachedEvents],
   );
 
   const saveEvents = useCallback(
@@ -216,7 +216,7 @@ export const useCalendarEvents = (
       setSaving(true);
 
       try {
-        if (!storage || !masterKey) return;
+        if (!masterKey) return;
 
         if (user?.type === "online") {
           if (!bucketKey) return;
@@ -225,14 +225,7 @@ export const useCalendarEvents = (
           // encrypt only added/updated events
           const toEncrypt = changes
             .filter((c) => c.type !== "deleted")
-            .map(
-              (c) =>
-                Object.fromEntries(
-                  Object.entries(c.event!).filter(
-                    ([key]) => !key.startsWith("_"),
-                  ),
-                ) as WithoutPrivateKeys<CalendarEvent>,
-            );
+            .map((c) => withoutPrivateKeys(c.event!));
           const encryptedEvents = await encryptEvents(
             toEncrypt,
             masterKey,
@@ -267,7 +260,7 @@ export const useCalendarEvents = (
             }
 
             // update local cachedEvents with the new encrypted events
-            const stored = storage.get("cachedEvents");
+            const stored = getStored("cachedEvents");
             const cached = stored
               ? (await decryptOfflineEvents(stored, masterKey)).filter(
                   (ev) => ev.start.isValid && ev.end.isValid,
@@ -282,7 +275,11 @@ export const useCalendarEvents = (
             // merge changes
             for (const c of changes as EventChange[]) {
               if (c.type === "deleted") cachedMap.delete(c.id!);
-              else cachedMap.set(c.event!.id, c.event!);
+              else
+                cachedMap.set(
+                  c.event!.id,
+                  withoutPrivateKeys(c.event!) as CalendarEvent,
+                );
             }
 
             // encrypt new values
@@ -292,7 +289,7 @@ export const useCalendarEvents = (
             );
 
             // store in cache
-            storage.set("cachedEvents", encryptedEvents);
+            setStored("cachedEvents", encryptedEvents);
 
             setSaving(false);
             cb();
@@ -304,7 +301,7 @@ export const useCalendarEvents = (
           const allEvents = changes as CalendarEvent[];
           const encrypted = await encryptOfflineEvents(allEvents, masterKey);
 
-          storage.set("offlineEvents", encrypted);
+          setStored("offlineEvents", encrypted);
 
           setSaving(false);
           cb();
@@ -314,7 +311,7 @@ export const useCalendarEvents = (
         setSaving(false);
       }
     },
-    [masterKey, bucketKey, post, storage, user?.type],
+    [masterKey, bucketKey, post, getStored, setStored, user?.type],
   );
 
   return { loadEvents, syncEvents, syncBuckets, saveEvents, saving };

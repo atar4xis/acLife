@@ -2,127 +2,139 @@ import { calendarReducer } from "@/reducers/calendarReducer";
 import type { CalendarAction } from "@/types/calendar/Action";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { WithChildren } from "@/types/Props";
-import { eventKey } from "@/lib/calendar/event";
+import {
+  createSelectionStore,
+  type SelectionStore,
+} from "@/lib/calendar/selection";
 import { DateTime } from "luxon";
 import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useReducer,
+  useRef,
   useState,
   type Dispatch,
+  type SetStateAction,
 } from "react";
 
-type CalendarContextValue = {
-  currentDate: DateTime;
-  setCurrentDate: (date: DateTime) => void;
-  calendarEvents: CalendarEvent[];
+type EditingState = { event: CalendarEvent | null; day: number | null };
+
+type EventEditHandler = (
+  originalEvent: CalendarEvent,
+  event: CalendarEvent,
+) => void;
+
+type CalendarActions = {
   dispatch: Dispatch<CalendarAction>;
-  editingEvent: CalendarEvent | null;
-  editingEventDay: number | null;
+  setCurrentDate: Dispatch<SetStateAction<DateTime>>;
+  getCurrentDate: () => DateTime;
   setEditingEvent: (event: CalendarEvent | null, day?: number | null) => void;
-  lastPointer: { x: number; y: number } | null;
-  setLastPointer: (p: { x: number; y: number } | null) => void;
-  selectedEvents: Map<string, CalendarEvent>;
-  toggleSelection: (event: CalendarEvent) => void;
-  selectEvents: (events: CalendarEvent[]) => void;
-  clearSelection: () => void;
-  onEventEdit: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
-  setOnEventEdit: (
-    handler: (originalEvent: CalendarEvent, event: CalendarEvent) => void,
-  ) => void;
+  selection: SelectionStore;
+  onEventEdit: EventEditHandler;
+  setOnEventEdit: (handler: EventEditHandler) => void;
 };
 
-const CalendarContext = createContext<CalendarContextValue | null>(null);
+const ActionsContext = createContext<CalendarActions | null>(null);
+const DateContext = createContext<DateTime | null>(null);
+const EventsContext = createContext<CalendarEvent[] | null>(null);
+const EditingContext = createContext<EditingState | null>(null);
 
 export function CalendarProvider({ children }: WithChildren) {
-  const [currentDate, setCurrentDate] = useState(DateTime.now());
+  const [currentDate, setCurrentDateState] = useState(DateTime.now());
   const [calendarEvents, dispatch] = useReducer(calendarReducer, []);
-  const [editingEvent, setEditingEventState] = useState<CalendarEvent | null>(
-    null,
+  const [editing, setEditing] = useState<EditingState>({
+    event: null,
+    day: null,
+  });
+  const [selection] = useState(createSelectionStore);
+
+  const currentDateRef = useRef(currentDate);
+  const getCurrentDate = useCallback(() => currentDateRef.current, []);
+  const setCurrentDate = useCallback((value: SetStateAction<DateTime>) => {
+    const next =
+      typeof value === "function" ? value(currentDateRef.current) : value;
+    currentDateRef.current = next;
+    setCurrentDateState(next);
+  }, []);
+
+  // a ref keeps onEventEdit stable while the calendar re-registers its handler
+  const onEventEditRef = useRef<EventEditHandler>(() => {});
+  const onEventEdit = useCallback<EventEditHandler>(
+    (originalEvent, event) => onEventEditRef.current(originalEvent, event),
+    [],
   );
-  const [editingEventDay, setEditingEventDay] = useState<number | null>(null);
-  const [lastPointer, setLastPointer] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
+  const setOnEventEdit = useCallback((handler: EventEditHandler) => {
+    onEventEditRef.current = handler;
+  }, []);
 
-  const [selectedEvents, setSelectedEvents] = useState<
-    Map<string, CalendarEvent>
-  >(new Map());
-
-  const [onEventEdit, setOnEventEditState] = useState<
-    (originalEvent: CalendarEvent, event: CalendarEvent) => void
-  >(() => () => {});
-
-  const setOnEventEdit = useCallback(
-    (handler: (originalEvent: CalendarEvent, event: CalendarEvent) => void) => {
-      setOnEventEditState(() => handler);
+  const setEditingEvent = useCallback(
+    (event: CalendarEvent | null, day?: number | null) => {
+      setEditing((prev) =>
+        prev.event === event && prev.day === (day ?? null)
+          ? prev
+          : { event, day: day ?? null },
+      );
     },
     [],
   );
 
-  const setEditingEvent = (
-    event: CalendarEvent | null,
-    day?: number | null,
-  ) => {
-    setEditingEventState(event);
-    setEditingEventDay(day ?? null);
-  };
-
-  const toggleSelection = useCallback((event: CalendarEvent) => {
-    setSelectedEvents((prev) => {
-      const next = new Map(prev);
-      const key = eventKey(event);
-      if (!next.delete(key)) next.set(key, event);
-      return next;
-    });
-  }, []);
-
-  const selectEvents = useCallback((events: CalendarEvent[]) => {
-    setSelectedEvents((prev) => {
-      const next = new Map(events.map((e) => [eventKey(e), e]));
-
-      const unchanged =
-        next.size === prev.size && [...next.keys()].every((k) => prev.has(k));
-
-      return unchanged ? prev : next;
-    });
-  }, []);
-
-  const clearSelection = useCallback(() => {
-    setSelectedEvents((prev) => (prev.size === 0 ? prev : new Map()));
-  }, []);
+  const actions = useMemo(
+    () => ({
+      dispatch,
+      setCurrentDate,
+      getCurrentDate,
+      setEditingEvent,
+      selection,
+      onEventEdit,
+      setOnEventEdit,
+    }),
+    [
+      setCurrentDate,
+      getCurrentDate,
+      setEditingEvent,
+      selection,
+      onEventEdit,
+      setOnEventEdit,
+    ],
+  );
 
   return (
-    <CalendarContext.Provider
-      value={{
-        currentDate,
-        calendarEvents,
-        editingEvent,
-        editingEventDay,
-        dispatch,
-        setCurrentDate,
-        setEditingEvent,
-        lastPointer,
-        setLastPointer,
-        selectedEvents,
-        toggleSelection,
-        selectEvents,
-        clearSelection,
-        onEventEdit,
-        setOnEventEdit,
-      }}
-    >
-      {children}
-    </CalendarContext.Provider>
+    <ActionsContext.Provider value={actions}>
+      <DateContext.Provider value={currentDate}>
+        <EventsContext.Provider value={calendarEvents}>
+          <EditingContext.Provider value={editing}>
+            {children}
+          </EditingContext.Provider>
+        </EventsContext.Provider>
+      </DateContext.Provider>
+    </ActionsContext.Provider>
   );
 }
 
+const useRequired = <T,>(value: T | null, hook: string): T => {
+  if (value === null)
+    throw new Error(`${hook} must be used within a CalendarProvider`);
+  return value;
+};
+
 // eslint-disable-next-line
-export function useCalendar() {
-  const context = useContext(CalendarContext);
-  if (!context)
-    throw new Error("useCalendar must be used within a CalendarProvider");
-  return context;
+export function useCalendarActions() {
+  return useRequired(useContext(ActionsContext), "useCalendarActions");
+}
+
+// eslint-disable-next-line
+export function useCurrentDate() {
+  return useRequired(useContext(DateContext), "useCurrentDate");
+}
+
+// eslint-disable-next-line
+export function useEventList() {
+  return useRequired(useContext(EventsContext), "useEventList");
+}
+
+// eslint-disable-next-line
+export function useEditing() {
+  return useRequired(useContext(EditingContext), "useEditing");
 }

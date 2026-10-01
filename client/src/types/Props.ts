@@ -4,6 +4,7 @@ import type { ReactNode, PointerEvent } from "react";
 import type { User } from "./User";
 import type { DateTime } from "luxon";
 import type { GridFocusStore } from "@/lib/calendar/gridFocus";
+import type { SelectionStore } from "@/lib/calendar/selection";
 
 export interface WithChildren {
   children?: ReactNode;
@@ -37,7 +38,7 @@ export interface EventBlockProps {
   date: DateTime;
   style: { top: number; left: number; width: number; height: number };
   editing: boolean;
-  selected: boolean;
+  selection: SelectionStore;
   focusStore: GridFocusStore;
   restoreFocus: (
     opener: Element | null,
@@ -54,4 +55,5 @@ export interface EventBlockProps {
   onEventMove: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   onEventDelete: (event: CalendarEvent) => void;
   onDuplicate: (event: CalendarEvent) => void;
+  setEditingEvent: (event: CalendarEvent | null, day?: number | null) => void;
 }

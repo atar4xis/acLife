@@ -17,19 +17,20 @@ import AppSidebar from "../../src/components/Sidebar.tsx";
 import { SidebarProvider } from "../../src/components/ui/sidebar.tsx";
 import {
   CalendarProvider,
-  useCalendar,
+  useCalendarActions,
+  useCurrentDate,
 } from "../../src/context/CalendarContext.tsx";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import { seedSettings } from "../settingsStorage.ts";
 
 function CurrentDate() {
   return (
-    <span data-testid="current">{useCalendar().currentDate.toISODate()}</span>
+    <span data-testid="current">{useCurrentDate().toISODate()}</span>
   );
 }
 
 function Seed({ events }: { events: CalendarEvent[] }) {
-  const { dispatch } = useCalendar();
+  const { dispatch } = useCalendarActions();
 
   useEffect(() => {
     events.forEach((event) => dispatch({ type: "add", event }));
@@ -97,6 +98,16 @@ describe("sidebar calendar", () => {
 
     expect(getByTestId("current")).toHaveTextContent("2026-03-20");
     expect(dayOf(container, "data-selected")).toBe("20");
+  });
+
+  it("keeps the day buttons mounted when the date changes", async () => {
+    const user = userEvent.setup();
+    const { getByRole } = renderSidebar("UTC", "2026-03-18T10:00:00Z");
+    const other = getByRole("button", { name: /March 25th/ });
+
+    await user.click(getByRole("button", { name: /March 20th/ }));
+
+    expect(other.isConnected).toBe(true);
   });
 });
 
@@ -176,6 +187,17 @@ describe("mini calendar settings", () => {
     unmount();
 
     render_({ miniCalendarEventBars: true }, [at(18, 9, "a")]);
+    expect(screen.getAllByTestId("event-bar")).toHaveLength(1);
+  });
+
+  it("keeps the day buttons and bars when picking a day in the viewed month", async () => {
+    const user = userEvent.setup();
+    render_({ miniCalendarEventBars: true }, [at(18, 9, "a")]);
+    const other = screen.getByRole("button", { name: /March 25th/ });
+
+    await user.click(screen.getByRole("button", { name: /March 20th/ }));
+
+    expect(other.isConnected).toBe(true);
     expect(screen.getAllByTestId("event-bar")).toHaveLength(1);
   });
 

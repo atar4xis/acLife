@@ -9,12 +9,24 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useCalendar } from "@/context/CalendarContext";
+import {
+  useCalendarActions,
+  useCurrentDate,
+  useEventList,
+} from "@/context/CalendarContext";
 import { Settings } from "lucide-react";
 import { DateTime } from "luxon";
 import UserDropdown from "./user/UserDropdown";
 import { useStorage } from "@/context/StorageContext";
-import { useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import AgendaList from "./calendar/AgendaList";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
@@ -24,38 +36,147 @@ import { getEventMap } from "@/lib/calendar/event";
 import { type BarSlots, barKey, layoutBars } from "@/lib/calendar/eventBars";
 import { EMPTY_ARRAY } from "@/lib/constants";
 
-export default function AppSidebar({
-  onOpenSettings,
+const START_MONTH = new Date(1900, 0);
+const END_MONTH = new Date(2100, 11);
+
+const toPickerMonth = (date: DateTime) => new Date(date.year, date.month - 1);
+
+const sameMonth = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+
+const DayBarsContext = createContext<{
+  bars: ReturnType<typeof layoutBars> | null;
+  bold: boolean;
+}>({ bars: null, bold: false });
+
+function MiniDayButton(props: React.ComponentProps<typeof CalendarDayButton>) {
+  const { bars, bold } = useContext(DayBarsContext);
+  const day = bars && fromPickerDate(props.day.date);
+
+  return (
+    <CalendarDayButton
+      {...props}
+      className={cn(
+        "relative",
+        bars && "@container pb-[56%]",
+        bold && "font-bold",
+      )}
+    >
+      {props.children}
+      {bars && day && (
+        <EventBars
+          layout={bars.get(day.toISODate()!)}
+          prev={bars.get(day.minus({ days: 1 }).toISODate()!)?.slots}
+          next={bars.get(day.plus({ days: 1 }).toISODate()!)?.slots}
+        />
+      )}
+    </CalendarDayButton>
+  );
+}
+
+// module scope keeps DayButton identity stable so day buttons keep focus
+const MINI_COMPONENTS ={ DayButton: MiniDayButton };
+
+const MiniCalendar = memo(function MiniCalendar({
+  onPick,
 }: {
-  onOpenSettings: (categoryId?: string) => void;
+  onPick: () => void;
 }) {
-  const { currentDate, setCurrentDate, calendarEvents } = useCalendar();
+  const currentDate = useCurrentDate();
+  const calendarEvents = useEventList();
+  const { setCurrentDate } = useCalendarActions();
   const { dayPickerWeekStart } = useWeekStart();
   const {
-    agendaEnabled,
-    miniCalendarEnabled,
     miniCalendarEventBars,
     miniCalendarWeekNumbers,
     miniCalendarBoldDayNumbers,
     miniCalendarDropdowns,
   } = useCalendarSettings((s) => ({
-    agendaEnabled: s.agendaEnabled,
-    miniCalendarEnabled: s.miniCalendarEnabled,
     miniCalendarEventBars: s.miniCalendarEventBars,
     miniCalendarWeekNumbers: s.miniCalendarWeekNumbers,
     miniCalendarBoldDayNumbers: s.miniCalendarBoldDayNumbers,
     miniCalendarDropdowns: s.miniCalendarDropdowns,
   }));
-  const [month, setMonth] = useState(() => toPickerDate(currentDate));
+  const [month, setMonth] = useState(() => toPickerMonth(currentDate));
 
   // keep the mini calendar on the month being viewed
   useEffect(() => {
-    setMonth(toPickerDate(currentDate));
+    const next = toPickerMonth(currentDate);
+    setMonth((prev) => (sameMonth(prev, next) ? prev : next));
   }, [currentDate]);
 
+  const selected = useMemo(() => toPickerDate(currentDate), [currentDate]);
+  const todayKey = DateTime.now().toISODate();
+  const today = useMemo(
+    () => toPickerDate(DateTime.fromISO(todayKey)),
+    [todayKey],
+  );
+
+  const onSelect = useCallback(
+    (date?: Date) => {
+      onPick();
+      setCurrentDate(date ? fromPickerDate(date) : DateTime.now());
+    },
+    [onPick, setCurrentDate],
+  );
+
+  const bars = useMemo(() => {
+    if (!miniCalendarEventBars) return null;
+
+    // visible grid incl. outside days
+    const days = Array.from({ length: 49 }, (_, i) =>
+      fromPickerDate(month)
+        .startOf("month")
+        .plus({ days: i - 7 }),
+    );
+    return layoutBars(
+      days.map((d) => d.toISODate()!),
+      getEventMap(calendarEvents, days, EMPTY_ARRAY, EMPTY_ARRAY),
+    );
+  }, [miniCalendarEventBars, calendarEvents, month]);
+
+  const dayBars = useMemo(
+    () => ({ bars, bold: miniCalendarBoldDayNumbers }),
+    [bars, miniCalendarBoldDayNumbers],
+  );
+
+  return (
+    <DayBarsContext.Provider value={dayBars}>
+      <Calendar
+        mode="single"
+        selected={selected}
+        today={today}
+        onSelect={onSelect}
+        className="w-full rounded-md border"
+        weekStartsOn={dayPickerWeekStart}
+        showWeekNumber={miniCalendarWeekNumbers}
+        captionLayout={miniCalendarDropdowns ? "dropdown" : "label"}
+        startMonth={START_MONTH}
+        endMonth={END_MONTH}
+        month={month}
+        onMonthChange={setMonth}
+        components={MINI_COMPONENTS}
+      />
+    </DayBarsContext.Provider>
+  );
+});
+
+export default memo(function AppSidebar({
+  onOpenSettings,
+}: {
+  onOpenSettings: (categoryId?: string) => void;
+}) {
+  const settings = useCalendarSettings((s) => ({
+    agendaEnabled: s.agendaEnabled,
+    miniCalendarEnabled: s.miniCalendarEnabled,
+  }));
   const isMobile = useIsMobile();
   const { open, setOpen, setOpenMobile, width, setWidth } = useSidebar();
   const storage = useStorage();
+
+  const closeMobile = useCallback(() => {
+    if (isMobile) setOpenMobile(false);
+  }, [isMobile, setOpenMobile]);
 
   const [restored, setRestored] = useState(false);
 
@@ -86,83 +207,15 @@ export default function AppSidebar({
     // eslint-disable-next-line
   }, [width, isMobile, restored]);
 
-  const bars = useMemo(() => {
-    if (!miniCalendarEnabled || !miniCalendarEventBars) return null;
-
-    // visible grid incl. outside days
-    const days = Array.from({ length: 49 }, (_, i) =>
-      fromPickerDate(month)
-        .startOf("month")
-        .plus({ days: i - 7 }),
-    );
-    return layoutBars(
-      days.map((d) => d.toISODate()!),
-      getEventMap(calendarEvents, days, EMPTY_ARRAY, EMPTY_ARRAY),
-    );
-  }, [miniCalendarEnabled, miniCalendarEventBars, calendarEvents, month]);
-
-  // stable identity so day buttons keep focus across renders
-  const components = useMemo(
-    () => ({
-      DayButton: (props: React.ComponentProps<typeof CalendarDayButton>) => (
-        <CalendarDayButton
-          {...props}
-          className={cn(
-            "relative",
-            bars && "@container pb-[56%]",
-            miniCalendarBoldDayNumbers && "font-bold",
-          )}
-        >
-          {props.children}
-          {bars && (
-            <EventBars
-              layout={bars.get(fromPickerDate(props.day.date).toISODate()!)}
-              prev={
-                bars.get(
-                  fromPickerDate(props.day.date)
-                    .minus({ days: 1 })
-                    .toISODate()!,
-                )?.slots
-              }
-              next={
-                bars.get(
-                  fromPickerDate(props.day.date).plus({ days: 1 }).toISODate()!,
-                )?.slots
-              }
-            />
-          )}
-        </CalendarDayButton>
-      ),
-    }),
-    [bars, miniCalendarBoldDayNumbers],
-  );
-
   return (
     <Sidebar collapsible="offcanvas">
       <SidebarContent>
-        {miniCalendarEnabled && (
+        {settings.miniCalendarEnabled && (
           <SidebarGroup>
-            <Calendar
-              mode="single"
-              selected={toPickerDate(currentDate)}
-              today={toPickerDate(DateTime.now())}
-              onSelect={(date) => {
-                if (isMobile) setOpenMobile(false);
-                setCurrentDate(date ? fromPickerDate(date) : DateTime.now());
-              }}
-              className="w-full rounded-md border"
-              weekStartsOn={dayPickerWeekStart}
-              showWeekNumber={miniCalendarWeekNumbers}
-              captionLayout={miniCalendarDropdowns ? "dropdown" : "label"}
-              startMonth={new Date(1900, 0)}
-              endMonth={new Date(2100, 11)}
-              month={month}
-              onMonthChange={setMonth}
-              components={components}
-            />
+            <MiniCalendar onPick={closeMobile} />
           </SidebarGroup>
         )}
-        {agendaEnabled && <AgendaList />}
+        {settings.agendaEnabled && <AgendaList />}
       </SidebarContent>
       <SidebarRail enableDrag={true} />
       <SidebarFooter>
@@ -185,7 +238,7 @@ export default function AppSidebar({
       </SidebarFooter>
     </Sidebar>
   );
-}
+});
 
 function EventBars({
   layout,

@@ -17,13 +17,13 @@ import {
 } from "../ui/context-menu";
 import { Clipboard, CopyIcon, PencilLine, RedoDot, Trash2 } from "lucide-react";
 import useTapInteraction from "@/hooks/useTapInteraction";
-import { useCalendar } from "@/context/CalendarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MoveMenuItems } from "./MoveMenuItems";
 import { Checkbox } from "../ui/checkbox";
 import { describeEvent } from "@/lib/calendar/a11y";
 import { eventDomId } from "@/lib/calendar/gridFocus";
 import { useEventFocused } from "@/hooks/useGridFocus";
+import { useEventSelected } from "@/hooks/useSelection";
 
 // how long (ms) a touch must be held roughly still before it starts a drag
 const LONG_PRESS_MS = 450;
@@ -39,7 +39,7 @@ export default memo(
     date,
     style,
     editing,
-    selected,
+    selection,
     focusStore,
     restoreFocus,
     onPointerDown,
@@ -47,10 +47,11 @@ export default memo(
     onEventMove,
     onEventDelete,
     onDuplicate,
+    setEditingEvent,
   }: EventBlockProps) {
-    const { setEditingEvent, setLastPointer } = useCalendar();
     const isMobile = useIsMobile();
     const keyboardFocused = useEventFocused(focusStore, eventKey(event), day);
+    const selected = useEventSelected(selection, eventKey(event));
 
     const { startsToday, endsToday } = useMemo(
       () => ({
@@ -222,8 +223,6 @@ export default memo(
 
     const handleTouchPointerDown = useCallback(
       (e: React.PointerEvent) => {
-        setLastPointer({ x: e.clientX, y: e.clientY });
-
         tapHandlers.onPointerDown(e);
 
         const timer = window.setTimeout(() => {
@@ -244,7 +243,7 @@ export default memo(
           activated: false,
         };
       },
-      [tapHandlers, onPointerDown, event, day, setLastPointer, collapsePopOut],
+      [tapHandlers, onPointerDown, event, day, collapsePopOut],
     );
 
     const handleTouchPointerMove = useCallback(
@@ -333,8 +332,6 @@ export default memo(
                     collapsePopOut();
                     return;
                   }
-                  setLastPointer({ x: e.clientX, y: e.clientY });
-
                   if (e.pointerType === "touch") {
                     handleTouchPointerDown(e);
                   } else {
@@ -348,7 +345,6 @@ export default memo(
                   day,
                   event,
                   onPointerDown,
-                  setLastPointer,
                 ],
               )}
               onPointerMove={handleTouchPointerMove}
@@ -491,13 +487,14 @@ export default memo(
       prev.event === next.event &&
       prev.day === next.day &&
       prev.editing === next.editing &&
-      prev.selected === next.selected &&
+      prev.selection === next.selection &&
       prev.restoreFocus === next.restoreFocus &&
       prev.onPointerDown === next.onPointerDown &&
       prev.onEventEdit === next.onEventEdit &&
       prev.onEventMove === next.onEventMove &&
       prev.onEventDelete === next.onEventDelete &&
       prev.onDuplicate === next.onDuplicate &&
+      prev.setEditingEvent === next.setEditingEvent &&
       shallowEqual(prev.style, next.style)
     );
   },

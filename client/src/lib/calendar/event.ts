@@ -249,6 +249,8 @@ type BaseEventMapCache = {
 
 const baseEventMapCache: BaseEventMapCache = {};
 
+const WINDOW_PAD_MS = 4 * 24 * 60 * 60 * 1000;
+
 function getBaseEventMap(events: CalendarEvent[], dates: DateTime[]) {
   if (
     baseEventMapCache.result &&
@@ -269,15 +271,30 @@ function getBaseEventMap(events: CalendarEvent[], dates: DateTime[]) {
   const firstVisibleDayStart = dates[0].startOf("day");
   const lastVisibleDayEnd = dates[dates.length - 1].endOf("day");
 
+  // padded so events near the edge survive whatever zone their days are in
+  const windowStart = firstVisibleDayStart.toMillis() - WINDOW_PAD_MS;
+  const windowEnd = lastVisibleDayEnd.toMillis() + WINDOW_PAD_MS;
+
   for (const e of events) {
     if (!e.id) continue;
 
-    const base =
-      e.isTask && e.repeat
-        ? { ...e, completed: resolveInstanceCompleted(e, e.start.toISODate()!) }
-        : e;
+    // events clear of the visible days have nothing to place; repeats still expand
+    const outsideWindow =
+      e.end.toMillis() < windowStart || e.start.toMillis() > windowEnd;
+    if (outsideWindow && !e.repeat) continue;
 
-    mapEventToDates(map, base, visibleDates);
+    if (!outsideWindow) {
+      const base =
+        e.isTask && e.repeat
+          ? {
+              ...e,
+              completed: resolveInstanceCompleted(e, e.start.toISODate()!),
+            }
+          : e;
+
+      mapEventToDates(map, base, visibleDates);
+    }
+
     processRepeats(
       map,
       e,

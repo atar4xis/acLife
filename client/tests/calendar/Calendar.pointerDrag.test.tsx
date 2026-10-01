@@ -597,3 +597,39 @@ describe("pointer drag: recurring events", () => {
     );
   });
 });
+
+describe("pointer drag: block identity", () => {
+  it("keeps every block mounted while one is dragged and dropped", async () => {
+    renderCalendar({
+      mode: "week",
+      events: [buildPlainEvent(), buildSecondEvent()],
+    });
+    const planning = await getEventBlock("Planning");
+    const retro = await getEventBlock("Retro");
+    const pointer = { button: 0, pointerId: 1, pointerType: "mouse" } as const;
+
+    fireEvent.pointerDown(planning, {
+      ...pointer,
+      clientX: dayCenterX(2),
+      clientY: timeToClientY(9),
+    });
+    dispatchWindowPointer("pointermove", {
+      ...pointer,
+      clientX: dayCenterX(2),
+      clientY: timeToClientY(10, 22),
+    });
+
+    expect(planning.isConnected).toBe(true);
+    expect(retro.isConnected).toBe(true);
+
+    dispatchWindowPointer("pointerup", {
+      ...pointer,
+      clientX: dayCenterX(2),
+      clientY: timeToClientY(10, 22),
+    });
+    await advanceSave();
+
+    expect(planning.isConnected).toBe(true);
+    expect(retro.isConnected).toBe(true);
+  });
+});
