@@ -210,6 +210,20 @@ export default function EventEditor({
       return;
     }
 
+    if (
+      newEvent.current.repeat?.until &&
+      newEvent.current.repeat.until <
+        newEvent.current.start.startOf("day").toMillis()
+    ) {
+      toast.warning("Repeat cannot end before it starts.", {
+        cancel: {
+          label: "OK",
+          onClick: () => {},
+        },
+      });
+      return;
+    }
+
     // make sure the encrypted data will be less than 10,000 bytes
     // with the current implementation 9971 is the maximum size
     if (
