@@ -63,6 +63,7 @@ import { weekLabel } from "@/lib/calendar/buckets";
 import { useUser } from "@/context/UserContext";
 import { toast } from "sonner";
 import HeaderCell from "./HeaderCell";
+import TimezoneHeaderCell from "./TimezoneHeaderCell";
 import GridCell from "./GridCell";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ModeSwitcher from "./ModeSwitcher";
@@ -2208,21 +2209,14 @@ export default function AppCalendar({
   const timezoneHeaderCells = useMemo(
     () =>
       settings.timezones.map((tz, i) => (
-        <div
+        <TimezoneHeaderCell
           key={tz}
-          role={settings.timezones.length > 1 ? "columnheader" : "presentation"}
-          aria-label={settings.timezones.length > 1 ? tz : undefined}
-          className={`select-none sticky ${headerBottom ? "bottom-0" : "top-0"} z-16 hover:z-20 shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)] flex items-center justify-center bg-background text-xs text-muted-foreground px-1`}
+          tz={tz}
+          multi={settings.timezones.length > 1}
+          headerBottom={headerBottom}
+          labelsRight={labelsRight}
           style={tzStickyStyle(i)}
-        >
-          {settings.timezones.length > 1 ? (
-            <span
-              className={`truncate hover:absolute hover:inset-y-0 ${labelsRight ? "hover:right-0" : "hover:left-0"} hover:w-max hover:min-w-full hover:overflow-visible hover:bg-background hover:ring-1 hover:ring-inset hover:ring-border hover:px-1 hover:flex hover:items-center hover:justify-center`}
-            >
-              {getTimezoneShortLabel(tz)}
-            </span>
-          ) : null}
-        </div>
+        />
       )),
     [settings.timezones, headerBottom, labelsRight, tzStickyStyle],
   );
