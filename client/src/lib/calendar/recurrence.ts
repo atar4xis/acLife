@@ -6,6 +6,16 @@ import type { CalendarAction } from "@/types/calendar/Action";
 export const isChainParent = (event: CalendarEvent) =>
   !event._parent && !!event.repeat;
 
+export function moveToIncludedDay(
+  start: DateTime,
+  end: DateTime,
+  except?: number[],
+) {
+  let days = 0;
+  while (except?.includes(start.plus({ days }).weekday)) days++;
+  return days ? { start: start.plus({ days }), end: end.plus({ days }) } : null;
+}
+
 export function skipSingleOccurrence(
   event: CalendarEvent,
   calendarEvents: CalendarEvent[],
@@ -35,7 +45,7 @@ export function skipSingleOccurrence(
 
     while (
       skipped.has(nextStart.toUTC().toISODate()!) ||
-      except.has(nextStart.toUTC().weekday)
+      except.has(nextStart.weekday)
     ) {
       nextStart = nextStart.plus(interval);
       nextEnd = nextEnd.plus(interval);
@@ -92,7 +102,7 @@ export function detachSingleOccurrence(
     let nextEnd = originalEnd.plus(interval);
     while (
       skip.has(nextStart.toUTC().toISODate()!) ||
-      except.has(nextStart.toUTC().weekday)
+      except.has(nextStart.weekday)
     ) {
       nextStart = nextStart.plus(interval);
       nextEnd = nextEnd.plus(interval);

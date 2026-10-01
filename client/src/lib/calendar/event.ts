@@ -212,7 +212,7 @@ function processRepeats(
     if (millis !== startMillis) {
       const key = cursor.toISODate()!;
       const keyUTC = cursor.toUTC().toISODate()!;
-      const weekday = cursor.toUTC().weekday;
+      const weekday = cursor.weekday;
       const instanceId = `${e.id}_${key}`;
 
       if (

@@ -1,6 +1,7 @@
 import type { CalendarEvent, RepeatInterval } from "@/types/calendar/Event";
 import type { EventBlockProps } from "@/types/Props";
 import { MAX_EVENT_DURATION_MINUTES } from "@/lib/calendar/event";
+import { moveToIncludedDay } from "@/lib/calendar/recurrence";
 import { lastInputModality } from "@/lib/inputModality";
 import useFocusTrap from "@/hooks/useFocusTrap";
 import {
@@ -208,6 +209,27 @@ export default function EventEditor({
         },
       });
       return;
+    }
+
+    const except = newEvent.current.repeat?.except;
+    if (new Set(except).size >= 7) {
+      toast.warning("Repeat cannot exclude every day.", {
+        cancel: {
+          label: "OK",
+          onClick: () => {},
+        },
+      });
+      return;
+    }
+
+    // the series should not start on an excluded day
+    if (!newEvent.current._parent) {
+      const moved = moveToIncludedDay(
+        newEvent.current.start,
+        newEvent.current.end,
+        except,
+      );
+      if (moved) Object.assign(newEvent.current, moved);
     }
 
     if (

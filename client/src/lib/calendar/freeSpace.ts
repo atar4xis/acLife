@@ -43,7 +43,7 @@ function findOverlappingOccurrence(
       if (!until || cursor.toMillis() < until) {
         const key = cursor.toISODate()!;
         const keyUTC = cursor.toUTC().toISODate()!;
-        const weekday = cursor.toUTC().weekday;
+        const weekday = cursor.weekday;
         const instanceId =
           cursor.toMillis() === e.start.toMillis() ? e.id : `${e.id}_${key}`;
 
