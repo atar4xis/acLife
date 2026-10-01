@@ -100,6 +100,7 @@ const defaults: StorageData = {
   pushSubscription: null,
   pushDismissed: false,
   sidebarOpen: true,
+  sidebarWidth: null,
   ...defaultSecuritySettings,
   unlockKeys: null,
   pinWrappedKeys: null,

@@ -38,6 +38,7 @@ export interface StorageData {
   pushSubscription: string | null;
   pushDismissed: boolean;
   sidebarOpen: boolean;
+  sidebarWidth: string | null;
   unlockMethod: UnlockMethod;
   unlockKeys: RawKeyPair | null;
   pinWrappedKeys: WrappedKeyPair | null;

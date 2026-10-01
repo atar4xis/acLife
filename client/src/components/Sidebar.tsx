@@ -54,25 +54,37 @@ export default function AppSidebar({
   }, [currentDate]);
 
   const isMobile = useIsMobile();
-  const { open, setOpen, setOpenMobile } = useSidebar();
+  const { open, setOpen, setOpenMobile, width, setWidth } = useSidebar();
   const storage = useStorage();
 
-  useEffect(() => {
-    if (isMobile || !storage) return;
+  const [restored, setRestored] = useState(false);
 
-    const lastOpenState = storage.get("sidebarOpen");
-    setOpen(lastOpenState);
+  useEffect(() => {
+    if (isMobile || !storage.ready) return;
+
+    setOpen(storage.get("sidebarOpen"));
+    const lastWidth = storage.get("sidebarWidth");
+    if (lastWidth) setWidth(lastWidth);
+    setRestored(true);
 
     // eslint-disable-next-line
-  }, [isMobile]);
+  }, [isMobile, storage.ready]);
 
   useEffect(() => {
-    if (isMobile || !storage) return;
+    if (isMobile || !restored) return;
 
     storage.set("sidebarOpen", open);
 
     // eslint-disable-next-line
-  }, [open, isMobile]);
+  }, [open, isMobile, restored]);
+
+  useEffect(() => {
+    if (isMobile || !restored) return;
+
+    storage.set("sidebarWidth", width);
+
+    // eslint-disable-next-line
+  }, [width, isMobile, restored]);
 
   const bars = useMemo(() => {
     if (!miniCalendarEnabled || !miniCalendarEventBars) return null;
