@@ -20,7 +20,7 @@ import {
 import type { Theme, ThemeColors, ThemePreset } from "@/types/Theme";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
-import { cssColorToHex } from "@/lib/utils";
+import { cn, cssColorToHex } from "@/lib/utils";
 import { PRESET_ERROR_MESSAGES } from "@/lib/themePresets";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Button } from "@/components/ui/button";
@@ -351,13 +351,13 @@ const PresetsList = memo(function PresetsList() {
                           }
                         }
                   }
-                  className={`group relative flex items-center justify-between gap-3 overflow-hidden rounded-md border border-muted p-2 transition-opacity ${
-                    dragIndex === index ? "opacity-40" : ""
-                  } ${
+                  className={cn(
+                    "group relative flex items-center justify-between gap-3 overflow-hidden rounded-md border border-muted p-2 transition-opacity",
+                    dragIndex === index && "opacity-40",
                     isActive
                       ? "border-primary bg-primary/5"
-                      : "cursor-pointer hover:bg-accent"
-                  }`}
+                      : "cursor-pointer hover:bg-accent",
+                  )}
                 >
                   {previewEnabled && !isActive && item.colors && (
                     <div

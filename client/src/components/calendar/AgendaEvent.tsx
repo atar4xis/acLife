@@ -1,4 +1,5 @@
 import { useCalendar } from "@/context/CalendarContext";
+import { cn } from "@/lib/utils";
 import { EVENT_COLOR_FALLBACK } from "@/context/CalendarSettingsContext";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -62,7 +63,10 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
 
   return (
     <div
-      className={`relative w-full py-1 px-2 flex justify-between items-center text-foreground hover:bg-secondary hover:cursor-pointer ${event.isTask && event.completed ? "opacity-50" : ""}`}
+      className={cn(
+        "relative w-full py-1 px-2 flex justify-between items-center text-foreground hover:bg-secondary hover:cursor-pointer",
+        event.isTask && event.completed && "opacity-50",
+      )}
     >
       <div className="font-semibold flex items-center">
         <div
@@ -91,7 +95,10 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
           }}
         >
           <span
-            className={`text-sm ${event.isTask && event.completed ? "line-through" : ""}`}
+            className={cn(
+              "text-sm",
+              event.isTask && event.completed && "line-through",
+            )}
           >
             {event.title}
           </span>

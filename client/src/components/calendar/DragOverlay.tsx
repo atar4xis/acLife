@@ -1,4 +1,5 @@
 import { eventKey } from "@/lib/calendar/event";
+import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { EventDragRef } from "@/types/calendar/Event";
 import { ArrowLeftCircle, ArrowRightCircle } from "lucide-react";
@@ -86,8 +87,7 @@ export default (function DragOverlay({
       document.querySelectorAll(`[data-event-key="${key}"]`),
     ).map((el) => el.getBoundingClientRect());
     const rect =
-      rects.find((r) => y >= r.top && y <= r.bottom && x >= r.left) ??
-      rects[0];
+      rects.find((r) => y >= r.top && y <= r.bottom && x >= r.left) ?? rects[0];
 
     if (rect) {
       const gap = 8;
@@ -107,7 +107,11 @@ export default (function DragOverlay({
         <>
           <div
             aria-hidden="true"
-            className={`fixed flex items-center justify-center z-20 left-0 top-0 bottom-0 ${isMobile ? "w-8" : "w-16"} bg-background hover:opacity-100 ${direction === -1 ? "opacity-100" : "opacity-30"}`}
+            className={cn(
+              "fixed flex items-center justify-center z-20 left-0 top-0 bottom-0 bg-background hover:opacity-100",
+              isMobile ? "w-8" : "w-16",
+              direction === -1 ? "opacity-100" : "opacity-30",
+            )}
             data-steps="-1"
             onPointerEnter={handleMoveEnter}
             onPointerLeave={handleMoveExit}
@@ -116,7 +120,11 @@ export default (function DragOverlay({
           </div>
           <div
             aria-hidden="true"
-            className={`fixed flex items-center justify-center z-20 right-0 top-0 bottom-0 ${isMobile ? "w-8" : "w-16"} bg-background hover:opacity-100 ${direction === 1 ? "opacity-100" : "opacity-30"}`}
+            className={cn(
+              "fixed flex items-center justify-center z-20 right-0 top-0 bottom-0 bg-background hover:opacity-100",
+              isMobile ? "w-8" : "w-16",
+              direction === 1 ? "opacity-100" : "opacity-30",
+            )}
             data-steps="1"
             onPointerEnter={handleMoveEnter}
             onPointerLeave={handleMoveExit}

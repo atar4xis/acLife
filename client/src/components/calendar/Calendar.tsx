@@ -68,7 +68,7 @@ import GridCell from "./GridCell";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ModeSwitcher from "./ModeSwitcher";
 import type { GridSelectionRef, GridTouchRef } from "@/types/calendar/Cell";
-import { clamp } from "@/lib/utils";
+import { clamp, cn } from "@/lib/utils";
 import RecurringUpdateDialog from "./RecurringUpdateDialog";
 import {
   detachSingleOccurrence,
@@ -2180,7 +2180,11 @@ export default function AppCalendar({
       visibleDays.map((d) => (
         <HeaderCell
           key={d.label}
-          className={`select-none ${headerBottom ? "top-auto bottom-0" : ""} ${isSameDate(d.date, now) ? "bg-card font-bold" : ""}`}
+          className={cn(
+            "select-none",
+            headerBottom && "top-auto bottom-0",
+            isSameDate(d.date, now) && "bg-card font-bold",
+          )}
           aria-label={
             describeFullDay(d.date) + (isSameDate(d.date, now) ? ", today" : "")
           }
@@ -2243,7 +2247,12 @@ export default function AppCalendar({
               <div
                 key={tz}
                 role="rowheader"
-                className={`select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)] flex text-sm items-center justify-center ${tz === settings.timezones[0] && hour == now.hour ? "bg-card font-bold" : "bg-background"}`}
+                className={cn(
+                  "select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)] flex text-sm items-center justify-center",
+                  tz === settings.timezones[0] && hour == now.hour
+                    ? "bg-card font-bold"
+                    : "bg-background",
+                )}
                 style={tzStickyStyle(i)}
               >
                 {getTimezoneHourLabel(
@@ -2374,7 +2383,10 @@ export default function AppCalendar({
     <main className="flex h-screen w-full flex-col">
       {swipeDelta !== 0 && (
         <div
-          className={`fixed top-1/2 z-100 ${Math.abs(swipeDelta) >= 100 ? "bg-foreground" : "bg-foreground/50"} text-background border p-1 rounded`}
+          className={cn(
+            "fixed top-1/2 z-100 text-background border p-1 rounded",
+            Math.abs(swipeDelta) >= 100 ? "bg-foreground" : "bg-foreground/50",
+          )}
           style={{
             [swipeDelta > 0 ? "right" : "left"]: "-80px",
             transform: `translateX(${clamp(-swipeDelta, -100, 100)}px)`,
@@ -2607,7 +2619,12 @@ export default function AppCalendar({
 
         {scrollThumb && (
           <div
-            className={`absolute right-0.5 w-1 rounded-full bg-foreground/20 hover:bg-foreground/40 z-40 transition-opacity duration-300 ${scrollThumbVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            className={cn(
+              "absolute right-0.5 w-1 rounded-full bg-foreground/20 hover:bg-foreground/40 z-40 transition-opacity duration-300",
+              scrollThumbVisible
+                ? "opacity-100"
+                : "opacity-0 pointer-events-none",
+            )}
             style={{ top: scrollThumb.top, height: scrollThumb.height }}
             onPointerDown={handleScrollThumbPointerDown}
           />
