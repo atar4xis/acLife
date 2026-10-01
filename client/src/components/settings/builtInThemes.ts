@@ -27,6 +27,7 @@ export const BUILT_IN_THEMES = [
   dark("night-owl", "Night Owl"),
   dark("kanagawa", "Kanagawa"),
   dark("synthwave-84", "SynthWave '84"),
+  dark("high-contrast", "High Contrast"),
   light("dracula-light", "Dracula"),
   light("tokyo-night-day", "Tokyo Night"),
   light("gruvbox-light", "Gruvbox"),
