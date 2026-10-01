@@ -121,10 +121,39 @@ export default function SettingsDialog({
       .slice(0, 8);
   }, [query, visibleCategories]);
 
+  const stopFollowing = useRef<(() => void) | null>(null);
+  useEffect(() => () => stopFollowing.current?.(), []);
+
   const scrollToSection = (sectionId: string) => {
-    sectionRefs.current
-      .get(sectionId)
-      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+    const el = sectionRefs.current.get(sectionId);
+    const viewport = pagesRef.current?.closest(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    if (!el) return;
+
+    el.scrollIntoView({ block: "start", behavior: "smooth" });
+
+    // deferred content grows after mounting, keep the section aligned until it settles
+    stopFollowing.current?.();
+    if (!pagesRef.current || !viewport) return;
+    let first = true;
+    const observer = new ResizeObserver(() => {
+      if (first) return void (first = false);
+      el.scrollIntoView({ block: "start" });
+    });
+    observer.observe(pagesRef.current);
+    const events = ["wheel", "touchstart", "keydown", "pointerdown"];
+    const stop = () => {
+      observer.disconnect();
+      clearTimeout(timeout);
+      events.forEach((e) => viewport.removeEventListener(e, stop));
+      stopFollowing.current = null;
+    };
+    const timeout = setTimeout(stop, 2000);
+    events.forEach((e) =>
+      viewport.addEventListener(e, stop, { passive: true }),
+    );
+    stopFollowing.current = stop;
   };
 
   useEffect(() => {
