@@ -522,6 +522,7 @@ describe("pointer drag: recurring events", () => {
   };
 
   it("asks what to update and detaches the occurrence for 'this event'", async () => {
+    seedSettings({ detachRecurringOnEdit: true });
     const saveEvents = vi.fn();
     const { user } = renderCalendar({
       mode: "week",

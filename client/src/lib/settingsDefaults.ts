@@ -23,6 +23,7 @@ export const defaultCalendarSettings: CalendarSettings = {
   miniCalendarWeekNumbers: false,
   miniCalendarBoldDayNumbers: false,
   miniCalendarDropdowns: false,
+  detachRecurringOnEdit: false,
   eventColorPresets: [
     "#2563eb",
     "#8125ea",

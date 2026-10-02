@@ -373,6 +373,7 @@ describe("sync rules", () => {
         "miniCalendarWeekNumbers",
         "miniCalendarBoldDayNumbers",
         "miniCalendarDropdowns",
+        "detachRecurringOnEdit",
         "snapMinutes",
         "theme",
         "timeLabelPosition",

@@ -2,6 +2,14 @@ import type { DateTime } from "luxon";
 
 export type RepeatIntervalUnit = "day" | "week" | "month" | "year";
 
+export type OccurrenceOverride = {
+  title?: string;
+  description?: string | null; // null clears the series value
+  color?: string | null;
+  startShift?: number; // millis from the nominal start
+  endShift?: number; // millis from the nominal end
+};
+
 export type RepeatInterval = {
   interval: number;
   unit: RepeatIntervalUnit;
@@ -12,6 +20,7 @@ export type RepeatInterval = {
   skip?: string[]; // skip these dates
   until?: number; // millis
   count?: number; // total occurrences, including the first
+  overrides?: Record<string, OccurrenceOverride>; // edited attached instances, by UTC date
 };
 
 export type CalendarEvent = {
@@ -30,6 +39,15 @@ export type CalendarEvent = {
   _parent?: string; // uuid of parent event
   _continued?: boolean; // events spanning multiple days
   _instanceId?: string; // internal instance id
+  _overrideKey?: string; // UTC date of the occurrence, the key of its override
+  _resettable?: boolean; // instance with an override that can be removed
+};
+
+export type RejectedEvent = {
+  id: string;
+  title: string;
+  wasAdded: boolean;
+  previous?: CalendarEvent; // last saved version, to restore
 };
 
 export type EncryptedEvent = {

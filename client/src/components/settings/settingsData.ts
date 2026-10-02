@@ -138,6 +138,17 @@ export const settingsCategories: SettingsCategory[] = [
         ],
       },
       {
+        id: "behavior",
+        label: "Behavior",
+        items: [
+          {
+            id: "calendar-detach-recurring",
+            label: "Detach recurring instances when edited",
+            settingKey: "detachRecurringOnEdit",
+          },
+        ],
+      },
+      {
         id: "grid",
         label: "Grid",
         items: [

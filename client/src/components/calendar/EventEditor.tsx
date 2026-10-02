@@ -2,7 +2,12 @@ import type { CalendarEvent, RepeatInterval } from "@/types/calendar/Event";
 import type { EventBlockProps } from "@/types/Props";
 import { MAX_EVENT_DURATION_MINUTES } from "@/lib/calendar/event";
 import { moveToFirstOccurrence } from "@/lib/calendar/recurrence";
-import { monthlyOptions, withUnitDefaults } from "@/lib/calendar/repeatOptions";
+import {
+  monthlyOptions,
+  repeatChanged,
+  repeatKey,
+  withUnitDefaults,
+} from "@/lib/calendar/repeatOptions";
 import { lastInputModality } from "@/lib/inputModality";
 import useFocusTrap from "@/hooks/useFocusTrap";
 import {
@@ -36,6 +41,9 @@ import {
   MoreVerticalIcon,
   PencilIcon,
   Trash2Icon,
+  RotateCcw,
+  TriangleAlert,
+  Unlink,
   XIcon,
 } from "lucide-react";
 import {
@@ -98,18 +106,6 @@ const presetRepeat: Record<string, RepeatInterval> = {
   },
 };
 
-const repeatKey = (r: RepeatInterval) =>
-  JSON.stringify([
-    r.interval,
-    r.unit,
-    r.except,
-    r.monthly,
-    r.days,
-    r.yearDays,
-    r.until,
-    r.count,
-  ]);
-
 const parseRepeatValue = (value: RepeatInterval) => {
   const key = repeatKey(withUnitDefaults(value));
   return (
@@ -131,6 +127,8 @@ export default function EventEditor({
   onDelete,
   onCancel,
   onDuplicate,
+  onDetach,
+  onReset,
   preview,
 }: Partial<EventBlockProps> & {
   eventRef?: RefObject<HTMLDivElement | null>;
@@ -140,6 +138,8 @@ export default function EventEditor({
   onDelete: () => void;
   onCancel: () => void;
   onDuplicate: () => void;
+  onDetach: () => void;
+  onReset: () => void;
 }) {
   if (!event) throw new Error("invalid instance of EventEditor");
 
@@ -162,6 +162,7 @@ export default function EventEditor({
     opacity: s.eventEditorOpacity,
     blur: s.eventEditorBlur,
     radius: s.eventEditorRadius,
+    detachRecurring: s.detachRecurringOnEdit,
   }));
   const opacity = preview?.opacity ?? settings.opacity;
   const blur = preview?.blur ?? settings.blur;
@@ -502,6 +503,20 @@ export default function EventEditor({
                 {event._parent ? "Copy parent ID" : "Copy ID"}
               </DropdownMenuItem>
 
+              {event._parent && (
+                <DropdownMenuItem onClick={onDetach}>
+                  <Unlink />
+                  Detach from parent
+                </DropdownMenuItem>
+              )}
+
+              {event._resettable && (
+                <DropdownMenuItem onClick={onReset}>
+                  <RotateCcw />
+                  Reset to original event
+                </DropdownMenuItem>
+              )}
+
               {/* Move submenu (mobile) */}
               <MoveMenuItems
                 event={originalEvent.current}
@@ -602,6 +617,14 @@ export default function EventEditor({
               </Button>
             )}
           </div>
+          {event._parent &&
+            !settings.detachRecurring &&
+            repeatChanged(repeat, event.repeat) && (
+              <p className="flex items-center gap-1.5 text-xs text-warning">
+                <TriangleAlert className="size-3.5 shrink-0" />
+                Changing repeat settings will detach this instance.
+              </p>
+            )}
         </Field>
 
         <Field>

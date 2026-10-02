@@ -1,11 +1,40 @@
-import type { DateTime } from "luxon";
-import type { RepeatInterval } from "@/types/calendar/Event";
+import { DateTime } from "luxon";
+import type {
+  CalendarEvent,
+  OccurrenceOverride,
+  RepeatInterval,
+} from "@/types/calendar/Event";
 
 const MAX_EMPTY_PERIODS = 100;
 
 export const isOccurrenceExcluded = (repeat: RepeatInterval, start: DateTime) =>
   !!repeat.except?.includes(start.weekday) ||
   !!repeat.skip?.includes(start.toUTC().toISODate()!);
+
+export const slotKey = (start: DateTime) => start.toUTC().toISODate()!;
+
+export const nominalOnDate = (anchor: DateTime, key: string) => {
+  const on = (days: number) =>
+    DateTime.fromISO(key, { zone: anchor.zone }).plus({ days }).set({
+      hour: anchor.hour,
+      minute: anchor.minute,
+      second: anchor.second,
+      millisecond: anchor.millisecond,
+    });
+  return [0, -1, 1].map(on).find((d) => slotKey(d) === key) ?? on(0);
+};
+
+export const overrideSpan = (
+  anchor: Pick<CalendarEvent, "start" | "end">,
+  key: string,
+  override: OccurrenceOverride,
+) => {
+  const start = nominalOnDate(anchor.start, key);
+  return {
+    start: start.plus(override.startShift ?? 0),
+    end: start.plus(anchor.end.diff(anchor.start)).plus(override.endShift ?? 0),
+  };
+};
 
 const periodCandidates = (
   anchor: DateTime,

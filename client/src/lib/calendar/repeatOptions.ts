@@ -30,6 +30,18 @@ export const monthlyOptions = (start: DateTime, keepLast = false) => {
   return options;
 };
 
+export const repeatKey = (r: RepeatInterval) =>
+  JSON.stringify([
+    r.interval,
+    r.unit,
+    r.except,
+    r.monthly,
+    r.days,
+    r.yearDays,
+    r.until,
+    r.count,
+  ]);
+
 export const withUnitDefaults = (
   repeat: RepeatInterval,
   start?: DateTime,
@@ -42,3 +54,7 @@ export const withUnitDefaults = (
   }
   return repeat;
 };
+
+export const repeatChanged = (a?: RepeatInterval, b?: RepeatInterval) =>
+  (a && repeatKey(withUnitDefaults(a))) !==
+  (b && repeatKey(withUnitDefaults(b)));

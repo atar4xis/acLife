@@ -78,7 +78,6 @@ describe("repeat until", () => {
     const result = detachSingleOccurrence(
       moved,
       ended.start,
-      ended.end,
       [ended],
       dispatch,
       vi.fn(),

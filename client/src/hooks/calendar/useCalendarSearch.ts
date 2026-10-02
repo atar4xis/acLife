@@ -55,8 +55,13 @@ export const useCalendarSearch = (
     const nowDate = DateTime.now();
     const now = nowDate.toMillis();
     return events
-      .filter((ev) => matchesQuery(ev, tokens))
-      .flatMap((ev) => nearbyOccurrences(ev, nowDate, OCCURRENCES_PER_SIDE))
+      .flatMap((ev) =>
+        ev.repeat?.overrides || matchesQuery(ev, tokens)
+          ? nearbyOccurrences(ev, nowDate, OCCURRENCES_PER_SIDE, (o) =>
+              matchesQuery(o, tokens),
+            )
+          : [],
+      )
       .sort(
         (a, b) =>
           Math.abs(a.start.toMillis() - now) -

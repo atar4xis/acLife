@@ -78,17 +78,24 @@ import ModeSwitcher from "./ModeSwitcher";
 import type { GridSelectionRef, GridTouchRef } from "@/types/calendar/Cell";
 import { clamp, cn } from "@/lib/utils";
 import RecurringUpdateDialog from "./RecurringUpdateDialog";
+import { repeatChanged } from "@/lib/calendar/repeatOptions";
 import {
   detachSingleOccurrence,
   isChainParent,
-  occurrencesBefore,
+  cutPoint,
+  endSeriesBefore,
+  futureOverrides,
+  overridesBefore,
+  resetOccurrence,
+  splitSeries,
+  withShiftedOverrides,
   skipSingleOccurrence,
 } from "@/lib/calendar/recurrence";
 import type { PushEvent } from "@/types/Push";
 import { CLIENT_ID } from "@/lib/clientId";
 import { useCalendarSearch } from "@/hooks/calendar/useCalendarSearch";
 import { EMPTY_ARRAY } from "@/lib/constants";
-import type { RepeatInterval } from "@/types/calendar/Event";
+import type { RejectedEvent, RepeatInterval } from "@/types/calendar/Event";
 
 const joined = (values?: (string | number)[]) => values?.join(",") ?? "";
 
@@ -105,7 +112,8 @@ const repeatEqual = (a?: RepeatInterval, b?: RepeatInterval) => {
     joined(a.days) === joined(b.days) &&
     joined(a.yearDays) === joined(b.yearDays) &&
     joined(a.except) === joined(b.except) &&
-    joined(a.skip) === joined(b.skip)
+    joined(a.skip) === joined(b.skip) &&
+    JSON.stringify(a.overrides) === JSON.stringify(b.overrides)
   );
 };
 
@@ -480,6 +488,7 @@ export default memo(function AppCalendar({
     defaultEventDuration: s.defaultEventDuration,
     resyncIntervalMinutes: s.resyncIntervalMinutes,
     addColorsAutomatically: s.addColorsAutomatically,
+    detachRecurringOnEdit: s.detachRecurringOnEdit,
     eventColorPresets: s.eventColorPresets,
     timezones: s.timezones,
     defaultTimezone: s.defaultTimezone,
@@ -543,9 +552,24 @@ export default memo(function AppCalendar({
   const selectionBoxRef = useRef<GridSelectionRef | null>(null);
   const hourHeightRef = useRef(hourHeight);
 
-  const evPendingUpdateRef = useRef<CalendarEvent | null>(null);
+  const evPendingRef = useRef<{
+    event: CalendarEvent;
+    original: CalendarEvent | null;
+  } | null>(null);
   const calendarEventsRef = useRef(calendarEvents);
   const selectedEventsRef = useRef(selection.get());
+  const [canKeepChanges, setCanKeepChanges] = useState(false);
+
+  const askUpdateScope = useCallback(
+    (event: CalendarEvent, original: CalendarEvent | null) => {
+      const parent =
+        calendarEventsRef.current.find((e) => e.id === event._parent) ?? event;
+      evPendingRef.current = { event, original };
+      setCanKeepChanges(!!event._parent && !!futureOverrides(parent, event));
+      setUpdateRepeatDialogOpen(true);
+    },
+    [],
+  );
 
   useEffect(() => {
     selectedEventsRef.current = selection.get();
@@ -626,13 +650,43 @@ export default memo(function AppCalendar({
     [user?.type],
   );
 
+  const resyncRef = useRef<() => void>(() => {});
+
+  // the server never got these, so undo them
+  const onRejected = useCallback(
+    (rejected: RejectedEvent[]) => {
+      const byId = new Map(rejected.map((r) => [r.id, r]));
+      for (const id of byId.keys()) changesMapRef.current.delete(id);
+
+      const restore = (events: CalendarEvent[]) =>
+        events.flatMap((e) => {
+          const r = byId.get(e.id);
+          if (!r) return [e];
+          if (r.previous) return [r.previous];
+          return r.wasAdded ? [] : [e];
+        });
+
+      const history = historyRef.current;
+      history.past = history.past.map(restore);
+      history.future = history.future.map(restore);
+      dispatch({ type: "set", events: restore(calendarEventsRef.current) });
+
+      if (rejected.some((r) => !r.previous && !r.wasAdded)) resyncRef.current();
+    },
+    [dispatch],
+  );
+
   const saveIfChanged = useCallback(() => {
     if (changesMapRef.current.size > 0) {
-      saveEvents(Array.from(changesMapRef.current.values()).flat(), () => {
-        changesMapRef.current.clear(); // reset after save
-      });
+      saveEvents(
+        Array.from(changesMapRef.current.values()).flat(),
+        () => {
+          changesMapRef.current.clear(); // reset after save
+        },
+        onRejected,
+      );
     }
-  }, [saveEvents]);
+  }, [saveEvents, onRejected]);
 
   const save = useCallback(() => {
     if (pendingSaveRef.current !== null) clearTimeout(pendingSaveRef.current);
@@ -798,10 +852,10 @@ export default memo(function AppCalendar({
           const parent = detachSingleOccurrence(
             moved,
             entry.originalStart,
-            entry.originalEnd,
             working,
             dispatch,
             updateChange,
+            settings.detachRecurringOnEdit,
           );
 
           if (parent) {
@@ -816,7 +870,14 @@ export default memo(function AppCalendar({
       if (detached) clearSelection();
       save();
     },
-    [updateChange, dispatch, save, clearSelection, pushHistory],
+    [
+      updateChange,
+      dispatch,
+      save,
+      clearSelection,
+      pushHistory,
+      settings.detachRecurringOnEdit,
+    ],
   );
 
   const commitSingleDrag = useCallback(
@@ -857,15 +918,14 @@ export default memo(function AppCalendar({
           event.end.toMillis() !== state.originalEnd.toMillis()
         ) {
           // if the event has or is a parent, ask what to do
-          evPendingUpdateRef.current = event;
-          setUpdateRepeatDialogOpen(true);
+          askUpdateScope(event, null);
         } else {
           // if it didn't actually update, just revert
           dragRef.current = null;
         }
       }
     },
-    [updateChange, dispatch, save, pushHistory],
+    [updateChange, dispatch, save, pushHistory, askUpdateScope],
   );
 
   const commitDrag = useCallback(
@@ -1190,7 +1250,7 @@ export default memo(function AppCalendar({
           patch.description = event.description;
         }
         if (event.color !== originalEvent.color) patch.color = event.color;
-        if (!repeatEqual(originalEvent.repeat, event.repeat)) {
+        if (repeatChanged(originalEvent.repeat, event.repeat)) {
           patch.repeat = event.repeat;
         }
         if (event.isTask !== originalEvent.isTask) patch.isTask = event.isTask;
@@ -1229,10 +1289,11 @@ export default memo(function AppCalendar({
             const parent = detachSingleOccurrence(
               next,
               ev.start,
-              ev.end,
               working,
               dispatch,
               updateChange,
+              settings.detachRecurringOnEdit ||
+                (!!ev._parent && "repeat" in patch),
             );
 
             if (parent) {
@@ -1287,8 +1348,7 @@ export default memo(function AppCalendar({
       }
 
       if (event._parent || (originalEvent.repeat && event.repeat)) {
-        evPendingUpdateRef.current = event;
-        setUpdateRepeatDialogOpen(true);
+        askUpdateScope(event, originalEvent);
         return;
       }
 
@@ -1337,6 +1397,7 @@ export default memo(function AppCalendar({
       clearSelection,
       pushHistory,
       settings,
+      askUpdateScope,
     ],
   );
 
@@ -1356,15 +1417,15 @@ export default memo(function AppCalendar({
       detachSingleOccurrence(
         event,
         originalEvent.start,
-        originalEvent.end,
         calendarEventsRef.current,
         dispatch,
         updateChange,
+        settings.detachRecurringOnEdit,
       );
 
       save();
     },
-    [dispatch, updateChange, save, pushHistory],
+    [dispatch, updateChange, save, pushHistory, settings.detachRecurringOnEdit],
   );
 
   const deleteSelectionBatch = useCallback(
@@ -1416,7 +1477,7 @@ export default memo(function AppCalendar({
 
       if (event._parent || event.repeat) {
         setDeleteRepeatDialogOpen(true);
-        evPendingUpdateRef.current = event;
+        evPendingRef.current = { event, original: null };
         return;
       }
 
@@ -1445,6 +1506,32 @@ export default memo(function AppCalendar({
       setEditingEvent,
       pushHistory,
     ],
+  );
+
+  const onEventReset = useCallback(
+    (event: CalendarEvent) => {
+      pushHistory();
+      resetOccurrence(event, calendarEventsRef.current, dispatch, updateChange);
+      setEditingEvent(null);
+      save();
+    },
+    [dispatch, updateChange, setEditingEvent, save, pushHistory],
+  );
+
+  const onEventDetach = useCallback(
+    (event: CalendarEvent) => {
+      pushHistory();
+      detachSingleOccurrence(
+        event,
+        event.start,
+        calendarEventsRef.current,
+        dispatch,
+        updateChange,
+      );
+      setEditingEvent(null);
+      save();
+    },
+    [dispatch, updateChange, setEditingEvent, save, pushHistory],
   );
 
   const onEventDuplicate = useCallback(
@@ -1938,6 +2025,10 @@ export default memo(function AppCalendar({
     );
   }, [syncEvents, user, masterKey, bucketKey, currentDate, dispatch]);
 
+  useEffect(() => {
+    resyncRef.current = resync;
+  }, [resync]);
+
   // resync calendar events periodically and on push message
   useEffect(() => {
     if (!user || !masterKey || !bucketKey || user.type === "offline") return;
@@ -2313,6 +2404,8 @@ export default memo(function AppCalendar({
                           onEventMove={onEventMove}
                           onEventDelete={onEventDelete}
                           onDuplicate={onEventDuplicate}
+                          onDetach={onEventDetach}
+                          onReset={onEventReset}
                           setEditingEvent={setEditingEvent}
                         />
                       ))}
@@ -2337,6 +2430,8 @@ export default memo(function AppCalendar({
       onEventMove,
       onEventDelete,
       onEventDuplicate,
+      onEventDetach,
+      onEventReset,
       setEditingEvent,
       onEventPointerDown,
       startNewEvent,
@@ -2596,16 +2691,20 @@ export default memo(function AppCalendar({
         open={updateRepeatDialogOpen}
         setOpen={setUpdateRepeatDialogOpen}
         onFocusReturned={onDialogFocusReturned}
-        onSubmit={(option: string) => {
-          const event = evPendingUpdateRef.current;
+        canKeepChanges={canKeepChanges}
+        onSubmit={(option: string, keepChanges: boolean) => {
+          const pending = evPendingRef.current;
 
-          if (!event) {
+          if (!pending) {
             toast.error("Event no longer exists.");
             dragRef.current = null;
-            evPendingUpdateRef.current = null;
+            evPendingRef.current = null;
             setUpdateRepeatDialogOpen(false);
             return;
           }
+
+          const { event } = pending;
+          const original = pending.original ?? event;
 
           pushHistory();
 
@@ -2627,7 +2726,7 @@ export default memo(function AppCalendar({
             });
 
             dragRef.current = null;
-            evPendingUpdateRef.current = null;
+            evPendingRef.current = null;
             save();
 
             return;
@@ -2635,21 +2734,22 @@ export default memo(function AppCalendar({
 
           const evStart = dragRef.current
             ? dragRef.current.originalStart
-            : event.start;
+            : original.start;
 
           const evEnd = dragRef.current
             ? dragRef.current.originalEnd
-            : event.end;
+            : original.end;
 
           switch (option) {
             case "this": {
               detachSingleOccurrence(
                 event,
                 evStart,
-                evEnd,
                 calendarEvents,
                 dispatch,
                 updateChange,
+                settings.detachRecurringOnEdit ||
+                  (!isParent && repeatChanged(original.repeat, event.repeat)),
               );
               break;
             }
@@ -2657,70 +2757,38 @@ export default memo(function AppCalendar({
             case "future": {
               if (isParent) {
                 // update everything
+                const updated = withShiftedOverrides(original, event);
+
                 dispatch({
                   type: "update",
                   id: parent.id,
-                  data: event,
+                  data: updated,
                 });
 
                 updateChange({
                   type: "updated",
-                  event,
+                  event: updated,
                 });
 
                 break;
               }
 
-              const { count } = parent.repeat;
-              const occurrencesKept = count
-                ? occurrencesBefore(parent.start, parent.repeat, evStart)
-                : 0;
+              const { created, remaining } = splitSeries(
+                parent,
+                event,
+                keepChanges,
+              );
 
-              // clone the event
-              const newEvent = {
-                ...event,
-                id: crypto.randomUUID(),
-                timestamp: Date.now(),
-                repeat: {
-                  ...parent.repeat,
-                  skip: undefined,
-                  count: count && count - occurrencesKept,
-                },
-              } as CalendarEvent;
+              dispatch({ type: "add", event: created });
+              updateChange({ type: "added", event: created });
 
-              delete newEvent._parent; // detach from parent
+              if (!remaining) {
+                endSeriesBefore(parent, event, dispatch, updateChange);
+                break;
+              }
 
-              dispatch({
-                type: "add",
-                event: newEvent,
-              });
-
-              updateChange({
-                type: "added",
-                event: newEvent,
-              });
-
-              // end parent's repetition
-              const updatedParent = {
-                ...parent,
-                repeat: {
-                  ...parent.repeat,
-                  ...(count
-                    ? { count: occurrencesKept }
-                    : { until: event.start.startOf("day").toMillis() }),
-                },
-              };
-
-              updateChange({
-                type: "updated",
-                event: updatedParent,
-              });
-
-              dispatch({
-                type: "update",
-                id: updatedParent.id,
-                data: updatedParent,
-              });
+              updateChange({ type: "updated", event: remaining });
+              dispatch({ type: "update", id: remaining.id, data: remaining });
               break;
             }
 
@@ -2778,12 +2846,12 @@ export default memo(function AppCalendar({
           }
 
           dragRef.current = null;
-          evPendingUpdateRef.current = null;
+          evPendingRef.current = null;
           save();
         }}
         onCancel={() => {
           dragRef.current = null;
-          evPendingUpdateRef.current = null;
+          evPendingRef.current = null;
         }}
       />
 
@@ -2794,11 +2862,11 @@ export default memo(function AppCalendar({
         setOpen={setDeleteRepeatDialogOpen}
         onFocusReturned={onDialogFocusReturned}
         onSubmit={(option: string) => {
-          const event = evPendingUpdateRef?.current;
+          const event = evPendingRef.current?.event;
 
-          if (!evPendingUpdateRef.current || !event) {
+          if (!event) {
             toast.error("Event no longer exists.");
-            evPendingUpdateRef.current = null;
+            evPendingRef.current = null;
             setDeleteRepeatDialogOpen(false);
             return;
           }
@@ -2853,8 +2921,11 @@ export default memo(function AppCalendar({
 
                 break;
               }
+              if (endSeriesBefore(parent, event, dispatch, updateChange)) break;
+
               // end parent's repetition
-              parent.repeat.until = event.start.startOf("day").toMillis();
+              parent.repeat.until = cutPoint(parent, event).toMillis();
+              parent.repeat.overrides = overridesBefore(parent, event);
 
               dispatch({
                 type: "update",
@@ -2885,12 +2956,12 @@ export default memo(function AppCalendar({
             }
           }
 
-          evPendingUpdateRef.current = null;
+          evPendingRef.current = null;
           setEditingEvent(null);
           save();
         }}
         onCancel={() => {
-          evPendingUpdateRef.current = null;
+          evPendingRef.current = null;
         }}
       />
     </main>

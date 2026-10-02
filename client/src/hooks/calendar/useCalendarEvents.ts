@@ -5,6 +5,7 @@ import {
   decryptEvents,
   encryptOfflineEvents,
   encryptEvents,
+  MAX_ENCRYPTED_EVENT_BYTES,
 } from "@/lib/calendar/crypt";
 import {
   computeBucketHash,
@@ -14,7 +15,7 @@ import {
   eventBucketLabels, // TODO: temporary migration, remove before v1
   RECURRING_BUCKET_LABEL, // TODO: temporary migration, remove before v1
 } from "@/lib/calendar/buckets";
-import { uuidToBase64 } from "@/lib/utils";
+import { base64ByteLength, uuidToBase64 } from "@/lib/utils";
 import type {
   CalendarEvent,
   EventHashRequest,
@@ -22,6 +23,7 @@ import type {
   EventSyncRequest,
   EventSyncResponse,
   EventChange,
+  RejectedEvent,
   WithoutPrivateKeys,
 } from "@/types/calendar/Event";
 import type { User } from "@/types/User";
@@ -34,6 +36,37 @@ const withoutPrivateKeys = (event: CalendarEvent) =>
   Object.fromEntries(
     Object.entries(event).filter(([key]) => !key.startsWith("_")),
   ) as WithoutPrivateKeys<CalendarEvent>;
+
+const rejectOversized = (
+  changes: EventChange[],
+  oversized: Set<string>,
+  cached: CalendarEvent[],
+): RejectedEvent[] => {
+  const previous = new Map(cached.map((ev) => [ev.id, ev]));
+  const rejected: RejectedEvent[] = [];
+
+  for (const id of oversized) {
+    const mine = changes.filter((c) => (c.event?.id ?? c.id) === id);
+    if (mine.at(-1)!.type === "deleted") continue;
+    rejected.push({
+      id,
+      title: mine.filter((c) => c.event).at(-1)!.event!.title,
+      wasAdded: mine.some((c) => c.type === "added"),
+      previous: previous.get(id),
+    });
+  }
+
+  return rejected;
+};
+
+// corrupted entries are dropped so the sync diff re-requests them fresh from the server
+const decryptValid = async (
+  stored: Parameters<typeof decryptOfflineEvents>[0],
+  masterKey: CryptoKey,
+) =>
+  (await decryptOfflineEvents(stored, masterKey)).filter(
+    (ev) => ev.start.isValid && ev.end.isValid,
+  );
 
 export const useCalendarEvents = (
   user: User | null,
@@ -51,13 +84,7 @@ export const useCalendarEvents = (
 
       if (cached) {
         try {
-          const decryptedCache = await decryptOfflineEvents(cached, masterKey);
-          // drop corrupted entries so the sync diff re-requests them fresh from the server
-          cachedEvents.push(
-            ...decryptedCache.filter(
-              (ev) => ev.start.isValid && ev.end.isValid,
-            ),
-          );
+          cachedEvents.push(...(await decryptValid(cached, masterKey)));
         } catch {
           toast.warning("Failed to decrypt event cache - it'll be discarded.");
         }
@@ -273,7 +300,11 @@ export const useCalendarEvents = (
   );
 
   const saveEvents = useCallback(
-    async (changes: EventChange[] | CalendarEvent[], cb: () => void) => {
+    async (
+      changes: EventChange[] | CalendarEvent[],
+      cb: () => void,
+      onRejected?: (rejected: RejectedEvent[]) => void,
+    ) => {
       if (!changes || changes.length === 0) return;
 
       setSaving(true);
@@ -294,6 +325,41 @@ export const useCalendarEvents = (
             masterKey,
             bucketKey,
           );
+
+          const oversized = new Set(
+            encryptedEvents
+              .filter(
+                (e) => base64ByteLength(e.data) > MAX_ENCRYPTED_EVENT_BYTES,
+              )
+              .map((e) => e.id),
+          );
+
+          if (oversized.size > 0) {
+            const stored = getStored("cachedEvents");
+            const cached = stored
+              ? await decryptValid(stored, masterKey).catch(() => [])
+              : [];
+            const rejected = rejectOversized(changes, oversized, cached);
+
+            changes = changes.filter(
+              (c) => c.type === "deleted" || !oversized.has(c.event!.id),
+            );
+
+            if (rejected.length > 0) {
+              toast.error(
+                rejected.length === 1
+                  ? `"${rejected[0].title}" is too large to save, so the change was undone.`
+                  : `${rejected.length} events are too large to save, so their changes were undone.`,
+              );
+            }
+            onRejected?.(rejected);
+
+            if (changes.length === 0) {
+              setSaving(false);
+              cb();
+              return;
+            }
+          }
 
           // build a map of (eventId: encryptedEvent) for quick lookup
           const encryptedMap = new Map(encryptedEvents.map((e) => [e.id, e]));
@@ -324,11 +390,7 @@ export const useCalendarEvents = (
 
             // update local cachedEvents with the new encrypted events
             const stored = getStored("cachedEvents");
-            const cached = stored
-              ? (await decryptOfflineEvents(stored, masterKey)).filter(
-                  (ev) => ev.start.isValid && ev.end.isValid,
-                )
-              : [];
+            const cached = stored ? await decryptValid(stored, masterKey) : [];
 
             // build map of (eventId: event) to merge changes easily
             const cachedMap = new Map(

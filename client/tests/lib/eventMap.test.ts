@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "luxon";
 import { eventKey, getEventMap } from "../../src/lib/calendar/event.ts";
-import type { CalendarEvent } from "../../src/types/calendar/Event.ts";
+import type {
+  CalendarEvent,
+  OccurrenceOverride,
+} from "../../src/types/calendar/Event.ts";
 
 const at = (iso: string, zone = "UTC") => DateTime.fromISO(iso, { zone });
 
@@ -192,3 +195,89 @@ describe("getEventMap keys", () => {
     }
   });
 });
+
+describe("getEventMap pre-anchor overrides", () => {
+  it("shows an override left behind the anchor", () => {
+    const map = getEventMap(
+      [
+        event("p", "2026-03-19T09:00", "2026-03-19T10:00", {
+          repeat: {
+            interval: 1,
+            unit: "day",
+            overrides: { "2026-03-18": { title: "First", startShift: 3600_000, endShift: 3600_000 } },
+          },
+        }),
+      ],
+      WINDOW(),
+      [],
+      [],
+    );
+
+    const first = map.get("2026-03-18")!;
+    expect(first).toHaveLength(1);
+    expect(first[0].title).toBe("First");
+    expect(first[0].start.toISO()).toBe(at("2026-03-18T10:00").toISO());
+  });
+
+  const daily = (overrides: Record<string, OccurrenceOverride>) =>
+    event("p", "2026-03-01T09:00", "2026-03-01T10:00", {
+      repeat: { interval: 1, unit: "day", overrides },
+    });
+  const day = 24 * 3600_000;
+
+  it("shows an instance moved into the window from before it", () => {
+    const map = getEventMap(
+      [daily({ "2026-03-10": { startShift: 10 * day, endShift: 10 * day } })],
+      WINDOW(),
+      [],
+      [],
+    );
+
+    expect(
+      (map.get("2026-03-20") ?? []).filter((e) => e.start.day === 20),
+    ).toHaveLength(2);
+    expect(
+      (map.get("2026-03-20") ?? []).map((e) => e._instanceId).sort(),
+    ).toEqual(["p_2026-03-10", "p_2026-03-20"]);
+  });
+
+  it("shows an instance moved into the window from after it", () => {
+    const map = getEventMap(
+      [daily({ "2026-03-30": { startShift: -10 * day, endShift: -10 * day } })],
+      WINDOW(),
+      [],
+      [],
+    );
+
+    expect(
+      (map.get("2026-03-20") ?? []).map((e) => e._instanceId).sort(),
+    ).toEqual(["p_2026-03-20", "p_2026-03-30"]);
+  });
+
+  it("shows an instance whose end alone is stretched into the window", () => {
+    const map = getEventMap(
+      [daily({ "2026-03-10": { endShift: 10 * day } })],
+      WINDOW(),
+      [],
+      [],
+    );
+
+    expect(
+      (map.get("2026-03-20") ?? []).map((e) => e._instanceId),
+    ).toContain("p_2026-03-10");
+  });
+
+  it("applies an end-only shift", () => {
+    const map = getEventMap(
+      [daily({ "2026-03-19": { endShift: 3600_000 } })],
+      WINDOW(),
+      [],
+      [],
+    );
+    const moved = map.get("2026-03-19")!.find((e) => e._instanceId)!;
+
+    expect(moved.start.toISO()).toBe(at("2026-03-19T09:00").toISO());
+    expect(moved.end.toISO()).toBe(at("2026-03-19T11:00").toISO());
+  });
+});
+

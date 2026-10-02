@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,6 +8,7 @@ import {
   AlertDialogFooter,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
+import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
@@ -16,7 +17,8 @@ type RecurringUpdateDialogOptions = {
   defaultOption: "this" | "future" | "all";
   open: boolean;
   setOpen: (open: boolean) => void;
-  onSubmit: (option: string) => void;
+  canKeepChanges?: boolean;
+  onSubmit: (option: string, keepChanges: boolean) => void;
   onCancel: () => void;
   onFocusReturned?: (toOpener: boolean) => void;
 };
@@ -26,16 +28,22 @@ export default memo(function RecurringUpdateDialog({
   defaultOption,
   open,
   setOpen,
+  canKeepChanges,
   onSubmit,
   onCancel,
   onFocusReturned,
 }: RecurringUpdateDialogOptions) {
   const [option, setOption] = useState<string>(defaultOption);
+  const [keepChanges, setKeepChanges] = useState(false);
   const openerRef = useRef<Element | null>(null);
 
   // the dialog has no trigger, so remember what had focus to give it back on close
   useLayoutEffect(() => {
     if (open) openerRef.current = document.activeElement;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) setKeepChanges(false);
   }, [open]);
 
   return (
@@ -73,10 +81,20 @@ export default memo(function RecurringUpdateDialog({
             <Label htmlFor="all">All events</Label>
           </div>
         </RadioGroup>
+        {canKeepChanges && option === "future" && (
+          <div className="flex gap-3 mt-4 text-left">
+            <Checkbox
+              id="keep-changes"
+              checked={keepChanges}
+              onCheckedChange={(c) => setKeepChanges(!!c)}
+            />
+            <Label htmlFor="keep-changes">Keep changes to future events</Label>
+          </div>
+        )}
         <AlertDialogFooter className="!flex-col mt-5">
           <AlertDialogAction
             onClick={() => {
-              onSubmit(option);
+              onSubmit(option, keepChanges);
               setOpen(false);
             }}
           >

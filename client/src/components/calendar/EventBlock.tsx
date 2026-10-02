@@ -15,7 +15,15 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "../ui/context-menu";
-import { Clipboard, CopyIcon, PencilLine, RedoDot, Trash2 } from "lucide-react";
+import {
+  Clipboard,
+  CopyIcon,
+  PencilLine,
+  RedoDot,
+  RotateCcw,
+  Trash2,
+  Unlink,
+} from "lucide-react";
 import useTapInteraction from "@/hooks/useTapInteraction";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MoveMenuItems } from "./MoveMenuItems";
@@ -47,6 +55,8 @@ export default memo(
     onEventMove,
     onEventDelete,
     onDuplicate,
+    onDetach,
+    onReset,
     setEditingEvent,
   }: EventBlockProps) {
     const isMobile = useIsMobile();
@@ -290,6 +300,14 @@ export default memo(
       onDuplicate(event);
     }, [event, onDuplicate]);
 
+    const detach = useCallback(() => {
+      onDetach(event);
+    }, [event, onDetach]);
+
+    const reset = useCallback(() => {
+      onReset(event);
+    }, [event, onReset]);
+
     const toggleCompleted = useCallback(
       (checked: boolean) => {
         onEventEdit(event, { ...event, completed: checked });
@@ -442,6 +460,20 @@ export default memo(
               Duplicate
             </ContextMenuItem>
 
+            {event._parent && (
+              <ContextMenuItem onClick={detach}>
+                <Unlink />
+                Detach from parent
+              </ContextMenuItem>
+            )}
+
+            {event._resettable && (
+              <ContextMenuItem onClick={reset}>
+                <RotateCcw />
+                Reset to original event
+              </ContextMenuItem>
+            )}
+
             <MoveMenuItems
               event={event}
               onMove={onEventMove}
@@ -476,6 +508,8 @@ export default memo(
             }}
             onDelete={handleDelete}
             onDuplicate={duplicate}
+            onDetach={detach}
+            onReset={reset}
             onCancel={() => setEditingEvent(null)}
           />
         ) : null}
@@ -494,6 +528,8 @@ export default memo(
       prev.onEventMove === next.onEventMove &&
       prev.onEventDelete === next.onEventDelete &&
       prev.onDuplicate === next.onDuplicate &&
+      prev.onDetach === next.onDetach &&
+      prev.onReset === next.onReset &&
       prev.setEditingEvent === next.setEditingEvent &&
       shallowEqual(prev.style, next.style)
     );

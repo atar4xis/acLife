@@ -166,6 +166,10 @@ export function uint8ArrayFromBase64(b64: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
+export function base64ByteLength(b64: string): number {
+  return Math.floor((b64.replace(/=/g, "").length * 3) / 4);
+}
+
 export function uint8ArrayFromUrlSafeBase64(
   base64: string,
 ): Uint8Array<ArrayBuffer> {

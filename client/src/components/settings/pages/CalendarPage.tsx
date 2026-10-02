@@ -467,6 +467,7 @@ export default function CalendarPage({
     miniCalendarWeekNumbers,
     miniCalendarBoldDayNumbers,
     miniCalendarDropdowns,
+    detachRecurringOnEdit,
     addColorsAutomatically,
     eventEditorOpacity,
     eventEditorBlur,
@@ -523,6 +524,25 @@ export default function CalendarPage({
         </Field>
 
         <TimezonesField />
+      </Section>
+
+      <Separator />
+
+      <Section
+        id="behavior"
+        label={sectionLabel("behavior")}
+        sectionRefs={sectionRefs}
+      >
+        <Field orientation="responsive">
+          <SettingsLabel settingKey="detachRecurringOnEdit" />
+          <Switch
+            aria-labelledby={settingLabelId("detachRecurringOnEdit")}
+            checked={detachRecurringOnEdit}
+            onCheckedChange={(checked) =>
+              setSetting("detachRecurringOnEdit", checked)
+            }
+          />
+        </Field>
       </Section>
 
       <Separator />

@@ -832,6 +832,7 @@ describe("keyboard move: recurring events", () => {
   });
 
   it("detaches the occurrence for 'this event'", async () => {
+    seedSettings({ detachRecurringOnEdit: true });
     const saveEvents = vi.fn();
     const { user } = renderCalendar({
       mode: "week",

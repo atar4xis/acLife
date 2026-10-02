@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "luxon";
 import { occurrences } from "@/lib/calendar/occurrences";
-import { nearbyOccurrences, nextOccurrence, occurrencesBefore } from "@/lib/calendar/recurrence";
+import { nearbyOccurrences, occurrencesBefore } from "@/lib/calendar/recurrence";
 import type { CalendarEvent, RepeatInterval } from "@/types/calendar/Event";
 
 const at = (iso: string) => DateTime.fromISO(iso, { zone: "utc" });
@@ -78,16 +78,6 @@ describe("occurrences", () => {
     const repeat: RepeatInterval = { interval: 1, unit: "month", monthly: "date" };
     const [first] = occurrences(at("2026-01-31T09:00"), repeat, at("2026-06-01T00:00"));
     expect(first.toISODate()).toBe("2026-07-31");
-  });
-
-  it("finds the next occurrence after a given start", () => {
-    const next = nextOccurrence(
-      { interval: 1, unit: "week", days: [1, 3] },
-      at("2026-03-09T09:00"),
-      at("2026-03-09T10:00"),
-    );
-    expect(next?.start.toISODate()).toBe("2026-03-11");
-    expect(next?.end.toISO()).toBe(at("2026-03-11T10:00").toISO());
   });
 });
 

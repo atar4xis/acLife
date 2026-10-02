@@ -1,5 +1,9 @@
 import type { ViewMode } from "@/types/calendar/ViewMode";
-import type { CalendarEvent, EventChange } from "@/types/calendar/Event";
+import type {
+  CalendarEvent,
+  EventChange,
+  RejectedEvent,
+} from "@/types/calendar/Event";
 import type { ReactNode, PointerEvent } from "react";
 import type { User } from "./User";
 import type { DateTime } from "luxon";
@@ -17,6 +21,7 @@ export interface CalendarProps {
   saveEvents: (
     changes: EventChange[] | CalendarEvent[],
     cb: () => void,
+    onRejected?: (rejected: RejectedEvent[]) => void,
   ) => void;
   syncEvents: (
     user: User,
@@ -55,5 +60,7 @@ export interface EventBlockProps {
   onEventMove: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   onEventDelete: (event: CalendarEvent) => void;
   onDuplicate: (event: CalendarEvent) => void;
+  onDetach: (event: CalendarEvent) => void;
+  onReset: (event: CalendarEvent) => void;
   setEditingEvent: (event: CalendarEvent | null, day?: number | null) => void;
 }

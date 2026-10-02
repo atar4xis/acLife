@@ -4,7 +4,11 @@ import type {
   PositionedEvent,
 } from "@/types/calendar/Event";
 import type { DateTime, Duration } from "luxon";
-import { occurrences } from "@/lib/calendar/occurrences";
+import {
+  nominalOnDate,
+  occurrences,
+  slotKey,
+} from "@/lib/calendar/occurrences";
 
 export const eventKey = (event: CalendarEvent) => event._instanceId ?? event.id;
 
@@ -153,14 +157,34 @@ export const makeOccurrence = (
   start: DateTime,
   key: string,
   duration: Duration,
-): CalendarEvent => ({
-  ...event,
-  _instanceId: `${event.id}_${key}`,
-  start,
-  end: start.plus(duration),
-  _parent: event.id,
-  completed: event.isTask ? resolveInstanceCompleted(event, key) : undefined,
-});
+): CalendarEvent => {
+  const slot = slotKey(start);
+  const override = event.repeat?.overrides?.[slot];
+  const {
+    startShift = 0,
+    endShift = 0,
+    description,
+    color,
+    title,
+  } = override ?? {};
+
+  return {
+    ...event,
+    title: title ?? event.title,
+    description:
+      description === undefined
+        ? event.description
+        : (description ?? undefined),
+    color: color === undefined ? event.color : (color ?? undefined),
+    _instanceId: `${event.id}_${key}`,
+    start: start.plus(startShift),
+    end: start.plus(duration).plus(endShift),
+    _parent: event.id,
+    _overrideKey: slot,
+    _resettable: override ? true : undefined,
+    completed: event.isTask ? resolveInstanceCompleted(event, key) : undefined,
+  };
+};
 
 export function mapEventToDate(
   map: Map<string, CalendarEvent[]>,
@@ -204,22 +228,43 @@ function processRepeats(
 
   const duration = e.end.diff(e.start);
   const startMillis = e.start.toMillis();
+  const overrides = e.repeat.overrides;
+  const pad = Math.max(
+    0,
+    ...Object.values(overrides ?? {}).flatMap((o) => [
+      Math.abs(o.startShift ?? 0),
+      Math.abs(o.endShift ?? 0),
+    ]),
+  );
 
-  for (const cursor of occurrences(e.start, e.repeat, firstVisibleDayStart)) {
-    if (cursor > lastVisibleDayEnd) break;
+  const emit = (cursor: DateTime) => {
+    const key = cursor.toISODate()!;
 
-    const millis = cursor.toMillis();
-
-    if (millis !== startMillis) {
-      const key = cursor.toISODate()!;
-      const instanceId = `${e.id}_${key}`;
-
-      if (visibleDates.has(key) && !excludeSet.has(instanceId)) {
-        const newEvent = makeOccurrence(e, cursor, key, duration);
-
-        mapEventToDates(map, newEvent, visibleDates);
-      }
+    if (
+      (visibleDates.has(key) || overrides?.[slotKey(cursor)]) &&
+      !excludeSet.has(`${e.id}_${key}`)
+    ) {
+      mapEventToDates(
+        map,
+        makeOccurrence(e, cursor, key, duration),
+        visibleDates,
+      );
     }
+  };
+
+  // overrides before the anchor are left behind when the parent moves forward
+  const anchorKey = slotKey(e.start);
+  for (const key of Object.keys(overrides ?? {})) {
+    if (key < anchorKey) emit(nominalOnDate(e.start, key));
+  }
+
+  for (const cursor of occurrences(
+    e.start,
+    e.repeat,
+    firstVisibleDayStart.minus(pad),
+  )) {
+    if (cursor > lastVisibleDayEnd.plus(pad)) break;
+    if (cursor.toMillis() !== startMillis) emit(cursor);
   }
 }
 

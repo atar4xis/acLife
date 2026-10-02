@@ -15,10 +15,56 @@ import {
   setupCalendarTests,
 } from "./helpers";
 
+import { seedSettings } from "../settingsStorage.ts";
 setupCalendarTests();
 
 describe("Calendar", () => {
+  it("detaches an attached instance from its context menu", async () => {
+    const saveEvents = vi.fn();
+    const { user } = renderCalendar({
+      events: [
+        buildRecurringEvent({
+          start: FIXED_NOW.startOf("week").minus({ days: 7 }).plus({ hours: 8 }),
+          end: FIXED_NOW.startOf("week").minus({ days: 7 }).plus({ hours: 9 }),
+        }),
+      ],
+      saveEvents,
+    });
+
+    await openEventMenu(user, "Daily standup");
+    await user.click(
+      await screen.findByRole("menuitem", { name: /detach from parent/i }),
+    );
+    await advanceSave();
+
+    const savedEvents = getLastSavedEvents(saveEvents);
+    expect(savedEvents).toHaveLength(2);
+    expect(savedEvents.filter((e) => e.repeat)).toHaveLength(1);
+  });
+
+  it("warns that changing repeat detaches an attached instance", async () => {
+    const { user } = renderCalendar({
+      events: [
+        buildRecurringEvent({
+          start: FIXED_NOW.startOf("week").minus({ days: 7 }).plus({ hours: 8 }),
+          end: FIXED_NOW.startOf("week").minus({ days: 7 }).plus({ hours: 9 }),
+        }),
+      ],
+    });
+
+    await openEventEditor(user, "Daily standup");
+    expect(screen.queryByText(/will detach this instance/i)).toBeNull();
+
+    await user.click(screen.getByRole("combobox", { name: /repeat/i }));
+    await user.click(await screen.findByRole("option", { name: /weekly/i }));
+
+    expect(
+      screen.getByText("Changing repeat settings will detach this instance."),
+    ).toBeInTheDocument();
+  });
+
   it("updates only selected recurring instance", async () => {
+    seedSettings({ detachRecurringOnEdit: true });
     const saveEvents = vi.fn();
     const { user } = renderCalendar({
       events: [buildRecurringEvent()],
@@ -282,6 +328,7 @@ describe("Calendar", () => {
   });
 
   it("cancel on recurring dialog after drag resets refs", async () => {
+    seedSettings({ detachRecurringOnEdit: true });
     const saveEvents = vi.fn();
     const { user } = renderCalendar({
       mode: "week",

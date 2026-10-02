@@ -311,7 +311,7 @@ describe("useCalendarSearch", () => {
       repeat,
     });
 
-    const search = async (events: CalendarEvent[]) => {
+    const search = async (events: CalendarEvent[], query = "standup") => {
       const { result } = renderHook(() =>
         useCalendarSearch(
           events,
@@ -324,7 +324,7 @@ describe("useCalendarSearch", () => {
         ),
       );
       act(() => {
-        result.current.setQuery("standup");
+        result.current.setQuery(query);
       });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
@@ -360,6 +360,87 @@ describe("useCalendarSearch", () => {
       expect(
         upcoming.every((d) => d! < today.plus({ days: 4 }).toISODate()!),
       ).toBe(true);
+    });
+
+    const today = () => DateTime.now().startOf("day");
+
+    it("lists an override left before the series start", async () => {
+      const yesterday = today().minus({ days: 1 }).toISODate()!;
+      const results = await search([
+        {
+          ...standup({
+            interval: 1,
+            unit: "day",
+            overrides: { [yesterday]: { title: "Standup (first)" } },
+          }),
+          start: today(),
+          end: today().plus({ hours: 1 }),
+        },
+      ]);
+
+      expect(results.map((e) => e._instanceId)).toContain(
+        `standup_${yesterday}`,
+      );
+    });
+
+    it("finds an instance by its own title", async () => {
+      const far = today().plus({ days: 20 }).toISODate()!;
+      const results = await search(
+        [
+          standup({
+            interval: 1,
+            unit: "day",
+            overrides: { [far]: { title: "Retro" } },
+          }),
+        ],
+        "retro",
+      );
+
+      expect(results.map((e) => e._instanceId)).toEqual([`standup_${far}`]);
+    });
+
+    it("caps instances found by their own title per side of now", async () => {
+      const overrides = Object.fromEntries(
+        [10, 11, 12, 13, 14].map((n) => [
+          today().plus({ days: n }).toISODate()!,
+          { title: "Retro" },
+        ]),
+      );
+      const results = await search(
+        [standup({ interval: 1, unit: "day", overrides })],
+        "retro",
+      );
+
+      expect(results).toHaveLength(3);
+    });
+
+    it("leaves out instances renamed away from the query", async () => {
+      const soon = today().plus({ days: 1 }).toISODate()!;
+      const results = await search([
+        standup({
+          interval: 1,
+          unit: "day",
+          overrides: { [soon]: { title: "Retro" } },
+        }),
+      ]);
+
+      expect(results.map((e) => e._instanceId)).not.toContain(
+        `standup_${soon}`,
+      );
+    });
+
+    it("fills every slot after dropping renamed instances", async () => {
+      const overrides = Object.fromEntries(
+        [1, 2, 3].map((n) => [
+          today().plus({ days: n }).toISODate()!,
+          { title: "Retro" },
+        ]),
+      );
+      const results = await search([
+        standup({ interval: 1, unit: "day", overrides }),
+      ]);
+
+      expect(results.filter((e) => e.start >= DateTime.now())).toHaveLength(3);
     });
 
     it("keeps non-repeating events as a single result", async () => {

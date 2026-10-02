@@ -62,6 +62,8 @@ export default memo(function EventEditorPreview({
                 onEventMove={noop}
                 onEventDelete={noop}
                 onDuplicate={noop}
+                onDetach={noop}
+                onReset={noop}
                 setEditingEvent={noop}
               />
             )}
@@ -77,6 +79,8 @@ export default memo(function EventEditorPreview({
           onDelete={noop}
           onCancel={noop}
           onDuplicate={noop}
+          onDetach={noop}
+          onReset={noop}
         />
       </div>
     </div>

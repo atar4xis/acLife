@@ -31,6 +31,7 @@ import {
   setupCalendarTests,
 } from "./helpers";
 
+import { seedSettings } from "../settingsStorage.ts";
 setupCalendarTests();
 
 describe("Calendar", () => {
@@ -166,6 +167,7 @@ describe("Calendar", () => {
   });
 
   it("moves every selected repeating event", async () => {
+    seedSettings({ detachRecurringOnEdit: true });
     const saveEvents = vi.fn();
     renderCalendar({
       mode: "week",

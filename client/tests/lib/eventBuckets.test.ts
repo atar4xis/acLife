@@ -60,6 +60,16 @@ describe("eventBucketLabels", () => {
     expect(weekly(MAX_SERIES_BUCKETS)).toEqual(["2026-W11", RECURRING_BUCKET_LABEL]);
   });
 
+  it("adds the weeks of moved attached instances to a bounded series", () => {
+    const shift = 14 * 24 * 3600_000;
+    const overrides = { "2026-03-16": { startShift: shift, endShift: shift } };
+    expect(
+      eventBucketLabels(
+        series({ interval: 1, unit: "week", count: 2, overrides }),
+      ),
+    ).toEqual(["2026-W11", "2026-W12", "2026-W14"]);
+  });
+
   it("only buckets the weeks that hold an occurrence", () => {
     expect(
       eventBucketLabels(
@@ -72,6 +82,20 @@ describe("eventBucketLabels", () => {
     expect(
       eventBucketLabels(series({ interval: 2, unit: "week", count: 2 }, "2026-03-15T20:00", 6)),
     ).toEqual(["2026-W11", "2026-W12", "2026-W13", "2026-W14"]);
+  });
+
+  it("includes the weeks an override stretches into", () => {
+    const stretch = 9 * 24 * 3600_000;
+    expect(
+      eventBucketLabels(
+        series({
+          interval: 1,
+          unit: "week",
+          count: 2,
+          overrides: { "2026-03-16": { endShift: stretch } },
+        }),
+      ),
+    ).toEqual(["2026-W11", "2026-W12", "2026-W13"]);
   });
 
   it("drops weeks whose occurrences are skipped or excluded", () => {

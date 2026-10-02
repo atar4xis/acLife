@@ -1,6 +1,6 @@
 import type { DateTime } from "luxon";
 import type { CalendarEvent } from "@/types/calendar/Event";
-import { occurrences } from "./occurrences";
+import { occurrences, overrideSpan } from "./occurrences";
 import { hmacSign } from "../crypt";
 import { arrayBufferToBase64 } from "../utils";
 
@@ -53,6 +53,11 @@ const seriesWeekLabels = (
     for (const label of weekLabels(start, start.plus(duration))) {
       labels.add(label);
     }
+  }
+
+  for (const [key, o] of Object.entries(event.repeat!.overrides ?? {})) {
+    const span = overrideSpan(event, key, o);
+    for (const label of weekLabels(span.start, span.end)) labels.add(label);
   }
 
   return labels.size < MAX_SERIES_BUCKETS ? labels : null;

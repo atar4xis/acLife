@@ -14,6 +14,7 @@ import {
   setupCalendarTests,
 } from "./helpers";
 
+import { seedSettings } from "../settingsStorage.ts";
 setupCalendarTests();
 
 const openMoveSubmenu = async (
@@ -145,6 +146,7 @@ describe("Calendar move menu", () => {
   });
 
   it("moves a single recurring event via the menu without prompting, detaching only that occurrence", async () => {
+    seedSettings({ detachRecurringOnEdit: true });
     const saveEvents = vi.fn();
     const { user } = renderCalendar({
       events: [buildRecurringEvent()],

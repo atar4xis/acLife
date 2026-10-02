@@ -18,6 +18,9 @@ import { compress, decompress } from "../gzip";
 import { arrayBufferToBase64, uint8ArrayFromBase64 } from "../utils";
 import { computeEventBuckets } from "./buckets";
 
+// mirrors the server's constants.MaxEventLen (bytes of ciphertext)
+export const MAX_ENCRYPTED_EVENT_BYTES = 10000;
+
 export const encryptOfflineEvents = async (
   events: CalendarEvent[],
   masterKey: CryptoKey,

@@ -27,6 +27,7 @@ export interface CalendarSettings {
   miniCalendarDropdowns: boolean;
   eventColorPresets: string[];
   addColorsAutomatically: boolean;
+  detachRecurringOnEdit: boolean;
   eventEditorOpacity: number;
   eventEditorBlur: number;
   eventEditorRadius: number;
