@@ -88,28 +88,33 @@ export const useCalendarEvents = (
         }),
       );
 
-      const hashRes = await post<EventHashResponse>("calendar/events/sync", {
-        hashes: Object.fromEntries(
-          await Promise.all(
-            buckets.map(async (b) => [
-              b,
-              await computeBucketHash(
-                byBucket.get(b)!.map((ev) => ({ id: ev.id, ts: ev.timestamp })),
-              ),
-            ]),
+      let mismatched = buckets;
+      if (cachedEvents.length > 0) {
+        const hashRes = await post<EventHashResponse>("calendar/events/sync", {
+          hashes: Object.fromEntries(
+            await Promise.all(
+              buckets.map(async (b) => [
+                b,
+                await computeBucketHash(
+                  byBucket
+                    .get(b)!
+                    .map((ev) => ({ id: ev.id, ts: ev.timestamp })),
+                ),
+              ]),
+            ),
           ),
-        ),
-      } satisfies EventHashRequest);
+        } satisfies EventHashRequest);
 
-      if (!hashRes.success || !hashRes.data) {
-        throw new Error(
-          "Failed to sync calendar events" +
-            (hashRes.message ? `: ${hashRes.message}` : "."),
-        );
+        if (!hashRes.success || !hashRes.data) {
+          throw new Error(
+            "Failed to sync calendar events" +
+              (hashRes.message ? `: ${hashRes.message}` : "."),
+          );
+        }
+
+        mismatched = hashRes.data.mismatched;
+        if (mismatched.length === 0) return cachedEvents;
       }
-
-      const { mismatched } = hashRes.data;
-      if (mismatched.length === 0) return cachedEvents;
 
       const eventsToSync = new Set(
         mismatched.flatMap((b) => byBucket.get(b) ?? []),
