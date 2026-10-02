@@ -1,4 +1,8 @@
-import { importKeyPair, unwrapKeyPairWithPin } from "@/lib/crypt";
+import {
+  importKeyPair,
+  MAX_PASSWORD_LENGTH,
+  unwrapKeyPairWithPin,
+} from "@/lib/crypt";
 import { unlockAccount } from "@/lib/unlockAccount";
 import { useApi } from "@/context/ApiContext";
 import { useStorage } from "@/context/StorageContext";
@@ -161,6 +165,7 @@ export default function UnlockDialog() {
                         id="password"
                         name="password"
                         type="password"
+                        maxLength={MAX_PASSWORD_LENGTH}
                         placeholder="Enter password"
                         autoFocus
                         required

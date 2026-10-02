@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { MAX_PASSWORD_LENGTH } from "@/lib/crypt";
 import {
   Dialog,
   DialogContent,
@@ -185,6 +186,7 @@ export function StayUnlockedDialog({
             <Input
               id="stay-unlocked-password"
               type="password"
+              maxLength={MAX_PASSWORD_LENGTH}
               autoFocus
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}

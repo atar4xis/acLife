@@ -15,6 +15,7 @@ import { useUser } from "@/context/UserContext";
 import {
   generateMasterKeyEnvelope,
   generateSRPTriplet,
+  MAX_PASSWORD_LENGTH,
   solveProofOfWork,
   SRP_CheckM2,
   SRP_PARAMS,
@@ -226,6 +227,7 @@ export function LoginForm({
                   id="password"
                   name="password"
                   type="password"
+                  maxLength={MAX_PASSWORD_LENGTH}
                   placeholder="Enter password"
                   required
                 />
@@ -241,6 +243,7 @@ export function LoginForm({
                       id="confirm-password"
                       name="confirm-password"
                       type="password"
+                      maxLength={MAX_PASSWORD_LENGTH}
                       placeholder="Confirm password"
                       required
                     />

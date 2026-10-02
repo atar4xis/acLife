@@ -8,6 +8,8 @@ import {
 } from "@mzattahri/srp";
 import { arrayBufferToBase64, uint8ArrayFromBase64 } from "./utils";
 
+export const MAX_PASSWORD_LENGTH = 256;
+
 export const SRP_PARAMS: Params = {
   name: "DH16-SHA256-CustomKDF",
   group: RFC5054Group4096,

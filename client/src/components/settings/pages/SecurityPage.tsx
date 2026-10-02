@@ -8,7 +8,11 @@ import {
   SecuritySettingsProvider,
   useSecuritySettings,
 } from "@/context/SecuritySettingsContext";
-import { generateSRPTriplet, rewrapMasterKeyEnvelope } from "@/lib/crypt";
+import {
+  generateSRPTriplet,
+  MAX_PASSWORD_LENGTH,
+  rewrapMasterKeyEnvelope,
+} from "@/lib/crypt";
 import { unlockAccount } from "@/lib/unlockAccount";
 import { validatePassword } from "@/lib/validators";
 import { bytesToBase64, uint8ArrayFromBase64 } from "@/lib/utils";
@@ -119,6 +123,7 @@ function ChangeEmailDialog({
             <Input
               id="current-password-email"
               type="password"
+              maxLength={MAX_PASSWORD_LENGTH}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -212,6 +217,7 @@ function ChangePasswordDialog({
             <Input
               id="current-password"
               type="password"
+              maxLength={MAX_PASSWORD_LENGTH}
               autoFocus
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
@@ -222,6 +228,7 @@ function ChangePasswordDialog({
             <Input
               id="new-password"
               type="password"
+              maxLength={MAX_PASSWORD_LENGTH}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
@@ -233,6 +240,7 @@ function ChangePasswordDialog({
             <Input
               id="confirm-new-password"
               type="password"
+              maxLength={MAX_PASSWORD_LENGTH}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
