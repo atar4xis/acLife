@@ -358,6 +358,7 @@ function AccountSection({
       throw new Error(res.message || "Failed to change password.");
     }
 
+    await checkLogin();
     setPasswordDialogOpen(false);
     onPasswordChanged();
     toast.success("Password updated.");
