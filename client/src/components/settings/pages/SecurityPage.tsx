@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2, RefreshCw, TriangleAlert } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { useApi } from "@/context/ApiContext";
+import { useSessions } from "@/hooks/useSessions";
 import {
   SecuritySettingsProvider,
   useSecuritySettings,
@@ -17,7 +18,6 @@ import { unlockAccount } from "@/lib/unlockAccount";
 import { validatePassword } from "@/lib/validators";
 import { bytesToBase64, uint8ArrayFromBase64 } from "@/lib/utils";
 import type { AutoLockOption, UnlockMethod } from "@/types/Storage";
-import type { Session } from "@/types/Session";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -265,7 +265,13 @@ function ChangePasswordDialog({
   );
 }
 
-function AccountSection({ sectionRefs }: { sectionRefs: SectionRefs }) {
+function AccountSection({
+  sectionRefs,
+  onPasswordChanged,
+}: {
+  sectionRefs: SectionRefs;
+  onPasswordChanged: () => void;
+}) {
   const { user, masterKey, checkLogin } = useUser();
   const { post, serverMeta } = useApi();
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -353,6 +359,7 @@ function AccountSection({ sectionRefs }: { sectionRefs: SectionRefs }) {
     }
 
     setPasswordDialogOpen(false);
+    onPasswordChanged();
     toast.success("Password updated.");
   };
 
@@ -401,28 +408,15 @@ function AccountSection({ sectionRefs }: { sectionRefs: SectionRefs }) {
   );
 }
 
-function SessionsSection({ sectionRefs }: { sectionRefs: SectionRefs }) {
-  const { get, del } = useApi();
-  const [sessions, setSessions] = useState<Session[] | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+function SessionsSection({
+  sectionRefs,
+  sessions,
+  setSessions,
+  refreshing,
+  load,
+}: { sectionRefs: SectionRefs } & ReturnType<typeof useSessions>) {
+  const { del } = useApi();
   const [revokingId, setRevokingId] = useState<string | null>(null);
-
-  const load = async () => {
-    setRefreshing(true);
-    const res = await get<Session[]>("user/sessions");
-    setRefreshing(false);
-
-    if (res.success && res.data) {
-      setSessions(res.data);
-    } else {
-      toast.error(res.message || "Failed to load sessions.");
-    }
-  };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line
-  }, []);
 
   const revoke = async (id: string) => {
     setRevokingId(id);
@@ -505,12 +499,16 @@ function SessionsSection({ sectionRefs }: { sectionRefs: SectionRefs }) {
 function SecurityPageContent({ sectionRefs }: { sectionRefs: SectionRefs }) {
   const { unlockMethod, autoLock, setUnlockMethod, setAutoLock } =
     useSecuritySettings();
+  const sessions = useSessions();
 
   return (
     <FieldGroup className="gap-8">
       <h2 className="text-lg font-semibold">Account & Security</h2>
 
-      <AccountSection sectionRefs={sectionRefs} />
+      <AccountSection
+        sectionRefs={sectionRefs}
+        onPasswordChanged={sessions.load}
+      />
 
       <Separator />
 
@@ -575,7 +573,7 @@ function SecurityPageContent({ sectionRefs }: { sectionRefs: SectionRefs }) {
 
       <Separator />
 
-      <SessionsSection sectionRefs={sectionRefs} />
+      <SessionsSection sectionRefs={sectionRefs} {...sessions} />
     </FieldGroup>
   );
 }
