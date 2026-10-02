@@ -56,6 +56,11 @@ server.post = async (endpoint, body) => {
     return { success: true };
   }
 
+  if ("hashes" in (body as object)) {
+    const { hashes } = body as { hashes: Record<string, string> };
+    return { success: true, data: { mismatched: Object.keys(hashes) } };
+  }
+
   const known = new Set(
     (body as { events: { id: string }[] }).events.map((e) => toUuid(e.id)),
   );

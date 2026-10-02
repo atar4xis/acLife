@@ -17,8 +17,14 @@ type CachedEvent struct {
 
 // EventSyncRequest is the structure of an event sync request.
 type EventSyncRequest struct {
-	Events  []CachedEvent `json:"events"`
-	Buckets []string      `json:"buckets"`
+	Events  []CachedEvent     `json:"events"`
+	Buckets []string          `json:"buckets"`
+	Hashes  map[string]string `json:"hashes"` // bucket id -> client's hash of cached events in that bucket
+}
+
+// EventHashResponse is the response to an event sync request that carries hashes.
+type EventHashResponse struct {
+	Mismatched []string `json:"mismatched"`
 }
 
 // EventSyncResponse is the structure of the response to an event sync request.

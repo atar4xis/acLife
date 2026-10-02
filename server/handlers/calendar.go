@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
 	"errors"
@@ -279,6 +280,96 @@ func scanEventMeta(rows *sql.Rows) ([]eventMeta, error) {
 	return out, nil
 }
 
+// bucketHash hashes the "uuid:updatedAtMillis" lines of a bucket; line order does not matter.
+func bucketHash(lines []string) string {
+	sorted := append([]string(nil), lines...)
+	sort.Strings(sorted)
+	sum := sha256.Sum256([]byte(strings.Join(sorted, "\n")))
+	return base64.StdEncoding.EncodeToString(sum[:])
+}
+
+// syncHashes replies with the requested buckets whose server-side hash differs from the client's.
+func syncHashes(w http.ResponseWriter, r *http.Request, owner string, hashes map[string]string) {
+	if len(hashes) == 0 || len(hashes) > constants.MaxSyncBuckets {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	args := make([]any, 0, len(hashes)+1)
+	args = append(args, owner)
+	placeholders := make([]string, 0, len(hashes))
+	keys := make(map[string]string, len(hashes))
+	for b := range hashes {
+		bucketID, err := base64.StdEncoding.DecodeString(b)
+		if err != nil || len(bucketID) != constants.BucketIDLen {
+			utils.SendBadRequest(w)
+			return
+		}
+		args = append(args, bucketID)
+		placeholders = append(placeholders, "?")
+		keys[string(bucketID)] = b
+	}
+
+	rows, err := database.Query(r.Context(), `
+		SELECT ceb.bucket_id, ce.id, ce.updated_at
+		FROM calendar_events ce
+		JOIN calendar_event_buckets ceb ON ceb.event_id = ce.id
+		WHERE ce.owner = ? AND ceb.bucket_id IN (`+strings.Join(placeholders, ",")+`)
+	`, args...)
+	if err != nil {
+		utils.LogError("syncHashes", "Query", err)
+		utils.SendInternalError(w)
+		return
+	}
+	defer func() { _ = rows.Close() }()
+
+	lines := make(map[string][]string, len(hashes))
+	for rows.Next() {
+		var bucketID []byte
+		var id string
+		var updatedAt time.Time
+		if err := rows.Scan(&bucketID, &id, &updatedAt); err != nil {
+			utils.LogError("syncHashes", "Scan", err)
+			utils.SendInternalError(w)
+			return
+		}
+		key := keys[string(bucketID)]
+		lines[key] = append(lines[key], fmt.Sprintf("%s:%d", strings.ToLower(id), updatedAt.UnixMilli()))
+	}
+	if err := rows.Err(); err != nil {
+		utils.LogError("syncHashes", "Rows", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	// legacy events only reach the client through the full diff, which also backfills them
+	var hasLegacy bool
+	if err := database.QueryRow(r.Context(), `
+		SELECT EXISTS (
+			SELECT 1 FROM calendar_events ce
+			WHERE ce.owner = ? AND NOT EXISTS (
+				SELECT 1 FROM calendar_event_buckets ceb WHERE ceb.event_id = ce.id
+			)
+		)
+	`, owner).Scan(&hasLegacy); err != nil {
+		utils.LogError("syncHashes", "LegacyQuery", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	mismatched := make([]string, 0, len(hashes))
+	for b, want := range hashes {
+		if hasLegacy || bucketHash(lines[b]) != want {
+			mismatched = append(mismatched, b)
+		}
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[types.EventHashResponse]{
+		Success: true,
+		Data:    types.EventHashResponse{Mismatched: mismatched},
+	})
+}
+
 func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	user := session.GetLoggedInUser(r)
 	utils.Assert(user != nil) // ensured by AuthMiddleware
@@ -286,6 +377,11 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	var req types.EventSyncRequest
 	if err := utils.ParseJSON(r.Body, &req); err != nil {
 		utils.SendBadRequest(w)
+		return
+	}
+
+	if req.Hashes != nil {
+		syncHashes(w, r, user.UUID, req.Hashes)
 		return
 	}
 

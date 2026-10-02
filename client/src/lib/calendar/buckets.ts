@@ -17,6 +17,17 @@ export const computeBucketId = async (
   return arrayBufferToBase64(await hmacSign(bucketKey, label));
 };
 
+export const computeBucketHash = async (
+  events: { id: string; ts: number }[],
+): Promise<string> => {
+  const lines = events.map((ev) => `${ev.id.toLowerCase()}:${ev.ts}`).sort();
+  const hash = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(lines.join("\n")),
+  );
+  return arrayBufferToBase64(hash);
+};
+
 export const computeEventBuckets = async (
   event: Pick<CalendarEvent, "start" | "end" | "repeat">,
   bucketKey: CryptoKey,

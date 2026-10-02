@@ -7,12 +7,15 @@ import {
   encryptEvents,
 } from "@/lib/calendar/crypt";
 import {
+  computeBucketHash,
   computeEventBuckets,
   computeSyncRangeBuckets,
 } from "@/lib/calendar/buckets";
 import { uuidToBase64 } from "@/lib/utils";
 import type {
   CalendarEvent,
+  EventHashRequest,
+  EventHashResponse,
   EventSyncRequest,
   EventSyncResponse,
   EventChange,
@@ -71,23 +74,50 @@ export const useCalendarEvents = (
       // get cached events
       const cachedEvents = await getCachedEvents(masterKey);
 
-      const requestedSet = new Set(buckets);
-
-      const eventsInRange = await Promise.all(
+      const byBucket = new Map<string, CalendarEvent[]>(
+        buckets.map((b) => [b, []]),
+      );
+      await Promise.all(
         cachedEvents.map(async (ev) => {
-          const evBuckets = await computeEventBuckets(ev, bucketKey);
-          return evBuckets.some((b) => requestedSet.has(b)) ? ev : null;
+          for (const b of await computeEventBuckets(ev, bucketKey)) {
+            byBucket.get(b)?.push(ev);
+          }
         }),
       );
 
+      const hashRes = await post<EventHashResponse>("calendar/events/sync", {
+        hashes: Object.fromEntries(
+          await Promise.all(
+            buckets.map(async (b) => [
+              b,
+              await computeBucketHash(
+                byBucket.get(b)!.map((ev) => ({ id: ev.id, ts: ev.timestamp })),
+              ),
+            ]),
+          ),
+        ),
+      } satisfies EventHashRequest);
+
+      if (!hashRes.success || !hashRes.data) {
+        throw new Error(
+          "Failed to sync calendar events" +
+            (hashRes.message ? `: ${hashRes.message}` : "."),
+        );
+      }
+
+      const { mismatched } = hashRes.data;
+      if (mismatched.length === 0) return cachedEvents;
+
+      const eventsToSync = new Set(
+        mismatched.flatMap((b) => byBucket.get(b) ?? []),
+      );
+
       const request: EventSyncRequest = {
-        events: eventsInRange
-          .filter((ev): ev is CalendarEvent => ev !== null)
-          .map((ev) => ({
-            id: uuidToBase64(ev.id),
-            ts: ev.timestamp,
-          })),
-        buckets,
+        events: Array.from(eventsToSync).map((ev) => ({
+          id: uuidToBase64(ev.id),
+          ts: ev.timestamp,
+        })),
+        buckets: mismatched,
       };
 
       // request sync from server, providing a map of our cached events

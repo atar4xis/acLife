@@ -91,6 +91,14 @@ export type EventSyncRequest = {
   buckets?: string[];
 };
 
+export type EventHashRequest = {
+  hashes: Record<string, string>; // bucket id -> hash of cached events in it
+};
+
+export type EventHashResponse = {
+  mismatched: string[];
+};
+
 export type EventSyncResponse = {
   updated: EncryptedEvent[];
   deleted: string[];
