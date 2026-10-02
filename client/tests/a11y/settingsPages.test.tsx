@@ -25,7 +25,7 @@ vi.mock("../../src/context/StorageContext.tsx", () => ({
   useStorage: () => storageMock,
 }));
 
-vi.mock("../../src/lib/crypt.ts", () => ({}));
+vi.mock("../../src/lib/crypt.ts", () => ({ MAX_PASSWORD_LENGTH: 256 }));
 vi.mock("../../src/lib/unlockAccount.ts", () => ({}));
 
 vi.mock("../../src/context/UserContext.tsx", () => ({

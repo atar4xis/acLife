@@ -30,6 +30,7 @@ const apiMock = vi.hoisted(() => ({ post: vi.fn() }));
 const cryptMock = vi.hoisted(() => ({
   exportKeyPair: vi.fn(),
   wrapKeyPairWithPin: vi.fn(),
+  MAX_PASSWORD_LENGTH: 256,
 }));
 
 const unlockMock = vi.hoisted(() => ({ unlockAccount: vi.fn() }));
