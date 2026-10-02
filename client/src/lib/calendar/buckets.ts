@@ -9,8 +9,10 @@ export const RECURRING_BUCKET_LABEL = "recurring";
 export const MAX_SYNC_BUCKETS_PER_REQUEST = 100;
 export const MAX_SERIES_BUCKETS = 32;
 
-export const weekLabel = (date: DateTime): string =>
-  `${date.weekYear}-W${String(date.weekNumber).padStart(2, "0")}`;
+export const weekLabel = (date: DateTime): string => {
+  const utc = date.toUTC();
+  return `${utc.weekYear}-W${String(utc.weekNumber).padStart(2, "0")}`;
+};
 
 export const computeBucketId = async (
   bucketKey: CryptoKey,
@@ -32,8 +34,8 @@ export const computeBucketHash = async (
 
 const weekLabels = (start: DateTime, end: DateTime) => {
   const labels: string[] = [];
-  const endWeek = end.startOf("week");
-  for (let cursor = start.startOf("week"); cursor <= endWeek;) {
+  const endWeek = end.toUTC().startOf("week");
+  for (let cursor = start.toUTC().startOf("week"); cursor <= endWeek;) {
     labels.push(weekLabel(cursor));
     cursor = cursor.plus({ weeks: 1 });
   }

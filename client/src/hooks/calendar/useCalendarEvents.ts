@@ -166,6 +166,13 @@ export const useCalendarEvents = (
         );
 
         const backfillIds = new Set(needsBucketBackfill ?? []);
+        const nothingToApply =
+          !updated.length && !added.length && !deleted.length;
+        if (nothingToApply) {
+          for (const b of mismatched) {
+            for (const ev of byBucket.get(b) ?? []) backfillIds.add(ev.id);
+          }
+        }
 
         // TODO: temporary migration, remove before v1
         const recurringBucket = await computeBucketId(

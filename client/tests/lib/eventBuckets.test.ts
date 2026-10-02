@@ -16,6 +16,15 @@ const series = (repeat: RepeatInterval, start = "2026-03-09T09:00", hours = 1) =
 });
 
 describe("eventBucketLabels", () => {
+  it("labels weeks in UTC regardless of the event zone", () => {
+    const utc = at("2026-09-27T16:00");
+    const tokyo = utc.setZone("Asia/Tokyo");
+    expect(tokyo.weekNumber).not.toBe(utc.weekNumber);
+    expect(
+      eventBucketLabels({ start: tokyo, end: tokyo.plus({ hours: 1 }) }),
+    ).toEqual(["2026-W39"]);
+  });
+
   it("leaves one-off events in their own weeks", () => {
     const start = at("2026-03-08T23:00");
     expect(

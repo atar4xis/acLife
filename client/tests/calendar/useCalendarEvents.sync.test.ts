@@ -109,4 +109,46 @@ describe("syncBuckets", () => {
     expect(body.buckets).toEqual([bucket]);
     expect(body.events).toHaveLength(1);
   });
+
+  it("re-saves events of mismatched buckets when the server has nothing to apply", async () => {
+    const { result, masterKey, bucketKey, bucket } = await setup();
+    apiMock.post
+      .mockReset()
+      .mockResolvedValueOnce({ success: true, data: { mismatched: [bucket] } })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { added: [], updated: [], deleted: [], needsBucketBackfill: [] },
+      })
+      .mockResolvedValue({ success: true });
+
+    await result.current.syncBuckets([bucket], masterKey, bucketKey);
+
+    await vi.waitFor(() => expect(apiMock.post).toHaveBeenCalledTimes(3));
+    const [path, changes] = apiMock.post.mock.calls[2];
+    expect(path).toBe("calendar/events/save");
+    expect(changes).toHaveLength(1);
+    expect(changes[0].type).toBe("updated");
+  });
+
+  it("does not re-save when the server returned changes", async () => {
+    const { result, masterKey, bucketKey, bucket } = await setup();
+    apiMock.post
+      .mockReset()
+      .mockResolvedValueOnce({ success: true, data: { mismatched: [bucket] } })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          added: [],
+          updated: [],
+          deleted: ["AAAAAAAAAAAAAAAAAAAAAA=="],
+          needsBucketBackfill: [],
+        },
+      })
+      .mockResolvedValue({ success: true });
+
+    await result.current.syncBuckets([bucket], masterKey, bucketKey);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(apiMock.post).toHaveBeenCalledTimes(2);
+  });
 });
