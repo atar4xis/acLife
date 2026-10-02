@@ -1,10 +1,10 @@
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { DateTime, Duration } from "luxon";
 import { resolveInstanceCompleted } from "./event";
+import { occurrences } from "./occurrences";
 
 const SEARCH_HORIZON_DAYS = 365;
 const MAX_CANDIDATES = 5000;
-const MAX_REPEAT_ITERATIONS = 20000;
 
 type Occurrence = { start: DateTime; end: DateTime };
 
@@ -33,34 +33,25 @@ function findOverlappingOccurrence(
     }
 
     const duration = e.end.diff(e.start);
-    const until = e.repeat.until;
-    let cursor = e.start;
-    let iterations = 0;
 
-    while (cursor <= rangeEnd && iterations < MAX_REPEAT_ITERATIONS) {
-      iterations++;
+    for (const cursor of occurrences(
+      e.start,
+      e.repeat,
+      rangeStart.minus(duration),
+    )) {
+      if (cursor > rangeEnd) break;
 
-      if (!until || cursor.toMillis() < until) {
-        const key = cursor.toISODate()!;
-        const keyUTC = cursor.toUTC().toISODate()!;
-        const weekday = cursor.weekday;
-        const instanceId =
-          cursor.toMillis() === e.start.toMillis() ? e.id : `${e.id}_${key}`;
+      const key = cursor.toISODate()!;
+      const instanceId =
+        cursor.toMillis() === e.start.toMillis() ? e.id : `${e.id}_${key}`;
+      const completed = e.isTask && resolveInstanceCompleted(e, key);
 
-        const skipped =
-          e.repeat.except?.includes(weekday) ||
-          e.repeat.skip?.includes(keyUTC) ||
-          (e.isTask && resolveInstanceCompleted(e, key));
-
-        if (!skipped && instanceId !== excludeKey) {
-          const occEnd = cursor.plus(duration);
-          if (cursor < rangeEnd && occEnd > rangeStart) {
-            return { start: cursor, end: occEnd };
-          }
+      if (!completed && instanceId !== excludeKey) {
+        const occEnd = cursor.plus(duration);
+        if (cursor < rangeEnd && occEnd > rangeStart) {
+          return { start: cursor, end: occEnd };
         }
       }
-
-      cursor = cursor.plus({ [e.repeat.unit]: e.repeat.interval });
     }
   }
 

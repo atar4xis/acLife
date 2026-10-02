@@ -2,9 +2,9 @@ import type {
   CalendarEvent,
   EventStyle,
   PositionedEvent,
-  RepeatInterval,
 } from "@/types/calendar/Event";
 import type { DateTime, Duration } from "luxon";
+import { occurrences } from "@/lib/calendar/occurrences";
 
 export const eventKey = (event: CalendarEvent) => event._instanceId ?? event.id;
 
@@ -148,10 +148,6 @@ export const resolveInstanceCompleted = (
     ? (event.completedInstances?.includes(dateKey) ?? false)
     : event.completed;
 
-export const isOccurrenceExcluded = (repeat: RepeatInterval, start: DateTime) =>
-  !!repeat.except?.includes(start.weekday) ||
-  !!repeat.skip?.includes(start.toUTC().toISODate()!);
-
 export const makeOccurrence = (
   event: CalendarEvent,
   start: DateTime,
@@ -206,43 +202,24 @@ function processRepeats(
 ) {
   if (!e.repeat || e._parent || e._continued) return;
 
-  const { unit, interval } = e.repeat;
   const duration = e.end.diff(e.start);
-  const until = e.repeat.until;
   const startMillis = e.start.toMillis();
 
-  // the repeat series ends before the visible range even starts
-  if (until && until < firstVisibleDayStart.toMillis()) return;
+  for (const cursor of occurrences(e.start, e.repeat, firstVisibleDayStart)) {
+    if (cursor > lastVisibleDayEnd) break;
 
-  let index = 0;
-
-  if (e.start < firstVisibleDayStart) {
-    const unitsElapsed = firstVisibleDayStart.diff(e.start, unit).as(unit);
-    index = Math.max(0, Math.floor(unitsElapsed / interval));
-  }
-
-  let cursor = e.start.plus({ [unit]: index * interval });
-
-  while (cursor <= lastVisibleDayEnd) {
     const millis = cursor.toMillis();
 
     if (millis !== startMillis) {
       const key = cursor.toISODate()!;
       const instanceId = `${e.id}_${key}`;
 
-      if (
-        visibleDates.has(key) &&
-        (!until || millis < until) &&
-        !isOccurrenceExcluded(e.repeat, cursor) &&
-        !excludeSet.has(instanceId)
-      ) {
+      if (visibleDates.has(key) && !excludeSet.has(instanceId)) {
         const newEvent = makeOccurrence(e, cursor, key, duration);
 
         mapEventToDates(map, newEvent, visibleDates);
       }
     }
-
-    cursor = e.start.plus({ [unit]: ++index * interval });
   }
 }
 

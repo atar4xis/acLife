@@ -8,8 +8,11 @@ import {
 } from "@/lib/calendar/crypt";
 import {
   computeBucketHash,
+  computeBucketId, // TODO: temporary migration, remove before v1
   computeEventBuckets,
   computeSyncRangeBuckets,
+  eventBucketLabels, // TODO: temporary migration, remove before v1
+  RECURRING_BUCKET_LABEL, // TODO: temporary migration, remove before v1
 } from "@/lib/calendar/buckets";
 import { uuidToBase64 } from "@/lib/utils";
 import type {
@@ -162,8 +165,26 @@ export const useCalendarEvents = (
           await encryptOfflineEvents(finalEvents, masterKey),
         );
 
-        if (needsBucketBackfill?.length > 0) {
-          const toBackfill = needsBucketBackfill
+        const backfillIds = new Set(needsBucketBackfill ?? []);
+
+        // TODO: temporary migration, remove before v1
+        const recurringBucket = await computeBucketId(
+          bucketKey,
+          RECURRING_BUCKET_LABEL,
+        );
+        if (mismatched.includes(recurringBucket)) {
+          for (const ev of cachedMap.values()) {
+            if (
+              ev.repeat &&
+              !eventBucketLabels(ev).includes(RECURRING_BUCKET_LABEL)
+            ) {
+              backfillIds.add(ev.id);
+            }
+          }
+        }
+
+        if (backfillIds.size > 0) {
+          const toBackfill = [...backfillIds]
             .map((id) => cachedMap.get(id))
             .filter((ev): ev is CalendarEvent => ev !== undefined);
 

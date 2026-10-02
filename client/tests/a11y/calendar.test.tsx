@@ -220,9 +220,34 @@ describe("Calendar grid a11y", () => {
       events: [buildEvent({ repeat: { interval: 2, unit: "week" as const } })],
     });
     await openEventEditor(user, "Planning");
+    await user.click(screen.getByRole("button", { name: "Edit custom repeat" }));
 
     expect(
-      screen.getByRole("combobox", { name: "Repeat unit" }),
+      await screen.findByRole("combobox", { name: "Repeat unit" }),
     ).toBeInTheDocument();
+  });
+
+  it("has no axe violations in the custom repeat dialog and returns focus", async () => {
+    const { user } = renderCalendar({
+      events: [buildEvent({ repeat: { interval: 2, unit: "month" } })],
+    });
+    await openEventEditor(user, "Planning");
+    await user.click(screen.getByRole("button", { name: "Edit custom repeat" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Custom repeat" });
+    await user.click(screen.getByRole("combobox", { name: "Repeat month day" }));
+    await user.click(screen.getByRole("option", { name: "on specific days" }));
+    expect(screen.getByRole("grid", { name: "Days of the month" })).toBeInTheDocument();
+    await expectNoViolations(dialog);
+
+    await user.click(screen.getByRole("combobox", { name: "Repeat unit" }));
+    await user.click(screen.getByRole("option", { name: "Weeks" }));
+    expect(screen.getByRole("button", { name: "Monday" })).toBeInTheDocument();
+    await expectNoViolations(dialog);
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Custom repeat" })).toBeNull();
+    expect(screen.getByRole("dialog", { name: /edit event/i })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Repeat" })).toHaveFocus();
   });
 });

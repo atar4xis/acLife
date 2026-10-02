@@ -384,4 +384,39 @@ describe("Calendar", () => {
       FIXED_NOW.startOf("day").plus({ days: 1, hours: 8 }).toISO(),
     );
   });
+
+  it("splits a counted series between the old and new parts on 'future' updates", async () => {
+    const saveEvents = vi.fn();
+    const { user } = renderCalendar({
+      mode: "week",
+      events: [
+        buildRecurringEvent({ repeat: { interval: 1, unit: "day", count: 5 } }),
+      ],
+      saveEvents,
+    });
+
+    const instanceBlock = document.querySelector(
+      '[data-event-key="repeat-parent_2026-03-19"]',
+    ) as HTMLElement;
+    await user.dblClick(instanceBlock);
+    await screen.findByRole("heading", { name: /edit event/i });
+
+    const titleInput = screen.getByDisplayValue("Daily standup");
+    await user.clear(titleInput);
+    await user.type(titleInput, "Team standup");
+    await user.click(screen.getByRole("button", { name: /^save$/i }));
+    await screen.findByText(/update recurring event/i);
+
+    await user.click(screen.getByRole("radio", { name: /future events/i }));
+    await user.click(screen.getByRole("button", { name: /^update$/i }));
+    await advanceSave();
+
+    const savedEvents = getLastSavedEvents(saveEvents);
+    const oldSeries = savedEvents.find((e) => e.id === "repeat-parent");
+    const newSeries = savedEvents.find((e) => e.id !== "repeat-parent");
+
+    expect(oldSeries?.repeat).toEqual({ interval: 1, unit: "day", count: 1 });
+    expect(newSeries?.repeat?.count).toBe(4);
+    expect(newSeries?.repeat?.until).toBeUndefined();
+  });
 });

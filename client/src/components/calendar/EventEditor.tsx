@@ -1,7 +1,8 @@
 import type { CalendarEvent, RepeatInterval } from "@/types/calendar/Event";
 import type { EventBlockProps } from "@/types/Props";
 import { MAX_EVENT_DURATION_MINUTES } from "@/lib/calendar/event";
-import { moveToIncludedDay } from "@/lib/calendar/recurrence";
+import { moveToFirstOccurrence } from "@/lib/calendar/recurrence";
+import { monthlyOptions, withUnitDefaults } from "@/lib/calendar/repeatOptions";
 import { lastInputModality } from "@/lib/inputModality";
 import useFocusTrap from "@/hooks/useFocusTrap";
 import {
@@ -33,6 +34,7 @@ import {
   Clipboard,
   CopyIcon,
   MoreVerticalIcon,
+  PencilIcon,
   Trash2Icon,
   XIcon,
 } from "lucide-react";
@@ -47,6 +49,7 @@ import {
   DropdownMenuSeparator,
 } from "../ui/dropdown-menu";
 import { MoveMenuItems } from "./MoveMenuItems";
+import RepeatDialog from "./RepeatDialog";
 import {
   Select,
   SelectContent,
@@ -54,7 +57,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 
@@ -75,9 +77,20 @@ const presetRepeat: Record<string, RepeatInterval> = {
     unit: "day",
     except: [6, 7],
   },
-  monthly: {
+  "monthly-date": {
     interval: 1,
     unit: "month",
+    monthly: "date",
+  },
+  "monthly-nth": {
+    interval: 1,
+    unit: "month",
+    monthly: "nth",
+  },
+  "monthly-last": {
+    interval: 1,
+    unit: "month",
+    monthly: "last",
   },
   yearly: {
     interval: 1,
@@ -85,18 +98,25 @@ const presetRepeat: Record<string, RepeatInterval> = {
   },
 };
 
-const parseRepeatValue = (value: RepeatInterval) => {
-  for (const [key, preset] of Object.entries(presetRepeat)) {
-    if (
-      value.interval === preset.interval &&
-      value.unit === preset.unit &&
-      value.except?.join(",") === preset.except?.join(",")
-    ) {
-      return key;
-    }
-  }
+const repeatKey = (r: RepeatInterval) =>
+  JSON.stringify([
+    r.interval,
+    r.unit,
+    r.except,
+    r.monthly,
+    r.days,
+    r.yearDays,
+    r.until,
+    r.count,
+  ]);
 
-  return "custom";
+const parseRepeatValue = (value: RepeatInterval) => {
+  const key = repeatKey(withUnitDefaults(value));
+  return (
+    Object.entries(presetRepeat).find(
+      ([, preset]) => repeatKey(preset) === key,
+    )?.[0] ?? "custom"
+  );
 };
 
 /* ------------------------------------------------- */
@@ -126,6 +146,7 @@ export default function EventEditor({
   const originalEvent = useRef(event);
   const editorRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
+  const repeatRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const [openedByKeyboard] = useState(
     () => !preview && lastInputModality() === "keyboard",
@@ -151,11 +172,10 @@ export default function EventEditor({
   const [start, setStart] = useState<Date | undefined>(event.start.toJSDate());
   const [end, setEnd] = useState<Date | undefined>(event.end.toJSDate());
   const [repeat, setRepeat] = useState(event.repeat);
-  const [customRepeat, setCustomRepeat] = useState(
-    event.repeat ? parseRepeatValue(event.repeat) === "custom" : false,
-  );
+  const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
   const [isTask, setIsTask] = useState(event.isTask ?? false);
   const [completed, setCompleted] = useState(event.completed ?? false);
+  const startTime = DateTime.fromJSDate(start || new Date());
   const isMobile = useIsMobile();
 
   const newEvent = useRef<CalendarEvent>({
@@ -222,12 +242,12 @@ export default function EventEditor({
       return;
     }
 
-    // the series should not start on an excluded day
+    // the series should not start on a day it does not repeat on
     if (!newEvent.current._parent) {
-      const moved = moveToIncludedDay(
+      const moved = moveToFirstOccurrence(
         newEvent.current.start,
         newEvent.current.end,
-        except,
+        newEvent.current.repeat,
       );
       if (moved) Object.assign(newEvent.current, moved);
     }
@@ -265,27 +285,9 @@ export default function EventEditor({
 
   const handleSelectRepeat = (value: string) => {
     if (value === "custom") {
-      setRepeat({
-        interval: 2,
-        unit: "day",
-      });
-      setCustomRepeat(true);
-      return;
+      setRepeatDialogOpen(true);
     } else {
-      setCustomRepeat(false);
-    }
-
-    if (value in presetRepeat) {
-      const { interval, unit, except } =
-        presetRepeat[value as keyof typeof presetRepeat];
-
-      setRepeat({
-        interval,
-        unit,
-        except,
-      });
-    } else {
-      setRepeat(undefined);
+      setRepeat(value in presetRepeat ? { ...presetRepeat[value] } : undefined);
     }
   };
 
@@ -391,6 +393,7 @@ export default function EventEditor({
         !editorRef.current.contains(el) &&
         !el.closest("[role=dialog]") && // color/date picker
         !el.closest("[role=presentation]") && // select dropdown
+        !el.closest("[data-slot=dialog-overlay]") && // repeat dialog
         !el.closest("[data-sonner-toast]") &&
         !el.closest('[data-slot^="dropdown-menu"]')
       ) {
@@ -557,152 +560,48 @@ export default function EventEditor({
           <DateTimePicker label="Start" value={start} onChange={setStart} />
           <DateTimePicker label="End" value={end} onChange={setEnd} />
 
-          <Select
-            value={
-              repeat
-                ? customRepeat
-                  ? "custom"
-                  : parseRepeatValue(repeat)
-                : "never"
-            }
-            onValueChange={handleSelectRepeat}
-          >
-            <SelectTrigger aria-label="Repeat">
-              <SelectValue placeholder="Repeat" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="never">Does not repeat</SelectItem>
-              <SelectItem value="daily">Repeat daily</SelectItem>
-              <SelectItem value="workdays">
-                Repeat daily, except weekends
-              </SelectItem>
-              <SelectItem value="weekly">Repeat weekly</SelectItem>
-              <SelectItem value="monthly">Repeat monthly</SelectItem>
-              <SelectItem value="yearly">Repeat yearly</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {customRepeat && (
-            <>
-              <FieldLabel>Repeat Every</FieldLabel>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  className="w-20"
-                  min={1}
-                  max={1000}
-                  placeholder="Every"
-                  value={repeat?.interval || 1}
-                  onChange={(e) => {
-                    setRepeat(
-                      (prev) =>
-                        ({
-                          ...prev,
-                          interval: e.target.valueAsNumber,
-                        }) as RepeatInterval,
-                    );
-                  }}
-                />
-                <Select
-                  value={repeat?.unit || "day"}
-                  onValueChange={(v) => {
-                    setRepeat(
-                      (prev) =>
-                        ({
-                          ...prev,
-                          unit: v,
-                        }) as RepeatInterval,
-                    );
-                  }}
-                >
-                  <SelectTrigger className="flex-1" aria-label="Repeat unit">
-                    <SelectValue placeholder="Unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="day">Days</SelectItem>
-                    <SelectItem value="week">Weeks</SelectItem>
-                    <SelectItem value="month">Months</SelectItem>
-                    <SelectItem value="year">Years</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-between">
-                <div className="flex items-start gap-2 mx-1">
-                  <Checkbox
-                    id="forever"
-                    checked={!repeat?.until}
-                    onCheckedChange={(c) => {
-                      setRepeat((prev) => {
-                        return {
-                          ...prev,
-                          until: c ? undefined : Date.now(),
-                        } as RepeatInterval;
-                      });
-                    }}
-                  />
-                  <Label htmlFor="forever">Forever</Label>
-                </div>
-                <div className="flex items-start gap-2 mx-1">
-                  <Label htmlFor="except">Excluding</Label>
-                  <Checkbox
-                    id="except"
-                    checked={repeat?.except !== undefined}
-                    onCheckedChange={(c) => {
-                      setRepeat((prev) => {
-                        return {
-                          ...prev,
-                          except: c ? [] : undefined,
-                        } as RepeatInterval;
-                      });
-                    }}
-                  />
-                </div>
-              </div>
-              {repeat?.except !== undefined && (
-                <div className="flex justify-center">
-                  <ToggleGroup
-                    type="multiple"
-                    variant="outline"
-                    value={repeat.except.map(String)}
-                    onValueChange={(e) => {
-                      setRepeat((prev) => {
-                        return {
-                          ...prev,
-                          except: e.map(Number),
-                        } as RepeatInterval;
-                      });
-                    }}
-                  >
-                    <ToggleGroupItem value="1">M</ToggleGroupItem>
-                    <ToggleGroupItem value="2">T</ToggleGroupItem>
-                    <ToggleGroupItem value="3">W</ToggleGroupItem>
-                    <ToggleGroupItem value="4">T</ToggleGroupItem>
-                    <ToggleGroupItem value="5">F</ToggleGroupItem>
-                    <ToggleGroupItem value="6">S</ToggleGroupItem>
-                    <ToggleGroupItem value="7">S</ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-              )}
-              {repeat?.until && (
-                <>
-                  <FieldLabel>Until</FieldLabel>
-                  <DateTimePicker
-                    label="Until"
-                    value={new Date(repeat.until)}
-                    onChange={(d) => {
-                      setRepeat((prev) => {
-                        return {
-                          ...prev,
-                          until: d ? d.getTime() : undefined,
-                        } as RepeatInterval;
-                      });
-                    }}
-                  />
-                </>
-              )}
-            </>
-          )}
+          <div className="flex gap-2">
+            <Select
+              value={repeat ? parseRepeatValue(repeat) : "never"}
+              onValueChange={handleSelectRepeat}
+            >
+              <SelectTrigger
+                ref={repeatRef}
+                className="flex-1"
+                aria-label="Repeat"
+              >
+                <SelectValue placeholder="Repeat" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="never">Does not repeat</SelectItem>
+                <SelectItem value="daily">Repeat daily</SelectItem>
+                <SelectItem value="workdays">
+                  Repeat daily, except weekends
+                </SelectItem>
+                <SelectItem value="weekly">Repeat weekly</SelectItem>
+                {monthlyOptions(startTime, repeat?.monthly === "last").map(
+                  (o) => (
+                    <SelectItem key={o.value} value={`monthly-${o.value}`}>
+                      Repeat monthly {o.label}
+                    </SelectItem>
+                  ),
+                )}
+                <SelectItem value="yearly">Repeat yearly</SelectItem>
+                <SelectItem value="custom">Custom repeat</SelectItem>
+              </SelectContent>
+            </Select>
+            {repeat && parseRepeatValue(repeat) === "custom" && (
+              <Button
+                variant="outline"
+                size="icon"
+                type="button"
+                aria-label="Edit custom repeat"
+                onClick={() => setRepeatDialogOpen(true)}
+              >
+                <PencilIcon />
+              </Button>
+            )}
+          </div>
         </Field>
 
         <Field>
@@ -748,6 +647,17 @@ export default function EventEditor({
           </div>
         </Field>
       </form>
+      <RepeatDialog
+        open={repeatDialogOpen}
+        onOpenChange={setRepeatDialogOpen}
+        onCloseFocus={() => repeatRef.current?.focus()}
+        start={startTime}
+        initial={repeat}
+        onApply={(r) => {
+          setRepeat(r);
+          setRepeatDialogOpen(false);
+        }}
+      />
       <div className="flex flex-wrap items-end justify-between mt-5">
         <div className="flex gap-3">
           <Button

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { DateTime } from "luxon";
 import { getEventMap } from "../../src/lib/calendar/event.ts";
 import {
-  moveToIncludedDay,
+  moveToFirstOccurrence,
   skipSingleOccurrence,
 } from "../../src/lib/calendar/recurrence.ts";
 import type { CalendarEvent } from "../../src/types/calendar/Event.ts";
@@ -45,24 +45,25 @@ describe("repeat except weekdays in a non-UTC zone", () => {
   });
 });
 
-describe("moveToIncludedDay", () => {
+describe("moveToFirstOccurrence", () => {
+  const day = (except: number[]) => ({ interval: 1, unit: "day" as const, except });
   const start = at("2026-03-16T08:00");
   const end = at("2026-03-16T09:00");
 
   it("returns null when the start day is not excluded", () => {
-    expect(moveToIncludedDay(start, end, [2])).toBeNull();
-    expect(moveToIncludedDay(start, end, undefined)).toBeNull();
+    expect(moveToFirstOccurrence(start, end, day([2]))).toBeNull();
+    expect(moveToFirstOccurrence(start, end, undefined)).toBeNull();
   });
 
   it("moves to the next included local day, keeping the wall time", () => {
-    const moved = moveToIncludedDay(start, end, [1, 2, 6, 7]);
+    const moved = moveToFirstOccurrence(start, end, day([1, 2, 6, 7]));
     expect(moved?.start.toISO()).toBe(at("2026-03-18T08:00").toISO());
     expect(moved?.end.toISO()).toBe(at("2026-03-18T09:00").toISO());
   });
 
   it("wraps past the weekend", () => {
     const friday = at("2026-03-20T08:00");
-    const moved = moveToIncludedDay(friday, friday, [5, 6, 7]);
+    const moved = moveToFirstOccurrence(friday, friday, day([5, 6, 7]));
     expect(moved?.start.toISODate()).toBe("2026-03-23");
   });
 });

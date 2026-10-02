@@ -58,7 +58,7 @@ export default memo(function RecurringUpdateDialog({
         <RadioGroup
           value={option}
           onValueChange={setOption}
-          className="mt-3 gap-5"
+          className="mt-3 gap-5 text-left"
         >
           <div className="flex gap-3">
             <RadioGroupItem value="this" id="this" />

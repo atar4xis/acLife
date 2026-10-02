@@ -6,19 +6,21 @@ import type {
   RepeatInterval,
 } from "@/types/calendar/Event";
 import type { CalendarAction } from "@/types/calendar/Action";
-import { isOccurrenceExcluded, makeOccurrence } from "@/lib/calendar/event";
+import { makeOccurrence } from "@/lib/calendar/event";
+import { occurrences } from "@/lib/calendar/occurrences";
 
 export const isChainParent = (event: CalendarEvent) =>
   !event._parent && !!event.repeat;
 
-export function moveToIncludedDay(
+export function moveToFirstOccurrence(
   start: DateTime,
   end: DateTime,
-  except?: number[],
+  repeat?: RepeatInterval,
 ) {
-  let days = 0;
-  while (except?.includes(start.plus({ days }).weekday)) days++;
-  return days ? { start: start.plus({ days }), end: end.plus({ days }) } : null;
+  const first = repeat && occurrences(start, repeat).next().value;
+  return first && first > start
+    ? { start: first, end: first.plus(end.diff(start)) }
+    : null;
 }
 
 export function nextOccurrence(
@@ -26,18 +28,26 @@ export function nextOccurrence(
   start: DateTime,
   end: DateTime,
 ) {
-  const step = { [repeat.unit]: repeat.interval };
-  let nextStart = start.plus(step);
-  let nextEnd = end.plus(step);
-  while (isOccurrenceExcluded(repeat, nextStart)) {
-    nextStart = nextStart.plus(step);
-    nextEnd = nextEnd.plus(step);
+  for (const next of occurrences(start, repeat, start)) {
+    if (next > start) return { start: next, end: next.plus(end.diff(start)) };
   }
-  if (repeat.until && nextStart.toMillis() >= repeat.until) return null;
-  return { start: nextStart, end: nextEnd };
+  return null;
 }
 
-const MAX_OCCURRENCE_SCAN = 400;
+export function occurrencesBefore(
+  start: DateTime,
+  repeat: RepeatInterval,
+  date: DateTime,
+) {
+  let found = 0;
+  for (const d of occurrences(start, repeat)) {
+    if (d >= date) break;
+    found++;
+  }
+  return found;
+}
+
+const MAX_LOOKBACK_PERIODS = 1600;
 
 export function nearbyOccurrences(
   event: CalendarEvent,
@@ -47,37 +57,34 @@ export function nearbyOccurrences(
   const repeat = event.repeat;
   if (!repeat || event._parent) return [event];
 
-  const { unit, interval, until } = repeat;
   const duration = event.end.diff(event.start);
-  const nowIndex = Math.max(
-    0,
-    Math.ceil(now.diff(event.start, unit).as(unit) / interval),
-  );
+  const toEvent = (start: DateTime) =>
+    start.toMillis() === event.start.toMillis()
+      ? event
+      : makeOccurrence(event, start, start.toISODate()!, duration);
 
-  const collect = (direction: 1 | -1) => {
-    const found: CalendarEvent[] = [];
-    let index = direction === 1 ? nowIndex : nowIndex - 1;
-    for (
-      let scanned = 0;
-      index >= 0 && found.length < perSide && scanned < MAX_OCCURRENCE_SCAN;
-      index += direction, scanned++
-    ) {
-      const start = event.start.plus({ [unit]: index * interval });
-      if (until && start.toMillis() >= until) {
-        if (direction === 1) break;
-        continue;
-      }
-      if (isOccurrenceExcluded(repeat, start)) continue;
-      found.push(
-        index === 0
-          ? event
-          : makeOccurrence(event, start, start.toISODate()!, duration),
-      );
+  const after: DateTime[] = [];
+  for (const start of occurrences(event.start, repeat, now)) {
+    if (after.length >= perSide) break;
+    after.push(start);
+  }
+
+  let before: DateTime[] = [];
+  for (
+    let periods = perSide * 2;
+    periods <= MAX_LOOKBACK_PERIODS;
+    periods *= 4
+  ) {
+    const from = now.minus({ [repeat.unit]: periods * repeat.interval });
+    before = [];
+    for (const start of occurrences(event.start, repeat, from)) {
+      if (start >= now) break;
+      before.push(start);
     }
-    return found;
-  };
+    if (before.length >= perSide || from <= event.start) break;
+  }
 
-  return [...collect(-1), ...collect(1)];
+  return [...before.slice(-perSide), ...after].map(toEvent);
 }
 
 export function skipSingleOccurrence(

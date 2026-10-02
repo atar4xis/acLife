@@ -81,6 +81,7 @@ import RecurringUpdateDialog from "./RecurringUpdateDialog";
 import {
   detachSingleOccurrence,
   isChainParent,
+  occurrencesBefore,
   skipSingleOccurrence,
 } from "@/lib/calendar/recurrence";
 import type { PushEvent } from "@/types/Push";
@@ -88,6 +89,8 @@ import { CLIENT_ID } from "@/lib/clientId";
 import { useCalendarSearch } from "@/hooks/calendar/useCalendarSearch";
 import { EMPTY_ARRAY } from "@/lib/constants";
 import type { RepeatInterval } from "@/types/calendar/Event";
+
+const joined = (values?: (string | number)[]) => values?.join(",") ?? "";
 
 const repeatEqual = (a?: RepeatInterval, b?: RepeatInterval) => {
   if (a === b) return true;
@@ -97,8 +100,12 @@ const repeatEqual = (a?: RepeatInterval, b?: RepeatInterval) => {
     a.interval === b.interval &&
     a.unit === b.unit &&
     a.until === b.until &&
-    (a.except?.join(",") ?? "") === (b.except?.join(",") ?? "") &&
-    (a.skip?.join(",") ?? "") === (b.skip?.join(",") ?? "")
+    a.count === b.count &&
+    a.monthly === b.monthly &&
+    joined(a.days) === joined(b.days) &&
+    joined(a.yearDays) === joined(b.yearDays) &&
+    joined(a.except) === joined(b.except) &&
+    joined(a.skip) === joined(b.skip)
   );
 };
 
@@ -2664,16 +2671,20 @@ export default memo(function AppCalendar({
                 break;
               }
 
+              const { count } = parent.repeat;
+              const occurrencesKept = count
+                ? occurrencesBefore(parent.start, parent.repeat, evStart)
+                : 0;
+
               // clone the event
               const newEvent = {
                 ...event,
                 id: crypto.randomUUID(),
                 timestamp: Date.now(),
                 repeat: {
-                  interval: parent.repeat.interval,
-                  unit: parent.repeat.unit,
-                  except: parent.repeat.except,
-                  until: parent.repeat.until,
+                  ...parent.repeat,
+                  skip: undefined,
+                  count: count && count - occurrencesKept,
                 },
               } as CalendarEvent;
 
@@ -2694,7 +2705,9 @@ export default memo(function AppCalendar({
                 ...parent,
                 repeat: {
                   ...parent.repeat,
-                  until: event.start.startOf("day").toMillis(),
+                  ...(count
+                    ? { count: occurrencesKept }
+                    : { until: event.start.startOf("day").toMillis() }),
                 },
               };
 
@@ -2816,44 +2829,12 @@ export default memo(function AppCalendar({
 
           switch (option) {
             case "this": {
-              if (isParent) {
-                // move parent to next non-skipped repetition
-                const interval = {
-                  [parent.repeat.unit]: parent.repeat.interval,
-                };
-
-                let nextStart = event.start.plus(interval);
-                let nextEnd = event.end.plus(interval);
-
-                if (parent.repeat.skip?.length) {
-                  const skipped = new Set(parent.repeat.skip);
-
-                  while (skipped.has(nextStart.toUTC().toISODate()!)) {
-                    nextStart = nextStart.plus(interval);
-                    nextEnd = nextEnd.plus(interval);
-                  }
-                }
-
-                parent.start = nextStart;
-                parent.end = nextEnd;
-              } else {
-                // skip current repetition
-                if (!parent.repeat.skip) parent.repeat.skip = [];
-                parent.repeat.skip.push(event.start.toUTC().toISODate()!);
-              }
-
-              dispatch({
-                type: "update",
-                id: parent.id,
-                data: parent,
-              });
-
-              updateChange({
-                type: "updated",
-                event: parent,
-              });
-
-              // the event never existed so no need to actually delete anything
+              skipSingleOccurrence(
+                event,
+                calendarEvents,
+                dispatch,
+                updateChange,
+              );
               break;
             }
 

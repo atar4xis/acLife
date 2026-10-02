@@ -6,8 +6,12 @@ export type RepeatInterval = {
   interval: number;
   unit: RepeatIntervalUnit;
   except?: number[]; // don't repeat on these weekdays
+  monthly?: "date" | "nth" | "last" | "days";
+  days?: number[]; // weekdays (1-7) for weeks, dates (1-31) for monthly "days"
+  yearDays?: string[]; // "MM-DD"
   skip?: string[]; // skip these dates
   until?: number; // millis
+  count?: number; // total occurrences, including the first
 };
 
 export type CalendarEvent = {
