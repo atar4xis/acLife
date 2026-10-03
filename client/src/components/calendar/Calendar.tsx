@@ -924,17 +924,16 @@ export default memo(function AppCalendar({
 
         dragRef.current = null;
         save();
-      } else if (state.moved) {
-        if (
-          event.start.toMillis() !== state.originalStart.toMillis() ||
-          event.end.toMillis() !== state.originalEnd.toMillis()
-        ) {
-          // if the event has or is a parent, ask what to do
-          askUpdateScope(event, null);
-        } else {
-          // if it didn't actually update, just revert
-          dragRef.current = null;
-        }
+      } else if (
+        state.moved &&
+        (event.start.toMillis() !== state.originalStart.toMillis() ||
+          event.end.toMillis() !== state.originalEnd.toMillis())
+      ) {
+        // if the event has or is a parent, ask what to do
+        askUpdateScope(event, null);
+      } else {
+        // if it didn't actually update, just revert
+        dragRef.current = null;
       }
     },
     [updateChange, dispatch, save, pushHistory, askUpdateScope],
@@ -1737,6 +1736,9 @@ export default memo(function AppCalendar({
       const newEvent = addNewEvent(start, e.altKey);
 
       if (e.pointerType !== "touch") {
+        window.addEventListener("pointermove", onGlobalPointerMove);
+        window.addEventListener("pointerup", onGlobalPointerUp);
+        window.addEventListener("pointercancel", onGlobalPointerCancel);
         setIsDragging(true);
 
         dragRef.current = {
@@ -1754,9 +1756,6 @@ export default memo(function AppCalendar({
           moved: false,
         };
       }
-
-      window.addEventListener("pointermove", onGlobalPointerMove);
-      window.addEventListener("pointerup", onGlobalPointerUp);
     },
     [
       hourHeight,
@@ -1766,27 +1765,40 @@ export default memo(function AppCalendar({
       visibleDays,
       onGlobalPointerMove,
       onGlobalPointerUp,
+      onGlobalPointerCancel,
       beginSelectionBox,
       clearSelection,
     ],
   );
 
-  const gridTouchStart = useCallback((e: React.TouchEvent) => {
-    const targetElement = e.target as Element;
-    if (
-      gridTouchRef.current != null ||
-      targetElement.closest(".event-editor") ||
-      !targetElement.closest(".grid-cell")
-    )
-      return;
+  const gridTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      const drag = dragRef.current;
+      if (
+        e.touches.length > 1 &&
+        drag &&
+        drag.pointerId !== KEYBOARD_DRAG_ID &&
+        !evPendingRef.current
+      )
+        onGlobalPointerCancel({ pointerId: drag.pointerId } as PointerEvent);
 
-    gridTouchRef.current = {
-      start: {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY,
-      },
-    };
-  }, []);
+      const targetElement = e.target as Element;
+      if (
+        gridTouchRef.current != null ||
+        targetElement.closest(".event-editor") ||
+        !targetElement.closest(".grid-cell")
+      )
+        return;
+
+      gridTouchRef.current = {
+        start: {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        },
+      };
+    },
+    [onGlobalPointerCancel],
+  );
 
   const gridTouchMove = useCallback((e: React.TouchEvent) => {
     if (gridTouchRef.current === null) return;

@@ -233,6 +233,25 @@ export default memo(
 
     useEffect(() => cancelLongPress, [cancelLongPress]);
 
+    useEffect(() => {
+      const release = (e: PointerEvent) => {
+        if (longPressRef.current?.pointerId === e.pointerId) cancelLongPress();
+      };
+      const cancelOnMultiTouch = (e: TouchEvent) => {
+        if (e.touches.length > 1) cancelLongPress();
+      };
+      window.addEventListener("pointerup", release);
+      window.addEventListener("pointercancel", release);
+      window.addEventListener("touchstart", cancelOnMultiTouch, {
+        passive: true,
+      });
+      return () => {
+        window.removeEventListener("pointerup", release);
+        window.removeEventListener("pointercancel", release);
+        window.removeEventListener("touchstart", cancelOnMultiTouch);
+      };
+    }, [cancelLongPress]);
+
     const handleTouchPointerDown = useCallback(
       (e: React.PointerEvent) => {
         tapHandlers.onPointerDown(e);
