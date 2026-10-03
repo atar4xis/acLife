@@ -61,22 +61,24 @@ export default function AppShell() {
     if (user.type === "online" && bucketKey === null) return;
     if (subscriptionMissing) return;
 
-    toast.promise(
-      (async () => {
-        const events = await loadEvents(
-          user,
-          masterKey,
-          bucketKey,
-          getCurrentDate(),
-        );
-        setCalEvents(events);
-      })(),
-      {
-        id: "loading-calendar-events",
-        loading: translate("appShell.loadingEvents"),
-        error: translate("appShell.loadEventsFailed"),
-      },
+    const id = "loading-calendar-events";
+    const timer = setTimeout(
+      () => toast.loading(translate("appShell.loadingEvents"), { id }),
+      300,
     );
+
+    (async () => {
+      try {
+        setCalEvents(
+          await loadEvents(user, masterKey, bucketKey, getCurrentDate()),
+        );
+        toast.dismiss(id);
+      } catch {
+        toast.error(translate("appShell.loadEventsFailed"), { id });
+      } finally {
+        clearTimeout(timer);
+      }
+    })();
 
     // eslint-disable-next-line
   }, [user, masterKey, bucketKey, subscriptionMissing]);
