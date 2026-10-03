@@ -38,7 +38,13 @@ import { getEventMap } from "@/lib/calendar/event";
 import {
   type BarSlots,
   barKey,
+  BAR_GAP,
+  BAR_HEIGHT,
+  BAR_SLOTS,
+  BARS_AREA,
+  BARS_BOTTOM,
   layoutBars,
+  numberPadding,
   sameBars,
 } from "@/lib/calendar/eventBars";
 import { EMPTY_ARRAY } from "@/lib/constants";
@@ -55,25 +61,32 @@ const sameMonth = (a: Date, b: Date) =>
 const DayBarsContext = createContext<{
   bars: ReturnType<typeof layoutBars> | null;
   bold: boolean;
-}>({ bars: null, bold: false });
+  adaptive: boolean;
+}>({ bars: null, bold: false, adaptive: false });
 
 function MiniDayButton(props: React.ComponentProps<typeof CalendarDayButton>) {
-  const { bars, bold } = useContext(DayBarsContext);
+  const { bars, bold, adaptive } = useContext(DayBarsContext);
   const day = bars && fromPickerDate(props.day.date);
+  const layout = day ? bars.get(day.toISODate()!) : undefined;
+  const barRows = layout ? layout.slots.findLastIndex(Boolean) + 1 : 0;
 
   return (
     <CalendarDayButton
       {...props}
-      className={cn(
-        "relative",
-        bars && "@container pb-[56%]",
-        bold && "font-bold",
-      )}
+      className={cn("relative", bars && "@container", bold && "font-bold")}
+      style={
+        bars
+          ? {
+              paddingBottom: `${numberPadding(adaptive ? barRows : BAR_SLOTS)}%`,
+            }
+          : undefined
+      }
     >
       {props.children}
       {bars && day && (
         <EventBars
-          layout={bars.get(day.toISODate()!)}
+          layout={layout}
+          fromBottom={adaptive}
           prev={bars.get(day.minus({ days: 1 }).toISODate()!)?.slots}
           next={bars.get(day.plus({ days: 1 }).toISODate()!)?.slots}
         />
@@ -90,11 +103,13 @@ function DayBarsProvider({
   month,
   enabled,
   bold,
+  adaptive,
   children,
 }: {
   month: Date;
   enabled: boolean;
   bold: boolean;
+  adaptive: boolean;
   children: React.ReactNode;
 }) {
   // deferred so the grid paints before the bars are recomputed
@@ -124,7 +139,10 @@ function DayBarsProvider({
     barsRef.current = bars;
   }, [bars]);
 
-  const dayBars = useMemo(() => ({ bars, bold }), [bars, bold]);
+  const dayBars = useMemo(
+    () => ({ bars, bold, adaptive }),
+    [bars, bold, adaptive],
+  );
 
   return (
     <DayBarsContext.Provider value={dayBars}>
@@ -141,16 +159,12 @@ const MiniCalendar = memo(function MiniCalendar({
   const currentDate = useCurrentDate();
   const { setCurrentDate } = useCalendarActions();
   const { dayPickerWeekStart } = useWeekStart();
-  const {
-    miniCalendarEventBars,
-    miniCalendarWeekNumbers,
-    miniCalendarBoldDayNumbers,
-    miniCalendarDropdowns,
-  } = useCalendarSettings((s) => ({
-    miniCalendarEventBars: s.miniCalendarEventBars,
-    miniCalendarWeekNumbers: s.miniCalendarWeekNumbers,
-    miniCalendarBoldDayNumbers: s.miniCalendarBoldDayNumbers,
-    miniCalendarDropdowns: s.miniCalendarDropdowns,
+  const settings = useCalendarSettings((s) => ({
+    eventBars: s.miniCalendarEventBars,
+    weekNumbers: s.miniCalendarWeekNumbers,
+    boldDayNumbers: s.miniCalendarBoldDayNumbers,
+    adaptiveNumbers: s.miniCalendarAdaptiveNumbers,
+    dropdowns: s.miniCalendarDropdowns,
   }));
   const [month, setMonth] = useState(() => toPickerMonth(currentDate));
 
@@ -178,8 +192,9 @@ const MiniCalendar = memo(function MiniCalendar({
   return (
     <DayBarsProvider
       month={month}
-      enabled={miniCalendarEventBars}
-      bold={miniCalendarBoldDayNumbers}
+      enabled={settings.eventBars}
+      bold={settings.boldDayNumbers}
+      adaptive={settings.adaptiveNumbers}
     >
       <Calendar
         mode="single"
@@ -188,8 +203,8 @@ const MiniCalendar = memo(function MiniCalendar({
         onSelect={onSelect}
         className="w-full rounded-md border"
         weekStartsOn={dayPickerWeekStart}
-        showWeekNumber={miniCalendarWeekNumbers}
-        captionLayout={miniCalendarDropdowns ? "dropdown" : "label"}
+        showWeekNumber={settings.weekNumbers}
+        captionLayout={settings.dropdowns ? "dropdown" : "label"}
         startMonth={START_MONTH}
         endMonth={END_MONTH}
         month={month}
@@ -283,10 +298,12 @@ export default memo(function AppSidebar({
 
 function EventBars({
   layout,
+  fromBottom,
   prev,
   next,
 }: {
   layout?: { slots: BarSlots; overflow: number };
+  fromBottom: boolean;
   prev?: BarSlots;
   next?: BarSlots;
 }) {
@@ -299,7 +316,17 @@ function EventBars({
       data-testid="event-bars"
       className="pointer-events-none absolute inset-0"
     >
-      <span className="absolute inset-x-0 bottom-[24%] flex h-[26%] flex-col gap-[11%]">
+      <span
+        className={cn(
+          "absolute inset-x-0 flex",
+          fromBottom ? "flex-col-reverse" : "flex-col",
+        )}
+        style={{
+          bottom: `${BARS_BOTTOM}%`,
+          height: `${BARS_AREA}%`,
+          gap: `${BAR_GAP}%`,
+        }}
+      >
         {slots.map((e, i) => {
           const joinPrev = !!e && barKey(prev?.[i]) === barKey(e);
           const joinNext = !!e && barKey(next?.[i]) === barKey(e);
@@ -309,11 +336,11 @@ function EventBars({
               key={i}
               data-testid={e ? "event-bar" : undefined}
               className={cn(
-                "h-[26%]",
                 !joinPrev && "ms-[12%] rounded-s-full",
                 !joinNext && "me-[12%] rounded-e-full",
               )}
               style={{
+                height: `${BAR_HEIGHT}%`,
                 backgroundColor: e && (e.color ?? "var(--primary)"),
               }}
             />

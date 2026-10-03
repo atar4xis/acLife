@@ -333,6 +333,7 @@
       "mini-calendar-event-bars": "予定バーを表示",
       "mini-calendar-week-numbers": "週番号を表示",
       "mini-calendar-bold-day-numbers": "日付を太字にする",
+      "mini-calendar-adaptive-numbers": "日付の位置を自動調整",
       "mini-calendar-dropdowns": "月と年のドロップダウン",
       "calendar-agenda-enabled": "有効",
       "calendar-agenda-range": "範囲",

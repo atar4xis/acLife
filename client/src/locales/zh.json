@@ -333,6 +333,7 @@
       "mini-calendar-event-bars": "显示日程条",
       "mini-calendar-week-numbers": "显示周数",
       "mini-calendar-bold-day-numbers": "加粗日期数字",
+      "mini-calendar-adaptive-numbers": "自动调整数字位置",
       "mini-calendar-dropdowns": "月份和年份下拉菜单",
       "calendar-agenda-enabled": "启用",
       "calendar-agenda-range": "范围",

@@ -3,6 +3,21 @@ import type { CalendarEvent } from "@/types/calendar/Event";
 export type BarSlots = (CalendarEvent | undefined)[];
 
 export const BAR_SLOTS = 3;
+
+// bar geometry in %
+export const BARS_BOTTOM = 24; // of day cell
+export const BARS_AREA = 26; // of day cell
+export const BAR_HEIGHT = 26; // of area
+export const BAR_GAP = 11; // of area
+const NUMBER_GAP = 6; // of day cell, between day number and top bar
+
+// day number padding that clears `rows` stacked bars
+export const numberPadding = (rows: number) =>
+  rows &&
+  BARS_BOTTOM +
+    (BARS_AREA * (rows * BAR_HEIGHT + (rows - 1) * BAR_GAP)) / 100 +
+    NUMBER_GAP;
+
 export const barKey = (e?: CalendarEvent) => e && (e._instanceId ?? e.id);
 
 // assigns each event a fixed row so multi-day events line up across days

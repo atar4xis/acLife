@@ -229,6 +229,10 @@ export const settingsCategories: SettingsCategory[] = [
             settingKey: "miniCalendarEventBars",
           },
           {
+            id: "mini-calendar-adaptive-numbers",
+            settingKey: "miniCalendarAdaptiveNumbers",
+          },
+          {
             id: "mini-calendar-week-numbers",
             settingKey: "miniCalendarWeekNumbers",
           },

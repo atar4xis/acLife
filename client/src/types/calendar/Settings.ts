@@ -28,6 +28,7 @@ export interface CalendarSettings {
   miniCalendarEventBars: boolean;
   miniCalendarWeekNumbers: boolean;
   miniCalendarBoldDayNumbers: boolean;
+  miniCalendarAdaptiveNumbers: boolean;
   miniCalendarDropdowns: boolean;
   eventColorPresets: string[];
   addColorsAutomatically: boolean;

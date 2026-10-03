@@ -274,6 +274,7 @@ export default function CalendarPage({
     miniCalendarEventBars,
     miniCalendarWeekNumbers,
     miniCalendarBoldDayNumbers,
+    miniCalendarAdaptiveNumbers,
     miniCalendarDropdowns,
     detachRecurringOnEdit,
     addColorsAutomatically,
@@ -488,6 +489,20 @@ export default function CalendarPage({
               }
             />
           </Field>
+
+          {miniCalendarEventBars && (
+            <Field orientation="responsive">
+              <SettingsLabel settingKey="miniCalendarAdaptiveNumbers" />
+              <Switch
+                aria-labelledby={settingLabelId("miniCalendarAdaptiveNumbers")}
+                checked={miniCalendarAdaptiveNumbers}
+                disabled={!miniCalendarEnabled}
+                onCheckedChange={(checked) =>
+                  setSetting("miniCalendarAdaptiveNumbers", checked)
+                }
+              />
+            </Field>
+          )}
 
           <Field orientation="responsive">
             <SettingsLabel settingKey="miniCalendarWeekNumbers" />
