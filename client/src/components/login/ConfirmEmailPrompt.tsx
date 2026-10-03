@@ -3,6 +3,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useApi } from "@/context/ApiContext";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export function ConfirmEmailPrompt({
   token,
@@ -12,6 +13,7 @@ export function ConfirmEmailPrompt({
   onDone: () => void;
 }) {
   const { post } = useApi();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
@@ -21,9 +23,9 @@ export function ConfirmEmailPrompt({
       const res = await post("auth/verify-email", { token });
 
       if (res.success) {
-        toast.success("Email verified. You can now log in.");
+        toast.success(t("login.emailVerified"));
       } else {
-        toast.error(res.message || "Email verification failed.");
+        toast.error(res.message || t("login.emailVerifyFailed"));
       }
     } finally {
       setLoading(false);
@@ -33,14 +35,12 @@ export function ConfirmEmailPrompt({
 
   return (
     <div className="flex flex-col gap-4 text-center">
-      <p className="text-sm my-4">
-        Click the button below to verify your email address.
-      </p>
+      <p className="text-sm my-4">{t("login.verifyPrompt")}</p>
       <Button onClick={handleConfirm} disabled={loading}>
-        {loading ? <Spinner /> : "Verify email"}
+        {loading ? <Spinner /> : t("login.verifyEmail")}
       </Button>
       <Button variant="outline" onClick={onDone} disabled={loading}>
-        Cancel
+        {t("common.cancel")}
       </Button>
     </div>
   );

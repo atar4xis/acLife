@@ -11,6 +11,8 @@ import type { WithChildren } from "@/types/Props";
 import type { ServerMetadata } from "@/types/ServerMetadata";
 import { validateServerMeta } from "@/lib/validators";
 import { toast } from "sonner";
+import i18n, { t } from "@/i18n";
+import { localizeReply } from "@/lib/serverErrors";
 
 interface ApiContextType {
   url: string;
@@ -29,6 +31,9 @@ interface ApiContextType {
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
+
+// lets the server answer in the app language, e.g. for verification emails
+const languageHeader = () => ({ "Accept-Language": i18n.language });
 
 function unverifiedEmailFrom(result: unknown): string | null {
   const data = (result as { data?: unknown })?.data as
@@ -53,9 +58,9 @@ export const ApiProvider = ({
       let message: string;
       try {
         const result = await response.json();
-        message = result.message || "Too many requests. Try again later.";
+        message = localizeReply(result).message || t("api.tooManyRequests");
       } catch {
-        message = "Too many requests. Try again later.";
+        message = t("api.tooManyRequests");
       }
       return { success: false, message } as APIResponse<unknown>;
     },
@@ -68,6 +73,7 @@ export const ApiProvider = ({
 
       try {
         const response = await fetch(joinUrl(url, endpoint), {
+          headers: languageHeader(),
           credentials: "include",
         });
 
@@ -87,12 +93,12 @@ export const ApiProvider = ({
           }
         }
 
-        return result;
+        return localizeReply(result);
       } catch (error) {
         console.error(error);
         return {
           success: false,
-          message: "Invalid response from API.",
+          message: t("api.invalidResponse"),
         } as APIResponse<T>;
       }
     },
@@ -105,17 +111,18 @@ export const ApiProvider = ({
 
       try {
         const response = await fetch(joinUrl(url, endpoint), {
+          headers: languageHeader(),
           credentials: "include",
         });
 
         if (response.status === 429) {
-          throw new Error("Too many requests. Try again later.");
+          throw new Error(t("api.tooManyRequests"));
         }
 
         return response;
       } catch (error) {
         console.error(error);
-        throw new Error("Invalid response from API.");
+        throw new Error(t("api.invalidResponse"));
       }
     },
     [url],
@@ -126,7 +133,7 @@ export const ApiProvider = ({
       if (!url) throw Error("Cannot POST before connection is established.");
 
       try {
-        const headers: Record<string, string> = {};
+        const headers: Record<string, string> = languageHeader();
         let payload: BodyInit | null = null;
 
         if (body instanceof Blob || body instanceof ArrayBuffer) {
@@ -161,12 +168,12 @@ export const ApiProvider = ({
           }
         }
 
-        return result;
+        return localizeReply(result);
       } catch (error) {
         console.error(error);
         return {
           success: false,
-          message: "Invalid response from API.",
+          message: t("api.invalidResponse"),
         } as APIResponse<T>;
       }
     },
@@ -180,6 +187,7 @@ export const ApiProvider = ({
       try {
         const response = await fetch(joinUrl(url, endpoint), {
           method: "DELETE",
+          headers: languageHeader(),
           credentials: "include",
         });
 
@@ -193,12 +201,12 @@ export const ApiProvider = ({
           setPendingLogout(true);
         }
 
-        return result;
+        return localizeReply(result);
       } catch (error) {
         console.error(error);
         return {
           success: false,
-          message: "Invalid response from API.",
+          message: t("api.invalidResponse"),
         } as APIResponse<T>;
       }
     },
@@ -228,20 +236,20 @@ export const ApiProvider = ({
 
         if (!res || !res.success || !res.data) {
           setServerMeta(null);
-          toast.error("Failed to fetch server metadata.");
+          toast.error(t("api.metadataFetchFailed"));
           return;
         }
 
         if (!validateServerMeta(res.data)) {
           setServerMeta(null);
-          toast.error("Failed to validate server metadata.");
+          toast.error(t("api.metadataInvalid"));
           return;
         }
 
         setServerMeta(res.data);
       } catch {
         setServerMeta(null);
-        toast.error("Failed to connect to server.");
+        toast.error(t("api.connectFailed"));
       }
     })();
   }, [url]);

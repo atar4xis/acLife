@@ -11,6 +11,7 @@ import {
   PinSetupDialog,
   StayUnlockedDialog,
 } from "@/components/settings/UnlockMethodDialogs";
+import { t } from "@/i18n";
 
 interface SecuritySettingsValue {
   unlockMethod: UnlockMethod;
@@ -38,7 +39,7 @@ export function SecuritySettingsProvider({ children }: WithChildren) {
     opts?: { pin?: string; currentPassword?: string },
   ) => {
     if (!masterKey || !bucketKey) {
-      toast.error("Your data must be decrypted to change this setting.");
+      toast.error(t("security.mustDecrypt"));
       return;
     }
     if (!user || user.type !== "online") return;
@@ -80,7 +81,7 @@ export function SecuritySettingsProvider({ children }: WithChildren) {
       storage.set("unlockMethod", method);
       setPinDialogOpen(false);
       setStayUnlockedDialogOpen(false);
-      toast.success("Security settings updated.");
+      toast.success(t("security.updated"));
     } catch (err) {
       console.error("Failed to update unlock method:", err);
       throw err;
@@ -98,7 +99,7 @@ export function SecuritySettingsProvider({ children }: WithChildren) {
     }
 
     commit(method).catch(() => {
-      toast.error("Failed to update security settings.");
+      toast.error(t("security.updateFailed"));
     });
   };
 

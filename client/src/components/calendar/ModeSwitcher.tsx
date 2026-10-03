@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import type { ViewMode } from "@/types/calendar/ViewMode";
+import { useTranslation } from "react-i18next";
 
 type ModeSwitcherParams = {
   mode: ViewMode;
@@ -17,14 +18,15 @@ export default memo(function ModeSwitcher({
   mode,
   setMode,
 }: ModeSwitcherParams) {
+  const { t } = useTranslation();
   return (
     <Select value={mode} onValueChange={setMode}>
-      <SelectTrigger className="mr-4 md:mr-0" aria-label="View mode">
+      <SelectTrigger className="me-4 md:me-0" aria-label={t("view.mode")}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="day">Day</SelectItem>
-        <SelectItem value="week">Week</SelectItem>
+        <SelectItem value="day">{t("view.day")}</SelectItem>
+        <SelectItem value="week">{t("view.week")}</SelectItem>
       </SelectContent>
     </Select>
   );

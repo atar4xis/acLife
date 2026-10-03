@@ -9,9 +9,11 @@ import (
 
 // Reply is a standard structure for JSON API responses.
 type Reply[T any] struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
-	Data    T      `json:"data,omitempty"`
+	Success bool           `json:"success"`
+	Message string         `json:"message,omitempty"`
+	Code    string         `json:"code,omitempty"`
+	Params  map[string]any `json:"params,omitempty"`
+	Data    T              `json:"data,omitempty"`
 }
 
 // User represents the user data returned from the database.

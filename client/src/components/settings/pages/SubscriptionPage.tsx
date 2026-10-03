@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { TFunction } from "i18next";
 import { toast } from "sonner";
 import { useApi } from "@/context/ApiContext";
 import { useUser } from "@/context/UserContext";
@@ -14,10 +15,13 @@ import { Separator } from "@/components/ui/separator";
 import { sectionLabel, settingLabel } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
+import { useTranslation } from "react-i18next";
 
-function statusLabel(status: string | null | undefined) {
-  if (!status) return "No active subscription";
-  return status.charAt(0).toUpperCase() + status.slice(1);
+function statusLabel(t: TFunction, status: string | null | undefined) {
+  if (!status) return t("settings.subscription.none");
+  return t(`settings.subscription.status.${status}`, {
+    defaultValue: status.charAt(0).toUpperCase() + status.slice(1),
+  });
 }
 
 export default function SubscriptionPage({
@@ -25,6 +29,7 @@ export default function SubscriptionPage({
 }: {
   sectionRefs: SectionRefs;
 }) {
+  const { t } = useTranslation();
   const { user } = useUser();
   const { get } = useApi();
   const [loading, setLoading] = useState(false);
@@ -37,7 +42,7 @@ export default function SubscriptionPage({
     setLoading(false);
 
     if (!res.success || !res.data) {
-      toast.error(res.message || "Failed to open billing portal.");
+      toast.error(res.message || t("settings.subscription.portalFailed"));
       return;
     }
 
@@ -46,14 +51,16 @@ export default function SubscriptionPage({
 
   return (
     <FieldGroup className="gap-8">
-      <h2 className="text-lg font-semibold">Subscription</h2>
+      <h2 className="text-lg font-semibold">
+        {t("settings.categories.subscription")}
+      </h2>
 
       <Section id="plan" label={sectionLabel("plan")} sectionRefs={sectionRefs}>
         <Field orientation="responsive">
           <FieldContent>
             <FieldTitle>{settingLabel("subscription-status")}</FieldTitle>
             <FieldDescription>
-              {statusLabel(user.subscription_status)}
+              {statusLabel(t, user.subscription_status)}
             </FieldDescription>
           </FieldContent>
         </Field>
@@ -61,12 +68,11 @@ export default function SubscriptionPage({
           <Field orientation="responsive">
             <FieldTitle>{settingLabel("subscription-manage")}</FieldTitle>
             <Button onClick={openPortal} disabled={loading} variant="outline">
-              Manage
+              {t("settings.subscription.manage")}
             </Button>
           </Field>
           <FieldDescription>
-            Change plan, update payment details, or cancel your subscription via
-            Stripe.
+            {t("settings.subscription.manageHelp")}
           </FieldDescription>
         </div>
       </Section>
@@ -82,11 +88,11 @@ export default function SubscriptionPage({
           <Field orientation="responsive">
             <FieldTitle>{settingLabel("subscription-invoices")}</FieldTitle>
             <Button onClick={openPortal} disabled={loading} variant="outline">
-              View invoices
+              {t("settings.subscription.viewInvoices")}
             </Button>
           </Field>
           <FieldDescription>
-            View and download past invoices via the Stripe billing portal.
+            {t("settings.subscription.invoicesHelp")}
           </FieldDescription>
         </div>
       </Section>

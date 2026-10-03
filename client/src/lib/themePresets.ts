@@ -1,17 +1,15 @@
 import { MAX_PRESETS } from "@/lib/constants";
 import type { ThemePreset } from "@/types/Theme";
+import { t } from "@/i18n";
 
 export type PresetResult = "ok" | "limit" | "too-large";
 
 export const MAX_PRESET_BYTES = 2048;
 
-export const PRESET_ERROR_MESSAGES: Record<
-  Exclude<PresetResult, "ok">,
-  string
-> = {
-  limit: `You can save up to ${MAX_PRESETS} themes.`,
-  "too-large": `A theme can be at most ${MAX_PRESET_BYTES / 1024} KB.`,
-};
+export const presetErrorMessage = (result: Exclude<PresetResult, "ok">) =>
+  result === "limit"
+    ? t("settings.themes.limit", { count: MAX_PRESETS })
+    : t("settings.themes.tooLarge", { size: MAX_PRESET_BYTES / 1024 });
 
 const UUID_LENGTH = 36;
 

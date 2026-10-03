@@ -6,6 +6,7 @@ import {
   browserSupportsPush,
   uint8ArrayFromUrlSafeBase64,
 } from "@/lib/utils";
+import { t } from "@/i18n";
 
 export function usePushService() {
   const storage = useStorage();
@@ -15,11 +16,11 @@ export function usePushService() {
   const enabled = !!storage.get("pushSubscription");
 
   const enable = useCallback(async () => {
-    if (!serverMeta?.vapidPublicKey) throw "Push service is not available.";
+    if (!serverMeta?.vapidPublicKey) throw t("push.unavailable");
 
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
-      throw "Notification permission request denied.";
+      throw t("push.permissionDenied");
     }
 
     const sw = await navigator.serviceWorker.register("/acLife/sw.js", {
@@ -52,7 +53,7 @@ export function usePushService() {
 
     if (!p256dhBuf || !authBuf) {
       await sub.unsubscribe();
-      throw "Something went wrong. Please try again.";
+      throw t("push.error");
     }
 
     const p256dh = arrayBufferToBase64Url(p256dhBuf);
@@ -60,7 +61,7 @@ export function usePushService() {
 
     const res = await post("user/push/subscribe", { endpoint, p256dh, auth });
     if (!res.success) {
-      throw "Something went wrong. Please try again later.";
+      throw t("push.errorLater");
     }
 
     storage.set("pushSubscription", JSON.stringify(sub));

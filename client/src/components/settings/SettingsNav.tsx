@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SettingsTree from "./SettingsTree";
 import type { SearchHit, SettingsCategory } from "./settingsData";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsNav({
   categories,
@@ -26,16 +27,17 @@ export default function SettingsNav({
   onSelectSection: (categoryId: string, sectionId: string) => void;
   onClose?: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full flex-col">
       <div className="relative p-3">
-        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-6 size-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 start-6 size-4 -translate-y-1/2" />
         <Input
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Search settings..."
-          aria-label="Search settings"
-          className="pl-9"
+          placeholder={t("settings.searchPlaceholder")}
+          aria-label={t("settings.search")}
+          className="ps-9"
         />
         {results.length > 0 && (
           <div className="bg-popover absolute inset-x-3 top-full z-10 mt-1 rounded-md border shadow-md">
@@ -44,7 +46,7 @@ export default function SettingsNav({
                 key={hit.itemId}
                 type="button"
                 onClick={() => onSelectHit(hit)}
-                className="hover:bg-accent hover:text-accent-foreground flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left first:rounded-t-md last:rounded-b-md"
+                className="hover:bg-accent hover:text-accent-foreground flex w-full flex-col items-start gap-0.5 px-3 py-2 text-start first:rounded-t-md last:rounded-b-md"
               >
                 <span className="text-sm">{hit.itemLabel}</span>
                 <span className="text-muted-foreground text-xs">
@@ -70,7 +72,7 @@ export default function SettingsNav({
       {onClose && (
         <div className="border-t p-3">
           <Button variant="outline" className="w-full" onClick={onClose}>
-            Close
+            {t("common.close")}
           </Button>
         </div>
       )}

@@ -138,6 +138,7 @@ func RateLimitMiddleware(maxRequests int, window time.Duration) mux.MiddlewareFu
 				utils.SendJSON(w, http.StatusTooManyRequests, types.Reply[any]{
 					Success: false,
 					Message: "Too many requests.",
+					Code:    "too_many_requests",
 				})
 				return
 			}
@@ -159,6 +160,7 @@ func AuthMiddleware() mux.MiddlewareFunc {
 				utils.SendJSON(w, http.StatusUnauthorized, types.Reply[any]{
 					Success: false,
 					Message: "You are not logged in.",
+					Code:    "not_logged_in",
 				})
 				return
 			}
@@ -176,6 +178,7 @@ func AuthMiddleware() mux.MiddlewareFunc {
 				utils.SendJSON(w, http.StatusForbidden, types.Reply[types.EmailUnverifiedData]{
 					Success: false,
 					Message: "Email verification required.",
+					Code:    "email_verification_required",
 					Data: types.EmailUnverifiedData{
 						Email:                user.Email,
 						RequiresVerification: true,
@@ -273,6 +276,7 @@ func CSRFMiddleware() mux.MiddlewareFunc {
 				utils.SendJSON(w, http.StatusForbidden, types.Reply[any]{
 					Success: false,
 					Message: "Missing Origin.",
+					Code:    "missing_origin",
 				})
 				return
 			}
@@ -281,6 +285,7 @@ func CSRFMiddleware() mux.MiddlewareFunc {
 				utils.SendJSON(w, http.StatusForbidden, types.Reply[any]{
 					Success: false,
 					Message: "Invalid Origin.",
+					Code:    "invalid_origin",
 				})
 				return
 			}
@@ -318,6 +323,7 @@ func denySubscription(w http.ResponseWriter) {
 	utils.SendJSON(w, http.StatusPaymentRequired, types.Reply[any]{
 		Success: false,
 		Message: "Invalid subscription.",
+		Code:    "invalid_subscription",
 	})
 }
 

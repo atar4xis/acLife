@@ -5,11 +5,14 @@ import type { CalendarEvent } from "@/types/calendar/Event";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSidebar } from "../ui/sidebar";
 import { Checkbox } from "../ui/checkbox";
+import { timeFormat } from "@/lib/calendar/date";
+import { useTranslation } from "react-i18next";
 
 type AgendaEventProps = {
   event: CalendarEvent;
 };
 export default function AgendaEvent({ event }: AgendaEventProps) {
+  const { t } = useTranslation();
   const { setEditingEvent, setCurrentDate, onEventEdit } = useCalendarActions();
   const { setOpenMobile } = useSidebar();
   const [now, setNow] = useState(Date.now());
@@ -18,14 +21,14 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
     const sameMeridiem = event.start.toFormat("a") === event.end.toFormat("a");
     return {
       eventColor: color,
-      startTimeFormat:
-        (event.start.minute === 0 ? "h" : "h:mm") + (!sameMeridiem ? " a" : ""),
-      endTimeFormat: event.end.minute === 0 ? "h a" : "h:mm a",
+      startTimeFormat: timeFormat(event.start, !sameMeridiem),
+      endTimeFormat: timeFormat(event.end),
     };
-  }, [event.start, event.end, event.color]);
+    // eslint-disable-next-line
+  }, [event.start, event.end, event.color, t]);
 
   const startsInText = useMemo(() => {
-    if (event.start.toMillis() < now) return "in progress";
+    if (event.start.toMillis() < now) return t("agenda.inProgress");
     if (event.start.toMillis() - now > 86_400_000) return ""; // 24 hours
 
     const diff = event.start
@@ -41,8 +44,10 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
             ? "minutes"
             : "seconds";
 
-    return `in ${diff.shiftTo(unit).mapUnits(Math.ceil).toHuman()}`;
-  }, [event.start, now]);
+    return t("agenda.startsIn", {
+      duration: diff.shiftTo(unit).mapUnits(Math.ceil).toHuman(),
+    });
+  }, [event.start, now, t]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -70,7 +75,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
     >
       <div className="font-semibold flex items-center">
         <div
-          className="mr-2 self-stretch"
+          className="me-2 self-stretch"
           style={{
             backgroundColor: eventColor,
           }}
@@ -79,7 +84,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
         </div>
         {event.isTask && event.start.toMillis() - now <= 86_400_000 && (
           <Checkbox
-            className="relative z-10 mr-2 shrink-0"
+            className="relative z-10 me-2 shrink-0"
             checked={event.completed ?? false}
             onClick={(e) => e.stopPropagation()}
             onCheckedChange={(c) => toggleCompleted(!!c)}
@@ -87,7 +92,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
         )}
         <button
           type="button"
-          className="flex cursor-pointer flex-col text-left after:absolute after:inset-0"
+          className="flex cursor-pointer flex-col text-start after:absolute after:inset-0"
           onClick={() => {
             setCurrentDate(event.start.startOf("day"));
             setEditingEvent(event);
@@ -108,7 +113,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
       {!event._continued && (
         <div className="text-xs font-normal truncate text-foreground/50">
           {event.start.toFormat(startTimeFormat) +
-            "-" +
+            " - " +
             event.end.toFormat(endTimeFormat)}
         </div>
       )}

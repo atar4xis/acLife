@@ -21,6 +21,7 @@ import {
   useCurrentDate,
 } from "../../src/context/CalendarContext.tsx";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
+import { applyLanguage } from "../../src/i18n";
 import { seedSettings } from "../settingsStorage.ts";
 
 function CurrentDate() {
@@ -68,6 +69,7 @@ const dayOf = (container: HTMLElement, attribute: string) =>
 
 afterEach(() => {
   vi.useRealTimers();
+  applyLanguage("en");
 });
 
 describe("sidebar calendar", () => {
@@ -242,4 +244,25 @@ describe("mini calendar settings", () => {
 
     expect(screen.getAllByTestId("event-bar")).toHaveLength(3);
   });
+
+  it.each(["en", "ar"])(
+    "caps only the ends of a multi-day bar with logical classes in %s",
+    (language) => {
+      applyLanguage(language);
+      render_({ miniCalendarEventBars: true }, [
+        at(18, 9, "long", {
+          end: DateTime.fromISO("2026-03-20T10:00", { zone: ZONE }),
+        }),
+      ]);
+
+      const [first, middle, last] = screen
+        .getAllByTestId("event-bar")
+        .map((bar) => bar.className);
+      expect(first).toContain("ms-[12%] rounded-s-full");
+      expect(first).not.toContain("me-[12%]");
+      expect(middle).not.toMatch(/ms-|me-|rounded-/);
+      expect(last).toContain("me-[12%] rounded-e-full");
+      expect(last).not.toContain("ms-[12%]");
+    },
+  );
 });

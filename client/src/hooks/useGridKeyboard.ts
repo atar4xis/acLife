@@ -16,6 +16,7 @@ import {
   type GridFocus,
   type GridFocusStore,
 } from "@/lib/calendar/gridFocus";
+import { t } from "@/i18n";
 
 type Day = { date: DateTime; label: string };
 
@@ -27,6 +28,7 @@ type Params = {
   mode: string;
   weekStartsOn: number;
   snapMins: number;
+  rtl: boolean;
   hourHeight: number;
   headerHeight: number;
   now: DateTime;
@@ -280,7 +282,7 @@ export default function useGridKeyboard(params: Params) {
 
       if (e.key === "Escape") {
         swallow();
-        abandonMove("Move cancelled");
+        abandonMove(t("keyboard.moveCancelled"));
         return;
       }
 
@@ -292,8 +294,11 @@ export default function useGridKeyboard(params: Params) {
         if (result === "moved") {
           speak(
             session.count > 1
-              ? `Moved ${session.count} events`
-              : `Moved ${session.title} to ${describeWhen(session.last)}`,
+              ? t("keyboard.movedMany", { count: session.count })
+              : t("keyboard.moved", {
+                  title: session.title,
+                  when: describeWhen(session.last),
+                }),
           );
           return;
         }
@@ -301,12 +306,12 @@ export default function useGridKeyboard(params: Params) {
         endMove();
         if (result === "unchanged") {
           commit(session.origin);
-          speak("Move cancelled");
+          speak(t("keyboard.moveCancelled"));
         }
         return;
       }
 
-      const step = moveStepForKey(e, p.snapMins);
+      const step = moveStepForKey(e, p.snapMins, p.rtl);
 
       if (!step) {
         if (!e.ctrlKey && !e.altKey && !e.metaKey) swallow();
@@ -427,7 +432,9 @@ export default function useGridKeyboard(params: Params) {
       handled();
       p.toggleCompleted(focused);
       speak(
-        `${focused.title} ${focused.completed ? "not completed" : "completed"}`,
+        t(focused.completed ? "keyboard.notCompleted" : "keyboard.completed", {
+          title: focused.title,
+        }),
       );
     },
     [speak],
@@ -451,7 +458,7 @@ export default function useGridKeyboard(params: Params) {
         commit(next);
         show(next);
       } else {
-        speak(direction > 0 ? "No later events" : "No earlier events");
+        speak(t(direction > 0 ? "keyboard.noLater" : "keyboard.noEarlier"));
       }
     },
     [commit, show, speak],
@@ -495,7 +502,8 @@ export default function useGridKeyboard(params: Params) {
         ];
         p.selectEvents(all);
         const size = new Set(all.map(eventKey)).size;
-        suffix = size > 0 ? `, ${size} selected` : "";
+        suffix =
+          size > 0 ? `, ${t("keyboard.selectedCount", { count: size })}` : "";
       }
 
       commit(next);
@@ -530,7 +538,15 @@ export default function useGridKeyboard(params: Params) {
       } else {
         const created = p.createEventAt(focus.day, focus.minutes);
         speak(
-          `Created ${created.title}, ${describeSlot(date, focus.minutes, isSameDate(date, p.now), [])}`,
+          t("keyboard.created", {
+            title: created.title,
+            slot: describeSlot(
+              date,
+              focus.minutes,
+              isSameDate(date, p.now),
+              [],
+            ),
+          }),
         );
       }
     },
@@ -550,7 +566,10 @@ export default function useGridKeyboard(params: Params) {
         last: focused,
       };
       speak(
-        `Moving ${focused.title}${count > 1 ? ` and ${count - 1} more` : ""}. Arrow keys move, Shift plus arrow keys resize, Enter to confirm, Escape to cancel.`,
+        t(count > 1 ? "keyboard.movingMore" : "keyboard.moving", {
+          title: focused.title,
+          count: count - 1,
+        }),
       );
     },
     [speak],
@@ -562,7 +581,11 @@ export default function useGridKeyboard(params: Params) {
       if (!focused) return;
       const selected = p.selectedEventsRef.current?.has(eventKey(focused));
       p.toggleSelection(focused);
-      speak(`${focused.title} ${selected ? "deselected" : "selected"}`);
+      speak(
+        t(selected ? "keyboard.deselected" : "keyboard.selected", {
+          title: focused.title,
+        }),
+      );
     },
     [speak],
   );
@@ -627,6 +650,7 @@ export default function useGridKeyboard(params: Params) {
       const target = moveFocus(focus, e.key, {
         snapMins: p.snapMins,
         dayCount: p.visibleDays.length,
+        rtl: p.rtl,
       });
       if (target) {
         navigate(ctx, target);

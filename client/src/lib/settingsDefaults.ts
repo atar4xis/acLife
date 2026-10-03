@@ -6,12 +6,16 @@ import { getDeviceTimezone } from "@/lib/calendar/timezone";
 const deviceTimezone = getDeviceTimezone();
 
 export const defaultCalendarSettings: CalendarSettings = {
+  language: "system",
   defaultView: "week",
   weekStartsOn: "inherit",
+  timeFormat: "",
+  dateFormat: "",
+  dateTimeFormat: "",
   snapMinutes: 5,
   lineOpacity: 10,
   dayHeaderPosition: "top",
-  timeLabelPosition: "left",
+  timeLabelPosition: "auto",
   defaultEventName: "new event",
   defaultTaskName: "new task",
   defaultEventDuration: 60,

@@ -3,6 +3,8 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useApi } from "@/context/ApiContext";
 import { useEffect, useState } from "react";
+import { Trans } from "react-i18next";
+import { useTranslation } from "react-i18next";
 
 export const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -16,6 +18,7 @@ export function EmailVerificationRequired({
   initialCooldown?: number;
 }) {
   const { post } = useApi();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -40,9 +43,9 @@ export function EmailVerificationRequired({
       const res = await post("auth/resend-verification", { email });
 
       if (res.success) {
-        setSuccess("Verification email sent.");
+        setSuccess(t("login.verificationSent"));
       } else {
-        setError(res.message || "Failed to resend verification email.");
+        setError(res.message || t("login.resendFailed"));
       }
 
       setCooldown(RESEND_COOLDOWN_SECONDS);
@@ -54,18 +57,22 @@ export function EmailVerificationRequired({
   return (
     <div className="flex flex-col gap-6 text-center">
       <Card className="bg-transparent border-none shadow-none">
-        <CardTitle>Email verification required</CardTitle>
+        <CardTitle>{t("login.verificationRequired")}</CardTitle>
         <CardContent className="flex flex-col gap-3">
           <p className="text-sm mb-4">
-            A verification link has been sent to <strong>{email}</strong>.
+            <Trans
+              i18nKey="login.verificationLinkSent"
+              values={{ email }}
+              components={{ strong: <strong /> }}
+            />
           </p>
           <Button onClick={handleResend} disabled={loading || cooldown > 0}>
             {loading ? (
               <Spinner />
             ) : cooldown > 0 ? (
-              `Resend email (${cooldown}s)`
+              t("login.resendCooldown", { seconds: cooldown })
             ) : (
-              "Resend email"
+              t("login.resend")
             )}
           </Button>
           {error && <span className="text-sm text-destructive">{error}</span>}
@@ -73,7 +80,7 @@ export function EmailVerificationRequired({
             <span className="text-sm text-success">{success}</span>
           )}
           <Button variant="outline" onClick={onBack}>
-            Back to login
+            {t("login.backToLogin")}
           </Button>
         </CardContent>
       </Card>

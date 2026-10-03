@@ -31,11 +31,25 @@ export const slotWithinDay = (
   snapMins: number,
 ) => clampSlot(time.diff(day.startOf("day"), "minutes").minutes, snapMins);
 
+const mirrorKey = (key: string, rtl?: boolean) =>
+  !rtl
+    ? key
+    : key === "ArrowLeft"
+      ? "ArrowRight"
+      : key === "ArrowRight"
+        ? "ArrowLeft"
+        : key;
+
 export function moveFocus(
   from: { day: number; minutes: number },
-  key: string,
-  { snapMins, dayCount }: { snapMins: number; dayCount: number },
+  rawKey: string,
+  {
+    snapMins,
+    dayCount,
+    rtl,
+  }: { snapMins: number; dayCount: number; rtl?: boolean },
 ): FocusMove | null {
+  const key = mirrorKey(rawKey, rtl);
   const { day, minutes } = from;
   const vertical = (m: number): FocusMove => ({
     day,
@@ -72,9 +86,11 @@ export function moveFocus(
 export function moveStepForKey(
   e: Pick<KeyboardEvent, "key" | "shiftKey" | "ctrlKey" | "altKey" | "metaKey">,
   snapMins: number,
+  rtl?: boolean,
 ): MoveStep | null {
+  const key = mirrorKey(e.key, rtl);
   const plain = !e.ctrlKey && !e.altKey && !e.metaKey;
-  const vertical = e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0;
+  const vertical = key === "ArrowUp" ? -1 : key === "ArrowDown" ? 1 : 0;
 
   if (vertical) {
     const minutes = vertical * snapMins;
@@ -86,7 +102,7 @@ export function moveStepForKey(
 
   if (!plain || e.shiftKey) return null;
 
-  switch (e.key) {
+  switch (key) {
     case "PageUp":
       return { type: "move", days: 0, minutes: -60 };
     case "PageDown":

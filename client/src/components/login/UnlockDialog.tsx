@@ -19,11 +19,13 @@ import { Input } from "../ui/input";
 import { useUser } from "@/context/UserContext";
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
+import { useTranslation } from "react-i18next";
 
 export default function UnlockDialog() {
   const { user, setMasterKey, setBucketKey, logout } = useUser();
   const { post } = useApi();
   const storage = useStorage();
+  const { t } = useTranslation();
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkingAutoUnlock, setCheckingAutoUnlock] = useState(true);
@@ -121,9 +123,9 @@ export default function UnlockDialog() {
     <Dialog open>
       <DialogContent showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle className="text-center">Decrypt Data</DialogTitle>
+          <DialogTitle className="text-center">{t("unlock.title")}</DialogTitle>
           <DialogDescription className="text-center">
-            You are logged in but your data is encrypted.
+            {t("unlock.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-6 text-center">
@@ -133,25 +135,27 @@ export default function UnlockDialog() {
                 <form onSubmit={handlePinSubmit}>
                   <FieldGroup>
                     <Field>
-                      <FieldLabel htmlFor="pin">PIN code</FieldLabel>
+                      <FieldLabel htmlFor="pin">
+                        {t("unlock.pinCode")}
+                      </FieldLabel>
                       <Input
                         id="pin"
                         name="pin"
                         type="password"
                         inputMode="numeric"
-                        placeholder="Enter PIN"
+                        placeholder={t("unlock.pinPlaceholder")}
                         autoFocus
                         required
                       />
                     </Field>
                     {error && (
-                      <span className="text-sm text-destructive text-left">
-                        Invalid PIN.
+                      <span className="text-sm text-destructive text-start">
+                        {t("unlock.invalidPin")}
                       </span>
                     )}
                     <Field>
                       <Button type="submit" disabled={loading}>
-                        Continue
+                        {t("common.continue")}
                       </Button>
                     </Field>
                   </FieldGroup>
@@ -160,25 +164,27 @@ export default function UnlockDialog() {
                 <form onSubmit={handleFormSubmit}>
                   <FieldGroup>
                     <Field>
-                      <FieldLabel htmlFor="password">Password</FieldLabel>
+                      <FieldLabel htmlFor="password">
+                        {t("login.password")}
+                      </FieldLabel>
                       <Input
                         id="password"
                         name="password"
                         type="password"
                         maxLength={MAX_PASSWORD_LENGTH}
-                        placeholder="Enter password"
+                        placeholder={t("login.passwordPlaceholder")}
                         autoFocus
                         required
                       />
                     </Field>
                     {error && (
-                      <span className="text-sm text-destructive text-left">
-                        Invalid password.
+                      <span className="text-sm text-destructive text-start">
+                        {t("unlock.invalidPassword")}
                       </span>
                     )}
                     <Field>
                       <Button type="submit" disabled={loading}>
-                        Continue
+                        {t("common.continue")}
                       </Button>
                     </Field>
                   </FieldGroup>
@@ -193,7 +199,7 @@ export default function UnlockDialog() {
                     setUsePin((v) => !v);
                   }}
                 >
-                  {usePin ? "Use password instead" : "Use PIN instead"}
+                  {usePin ? t("unlock.usePassword") : t("unlock.usePin")}
                 </Button>
               )}
               <Button
@@ -201,7 +207,7 @@ export default function UnlockDialog() {
                 variant="outline"
                 onClick={logout}
               >
-                Log out
+                {t("user.logout")}
               </Button>
             </CardContent>
           </Card>

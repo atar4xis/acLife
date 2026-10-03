@@ -21,20 +21,23 @@ import { normalize, tokenize } from "@/lib/utils";
 import SettingsNav from "./SettingsNav";
 import {
   settingsCategories,
-  searchIndex,
+  buildSearchIndex,
   type SearchHit,
 } from "./settingsData";
 import AppearancePage from "./pages/AppearancePage";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import SecurityPage from "./pages/SecurityPage";
+import RegionPage from "./pages/RegionPage";
 import CalendarPage from "./pages/CalendarPage";
 import SyncPage from "./pages/SyncPage";
 import type { SectionRefs } from "./SettingsSection";
+import { useTranslation } from "react-i18next";
 
 const PAGES: Record<string, ComponentType<{ sectionRefs: SectionRefs }>> = {
   appearance: AppearancePage,
   subscription: SubscriptionPage,
   security: SecurityPage,
+  region: RegionPage,
   calendar: CalendarPage,
   sync: SyncPage,
 };
@@ -52,6 +55,7 @@ export default function SettingsDialog({
   subscriptionEnabled?: boolean;
   initialCategoryId?: string;
 }) {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
 
   const visibleCategories = useMemo(
@@ -110,7 +114,7 @@ export default function SettingsDialog({
 
     const visibleIds = new Set(visibleCategories.map((c) => c.id));
 
-    return searchIndex
+    return buildSearchIndex()
       .filter((hit) => visibleIds.has(hit.categoryId))
       .filter((hit) => {
         const haystack = normalize(
@@ -119,7 +123,8 @@ export default function SettingsDialog({
         return tokens.every((token) => haystack.includes(token));
       })
       .slice(0, 8);
-  }, [query, visibleCategories]);
+    // eslint-disable-next-line
+  }, [query, visibleCategories, t]);
 
   const stopFollowing = useRef<(() => void) | null>(null);
   useEffect(() => () => stopFollowing.current?.(), []);
@@ -200,15 +205,15 @@ export default function SettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[min(840px,85vh)] w-[min(1280px,95vw)] max-w-none flex-col gap-0 p-0 sm:max-w-none">
-        <DialogTitle className="sr-only">Settings</DialogTitle>
+        <DialogTitle className="sr-only">{t("common.settings")}</DialogTitle>
         {isMobile && (
           <button
             type="button"
             onClick={() => setNavOpen(true)}
-            className="ring-offset-background focus:ring-ring absolute top-4 left-4 z-10 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+            className="ring-offset-background focus:ring-ring absolute top-4 start-4 z-10 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
           >
             <Menu className="size-4" />
-            <span className="sr-only">Open settings navigation</span>
+            <span className="sr-only">{t("settings.openNav")}</span>
           </button>
         )}
         <div className="flex min-h-0 flex-1">
@@ -250,7 +255,7 @@ export default function SettingsDialog({
               className="w-72 p-0"
               showCloseButton={false}
             >
-              <SheetTitle className="sr-only">Settings navigation</SheetTitle>
+              <SheetTitle className="sr-only">{t("settings.nav")}</SheetTitle>
               {renderNav(() => setNavOpen(false))}
             </SheetContent>
           </Sheet>

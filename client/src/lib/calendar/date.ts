@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import { fmt, t } from "@/i18n";
 
 export const toPickerDate = (date: DateTime) =>
   new Date(date.year, date.month - 1, date.day);
@@ -13,7 +14,7 @@ export const fromPickerDate = (date: Date) =>
 export const isSameDate = (a: DateTime, b: DateTime) => a.hasSame(b, "day");
 
 export const getDay = (date: DateTime) => [
-  { date: date.startOf("day"), label: date.toFormat("EEE d") },
+  { date: date.startOf("day"), label: date.toFormat(fmt("dayShort")) },
 ];
 
 export const getWeekDays = (date: DateTime, weekStartsOn: number = 1) => {
@@ -22,7 +23,7 @@ export const getWeekDays = (date: DateTime, weekStartsOn: number = 1) => {
 
   return Array.from({ length: 7 }, (_, i) => {
     const day = start.plus({ days: i });
-    return { date: day, label: day.toFormat("EEE d") };
+    return { date: day, label: day.toFormat(fmt("dayShort")) };
   });
 };
 
@@ -31,7 +32,11 @@ export const getRelativeDays = (now: DateTime, days: number) => {
   return Array.from({ length: days }, (_, i) => {
     const day = start.plus({ days: i });
     const label =
-      i === 0 ? "Today" : i === 1 ? "Tomorrow" : day.toFormat("EEEE d");
+      i === 0
+        ? t("date.today")
+        : i === 1
+          ? t("date.tomorrow")
+          : day.toFormat(fmt("dayLong"));
     return { date: day, label };
   });
 };
@@ -50,7 +55,7 @@ export const getDateRangeString = (
   weekStartsOn: number = 1,
 ) => {
   if (mode === "month") {
-    return currentDate.toFormat("MMMM yyyy");
+    return currentDate.toFormat(fmt("monthYear"));
   }
 
   const days =
@@ -62,11 +67,17 @@ export const getDateRangeString = (
   const last = days[days.length - 1].date;
 
   if (first.hasSame(last, "month")) {
-    return first.toFormat("MMMM yyyy");
+    return first.toFormat(fmt("monthYear"));
   }
 
-  return `${first.toFormat("MMM yyyy")} - ${last.toFormat("MMM yyyy")}`;
+  return `${first.toFormat(fmt("monthYearShort"))} - ${last.toFormat(fmt("monthYearShort"))}`;
 };
+
+export const timeFormat = (date: DateTime, withMeridiem = true) =>
+  fmt(
+    (date.minute === 0 ? "timeHour" : "time") +
+      (withMeridiem ? "" : "NoMeridiem"),
+  );
 
 export const snapMinutes = (mins: number, snap: number) =>
   Math.floor(mins / snap) * snap;

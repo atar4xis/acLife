@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
 
 export function PinSetupDialog({
   open,
@@ -22,6 +23,7 @@ export function PinSetupDialog({
   onCancel: () => void;
   onConfirm: (pin: string, currentPassword: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -42,15 +44,15 @@ export function PinSetupDialog({
     e.preventDefault();
 
     if (!/^\d{4,16}$/.test(pin)) {
-      setError("PIN must be 4 to 16 digits.");
+      setError(t("settings.pin.length"));
       return;
     }
     if (pin !== confirmPin) {
-      setError("PINs do not match.");
+      setError(t("settings.pin.mismatch"));
       return;
     }
     if (!currentPassword) {
-      setError("Please enter your current password.");
+      setError(t("settings.enterCurrentPassword"));
       return;
     }
 
@@ -59,7 +61,7 @@ export function PinSetupDialog({
     try {
       await onConfirm(pin, currentPassword);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to set up PIN.");
+      setError(err instanceof Error ? err.message : t("settings.pin.failed"));
     } finally {
       setSubmitting(false);
     }
@@ -69,11 +71,13 @@ export function PinSetupDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
       <DialogContent aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>Set up a PIN code</DialogTitle>
+          <DialogTitle>{t("settings.pin.setupTitle")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field>
-            <FieldLabel htmlFor="pin-setup-pin">PIN</FieldLabel>
+            <FieldLabel htmlFor="pin-setup-pin">
+              {t("settings.pin.pin")}
+            </FieldLabel>
             <Input
               id="pin-setup-pin"
               type="password"
@@ -85,7 +89,9 @@ export function PinSetupDialog({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="pin-setup-confirm">Confirm PIN</FieldLabel>
+            <FieldLabel htmlFor="pin-setup-confirm">
+              {t("settings.pin.confirm")}
+            </FieldLabel>
             <Input
               id="pin-setup-confirm"
               type="password"
@@ -97,7 +103,7 @@ export function PinSetupDialog({
           </Field>
           <Field>
             <FieldLabel htmlFor="pin-setup-password">
-              Current password
+              {t("settings.currentPassword")}
             </FieldLabel>
             <Input
               id="pin-setup-password"
@@ -114,10 +120,14 @@ export function PinSetupDialog({
               onClick={onCancel}
               disabled={submitting}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? <Loader2 className="animate-spin" /> : <>Set PIN</>}
+              {submitting ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                t("settings.pin.set")
+              )}
             </Button>
           </DialogFooter>
         </form>
@@ -135,6 +145,7 @@ export function StayUnlockedDialog({
   onCancel: () => void;
   onConfirm: (currentPassword: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -151,7 +162,7 @@ export function StayUnlockedDialog({
     e.preventDefault();
 
     if (!currentPassword) {
-      setError("Please enter your current password.");
+      setError(t("settings.enterCurrentPassword"));
       return;
     }
 
@@ -161,7 +172,7 @@ export function StayUnlockedDialog({
       await onConfirm(currentPassword);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to enable stay unlocked.",
+        err instanceof Error ? err.message : t("settings.stayUnlocked.failed"),
       );
     } finally {
       setSubmitting(false);
@@ -172,16 +183,15 @@ export function StayUnlockedDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Stay unlocked</DialogTitle>
+          <DialogTitle>{t("settings.stayUnlocked.title")}</DialogTitle>
           <DialogDescription>
-            Your master key will be stored on this device. Anyone with access to
-            your device can access your data.
+            {t("settings.stayUnlocked.description")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field>
             <FieldLabel htmlFor="stay-unlocked-password">
-              Current password
+              {t("settings.currentPassword")}
             </FieldLabel>
             <Input
               id="stay-unlocked-password"
@@ -200,10 +210,14 @@ export function StayUnlockedDialog({
               onClick={onCancel}
               disabled={submitting}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? <Loader2 className="animate-spin" /> : "Enable"}
+              {submitting ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                t("settings.stayUnlocked.enable")
+              )}
             </Button>
           </DialogFooter>
         </form>

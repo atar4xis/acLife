@@ -16,6 +16,8 @@ import (
 	"regexp"
 	"runtime"
 	"runtime/debug"
+	"slices"
+	"strconv"
 	"strings"
 
 	"acLife/types"
@@ -38,6 +40,7 @@ func SendInternalError(w http.ResponseWriter) {
 	SendJSON(w, http.StatusInternalServerError, types.Reply[any]{
 		Success: false,
 		Message: "An unexpected error occurred.",
+		Code:    "internal_error",
 	})
 }
 
@@ -46,6 +49,7 @@ func SendBadRequest(w http.ResponseWriter) {
 	SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 		Success: false,
 		Message: "Bad request.",
+		Code:    "bad_request",
 	})
 }
 
@@ -160,4 +164,26 @@ func IsEmailDomainAllowed(email string) bool {
 	}
 
 	return true
+}
+
+// PreferredLanguage picks the best match for the request's Accept-Language header from supported (base language codes), falling back to "en".
+func PreferredLanguage(r *http.Request, supported []string) string {
+	best, bestQ := "en", 0.0
+	for part := range strings.SplitSeq(r.Header.Get("Accept-Language"), ",") {
+		tag, params, _ := strings.Cut(strings.TrimSpace(part), ";")
+		q := 1.0
+		if v, ok := strings.CutPrefix(strings.TrimSpace(params), "q="); ok {
+			parsed, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				continue
+			}
+			q = parsed
+		}
+
+		base, _, _ := strings.Cut(strings.ToLower(strings.TrimSpace(tag)), "-")
+		if q > bestQ && slices.Contains(supported, base) {
+			best, bestQ = base, q
+		}
+	}
+	return best
 }

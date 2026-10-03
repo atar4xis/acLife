@@ -36,6 +36,7 @@ vi.mock("../../src/context/StorageContext.tsx", () => ({
 }));
 
 import LoginDialog from "../../src/components/login/LoginDialog.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 
 const serverMeta: ServerMetadata = {
   url: "https://api.example.com/acLife/api",
@@ -54,14 +55,22 @@ describe("LoginDialog a11y", () => {
   });
 
   it("login form has no axe violations", async () => {
-    render(<LoginDialog />);
+    render(
+      <SettingsStoreProvider>
+        <LoginDialog />
+      </SettingsStoreProvider>,
+    );
     await screen.findByLabelText(/email/i);
     await expectNoViolations(document.body);
   });
 
   it("registration form has no axe violations", async () => {
     const user = userEvent.setup();
-    render(<LoginDialog />);
+    render(
+      <SettingsStoreProvider>
+        <LoginDialog />
+      </SettingsStoreProvider>,
+    );
     await user.click(screen.getByRole("button", { name: /create account/i }));
     await screen.findByLabelText(/confirm password/i);
     await expectNoViolations(document.body);
@@ -69,7 +78,11 @@ describe("LoginDialog a11y", () => {
 
   it("server switcher has no axe violations", async () => {
     const user = userEvent.setup();
-    render(<LoginDialog />);
+    render(
+      <SettingsStoreProvider>
+        <LoginDialog />
+      </SettingsStoreProvider>,
+    );
     await user.click(screen.getByRole("button", { name: "api.example.com" }));
     await screen.findByRole("button", { name: "Test connectivity" });
     await expectNoViolations(document.body);

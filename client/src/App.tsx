@@ -11,6 +11,9 @@ import { ApiProvider, useApi } from "./context/ApiContext";
 import { useEffect, useRef } from "react";
 import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
+import { Direction } from "radix-ui";
+import { useTranslation } from "react-i18next";
+import LanguageSync from "@/components/LanguageSync";
 
 function AuthWrapper({ children }: WithChildren) {
   const { user, isUnlocking, checkLogin, setUser } = useUser();
@@ -37,11 +40,12 @@ function AuthWrapper({ children }: WithChildren) {
 }
 
 export default function App() {
+  const { t, i18n } = useTranslation();
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("verified") !== "false") return;
 
-    toast.error("Email verification failed. Please try again.");
+    toast.error(t("app.emailVerificationFailed"));
 
     params.delete("verified");
     const newSearch = params.toString();
@@ -50,26 +54,29 @@ export default function App() {
       "",
       window.location.pathname + (newSearch ? `?${newSearch}` : ""),
     );
-  }, []);
+  }, [t]);
 
   return (
-    <SettingsStoreProvider>
-      <ThemeProvider>
-        <ApiProvider>
-          <StorageProvider>
-            <UserProvider>
-              <CalendarProvider>
-                <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
-                  <Toaster position="bottom-center" />
-                  <AuthWrapper>
-                    <AppShell />
-                  </AuthWrapper>
-                </SidebarProvider>
-              </CalendarProvider>
-            </UserProvider>
-          </StorageProvider>
-        </ApiProvider>
-      </ThemeProvider>
-    </SettingsStoreProvider>
+    <Direction.Provider dir={i18n.dir()}>
+      <SettingsStoreProvider>
+        <LanguageSync />
+        <ThemeProvider>
+          <ApiProvider>
+            <StorageProvider>
+              <UserProvider>
+                <CalendarProvider>
+                  <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
+                    <Toaster position="bottom-center" />
+                    <AuthWrapper>
+                      <AppShell />
+                    </AuthWrapper>
+                  </SidebarProvider>
+                </CalendarProvider>
+              </UserProvider>
+            </StorageProvider>
+          </ApiProvider>
+        </ThemeProvider>
+      </SettingsStoreProvider>
+    </Direction.Provider>
   );
 }

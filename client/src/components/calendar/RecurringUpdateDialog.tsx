@@ -11,6 +11,7 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { useTranslation } from "react-i18next";
 
 type RecurringUpdateDialogOptions = {
   action: "Update" | "Delete";
@@ -33,6 +34,7 @@ export default memo(function RecurringUpdateDialog({
   onCancel,
   onFocusReturned,
 }: RecurringUpdateDialogOptions) {
+  const { t } = useTranslation();
   const [option, setOption] = useState<string>(defaultOption);
   const [keepChanges, setKeepChanges] = useState(false);
   const openerRef = useRef<Element | null>(null);
@@ -59,36 +61,40 @@ export default memo(function RecurringUpdateDialog({
           onFocusReturned?.(toOpener);
         }}
       >
-        <AlertDialogTitle>{action} recurring event</AlertDialogTitle>
+        <AlertDialogTitle>
+          {t(`recurringDialog.${action}.title`)}
+        </AlertDialogTitle>
         <AlertDialogDescription>
-          Which event would you like to {action.toLowerCase()}?
+          {t(`recurringDialog.${action}.question`)}
         </AlertDialogDescription>
         <RadioGroup
           value={option}
           onValueChange={setOption}
-          className="mt-3 gap-5 text-left"
+          className="mt-3 gap-5 text-start"
         >
           <div className="flex gap-3">
             <RadioGroupItem value="this" id="this" />
-            <Label htmlFor="this">This event</Label>
+            <Label htmlFor="this">{t("recurringDialog.this")}</Label>
           </div>
           <div className="flex gap-3">
             <RadioGroupItem value="future" id="future" />
-            <Label htmlFor="future">This and future events</Label>
+            <Label htmlFor="future">{t("recurringDialog.future")}</Label>
           </div>
           <div className="flex gap-3">
             <RadioGroupItem value="all" id="all" />
-            <Label htmlFor="all">All events</Label>
+            <Label htmlFor="all">{t("recurringDialog.all")}</Label>
           </div>
         </RadioGroup>
         {canKeepChanges && option === "future" && (
-          <div className="flex gap-3 mt-4 text-left">
+          <div className="flex gap-3 mt-4 text-start">
             <Checkbox
               id="keep-changes"
               checked={keepChanges}
               onCheckedChange={(c) => setKeepChanges(!!c)}
             />
-            <Label htmlFor="keep-changes">Keep changes to future events</Label>
+            <Label htmlFor="keep-changes">
+              {t("recurringDialog.keepChanges")}
+            </Label>
           </div>
         )}
         <AlertDialogFooter className="!flex-col mt-5">
@@ -98,7 +104,7 @@ export default memo(function RecurringUpdateDialog({
               setOpen(false);
             }}
           >
-            {action}
+            {t(`recurringDialog.${action}.confirm`)}
           </AlertDialogAction>
           <AlertDialogCancel
             onClick={() => {
@@ -106,7 +112,7 @@ export default memo(function RecurringUpdateDialog({
               setOpen(false);
             }}
           >
-            Cancel
+            {t("common.cancel")}
           </AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>

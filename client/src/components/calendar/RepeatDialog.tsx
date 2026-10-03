@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
+import i18n, { fmt } from "@/i18n";
 import { FieldLabel } from "../ui/field";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -31,6 +32,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
+import { useTranslation } from "react-i18next";
 
 // a leap year, so every date can be picked
 const PICKER_YEAR = 2024;
@@ -98,6 +100,7 @@ function RepeatForm({
   onApply: (repeat: RepeatInterval) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const { dayPickerWeekStart } = useWeekStart();
   const [draft, setDraft] = useState<RepeatInterval>(
     initial ? withUnitDefaults(initial, start) : { interval: 1, unit: "day" },
@@ -111,14 +114,14 @@ function RepeatForm({
 
   return (
     <div className="flex min-w-0 flex-col gap-4 mt-2">
-      <FieldLabel>Repeat every</FieldLabel>
+      <FieldLabel>{t("repeatDialog.every")}</FieldLabel>
       <div className="flex gap-2">
         <Input
           type="number"
           className="w-20 shrink-0"
           min={1}
           max={1000}
-          aria-label="Repeat every"
+          aria-label={t("repeatDialog.every")}
           value={Number.isNaN(draft.interval) ? "" : draft.interval}
           onChange={(e) =>
             patch({ interval: Math.min(1000, e.target.valueAsNumber) })
@@ -143,22 +146,22 @@ function RepeatForm({
         >
           <SelectTrigger
             className={cn(TRUNCATING_SELECT, unit === "month" && "flex-none")}
-            aria-label="Repeat unit"
+            aria-label={t("repeatDialog.unit")}
           >
-            <SelectValue placeholder="Unit" />
+            <SelectValue placeholder={t("repeatDialog.unitPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="day">
-              {draft.interval === 1 ? "Day" : "Days"}
+              {t("repeatDialog.unit_day", { count: draft.interval })}
             </SelectItem>
             <SelectItem value="week">
-              {draft.interval === 1 ? "Week" : "Weeks"}
+              {t("repeatDialog.unit_week", { count: draft.interval })}
             </SelectItem>
             <SelectItem value="month">
-              {draft.interval === 1 ? "Month" : "Months"}
+              {t("repeatDialog.unit_month", { count: draft.interval })}
             </SelectItem>
             <SelectItem value="year">
-              {draft.interval === 1 ? "Year" : "Years"}
+              {t("repeatDialog.unit_year", { count: draft.interval })}
             </SelectItem>
           </SelectContent>
         </Select>
@@ -174,7 +177,7 @@ function RepeatForm({
           >
             <SelectTrigger
               className={TRUNCATING_SELECT}
-              aria-label="Repeat month day"
+              aria-label={t("repeatDialog.monthDay")}
             >
               <SelectValue />
             </SelectTrigger>
@@ -184,7 +187,9 @@ function RepeatForm({
                   {o.label}
                 </SelectItem>
               ))}
-              <SelectItem value="days">on specific days</SelectItem>
+              <SelectItem value="days">
+                {t("repeatDialog.specificDays")}
+              </SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -198,11 +203,11 @@ function RepeatForm({
               checked={draft.except !== undefined}
               onCheckedChange={(c) => patch({ except: c ? [] : undefined })}
             />
-            <Label htmlFor="except">Excluding</Label>
+            <Label htmlFor="except">{t("repeatDialog.excluding")}</Label>
           </div>
           {draft.except && (
             <WeekdayToggle
-              label="Excluded days"
+              label={t("repeatDialog.excludedDays")}
               value={draft.except}
               min={0}
               max={6}
@@ -214,9 +219,9 @@ function RepeatForm({
 
       {unit === "week" && (
         <>
-          <FieldLabel>Repeat on</FieldLabel>
+          <FieldLabel>{t("repeatDialog.repeatOn")}</FieldLabel>
           <WeekdayToggle
-            label="Repeat on"
+            label={t("repeatDialog.repeatOn")}
             value={draft.days ?? []}
             min={1}
             max={7}
@@ -234,8 +239,8 @@ function RepeatForm({
           hideWeekdays
           classNames={PICKER_CLASS_NAMES}
           showOutsideDays={false}
-          formatters={{ formatCaption: () => "Days of the month" }}
-          labels={{ labelGrid: () => "Days of the month" }}
+          formatters={{ formatCaption: () => t("repeatDialog.daysOfMonth") }}
+          labels={{ labelGrid: () => t("repeatDialog.daysOfMonth") }}
           weekStartsOn={dayPickerWeekStart}
           selected={draft.days?.map((d) => new Date(PICKER_YEAR, 0, d))}
           onSelect={(dates) =>
@@ -255,7 +260,7 @@ function RepeatForm({
                 patch({ yearDays: c ? [start.toFormat("MM-dd")] : undefined })
               }
             />
-            <Label htmlFor="yearDays">On specific days</Label>
+            <Label htmlFor="yearDays">{t("repeatDialog.onSpecificDays")}</Label>
           </div>
           {draft.yearDays && (
             <Calendar
@@ -268,11 +273,11 @@ function RepeatForm({
               endMonth={new Date(PICKER_YEAR, 11)}
               formatters={{
                 formatCaption: (d) =>
-                  d.toLocaleString("default", { month: "long" }),
+                  d.toLocaleString(i18n.language, { month: "long" }),
               }}
               labels={{
                 labelGrid: (d) =>
-                  d.toLocaleString("default", { month: "long" }),
+                  d.toLocaleString(i18n.language, { month: "long" }),
               }}
               weekStartsOn={dayPickerWeekStart}
               selected={draft.yearDays.map((md) => {
@@ -303,7 +308,7 @@ function RepeatForm({
             })
           }
         />
-        <Label htmlFor="forever">Forever</Label>
+        <Label htmlFor="forever">{t("repeatDialog.forever")}</Label>
       </div>
       {!forever && (
         <div className="flex gap-2">
@@ -320,12 +325,17 @@ function RepeatForm({
               )
             }
           >
-            <SelectTrigger className={TRUNCATING_SELECT} aria-label="Ends">
-              <SelectValue placeholder="Ends" />
+            <SelectTrigger
+              className={TRUNCATING_SELECT}
+              aria-label={t("repeatDialog.ends")}
+            >
+              <SelectValue placeholder={t("repeatDialog.ends")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="on">Ends on</SelectItem>
-              <SelectItem value="after">Ends after</SelectItem>
+              <SelectItem value="on">{t("repeatDialog.endsOn")}</SelectItem>
+              <SelectItem value="after">
+                {t("repeatDialog.endsAfter")}
+              </SelectItem>
             </SelectContent>
           </Select>
           {count === undefined ? (
@@ -334,10 +344,10 @@ function RepeatForm({
                 <Button
                   variant="outline"
                   className="flex-1 justify-start font-normal"
-                  aria-label="Ends on date"
+                  aria-label={t("repeatDialog.endsOnDate")}
                 >
                   <CalendarIcon />
-                  {untilDate.toFormat("dd LLL yyyy")}
+                  {untilDate.toFormat(fmt("date"))}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -372,7 +382,7 @@ function RepeatForm({
                 type="number"
                 min={1}
                 max={1000}
-                aria-label="Ends after repetitions"
+                aria-label={t("repeatDialog.endsAfterCount")}
                 value={Number.isNaN(count) ? "" : count}
                 onChange={(e) =>
                   patch({
@@ -380,7 +390,9 @@ function RepeatForm({
                   })
                 }
               />
-              <span className="text-sm">times</span>
+              <span className="text-sm">
+                {t("repeatDialog.times", { count: count ?? 0 })}
+              </span>
             </div>
           )}
         </div>
@@ -388,7 +400,7 @@ function RepeatForm({
 
       <DialogFooter className="flex-row justify-end mt-2">
         <Button variant="secondary" type="button" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button
           type="button"
@@ -399,7 +411,7 @@ function RepeatForm({
           }
           onClick={() => onApply(draft)}
         >
-          Apply
+          {t("common.apply")}
         </Button>
       </DialogFooter>
     </div>
@@ -419,6 +431,7 @@ export default function RepeatDialog({
   initial?: RepeatInterval;
   onApply: (repeat: RepeatInterval) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -431,7 +444,7 @@ export default function RepeatDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle className="text-left">Custom repeat</DialogTitle>
+          <DialogTitle className="text-start">{t("editor.custom")}</DialogTitle>
         </DialogHeader>
         <RepeatForm {...props} onCancel={() => onOpenChange(false)} />
       </DialogContent>

@@ -90,6 +90,7 @@ vi.mock("@mzattahri/srp", async () => {
 });
 
 import LoginDialog from "../../src/components/login/LoginDialog.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 
 const defaultServerMeta: ServerMetadata = {
   url: "https://api.example.com/acLife/api",
@@ -105,7 +106,12 @@ const defaultServerMeta: ServerMetadata = {
   vapidPublicKey: "test-vapid-key",
 };
 
-const renderLoginDialog = () => render(<LoginDialog />);
+const renderLoginDialog = () =>
+  render(
+    <SettingsStoreProvider>
+      <LoginDialog />
+    </SettingsStoreProvider>,
+  );
 
 const openRegistrationForm = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(screen.getByRole("button", { name: /create account/i }));

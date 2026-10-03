@@ -8,8 +8,10 @@ import { EMPTY_ARRAY } from "@/lib/constants";
 import AgendaEvent from "./AgendaEvent";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
+import { useTranslation } from "react-i18next";
 
 export default memo(function AgendaList() {
+  const { t, i18n } = useTranslation();
   const calendarEvents = useEventList();
   const { agendaRangeDays, defaultTimezone } = useCalendarSettings((s) => ({
     agendaRangeDays: s.agendaRangeDays,
@@ -17,8 +19,9 @@ export default memo(function AgendaList() {
   }));
   const [now, setNow] = useState(() => DateTime.now().setZone(defaultTimezone));
   const visibleDays = useMemo(
-    () => getRelativeDays(now, agendaRangeDays),
-    [now, agendaRangeDays],
+    () => getRelativeDays(now.setLocale(i18n.language), agendaRangeDays),
+    // eslint-disable-next-line
+    [now, agendaRangeDays, t, i18n.language],
   );
 
   const eventMap = useMemo(

@@ -12,6 +12,7 @@ import {
   type SyncableKey,
   type SyncOverrides,
 } from "@/lib/settingsSync";
+import { isLanguage } from "@/i18n";
 import { MAX_PRESETS } from "@/lib/constants";
 import { fitsPresetLimit } from "@/lib/themePresets";
 import { readJSON, shallowEqual } from "@/lib/utils";
@@ -105,9 +106,12 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
   );
   parsed.timeLabelPosition = oneOf(
     parsed.timeLabelPosition,
-    ["left", "right"],
+    ["auto", "left", "right"],
     defaultCalendarSettings.timeLabelPosition,
   );
+  if (parsed.language !== "system" && !isLanguage(parsed.language)) {
+    parsed.language = defaultCalendarSettings.language;
+  }
   parsed.theme = oneOf(
     parsed.theme,
     ["dark", "light", "system", "custom"],

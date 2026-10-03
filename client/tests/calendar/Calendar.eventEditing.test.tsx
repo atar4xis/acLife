@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
+import { applyLanguage } from "../../src/i18n";
 import {
   FIXED_NOW,
   buildPlainEvent,
@@ -21,6 +22,29 @@ import {
 setupCalendarTests();
 
 describe("Calendar", () => {
+  it("names a new event in the current language until the default is customized", async () => {
+    const saveEvents = vi.fn();
+    applyLanguage("es");
+
+    try {
+      renderCalendar({ mode: "week", saveEvents });
+      const pointer = {
+        button: 0,
+        pointerId: 7,
+        pointerType: "mouse",
+        clientX: dayCenterX(4),
+        clientY: timeToClientY(11, 27),
+      };
+
+      fireEvent.pointerDown(getDayCell(4), pointer);
+      dispatchWindowPointer("pointerup", pointer);
+
+      expect(await screen.findByText("nuevo evento")).toBeInTheDocument();
+    } finally {
+      applyLanguage("en");
+    }
+  });
+
   it("creates new event on correct day and time", async () => {
     const saveEvents = vi.fn();
 

@@ -5,12 +5,14 @@ export type SectionRefs = RefObject<Map<string, HTMLDivElement>>;
 export default function Section({
   id,
   label,
+  labelAddon,
   action,
   sectionRefs,
   children,
 }: {
   id: string;
   label: string;
+  labelAddon?: ReactNode;
   action?: ReactNode;
   sectionRefs: SectionRefs;
   children: ReactNode;
@@ -24,7 +26,10 @@ export default function Section({
       className="flex flex-col gap-4 scroll-mt-4"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">{label}</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-medium text-muted-foreground">{label}</h3>
+          {labelAddon}
+        </div>
         {action}
       </div>
       {children}

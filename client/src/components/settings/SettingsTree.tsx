@@ -1,5 +1,9 @@
 import { cn } from "@/lib/utils";
-import type { SettingsCategory } from "./settingsData";
+import {
+  categoryLabel,
+  sectionLabel,
+  type SettingsCategory,
+} from "./settingsData";
 
 export default function SettingsTree({
   categories,
@@ -24,22 +28,22 @@ export default function SettingsTree({
               type="button"
               onClick={() => onSelectCategory(category.id)}
               className={cn(
-                "w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+                "w-full rounded-md px-2 py-1.5 text-start text-sm hover:bg-accent hover:text-accent-foreground",
                 isActive && "bg-accent text-accent-foreground font-medium",
               )}
             >
-              {category.label}
+              {categoryLabel(category.id)}
             </button>
             {hasChildren && (
-              <div className="ml-3 flex flex-col gap-0.5 border-l pl-2 py-0.5">
+              <div className="ms-3 flex flex-col gap-0.5 border-s ps-2 py-0.5">
                 {category.sections.map((section) => (
                   <button
                     key={section.id}
                     type="button"
                     onClick={() => onSelectSection(category.id, section.id)}
-                    className="rounded-md px-2 py-1 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    className="rounded-md px-2 py-1 text-start text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   >
-                    {section.label}
+                    {sectionLabel(section.id)}
                   </button>
                 ))}
               </div>

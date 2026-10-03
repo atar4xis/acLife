@@ -2,8 +2,12 @@ import type { StoreKey, StoreSettings } from "@/lib/settingsDefaults";
 
 // settings that can be synced to the server, mapped to whether they sync by default
 export const syncByDefault = {
+  language: false,
   defaultView: true,
   weekStartsOn: true,
+  timeFormat: true,
+  dateFormat: true,
+  dateTimeFormat: true,
   snapMinutes: false,
   lineOpacity: true,
   dayHeaderPosition: true,
@@ -143,15 +147,19 @@ export const syncGroups: { id: string; label: string; keys: SyncableKey[] }[] =
   [
     {
       id: "appearance",
-      label: "Appearance",
+      label: "settings.categories.appearance",
       keys: ["theme", "colors", "fontFamily", "fontSize", "presets"],
     },
     {
       id: "calendar",
-      label: "Calendar",
+      label: "settings.categories.calendar",
       keys: [
+        "language",
         "defaultView",
         "weekStartsOn",
+        "timeFormat",
+        "dateFormat",
+        "dateTimeFormat",
         "snapMinutes",
         "lineOpacity",
         "dayHeaderPosition",
@@ -168,7 +176,7 @@ export const syncGroups: { id: string; label: string; keys: SyncableKey[] }[] =
     },
     {
       id: "events",
-      label: "Events",
+      label: "settings.sync.groups.events",
       keys: [
         "defaultEventName",
         "defaultTaskName",
@@ -182,7 +190,7 @@ export const syncGroups: { id: string; label: string; keys: SyncableKey[] }[] =
     },
     {
       id: "timezones",
-      label: "Time zones",
+      label: "settings.sync.groups.timezones",
       keys: ["timezones", "defaultTimezone"],
     },
   ];

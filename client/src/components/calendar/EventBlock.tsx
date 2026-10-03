@@ -29,9 +29,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MoveMenuItems } from "./MoveMenuItems";
 import { Checkbox } from "../ui/checkbox";
 import { describeEvent } from "@/lib/calendar/a11y";
+import { timeFormat } from "@/lib/calendar/date";
+import { fmt } from "@/i18n";
 import { eventDomId } from "@/lib/calendar/gridFocus";
 import { useEventFocused } from "@/hooks/useGridFocus";
 import { useEventSelected } from "@/hooks/useSelection";
+import { useTranslation } from "react-i18next";
 
 // how long (ms) a touch must be held roughly still before it starts a drag
 const LONG_PRESS_MS = 450;
@@ -59,6 +62,7 @@ export default memo(
     onReset,
     setEditingEvent,
   }: EventBlockProps) {
+    const { t, i18n } = useTranslation();
     const isMobile = useIsMobile();
     const keyboardFocused = useEventFocused(focusStore, eventKey(event), day);
     const selected = useEventSelected(selection, eventKey(event));
@@ -80,14 +84,12 @@ export default memo(
         return {
           eventColor: color,
           textColor: isDark ? "text-white" : "text-black",
-          startTimeFormat:
-            (event.start.minute === 0 ? "h" : "h:mm") +
-            (!sameMeridiem || !endsToday ? " a" : ""),
+          startTimeFormat: timeFormat(event.start, !sameMeridiem || !endsToday),
           endTimeFormat:
-            (event.end.minute === 0 ? "h a" : "h:mm a") +
-            (endsToday ? "" : " (EEE)"),
+            timeFormat(event.end) + (endsToday ? "" : fmt("dayAbbrevSuffix")),
         };
-      }, [event.start, event.end, event.color, endsToday]);
+        // eslint-disable-next-line
+      }, [event.start, event.end, event.color, endsToday, t]);
 
     const lineHeight = 16;
     const isTiny = style.height < lineHeight;
@@ -376,8 +378,12 @@ export default memo(
             >
               {!event._continued ? (
                 <>
-                  <div className="flex items-start justify-between gap-1">
+                  <div
+                    dir={i18n.dir()}
+                    className="flex items-start justify-between gap-1"
+                  >
                     <div
+                      dir="auto"
                       className={cn(
                         "font-semibold",
                         event.isTask && event.completed && "line-through",
@@ -394,7 +400,9 @@ export default memo(
                     {event.isTask && (
                       <Checkbox
                         className="mt-0.5 shrink-0 border-current/50"
-                        aria-label={`${event.title} completed`}
+                        aria-label={t("block.completed", {
+                          title: event.title,
+                        })}
                         tabIndex={-1}
                         checked={event.completed ?? false}
                         onPointerDown={stopPropagation}
@@ -403,6 +411,7 @@ export default memo(
                     )}
                   </div>
                   <span
+                    dir={i18n.dir()}
                     className={cn(
                       "text-xs block",
                       event.isTask && event.completed && "line-through",
@@ -447,30 +456,30 @@ export default memo(
 
             <ContextMenuItem onClick={() => setEditingEvent(event, day)}>
               <PencilLine />
-              Edit
+              {t("block.edit")}
             </ContextMenuItem>
 
             <ContextMenuItem onClick={copyID}>
               <Clipboard />
-              {event._parent ? "Copy parent ID" : "Copy ID"}
+              {event._parent ? t("block.copyParentId") : t("block.copyId")}
             </ContextMenuItem>
 
             <ContextMenuItem onClick={duplicate}>
               <CopyIcon />
-              Duplicate
+              {t("block.duplicate")}
             </ContextMenuItem>
 
             {event._parent && (
               <ContextMenuItem onClick={detach}>
                 <Unlink />
-                Detach from parent
+                {t("block.detach")}
               </ContextMenuItem>
             )}
 
             {event._resettable && (
               <ContextMenuItem onClick={reset}>
                 <RotateCcw />
-                Reset to original event
+                {t("block.reset")}
               </ContextMenuItem>
             )}
 
@@ -487,7 +496,7 @@ export default memo(
             />
 
             <ContextMenuItem onClick={handleDelete}>
-              <Trash2 /> Delete
+              <Trash2 /> {t("common.delete")}
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>

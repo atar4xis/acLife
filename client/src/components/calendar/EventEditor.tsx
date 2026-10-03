@@ -67,6 +67,7 @@ import {
 } from "../ui/select";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
+import { useTranslation } from "react-i18next";
 
 /* ------------------------------------------------- */
 
@@ -143,6 +144,8 @@ export default function EventEditor({
 }) {
   if (!event) throw new Error("invalid instance of EventEditor");
 
+  const { t } = useTranslation();
+
   const originalEvent = useRef(event);
   const editorRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -196,9 +199,9 @@ export default function EventEditor({
   const handleSave = useCallback(() => {
     // make sure dates are valid
     if (newEvent.current.start > newEvent.current.end) {
-      toast.warning("An event cannot end before it starts.", {
+      toast.warning(t("editor.endBeforeStart"), {
         cancel: {
-          label: "OK",
+          label: t("common.ok"),
           onClick: () => {},
         },
       });
@@ -210,9 +213,9 @@ export default function EventEditor({
       newEvent.current.end.toMillis() - newEvent.current.start.toMillis() <
       60000
     ) {
-      toast.warning("Invalid event duration.", {
+      toast.warning(t("editor.invalidDuration"), {
         cancel: {
-          label: "OK",
+          label: t("common.ok"),
           onClick: () => {},
         },
       });
@@ -223,9 +226,9 @@ export default function EventEditor({
       newEvent.current.end.diff(newEvent.current.start).as("minutes") >
       MAX_EVENT_DURATION_MINUTES
     ) {
-      toast.warning("An event cannot last this long.", {
+      toast.warning(t("editor.tooLong"), {
         cancel: {
-          label: "OK",
+          label: t("common.ok"),
           onClick: () => {},
         },
       });
@@ -234,9 +237,9 @@ export default function EventEditor({
 
     const except = newEvent.current.repeat?.except;
     if (new Set(except).size >= 7) {
-      toast.warning("Repeat cannot exclude every day.", {
+      toast.warning(t("editor.excludesEveryDay"), {
         cancel: {
-          label: "OK",
+          label: t("common.ok"),
           onClick: () => {},
         },
       });
@@ -258,9 +261,9 @@ export default function EventEditor({
       newEvent.current.repeat.until <
         newEvent.current.start.startOf("day").toMillis()
     ) {
-      toast.warning("Repeat cannot end before it starts.", {
+      toast.warning(t("editor.repeatEndsBeforeStart"), {
         cancel: {
-          label: "OK",
+          label: t("common.ok"),
           onClick: () => {},
         },
       });
@@ -272,9 +275,9 @@ export default function EventEditor({
     if (
       new TextEncoder().encode(JSON.stringify(newEvent.current)).length > 9971
     ) {
-      toast.warning("The event is too large.", {
+      toast.warning(t("editor.tooLarge"), {
         cancel: {
-          label: "OK",
+          label: t("common.ok"),
           onClick: () => {},
         },
       });
@@ -282,7 +285,7 @@ export default function EventEditor({
     }
 
     onSave(originalEvent.current, newEvent.current);
-  }, [onSave]);
+  }, [onSave, t]);
 
   const handleSelectRepeat = (value: string) => {
     if (value === "custom") {
@@ -481,7 +484,7 @@ export default function EventEditor({
         }}
       >
         <h3 id={titleId} className="text-xl font-semibold select-none">
-          Edit Event
+          {t("editor.title")}
         </h3>
         <div className="flex items-center gap-1">
           {/* the context menu on the event block is disabled on mobile
@@ -492,7 +495,7 @@ export default function EventEditor({
                 variant="ghost"
                 size="icon"
                 className="md:hidden"
-                aria-label="More actions"
+                aria-label={t("editor.moreActions")}
               >
                 <MoreVerticalIcon />
               </Button>
@@ -500,20 +503,20 @@ export default function EventEditor({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={copyID}>
                 <Clipboard />
-                {event._parent ? "Copy parent ID" : "Copy ID"}
+                {event._parent ? t("block.copyParentId") : t("block.copyId")}
               </DropdownMenuItem>
 
               {event._parent && (
                 <DropdownMenuItem onClick={onDetach}>
                   <Unlink />
-                  Detach from parent
+                  {t("block.detach")}
                 </DropdownMenuItem>
               )}
 
               {event._resettable && (
                 <DropdownMenuItem onClick={onReset}>
                   <RotateCcw />
-                  Reset to original event
+                  {t("block.reset")}
                 </DropdownMenuItem>
               )}
 
@@ -534,7 +537,7 @@ export default function EventEditor({
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Close"
+            aria-label={t("common.close")}
             onClick={onCancel}
           >
             <XIcon />
@@ -549,18 +552,18 @@ export default function EventEditor({
         className="flex flex-col gap-5 my-3"
       >
         <Field>
-          <FieldLabel>Title &amp; Color</FieldLabel>
+          <FieldLabel>{t("editor.titleColor")}</FieldLabel>
           <div className="flex">
             <Input
               ref={titleRef}
               type="text"
-              className="mr-2"
+              className="me-2"
               placeholder={originalEvent.current.title}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
             <ColorPicker
-              aria-label="Event color"
+              aria-label={t("editor.eventColor")}
               presetColors={settings.colorPresets}
               onChange={(v) => {
                 setColor(v as string);
@@ -571,9 +574,17 @@ export default function EventEditor({
         </Field>
 
         <Field>
-          <FieldLabel>Start &amp; End Time</FieldLabel>
-          <DateTimePicker label="Start" value={start} onChange={setStart} />
-          <DateTimePicker label="End" value={end} onChange={setEnd} />
+          <FieldLabel>{t("editor.startEnd")}</FieldLabel>
+          <DateTimePicker
+            label={t("editor.start")}
+            value={start}
+            onChange={setStart}
+          />
+          <DateTimePicker
+            label={t("editor.end")}
+            value={end}
+            onChange={setEnd}
+          />
 
           <div className="flex gap-2">
             <Select
@@ -583,26 +594,24 @@ export default function EventEditor({
               <SelectTrigger
                 ref={repeatRef}
                 className="flex-1"
-                aria-label="Repeat"
+                aria-label={t("editor.repeat")}
               >
-                <SelectValue placeholder="Repeat" />
+                <SelectValue placeholder={t("editor.repeat")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="never">Does not repeat</SelectItem>
-                <SelectItem value="daily">Repeat daily</SelectItem>
-                <SelectItem value="workdays">
-                  Repeat daily, except weekends
-                </SelectItem>
-                <SelectItem value="weekly">Repeat weekly</SelectItem>
+                <SelectItem value="never">{t("editor.never")}</SelectItem>
+                <SelectItem value="daily">{t("editor.daily")}</SelectItem>
+                <SelectItem value="workdays">{t("editor.workdays")}</SelectItem>
+                <SelectItem value="weekly">{t("editor.weekly")}</SelectItem>
                 {monthlyOptions(startTime, repeat?.monthly === "last").map(
                   (o) => (
                     <SelectItem key={o.value} value={`monthly-${o.value}`}>
-                      Repeat monthly {o.label}
+                      {t("editor.monthly", { option: o.label })}
                     </SelectItem>
                   ),
                 )}
-                <SelectItem value="yearly">Repeat yearly</SelectItem>
-                <SelectItem value="custom">Custom repeat</SelectItem>
+                <SelectItem value="yearly">{t("editor.yearly")}</SelectItem>
+                <SelectItem value="custom">{t("editor.custom")}</SelectItem>
               </SelectContent>
             </Select>
             {repeat && parseRepeatValue(repeat) === "custom" && (
@@ -610,7 +619,7 @@ export default function EventEditor({
                 variant="outline"
                 size="icon"
                 type="button"
-                aria-label="Edit custom repeat"
+                aria-label={t("editor.editCustom")}
                 onClick={() => setRepeatDialogOpen(true)}
               >
                 <PencilIcon />
@@ -622,13 +631,13 @@ export default function EventEditor({
             repeatChanged(repeat, event.repeat) && (
               <p className="flex items-center gap-1.5 text-xs text-warning">
                 <TriangleAlert className="size-3.5 shrink-0" />
-                Changing repeat settings will detach this instance.
+                {t("editor.detachWarning")}
               </p>
             )}
         </Field>
 
         <Field>
-          <FieldLabel>Description</FieldLabel>
+          <FieldLabel>{t("editor.description")}</FieldLabel>
           <Textarea
             placeholder={originalEvent.current.description}
             value={description}
@@ -655,11 +664,11 @@ export default function EventEditor({
                 checked={isTask}
                 onCheckedChange={(c) => setIsTask(!!c)}
               />
-              <Label htmlFor="isTask">Task</Label>
+              <Label htmlFor="isTask">{t("editor.task")}</Label>
             </div>
             {isTask && (
               <div className="flex items-start gap-2">
-                <Label htmlFor="completed">Completed</Label>
+                <Label htmlFor="completed">{t("editor.completed")}</Label>
                 <Checkbox
                   id="completed"
                   checked={completed}
@@ -687,7 +696,7 @@ export default function EventEditor({
             size="icon"
             variant="secondary"
             type="button"
-            aria-label="Delete event"
+            aria-label={t("editor.delete")}
             onClick={onDelete}
           >
             <Trash2Icon />
@@ -696,7 +705,7 @@ export default function EventEditor({
             size="icon"
             variant="secondary"
             type="button"
-            aria-label="Duplicate event"
+            aria-label={t("editor.duplicate")}
             onClick={onDuplicate}
           >
             <CopyIcon />
@@ -704,9 +713,9 @@ export default function EventEditor({
         </div>
         <div className="flex gap-3">
           <Button variant="secondary" type="button" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleSave}>{t("common.save")}</Button>
         </div>
       </div>
     </div>

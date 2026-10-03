@@ -43,6 +43,7 @@ import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
 import SettingsLabel from "../SettingsLabel";
 import SettingsSelect from "../SettingsSelect";
+import { useTranslation } from "react-i18next";
 
 function ChangeEmailDialog({
   open,
@@ -57,6 +58,7 @@ function ChangeEmailDialog({
   onCancel: () => void;
   onConfirm: (newEmail: string, currentPassword: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [newEmail, setNewEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -75,11 +77,11 @@ function ChangeEmailDialog({
     e.preventDefault();
 
     if (!newEmail || !password) {
-      setError("Please fill out all the fields.");
+      setError(t("login.fillAll"));
       return;
     }
     if (newEmail === currentEmail) {
-      setError("This is already your email address.");
+      setError(t("settings.security.sameEmail"));
       return;
     }
 
@@ -88,7 +90,9 @@ function ChangeEmailDialog({
     try {
       await onConfirm(newEmail, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to change email.");
+      setError(
+        err instanceof Error ? err.message : t("settings.security.emailFailed"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -98,16 +102,16 @@ function ChangeEmailDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Change email</DialogTitle>
+          <DialogTitle>{t("settings.security.changeEmail")}</DialogTitle>
           <DialogDescription>
-            {verificationRequired
-              ? "You will need to verify your new email address before you can log in again. Entering the wrong email will lock you out of your account."
-              : ""}
+            {verificationRequired ? t("settings.security.verifyWarning") : ""}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field>
-            <FieldLabel htmlFor="new-email">New email</FieldLabel>
+            <FieldLabel htmlFor="new-email">
+              {t("settings.security.newEmail")}
+            </FieldLabel>
             <Input
               id="new-email"
               type="email"
@@ -118,7 +122,7 @@ function ChangeEmailDialog({
           </Field>
           <Field>
             <FieldLabel htmlFor="current-password-email">
-              Current password
+              {t("settings.currentPassword")}
             </FieldLabel>
             <Input
               id="current-password-email"
@@ -136,10 +140,14 @@ function ChangeEmailDialog({
               onClick={onCancel}
               disabled={submitting}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? <Loader2 className="animate-spin" /> : "Save"}
+              {submitting ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                t("common.save")
+              )}
             </Button>
           </DialogFooter>
         </form>
@@ -157,6 +165,7 @@ function ChangePasswordDialog({
   onCancel: () => void;
   onConfirm: (currentPassword: string, newPassword: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -177,17 +186,15 @@ function ChangePasswordDialog({
     e.preventDefault();
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setError("Please fill out all the fields.");
+      setError(t("login.fillAll"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t("login.passwordsMismatch"));
       return;
     }
     if (!validatePassword(newPassword)) {
-      setError(
-        "Password must be 12 to 256 characters long and include uppercase and lowercase letters, a number, and a special character.",
-      );
+      setError(t("settings.security.passwordRules"));
       return;
     }
 
@@ -197,7 +204,9 @@ function ChangePasswordDialog({
       await onConfirm(currentPassword, newPassword);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to change password.",
+        err instanceof Error
+          ? err.message
+          : t("settings.security.passwordFailed"),
       );
     } finally {
       setSubmitting(false);
@@ -208,12 +217,14 @@ function ChangePasswordDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Change password</DialogTitle>
+          <DialogTitle>{t("settings.security.changePassword")}</DialogTitle>
           <DialogDescription></DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field>
-            <FieldLabel htmlFor="current-password">Current password</FieldLabel>
+            <FieldLabel htmlFor="current-password">
+              {t("settings.currentPassword")}
+            </FieldLabel>
             <Input
               id="current-password"
               type="password"
@@ -224,7 +235,9 @@ function ChangePasswordDialog({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="new-password">New password</FieldLabel>
+            <FieldLabel htmlFor="new-password">
+              {t("settings.security.newPassword")}
+            </FieldLabel>
             <Input
               id="new-password"
               type="password"
@@ -235,7 +248,7 @@ function ChangePasswordDialog({
           </Field>
           <Field>
             <FieldLabel htmlFor="confirm-new-password">
-              Confirm new password
+              {t("settings.security.confirmNewPassword")}
             </FieldLabel>
             <Input
               id="confirm-new-password"
@@ -253,10 +266,14 @@ function ChangePasswordDialog({
               onClick={onCancel}
               disabled={submitting}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? <Loader2 className="animate-spin" /> : "Save"}
+              {submitting ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                t("common.save")
+              )}
             </Button>
           </DialogFooter>
         </form>
@@ -272,6 +289,7 @@ function AccountSection({
   sectionRefs: SectionRefs;
   onPasswordChanged: () => void;
 }) {
+  const { t } = useTranslation();
   const { user, masterKey, checkLogin } = useUser();
   const { post, serverMeta } = useApi();
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -284,7 +302,7 @@ function AccountSection({
       email: user.email,
     });
     if (!saltRes.success || !saltRes.data) {
-      throw new Error(saltRes.message || "Failed to verify current password.");
+      throw new Error(saltRes.message || t("settings.security.verifyFailed"));
     }
     return uint8ArrayFromBase64(saltRes.data);
   };
@@ -310,19 +328,17 @@ function AccountSection({
 
     if (res.data?.requiresVerification) {
       setEmailDialogOpen(false);
-      toast.success(
-        "Email address updated. Please verify your new email address.",
-      );
+      toast.success(t("settings.security.emailUpdatedVerify"));
       return;
     }
 
     if (!res.success) {
-      throw new Error(res.message || "Failed to change email.");
+      throw new Error(res.message || t("settings.security.emailFailed"));
     }
 
     await checkLogin();
     setEmailDialogOpen(false);
-    toast.success("Email address updated.");
+    toast.success(t("settings.security.emailUpdated"));
   };
 
   const handlePasswordChange = async (
@@ -330,7 +346,7 @@ function AccountSection({
     newPassword: string,
   ) => {
     if (!masterKey) {
-      throw new Error("Your data must be decrypted to change your password.");
+      throw new Error(t("settings.security.mustDecrypt"));
     }
 
     const currentSalt = await fetchCurrentSalt();
@@ -355,13 +371,13 @@ function AccountSection({
     });
 
     if (!res.success) {
-      throw new Error(res.message || "Failed to change password.");
+      throw new Error(res.message || t("settings.security.passwordFailed"));
     }
 
     await checkLogin();
     setPasswordDialogOpen(false);
     onPasswordChanged();
-    toast.success("Password updated.");
+    toast.success(t("settings.security.passwordUpdated"));
   };
 
   return (
@@ -377,7 +393,7 @@ function AccountSection({
             <FieldDescription>{user.email}</FieldDescription>
           </div>
           <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
-            Change email
+            {t("settings.security.changeEmail")}
           </Button>
         </Field>
 
@@ -386,7 +402,7 @@ function AccountSection({
             <FieldTitle>{settingLabel("account-password")}</FieldTitle>
           </div>
           <Button variant="outline" onClick={() => setPasswordDialogOpen(true)}>
-            Change password
+            {t("settings.security.changePassword")}
           </Button>
         </Field>
       </Section>
@@ -416,6 +432,7 @@ function SessionsSection({
   refreshing,
   load,
 }: { sectionRefs: SectionRefs } & ReturnType<typeof useSessions>) {
+  const { t } = useTranslation();
   const { del } = useApi();
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
@@ -425,7 +442,7 @@ function SessionsSection({
     setRevokingId(null);
 
     if (!res.success) {
-      toast.error(res.message || "Failed to end session.");
+      toast.error(res.message || t("settings.security.endFailed"));
       return;
     }
 
@@ -442,7 +459,7 @@ function SessionsSection({
           variant="ghost"
           size="icon"
           className="size-7"
-          aria-label="Refresh sessions"
+          aria-label={t("settings.security.refreshSessions")}
           disabled={refreshing}
           onClick={load}
         >
@@ -456,7 +473,7 @@ function SessionsSection({
           <Skeleton className="h-12 w-full" />
         </div>
       ) : sessions.length === 0 ? (
-        <FieldDescription>No active sessions.</FieldDescription>
+        <FieldDescription>{t("settings.security.noSessions")}</FieldDescription>
       ) : (
         <div className="flex flex-col gap-2">
           {sessions.map((s, index) => (
@@ -466,17 +483,23 @@ function SessionsSection({
             >
               <div className="flex flex-col gap-1">
                 <FieldTitle>
-                  Session #{sessions.length - index}{" "}
+                  {t("settings.security.session", {
+                    number: sessions.length - index,
+                  })}{" "}
                   {s.current && (
                     <span className="text-xs px-2 bg-accent rounded-md">
-                      current
+                      {t("settings.security.current")}
                     </span>
                   )}
                 </FieldTitle>
                 <FieldDescription>
-                  Logged in {DateTime.fromISO(s.createdAt).toRelative()}
+                  {t("settings.security.loggedIn", {
+                    when: DateTime.fromISO(s.createdAt).toRelative(),
+                  })}
                   {" - "}
-                  Expires {DateTime.fromISO(s.expiresAt).toRelative()}
+                  {t("settings.security.expires", {
+                    when: DateTime.fromISO(s.expiresAt).toRelative(),
+                  })}
                 </FieldDescription>
               </div>
               {!s.current && (
@@ -486,7 +509,7 @@ function SessionsSection({
                   disabled={revokingId === s.id}
                   onClick={() => revoke(s.id)}
                 >
-                  End session
+                  {t("settings.security.endSession")}
                 </Button>
               )}
             </div>
@@ -498,13 +521,16 @@ function SessionsSection({
 }
 
 function SecurityPageContent({ sectionRefs }: { sectionRefs: SectionRefs }) {
+  const { t } = useTranslation();
   const { unlockMethod, autoLock, setUnlockMethod, setAutoLock } =
     useSecuritySettings();
   const sessions = useSessions();
 
   return (
     <FieldGroup className="gap-8">
-      <h2 className="text-lg font-semibold">Account & Security</h2>
+      <h2 className="text-lg font-semibold">
+        {t("settings.categories.security")}
+      </h2>
 
       <AccountSection
         sectionRefs={sectionRefs}
@@ -531,24 +557,23 @@ function SecurityPageContent({ sectionRefs }: { sectionRefs: SectionRefs }) {
                   onClick={() => setUnlockMethod("pin")}
                   className="text-xs text-muted-foreground hover:text-foreground"
                 >
-                  Change PIN
+                  {t("settings.security.changePin")}
                 </button>
               )
             }
           >
-            <SelectItem value="password">Password</SelectItem>
-            <SelectItem value="pin">PIN code</SelectItem>
-            <SelectItem value="stay-unlocked">Stay unlocked</SelectItem>
+            <SelectItem value="password">{t("login.password")}</SelectItem>
+            <SelectItem value="pin">{t("unlock.pinCode")}</SelectItem>
+            <SelectItem value="stay-unlocked">
+              {t("settings.stayUnlocked.title")}
+            </SelectItem>
           </SettingsSelect>
         </Field>
 
         {unlockMethod === "stay-unlocked" && (
           <div className="flex gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
             <TriangleAlert className="size-4 shrink-0 mt-0.5" />
-            <span>
-              Your master key is stored on your device. Anyone with access to
-              your device can access your data.
-            </span>
+            <span>{t("settings.security.masterKeyWarning")}</span>
           </div>
         )}
 
@@ -560,14 +585,28 @@ function SecurityPageContent({ sectionRefs }: { sectionRefs: SectionRefs }) {
             onValueChange={(value) => setAutoLock(value as AutoLockOption)}
             disabled={unlockMethod === "stay-unlocked"}
           >
-            <SelectItem value="disabled">Disabled</SelectItem>
-            <SelectItem value="focus">When focus lost</SelectItem>
-            <SelectItem value="5m">5 minutes</SelectItem>
-            <SelectItem value="10m">10 minutes</SelectItem>
-            <SelectItem value="15m">15 minutes</SelectItem>
-            <SelectItem value="30m">30 minutes</SelectItem>
-            <SelectItem value="45m">45 minutes</SelectItem>
-            <SelectItem value="1h">1 hour</SelectItem>
+            <SelectItem value="disabled">
+              {t("settings.security.autoLock.disabled")}
+            </SelectItem>
+            <SelectItem value="focus">
+              {t("settings.security.autoLock.focus")}
+            </SelectItem>
+            <SelectItem value="5m">
+              {t("move.minutes", { count: 5 })}
+            </SelectItem>
+            <SelectItem value="10m">
+              {t("move.minutes", { count: 10 })}
+            </SelectItem>
+            <SelectItem value="15m">
+              {t("move.minutes", { count: 15 })}
+            </SelectItem>
+            <SelectItem value="30m">
+              {t("move.minutes", { count: 30 })}
+            </SelectItem>
+            <SelectItem value="45m">
+              {t("move.minutes", { count: 45 })}
+            </SelectItem>
+            <SelectItem value="1h">{t("move.hours", { count: 1 })}</SelectItem>
           </SettingsSelect>
         </Field>
       </Section>

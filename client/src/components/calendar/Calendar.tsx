@@ -78,6 +78,8 @@ import ModeSwitcher from "./ModeSwitcher";
 import type { GridSelectionRef, GridTouchRef } from "@/types/calendar/Cell";
 import { clamp, cn } from "@/lib/utils";
 import RecurringUpdateDialog from "./RecurringUpdateDialog";
+import { resolveDefaultName } from "@/lib/calendar/defaultNames";
+import { fmt, t as translate } from "@/i18n";
 import { repeatChanged } from "@/lib/calendar/repeatOptions";
 import {
   detachSingleOccurrence,
@@ -96,6 +98,7 @@ import { CLIENT_ID } from "@/lib/clientId";
 import { useCalendarSearch } from "@/hooks/calendar/useCalendarSearch";
 import { EMPTY_ARRAY } from "@/lib/constants";
 import type { RejectedEvent, RepeatInterval } from "@/types/calendar/Event";
+import { useTranslation } from "react-i18next";
 
 const joined = (values?: (string | number)[]) => values?.join(",") ?? "";
 
@@ -382,11 +385,14 @@ const describeDragLabel = (start: DateTime, end: DateTime, extraCount = 0) => {
   const hours = Math.floor(diff.hours);
   const minutes = Math.round(diff.minutes);
   const durText = [];
-  if (hours > 0) durText.push(`${hours} hr${hours !== 1 ? "s" : ""}`);
-  if (minutes > 0) durText.push(`${minutes} min`);
+  if (hours > 0) durText.push(translate("calendar.hours", { count: hours }));
+  if (minutes > 0)
+    durText.push(translate("calendar.minutes", { count: minutes }));
 
-  let label = `${start.toFormat("t")} - ${end.toFormat("t")}\n${durText.join(" ")}`;
-  if (extraCount) label += `\n${extraCount + 1} events`;
+  let label = `${start.toFormat(fmt("time"))} - ${end.toFormat(fmt("time"))}\n${durText.join(" ")}`;
+  if (extraCount) {
+    label += `\n${translate("calendar.eventsCount", { count: extraCount + 1 })}`;
+  }
   return label;
 };
 
@@ -455,6 +461,8 @@ export default memo(function AppCalendar({
   syncBuckets,
   saveDebounceMs = 100,
 }: CalendarProps) {
+  const { t, i18n } = useTranslation();
+  const rtl = i18n.dir() === "rtl";
   const {
     setCurrentDate,
     dispatch,
@@ -540,7 +548,10 @@ export default memo(function AppCalendar({
 
   const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
   const headerBottom = settings.dayHeaderPosition === "bottom";
-  const labelsRight = settings.timeLabelPosition === "right";
+  const labelsRight =
+    settings.timeLabelPosition === "auto"
+      ? rtl
+      : settings.timeLabelPosition === "right";
   const gridHeaderOffset = headerBottom ? 0 : GRID_HEADER_HEIGHT;
 
   const gridRef = useRef<HTMLDivElement>(null);
@@ -592,7 +603,8 @@ export default memo(function AppCalendar({
         week: getWeekDays(currentDate, weekStartsOn),
       }[mode] ?? []
     );
-  }, [currentDate, mode, weekStartsOn]);
+    // eslint-disable-next-line
+  }, [currentDate, mode, weekStartsOn, t]);
 
   const isMobile = useIsMobile();
 
@@ -1655,7 +1667,9 @@ export default memo(function AppCalendar({
     (start: DateTime, isTask: boolean) => {
       const newEvent = {
         id: crypto.randomUUID(),
-        title: isTask ? settings.defaultTaskName : settings.defaultEventName,
+        title: isTask
+          ? resolveDefaultName("defaultTaskName", settings.defaultTaskName)
+          : resolveDefaultName("defaultEventName", settings.defaultEventName),
         color: settings.eventColorPresets[0] ?? EVENT_COLOR_FALLBACK,
         start,
         end: start.plus({ minutes: settings.defaultEventDuration }),
@@ -1735,7 +1749,7 @@ export default memo(function AppCalendar({
           originalDay: dayIndex,
           originalStart: start,
           originalEnd: start,
-          label: "new event",
+          label: translate("calendar.newEvent"),
           dayRects: getDayRects(),
           moved: false,
         };
@@ -1853,7 +1867,7 @@ export default memo(function AppCalendar({
       gridTouchRef.current.delta &&
       Math.abs(gridTouchRef.current.delta.x) > 100
     ) {
-      move(gridTouchRef.current.delta.x > 0 ? 1 : -1);
+      move(gridTouchRef.current.delta.x > 0 !== rtl ? 1 : -1);
     }
 
     gridTouchRef.current.distance = undefined;
@@ -1862,7 +1876,7 @@ export default memo(function AppCalendar({
 
     gridTouchRef.current = null;
     forceRender((tick) => tick + 1);
-  }, [move]);
+  }, [move, rtl]);
 
   /* -------------------------------------------------------------------------- */
 
@@ -1876,21 +1890,34 @@ export default memo(function AppCalendar({
     calendarEventsRef.current = calendarEvents;
   }, [calendarEvents]);
 
-  // events keep the zone they were parsed in, so re-zone them when the default changes
+  // events keep the zone and locale they were parsed in, so re-zone/re-locale them when either changes
   useEffect(() => {
     const tz = settings.defaultTimezone;
+    const locale = i18n.language;
     const current = calendarEventsRef.current;
-    if (current.every((e) => e.start.zoneName === tz)) return;
+    if (
+      current.every((e) => e.start.zoneName === tz && e.start.locale === locale)
+    )
+      return;
 
     dispatch({
       type: "set",
       events: current.map((e) => ({
         ...e,
-        start: e.start.setZone(tz),
-        end: e.end.setZone(tz),
+        start: e.start.setZone(tz).setLocale(locale),
+        end: e.end.setZone(tz).setLocale(locale),
       })),
     });
-  }, [settings.defaultTimezone, dispatch]);
+  }, [settings.defaultTimezone, i18n.language, dispatch]);
+
+  useEffect(() => {
+    setCurrentDate((d) =>
+      d.locale === i18n.language ? d : d.setLocale(i18n.language),
+    );
+    setNow((d) =>
+      d.locale === i18n.language ? d : d.setLocale(i18n.language),
+    );
+  }, [i18n.language, setCurrentDate]);
 
   // keyboard shortcuts: arrows, escape, delete, undo/redo, cut/copy/paste
   useEffect(() => {
@@ -1899,10 +1926,10 @@ export default memo(function AppCalendar({
 
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        move(-1);
+        move(rtl ? 1 : -1);
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        move(1);
+        move(rtl ? -1 : 1);
       } else if (e.key === "Escape" && editingEvent === null) {
         clearSelection();
       } else if (e.key === "Delete") {
@@ -1944,6 +1971,7 @@ export default memo(function AppCalendar({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
     move,
+    rtl,
     editingEvent,
     clearSelection,
     onEventDelete,
@@ -2019,8 +2047,8 @@ export default memo(function AppCalendar({
           .catch(() => reject());
       }),
       {
-        loading: "Event sync in progress...",
-        error: "Failed to sync calendar events.",
+        loading: translate("calendar.syncing"),
+        error: translate("events.syncFailed"),
       },
     );
   }, [syncEvents, user, masterKey, bucketKey, currentDate, dispatch]);
@@ -2146,6 +2174,7 @@ export default memo(function AppCalendar({
     mode,
     weekStartsOn,
     snapMins: settings.snapMinutes,
+    rtl,
     hourHeight,
     headerHeight: GRID_HEADER_HEIGHT,
     now,
@@ -2227,25 +2256,25 @@ export default memo(function AppCalendar({
   }, [gridTouchRef.current?.delta?.x]);
 
   // headers in day/week view, one for every visibleDay
-  const dayWeekHeaders = useMemo(
-    () =>
-      visibleDays.map((d, dayIndex) => (
-        <HeaderCell
-          key={dayIndex}
-          className={cn(
-            "select-none",
-            headerBottom && "top-auto bottom-0",
-            isSameDate(d.date, now) && "bg-card font-bold",
-          )}
-          aria-label={
-            describeFullDay(d.date) + (isSameDate(d.date, now) ? ", today" : "")
-          }
-        >
-          {d.label}
-        </HeaderCell>
-      )),
-    [visibleDays, now, headerBottom],
-  );
+  const dayWeekHeaders = useMemo(() => {
+    const cells = visibleDays.map((d, dayIndex) => (
+      <HeaderCell
+        key={dayIndex}
+        className={cn(
+          "select-none",
+          headerBottom && "top-auto bottom-0",
+          isSameDate(d.date, now) && "bg-card font-bold",
+        )}
+        aria-label={
+          describeFullDay(d.date) +
+          (isSameDate(d.date, now) ? `, ${t("a11y.today")}` : "")
+        }
+      >
+        {d.label}
+      </HeaderCell>
+    ));
+    return rtl ? cells.reverse() : cells;
+  }, [visibleDays, now, headerBottom, t, rtl]);
 
   const tzColWidth = useMemo(
     () => getTimezoneColWidth(settings.timezones, visibleDays.length),
@@ -2298,6 +2327,7 @@ export default memo(function AppCalendar({
             <div
               key={tz}
               role="rowheader"
+              dir={i18n.dir()}
               className={cn(
                 "select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)] flex text-sm items-center justify-center",
                 tz === settings.timezones[0] && hour == now.hour
@@ -2315,12 +2345,20 @@ export default memo(function AppCalendar({
           ))}
         </>
       )),
-    [settings.timezones, now.hour, tzStickyStyle, visibleDays, currentDate],
+    [
+      settings.timezones,
+      now.hour,
+      tzStickyStyle,
+      visibleDays,
+      currentDate,
+      i18n,
+    ],
   );
 
   const dateRange = useMemo(
     () => getDateRangeString(mode, currentDate, weekStartsOn),
-    [mode, currentDate, weekStartsOn],
+    // eslint-disable-next-line
+    [mode, currentDate, weekStartsOn, t],
   );
 
   // grid in day/week view
@@ -2333,7 +2371,8 @@ export default memo(function AppCalendar({
           <div key={hour} role="row" className="contents">
             {!labelsRight && timeLabels}
 
-            {visibleDays.map((d, dayIndex) => {
+            {(rtl ? [...visibleDays].reverse() : visibleDays).map((d) => {
+              const dayIndex = visibleDays.indexOf(d);
               const key = d.date.toISODate()!;
               const dayEvents = eventMap.get(key) || [];
               const styles = stylesMap.get(key) || {};
@@ -2355,10 +2394,11 @@ export default memo(function AppCalendar({
                       {isSameDate(d.date, now) && (
                         <div
                           aria-hidden="true"
-                          className="pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-foreground
-                    before:absolute before:-left-1 before:top-1/2
-                    before:h-2 before:w-2 before:-translate-y-1/2
-                    before:rounded-full before:bg-foreground"
+                          className={cn(
+                            "pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-foreground before:absolute before:top-1/2 before:h-2 before:w-2 before:-translate-y-1/2 before:rounded-full before:bg-foreground",
+                            // eslint-disable-next-line
+                            rtl ? "before:-right-1" : "before:-left-1",
+                          )}
                           style={{
                             top: getNowY(),
                             height: 2,
@@ -2444,6 +2484,7 @@ export default memo(function AppCalendar({
       selection,
       hourLabels,
       labelsRight,
+      rtl,
     ],
   );
 
@@ -2468,30 +2509,30 @@ export default memo(function AppCalendar({
 
         <div className="items-center gap-2 hidden md:flex">
           <Button variant="outline" onClick={goToToday}>
-            Today
+            {t("calendar.today")}
           </Button>
           <Button
             data-testid="prev-btn"
             variant="outline"
             size="icon"
-            aria-label="Previous"
+            aria-label={t("calendar.previous")}
             onClick={() => move(-1)}
           >
-            <ArrowLeft />
+            {rtl ? <ArrowRight /> : <ArrowLeft />}
           </Button>
           <Button
             data-testid="next-btn"
             variant="outline"
             size="icon"
-            aria-label="Next"
+            aria-label={t("calendar.next")}
             onClick={() => move(1)}
           >
-            <ArrowRight />
+            {rtl ? <ArrowLeft /> : <ArrowRight />}
           </Button>
-          <h2 className="ml-2 text-xl">{dateRange}</h2>
+          <h2 className="ms-2 text-xl">{dateRange}</h2>
         </div>
 
-        <h2 className="flex-1 text-xl ml-6 md:hidden">{dateRange}</h2>
+        <h2 className="flex-1 text-xl ms-6 md:hidden">{dateRange}</h2>
 
         <ModeSwitcher mode={mode} setMode={setMode} />
 
@@ -2506,7 +2547,7 @@ export default memo(function AppCalendar({
                   searchAnchorRef.current = el;
                 }}
                 type="button"
-                aria-label="Search events"
+                aria-label={t("calendar.searchEvents")}
                 onClick={() => setSearchOpen(!searchOpen)}
               >
                 <SearchIcon />
@@ -2522,8 +2563,8 @@ export default memo(function AppCalendar({
                 <div className="relative flex items-center">
                   <Input
                     ref={searchInputRef}
-                    className="pr-8"
-                    placeholder="Search events..."
+                    className="pe-8"
+                    placeholder={t("calendar.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => {
                       setSearchQuery(e.target.value);
@@ -2536,8 +2577,8 @@ export default memo(function AppCalendar({
                   {searchQuery.length > 0 && (
                     <button
                       type="button"
-                      aria-label="Clear search"
-                      className="text-muted-foreground hover:text-foreground absolute right-2"
+                      aria-label={t("calendar.clearSearch")}
+                      className="text-muted-foreground hover:text-foreground absolute end-2"
                       onClick={() => {
                         setSearchQuery("");
                         searchInputRef.current?.focus();
@@ -2566,16 +2607,16 @@ export default memo(function AppCalendar({
               <div className="relative mb-2 flex items-center">
                 <Input
                   ref={searchInputRef}
-                  className="pr-8"
-                  placeholder="Search events..."
+                  className="pe-8"
+                  placeholder={t("calendar.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 {searchQuery.length > 0 && (
                   <button
                     type="button"
-                    aria-label="Clear search"
-                    className="text-muted-foreground hover:text-foreground absolute right-2"
+                    aria-label={t("calendar.clearSearch")}
+                    className="text-muted-foreground hover:text-foreground absolute end-2"
                     onClick={() => {
                       setSearchQuery("");
                       searchInputRef.current?.focus();
@@ -2588,7 +2629,9 @@ export default memo(function AppCalendar({
             )}
             {searchResults.length === 0 ? (
               <p className="text-muted-foreground p-2 text-sm">
-                {isSearchExpanding ? "Searching..." : "No matching events."}
+                {isSearchExpanding
+                  ? t("calendar.searching")
+                  : t("calendar.noMatches")}
               </p>
             ) : (
               <ul className="max-h-80 overflow-auto">
@@ -2596,7 +2639,7 @@ export default memo(function AppCalendar({
                   <li key={ev._instanceId ?? ev.id}>
                     <button
                       type="button"
-                      className="hover:bg-accent flex w-full items-stretch gap-2 rounded-sm p-2 text-left text-sm"
+                      className="hover:bg-accent flex w-full items-stretch gap-2 rounded-sm p-2 text-start text-sm"
                       onClick={() => onSelectSearchResult(ev)}
                     >
                       <span
@@ -2608,7 +2651,7 @@ export default memo(function AppCalendar({
                       <span className="flex flex-col items-start">
                         <span className="font-medium">{ev.title}</span>
                         <span className="text-muted-foreground text-xs">
-                          {ev.start.toFormat("EEE, MMM d yyyy, h:mm a")}
+                          {ev.start.toFormat(fmt("dateTimeLong"))}
                         </span>
                       </span>
                     </button>
@@ -2624,7 +2667,7 @@ export default memo(function AppCalendar({
                   className="w-full"
                   onClick={expandSearchRadius}
                 >
-                  Expand search radius
+                  {t("calendar.expandSearch")}
                 </Button>
               </div>
             )}
@@ -2632,11 +2675,11 @@ export default memo(function AppCalendar({
         </Popover>
       </nav>
 
-      <div className="@container flex-1 overflow-hidden relative">
+      <div dir="ltr" className="@container flex-1 overflow-hidden relative">
         <div
           ref={gridRef}
           role="grid"
-          aria-label="Calendar"
+          aria-label={t("calendar.grid")}
           {...gridKeyboardProps}
           data-keyboard-mode={keyboardMode ? "" : undefined}
           className="group/grid outline-none touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
@@ -2696,7 +2739,7 @@ export default memo(function AppCalendar({
           const pending = evPendingRef.current;
 
           if (!pending) {
-            toast.error("Event no longer exists.");
+            toast.error(t("calendar.eventGone"));
             dragRef.current = null;
             evPendingRef.current = null;
             setUpdateRepeatDialogOpen(false);
@@ -2865,7 +2908,7 @@ export default memo(function AppCalendar({
           const event = evPendingRef.current?.event;
 
           if (!event) {
-            toast.error("Event no longer exists.");
+            toast.error(t("calendar.eventGone"));
             evPendingRef.current = null;
             setDeleteRepeatDialogOpen(false);
             return;

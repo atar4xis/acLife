@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
 } from "../ui/alert-dialog";
 import type { WithChildren } from "@/types/Props";
+import { useTranslation } from "react-i18next";
 
 type YesNoDialogProps = {
   open: boolean;
@@ -36,6 +37,7 @@ export default function YesNoDialog({
   onCancel,
   children,
 }: YesNoDialogProps & WithChildren) {
+  const { t } = useTranslation();
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>
@@ -47,14 +49,14 @@ export default function YesNoDialog({
         <AlertDialogFooter>
           <div className="flex justify-between w-full">
             <AlertDialogCancel onClick={onCancel} disabled={disabled}>
-              {cancelText || "Cancel"}
+              {cancelText || t("common.cancel")}
             </AlertDialogCancel>
             <div className="flex gap-2">
               <AlertDialogCancel onClick={onNo} disabled={disabled}>
-                {noText || "No"}
+                {noText || t("common.no")}
               </AlertDialogCancel>
               <AlertDialogAction onClick={onYes} disabled={disabled}>
-                {yesText || "Yes"}
+                {yesText || t("common.yes")}
               </AlertDialogAction>
             </div>
           </div>

@@ -7,6 +7,8 @@ import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
 import { useWeekStart } from "@/hooks/useWeekStart";
 import { toPickerDate } from "@/lib/calendar/date";
+import { fmt } from "@/i18n";
+import { useTranslation } from "react-i18next";
 
 type DateTimePickerProps = {
   value: Date | undefined;
@@ -19,6 +21,7 @@ export function DateTimePicker({
   onChange,
   label,
 }: DateTimePickerProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const { dayPickerWeekStart } = useWeekStart();
   const zoned = value && DateTime.fromJSDate(value);
@@ -31,10 +34,14 @@ export function DateTimePicker({
           <Button
             variant="outline"
             data-empty={!value}
-            className="data-[empty=true]:text-muted-foreground justify-start text-left font-normal"
+            className="data-[empty=true]:text-muted-foreground justify-start text-start font-normal"
           >
             <CalendarIcon />
-            {value ? zoned!.toFormat("dd LLL yyyy") : <span>Pick a date</span>}
+            {value ? (
+              zoned!.toFormat(fmt("date"))
+            ) : (
+              <span>{t("picker.pickDate")}</span>
+            )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">
@@ -66,7 +73,7 @@ export function DateTimePicker({
       <Input
         type="time"
         step="60"
-        aria-label={label && `${label} time`}
+        aria-label={label && t("picker.time", { label })}
         value={zoned ? zoned.toFormat("HH:mm") : ""}
         onChange={(e) => {
           if (!zoned) return;

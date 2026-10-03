@@ -1,20 +1,18 @@
+import { t } from "@/i18n";
 import type { SettingKey, StoreKey } from "@/lib/settingsDefaults";
 
 export interface SettingItem {
   id: string;
-  label: string;
   settingKey?: SettingKey | StoreKey;
 }
 
 export interface SettingsSection {
   id: string;
-  label: string;
   items: SettingItem[];
 }
 
 export interface SettingsCategory {
   id: string;
-  label: string;
   sections: SettingsSection[];
   hideOffline?: boolean;
   hideIfNoSubscription?: boolean;
@@ -23,32 +21,27 @@ export interface SettingsCategory {
 export const settingsCategories: SettingsCategory[] = [
   {
     id: "appearance",
-    label: "Appearance",
     sections: [
       {
         id: "theme",
-        label: "Theme",
         items: [
-          { id: "theme-mode", label: "Theme mode", settingKey: "theme" },
-          { id: "custom-theme", label: "Custom theme" },
-          { id: "presets-list", label: "User themes", settingKey: "presets" },
+          { id: "theme-mode", settingKey: "theme" },
+          { id: "custom-theme" },
+          { id: "presets-list", settingKey: "presets" },
         ],
       },
       {
         id: "font",
-        label: "Font",
         items: [
-          { id: "font-family", label: "Font family", settingKey: "fontFamily" },
-          { id: "font-size", label: "Font size", settingKey: "fontSize" },
+          { id: "font-family", settingKey: "fontFamily" },
+          { id: "font-size", settingKey: "fontSize" },
         ],
       },
       {
         id: "colors",
-        label: "Colors",
         items: [
           {
             id: "colors-overrides",
-            label: "Color overrides",
             settingKey: "colors",
           },
         ],
@@ -57,223 +50,207 @@ export const settingsCategories: SettingsCategory[] = [
   },
   {
     id: "subscription",
-    label: "Subscription",
     hideOffline: true,
     hideIfNoSubscription: true,
     sections: [
       {
         id: "plan",
-        label: "Your plan",
-        items: [
-          { id: "subscription-status", label: "Subscription status" },
-          { id: "subscription-manage", label: "Manage subscription" },
-        ],
+        items: [{ id: "subscription-status" }, { id: "subscription-manage" }],
       },
       {
         id: "invoices",
-        label: "Invoices",
-        items: [{ id: "subscription-invoices", label: "Invoices" }],
+        items: [{ id: "subscription-invoices" }],
       },
     ],
   },
   {
     id: "security",
-    label: "Account & Security",
     hideOffline: true,
     sections: [
       {
         id: "account",
-        label: "Account",
-        items: [
-          { id: "account-email", label: "Email address" },
-          { id: "account-password", label: "Password" },
-        ],
+        items: [{ id: "account-email" }, { id: "account-password" }],
       },
       {
         id: "encryption",
-        label: "Encryption",
         items: [
           {
             id: "security-unlock-method",
-            label: "Data decryption method",
             settingKey: "unlockMethod",
           },
           {
             id: "security-auto-lock",
-            label: "Auto-lock",
             settingKey: "autoLock",
           },
         ],
       },
       {
         id: "sessions",
-        label: "Active sessions",
-        items: [{ id: "security-sessions", label: "Sessions" }],
+        items: [{ id: "security-sessions" }],
+      },
+    ],
+  },
+  {
+    id: "region",
+    sections: [
+      {
+        id: "language",
+        items: [
+          {
+            id: "calendar-language",
+            settingKey: "language",
+          },
+        ],
+      },
+      {
+        id: "formats",
+        items: [
+          {
+            id: "calendar-week-start",
+            settingKey: "weekStartsOn",
+          },
+          {
+            id: "calendar-time-format",
+            settingKey: "timeFormat",
+          },
+          {
+            id: "calendar-date-format",
+            settingKey: "dateFormat",
+          },
+          {
+            id: "calendar-date-time-format",
+            settingKey: "dateTimeFormat",
+          },
+        ],
+      },
+      {
+        id: "timezones",
+        items: [
+          {
+            id: "calendar-default-timezone",
+            settingKey: "defaultTimezone",
+          },
+          {
+            id: "calendar-timezones-list",
+            settingKey: "timezones",
+          },
+        ],
       },
     ],
   },
   {
     id: "calendar",
-    label: "Calendar",
     sections: [
       {
-        id: "region",
-        label: "Region",
-        items: [
-          {
-            id: "calendar-week-start",
-            label: "Week start",
-            settingKey: "weekStartsOn",
-          },
-          {
-            id: "calendar-default-timezone",
-            label: "Default time zone",
-            settingKey: "defaultTimezone",
-          },
-          {
-            id: "calendar-timezones-list",
-            label: "Time zones",
-            settingKey: "timezones",
-          },
-        ],
-      },
-      {
         id: "behavior",
-        label: "Behavior",
         items: [
           {
             id: "calendar-detach-recurring",
-            label: "Detach recurring instances when edited",
             settingKey: "detachRecurringOnEdit",
           },
         ],
       },
       {
         id: "grid",
-        label: "Grid",
         items: [
           {
             id: "calendar-default-view",
-            label: "Default view",
             settingKey: "defaultView",
           },
           {
             id: "calendar-snap-minutes",
-            label: "Snap to minutes",
             settingKey: "snapMinutes",
           },
           {
             id: "calendar-line-opacity",
-            label: "Line opacity",
             settingKey: "lineOpacity",
           },
           {
             id: "calendar-day-header-position",
-            label: "Day header position",
             settingKey: "dayHeaderPosition",
           },
           {
             id: "calendar-time-label-position",
-            label: "Time labels position",
             settingKey: "timeLabelPosition",
           },
         ],
       },
       {
         id: "events",
-        label: "Event defaults",
         items: [
           {
             id: "calendar-default-event-name",
-            label: "Default event name",
             settingKey: "defaultEventName",
           },
           {
             id: "calendar-default-task-name",
-            label: "Default task name",
             settingKey: "defaultTaskName",
           },
           {
             id: "calendar-default-event-duration",
-            label: "Default event duration",
             settingKey: "defaultEventDuration",
           },
         ],
       },
       {
         id: "event-editor",
-        label: "Event editor",
         items: [
           {
             id: "calendar-event-editor-color-presets",
-            label: "Color presets",
             settingKey: "eventColorPresets",
           },
           {
             id: "calendar-event-editor-add-colors-automatically",
-            label: "Add new colors automatically",
             settingKey: "addColorsAutomatically",
           },
           {
             id: "calendar-event-editor-opacity",
-            label: "Background opacity",
             settingKey: "eventEditorOpacity",
           },
           {
             id: "calendar-event-editor-blur",
-            label: "Background blur",
             settingKey: "eventEditorBlur",
           },
           {
             id: "calendar-event-editor-radius",
-            label: "Border radius",
             settingKey: "eventEditorRadius",
           },
         ],
       },
       {
         id: "mini-calendar",
-        label: "Mini calendar",
         items: [
           {
             id: "mini-calendar-enabled",
-            label: "Enabled",
             settingKey: "miniCalendarEnabled",
           },
           {
             id: "mini-calendar-event-bars",
-            label: "Show event bars",
             settingKey: "miniCalendarEventBars",
           },
           {
             id: "mini-calendar-week-numbers",
-            label: "Show week numbers",
             settingKey: "miniCalendarWeekNumbers",
           },
           {
             id: "mini-calendar-bold-day-numbers",
-            label: "Bold day numbers",
             settingKey: "miniCalendarBoldDayNumbers",
           },
           {
             id: "mini-calendar-dropdowns",
-            label: "Month and year dropdowns",
             settingKey: "miniCalendarDropdowns",
           },
         ],
       },
       {
         id: "agenda",
-        label: "Agenda view",
         items: [
           {
             id: "calendar-agenda-enabled",
-            label: "Enabled",
             settingKey: "agendaEnabled",
           },
           {
             id: "calendar-agenda-range",
-            label: "Range",
             settingKey: "agendaRangeDays",
           },
         ],
@@ -282,26 +259,21 @@ export const settingsCategories: SettingsCategory[] = [
   },
   {
     id: "sync",
-    label: "Sync",
     hideOffline: true,
     sections: [
       {
         id: "settings-sync",
-        label: "Settings",
-        items: [{ id: "sync-settings-enabled", label: "Sync across devices" }],
+        items: [{ id: "sync-settings-enabled" }],
       },
       {
         id: "push-service",
-        label: "Push service",
-        items: [{ id: "sync-push-status", label: "Enabled" }],
+        items: [{ id: "sync-push-status" }],
       },
       {
         id: "resync",
-        label: "Resync",
         items: [
           {
             id: "sync-resync-interval",
-            label: "Resync interval",
             settingKey: "resyncIntervalMinutes",
           },
         ],
@@ -319,37 +291,33 @@ export interface SearchHit {
   itemLabel: string;
 }
 
-export const searchIndex: SearchHit[] = settingsCategories.flatMap((category) =>
-  category.sections.flatMap((section) =>
-    section.items.map((item) => ({
-      categoryId: category.id,
-      categoryLabel: category.label,
-      sectionId: section.id,
-      sectionLabel: section.label,
-      itemId: item.id,
-      itemLabel: item.label,
-    })),
-  ),
-);
+export const categoryLabel = (categoryId: string) =>
+  t(`settings.categories.${categoryId}`);
 
-const itemLabels = new Map(
-  searchIndex.map((hit) => [hit.itemId, hit.itemLabel]),
-);
-const sectionLabels = new Map(
-  searchIndex.map((hit) => [hit.sectionId, hit.sectionLabel]),
-);
+export const sectionLabel = (sectionId: string) =>
+  t(`settings.sections.${sectionId}`);
 
-export function settingLabel(itemId: string): string {
-  const label = itemLabels.get(itemId);
-  if (!label) throw new Error(`Unknown setting id: ${itemId}`);
-  return label;
-}
+export const settingLabel = (itemId: string) => t(`settings.items.${itemId}`);
 
-const keyLabels = new Map(
+export const buildSearchIndex = (): SearchHit[] =>
+  settingsCategories.flatMap((category) =>
+    category.sections.flatMap((section) =>
+      section.items.map((item) => ({
+        categoryId: category.id,
+        categoryLabel: categoryLabel(category.id),
+        sectionId: section.id,
+        sectionLabel: sectionLabel(section.id),
+        itemId: item.id,
+        itemLabel: settingLabel(item.id),
+      })),
+    ),
+  );
+
+const keyItemIds = new Map(
   settingsCategories.flatMap((category) =>
     category.sections.flatMap((section) =>
       section.items.flatMap((item) =>
-        item.settingKey ? [[item.settingKey, item.label] as const] : [],
+        item.settingKey ? [[item.settingKey, item.id] as const] : [],
       ),
     ),
   ),
@@ -360,13 +328,7 @@ export function settingLabelId(settingKey: SettingKey | StoreKey): string {
 }
 
 export function settingLabelByKey(settingKey: SettingKey | StoreKey): string {
-  const label = keyLabels.get(settingKey);
-  if (!label) throw new Error(`Unknown setting key: ${settingKey}`);
-  return label;
-}
-
-export function sectionLabel(sectionId: string): string {
-  const label = sectionLabels.get(sectionId);
-  if (!label) throw new Error(`Unknown section id: ${sectionId}`);
-  return label;
+  const itemId = keyItemIds.get(settingKey);
+  if (!itemId) throw new Error(`Unknown setting key: ${settingKey}`);
+  return settingLabel(itemId);
 }

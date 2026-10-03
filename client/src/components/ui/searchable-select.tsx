@@ -9,6 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useTranslation } from "react-i18next";
 
 export interface SearchableSelectOption {
   value: string;
@@ -60,15 +61,19 @@ function SearchableSelect({
   options,
   value,
   onValueChange,
-  placeholder = "Select...",
-  searchPlaceholder = "Search...",
-  emptyMessage = "No results found",
+  placeholder,
+  searchPlaceholder,
+  emptyMessage,
   disabled,
   labelledBy,
   className,
   debounceMs = 200,
   maxResults = 50,
 }: SearchableSelectProps) {
+  const { t } = useTranslation();
+  placeholder ??= t("common.select");
+  searchPlaceholder ??= t("common.search");
+  emptyMessage ??= t("common.noResults");
   const listId = React.useId();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -188,7 +193,7 @@ function SearchableSelect({
                 onClick={() => select(option)}
                 onPointerMove={() => setActiveIndex(index)}
                 className={cn(
-                  "flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none",
+                  "flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start outline-none",
                   index === activeIndex && "bg-accent text-accent-foreground",
                 )}
               >

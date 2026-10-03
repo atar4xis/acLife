@@ -10,6 +10,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { Trans } from "react-i18next";
 import type { ServerMetadata } from "@/types/ServerMetadata";
 import { useUser } from "@/context/UserContext";
 import {
@@ -25,6 +26,7 @@ import { validatePassword } from "@/lib/validators";
 import { useApi } from "@/context/ApiContext";
 import { Client } from "@mzattahri/srp";
 import { Spinner } from "../ui/spinner";
+import { useTranslation } from "react-i18next";
 
 export function LoginForm({
   handleOfflineClick,
@@ -35,6 +37,7 @@ export function LoginForm({
   handleOfflineClick: (e: React.MouseEvent) => void;
   onNeedsVerification: (email: string) => void;
 }) {
+  const { t } = useTranslation();
   const [newAccount, setNewAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -66,24 +69,22 @@ export function LoginForm({
     if (newAccount) {
       // ----- REGISTRATION FLOW -----
       if (!email || !password || !confirm) {
-        setError("Please fill out all the fields.");
+        setError(t("login.fillAll"));
         return;
       }
 
       if (password !== confirm) {
-        setError("Passwords do not match.");
+        setError(t("login.passwordsMismatch"));
         return;
       }
 
       if (password.length < 12 || password.length > 256) {
-        setError("Password must be 12 to 256 characters long.");
+        setError(t("login.passwordLength"));
         return;
       }
 
       if (!validatePassword(password)) {
-        setError(
-          "Password must include uppercase and lowercase letters, a number, and a special character.",
-        );
+        setError(t("login.passwordStrength"));
         return;
       }
 
@@ -95,7 +96,7 @@ export function LoginForm({
           { email },
         );
         if (!challengeRes.success || !challengeRes.data) {
-          setError(challengeRes.message || "An unknown error occurred.");
+          setError(challengeRes.message || t("common.unknownError"));
           return;
         }
 
@@ -117,7 +118,7 @@ export function LoginForm({
         });
 
         if (!res.success) {
-          setError(res.message || "An unknown error occurred.");
+          setError(res.message || t("common.unknownError"));
           return;
         }
 
@@ -129,7 +130,7 @@ export function LoginForm({
           return;
         }
 
-        setSuccess("Account created. You may now log in.");
+        setSuccess(t("login.accountCreated"));
       } finally {
         setLoading(false);
       }
@@ -139,7 +140,7 @@ export function LoginForm({
 
     // ----- LOGIN FLOW -----
     if (!email || !password) {
-      setError("Please fill out all the fields.");
+      setError(t("login.fillAll"));
       return;
     }
 
@@ -148,7 +149,7 @@ export function LoginForm({
     try {
       const saltResponse = await post<string>("auth/login/start", { email });
       if (!saltResponse.success || !saltResponse.data) {
-        setError(saltResponse.message || "An unknown error occurred.");
+        setError(saltResponse.message || t("common.unknownError"));
         return;
       }
 
@@ -168,7 +169,7 @@ export function LoginForm({
       });
 
       if (!res1.success || !res1.data) {
-        setError(res1.message || "An unknown error occurred.");
+        setError(res1.message || t("common.unknownError"));
         return;
       }
 
@@ -184,7 +185,7 @@ export function LoginForm({
       });
 
       if (!res2.success || !res2.data) {
-        setError(res2.message || "An unknown error occurred.");
+        setError(res2.message || t("common.unknownError"));
         return;
       }
 
@@ -193,7 +194,7 @@ export function LoginForm({
       // workaround for SRP_CheckM2 bug
       // eslint-disable-next-line
       if (!SRP_CheckM2((client as any).M2, M2, SRP_PARAMS.group.bitLength)) {
-        setError("Failed to verify server integrity.");
+        setError(t("login.integrityFailed"));
         return;
       }
 
@@ -212,23 +213,25 @@ export function LoginForm({
           <form onSubmit={handleFormSubmit}>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="email">Email Address</FieldLabel>
+                <FieldLabel htmlFor="email">{t("login.email")}</FieldLabel>
                 <Input
                   id="email"
                   type="email"
                   name="email"
-                  placeholder="me@example.com"
+                  placeholder={t("login.emailPlaceholder")}
                   required
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <FieldLabel htmlFor="password">
+                  {t("login.password")}
+                </FieldLabel>
                 <Input
                   id="password"
                   name="password"
                   type="password"
                   maxLength={MAX_PASSWORD_LENGTH}
-                  placeholder="Enter password"
+                  placeholder={t("login.passwordPlaceholder")}
                   required
                 />
               </Field>
@@ -237,14 +240,14 @@ export function LoginForm({
                 <>
                   <Field>
                     <FieldLabel htmlFor="confirm-password">
-                      Confirm Password
+                      {t("login.confirmPassword")}
                     </FieldLabel>
                     <Input
                       id="confirm-password"
                       name="confirm-password"
                       type="password"
                       maxLength={MAX_PASSWORD_LENGTH}
-                      placeholder="Confirm password"
+                      placeholder={t("login.confirmPasswordPlaceholder")}
                       required
                     />
                   </Field>
@@ -258,13 +261,13 @@ export function LoginForm({
                     }}
                   >
                     <FieldLabel htmlFor="confirm-email">
-                      Confirm Email
+                      {t("login.confirmEmail")}
                     </FieldLabel>
                     <Input
                       id="confirm-email"
                       name="confirm-email"
                       type="email"
-                      placeholder="Confirm email"
+                      placeholder={t("login.confirmEmailPlaceholder")}
                       tabIndex={-1}
                       autoComplete="off"
                     />
@@ -273,75 +276,60 @@ export function LoginForm({
                     <div className="flex items-center gap-2">
                       <Checkbox id="accept-terms" required />
                       <Label htmlFor="accept-terms">
-                        {serverMeta.policies.terms &&
-                        serverMeta.policies.privacy ? (
-                          <span>
-                            I accept the{" "}
-                            <a
-                              href={serverMeta.policies.terms}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline"
-                            >
-                              terms
-                            </a>{" "}
-                            and{" "}
-                            <a
-                              href={serverMeta.policies.privacy}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline"
-                            >
-                              privacy policy
-                            </a>
-                          </span>
-                        ) : serverMeta.policies.terms ? (
-                          <span>
-                            I accept the{" "}
-                            <a
-                              href={serverMeta.policies.terms}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline"
-                            >
-                              terms
-                            </a>
-                          </span>
-                        ) : serverMeta.policies.privacy ? (
-                          <span>
-                            I accept the{" "}
-                            <a
-                              href={serverMeta.policies.privacy}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline"
-                            >
-                              privacy policy
-                            </a>
-                          </span>
-                        ) : null}
+                        <Trans
+                          i18nKey={
+                            serverMeta.policies.terms &&
+                            serverMeta.policies.privacy
+                              ? "login.acceptBoth"
+                              : serverMeta.policies.terms
+                                ? "login.acceptTerms"
+                                : "login.acceptPrivacy"
+                          }
+                          components={{
+                            terms: (
+                              // eslint-disable-next-line
+                              <a
+                                href={serverMeta.policies.terms}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                              />
+                            ),
+                            privacy: (
+                              // eslint-disable-next-line
+                              <a
+                                href={serverMeta.policies.privacy}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                              />
+                            ),
+                          }}
+                        />
                       </Label>
                     </div>
                   ) : null}
                 </>
               ) : null}
               {error && (
-                <span className="text-sm text-destructive text-left">
+                <span className="text-sm text-destructive text-start">
                   {error}
                 </span>
               )}
               {success && !error && (
-                <span className="text-sm text-success text-left">
+                <span className="text-sm text-success text-start">
                   {success}
                 </span>
               )}
               <Field>
                 <Button type="submit" disabled={loading}>
-                  {loading ? <Spinner /> : "Continue"}
+                  {loading ? <Spinner /> : t("common.continue")}
                 </Button>
                 {canRegister ? (
                   <Button variant="outline" onClick={handleCreateAccountClick}>
-                    {newAccount ? "Have an account? Log in" : "Create Account"}
+                    {newAccount
+                      ? t("login.haveAccount")
+                      : t("login.createAccount")}
                   </Button>
                 ) : (
                   <Tooltip>
@@ -353,17 +341,17 @@ export function LoginForm({
                           className="w-full"
                           onClick={(e) => e.preventDefault()}
                         >
-                          Create Account
+                          {t("login.createAccount")}
                         </Button>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
-                      <p>This server is not accepting registrations.</p>
+                      <p>{t("login.registrationsClosed")}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
                 <Button variant="link" onClick={handleOfflineClick}>
-                  Use in Offline Mode
+                  {t("login.offlineMode")}
                 </Button>
               </Field>
             </FieldGroup>

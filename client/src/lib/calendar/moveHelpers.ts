@@ -3,15 +3,7 @@ import { findFreeSlot } from "@/lib/calendar/freeSpace";
 
 export const MOVE_MINUTE_STEPS = [5, 10, 15, 30];
 export const MOVE_HOUR_STEPS = [1, 2, 3, 4, 5, 8];
-export const MOVE_UNIT_STEPS: {
-  label: string;
-  unit: "days" | "weeks" | "months" | "years";
-}[] = [
-  { label: "Day", unit: "days" },
-  { label: "Week", unit: "weeks" },
-  { label: "Month", unit: "months" },
-  { label: "Year", unit: "years" },
-];
+export const MOVE_UNIT_STEPS = ["days", "weeks", "months", "years"] as const;
 
 export function getMovedEvent(
   event: CalendarEvent,

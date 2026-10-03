@@ -5,6 +5,7 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
+import logicalClasses from "./eslint-rules/logical-classes.js";
 
 export default defineConfig([
   globalIgnores(["dist", "src-tauri"]),
@@ -24,5 +25,18 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+  },
+  {
+    files: ["src/**/*.tsx"],
+    plugins: { rtl: logicalClasses },
+    rules: { "rtl/logical-classes": "error" },
+  },
+  {
+    // always left-to-right (forced dir="ltr") or keyed by an explicit physical side
+    files: [
+      "src/components/calendar/{DragOverlay,ScrollThumb,GridFocus,TimezoneHeaderCell}.tsx",
+      "src/components/ui/{sheet,sidebar,resizable}.tsx",
+    ],
+    rules: { "rtl/logical-classes": "off" },
   },
 ]);

@@ -4,6 +4,7 @@ import {
   getTimezone,
 } from "countries-and-timezones";
 import { DateTime } from "luxon";
+import i18n, { fmt, t } from "@/i18n";
 import { flatMapInBatches } from "@/lib/batch";
 import type { Weekday, WeekStartsOn } from "@/types/calendar/Settings";
 
@@ -54,18 +55,31 @@ const getRegion = (tz: string): string => {
 // some zones cover dozens of countries, so only call out a couple extra
 const MAX_EXTRA_COUNTRIES_IN_LABEL = 2;
 
+// the browser's CLDR data knows country names in every language, the library only has English
+const countryName = (code: string): string | undefined => {
+  try {
+    const localized = new Intl.DisplayNames(i18n.language, {
+      type: "region",
+    }).of(code);
+    if (localized && localized !== code) return localized;
+  } catch {
+    // unsupported language or code, use the library name
+  }
+  return getCountry(code)?.name;
+};
+
 export const getFriendlyName = (tz: string): string => {
   const city = getTimezoneShortLabel(tz);
   const info = getTimezone(tz);
   const countryNames = (info?.countries ?? [])
-    .map((code) => getCountry(code)?.name)
+    .map((code) => countryName(code))
     .filter((name): name is string => !!name);
 
   if (countryNames.length === 0) return city;
 
   const [primary, ...rest] = countryNames;
   if (rest.length > 0 && rest.length <= MAX_EXTRA_COUNTRIES_IN_LABEL) {
-    return `${city}, ${primary} (also ${rest.join(", ")})`;
+    return t("timezone.also", { city, primary, others: rest.join(", ") });
   }
 
   return `${city}, ${primary}`;
@@ -75,7 +89,7 @@ const getTimezoneNamePart = (
   tz: string,
   timeZoneName: "long" | "short",
 ): string =>
-  new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName })
+  new Intl.DateTimeFormat(i18n.language, { timeZone: tz, timeZoneName })
     .formatToParts(new Date())
     .find((part) => part.type === "timeZoneName")?.value ?? "";
 
@@ -119,6 +133,11 @@ const TIMEZONE_BATCH_SIZE = 20;
 let timezonesCache: TimezoneOption[] | null = null;
 let timezonesPromise: Promise<TimezoneOption[]> | null = null;
 
+i18n.on("languageChanged", () => {
+  timezonesCache = null;
+  timezonesPromise = null;
+});
+
 export const getCachedTimezones = (): TimezoneOption[] | null => timezonesCache;
 
 export const loadTimezones = (): Promise<TimezoneOption[]> => {
@@ -141,7 +160,7 @@ export const getTimezoneHourLabel = (
   reference
     .set({ hour, minute: 0, second: 0, millisecond: 0 })
     .setZone(tz)
-    .toFormat("h a");
+    .toFormat(fmt("timeHour"));
 
 interface WeekInfoLocale {
   getWeekInfo?: () => { firstDay: number };

@@ -1,4 +1,5 @@
 import { memo, useRef, useState, type CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { getTimezoneShortLabel } from "@/lib/calendar/timezone";
 
@@ -15,6 +16,7 @@ export default memo(function TimezoneHeaderCell({
   labelsRight: boolean;
   style: CSSProperties;
 }) {
+  const { i18n } = useTranslation();
   const [truncated, setTruncated] = useState(false);
   const labelRef = useRef<HTMLSpanElement>(null);
   return (
@@ -26,6 +28,7 @@ export default memo(function TimezoneHeaderCell({
         headerBottom ? "bottom-0" : "top-0",
       )}
       style={style}
+      dir={i18n.dir()}
       onMouseEnter={() => {
         const el = labelRef.current;
         setTruncated(!!el && el.scrollWidth > el.clientWidth);

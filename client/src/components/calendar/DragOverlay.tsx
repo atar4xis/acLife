@@ -2,6 +2,7 @@ import { eventKey } from "@/lib/calendar/event";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { EventDragRef } from "@/types/calendar/Event";
+import { useTranslation } from "react-i18next";
 import { ArrowLeftCircle, ArrowRightCircle } from "lucide-react";
 import {
   useCallback,
@@ -22,6 +23,7 @@ export default (function DragOverlay({
   anchored?: boolean;
 }) {
   const isMobile = useIsMobile();
+  const leftSteps = useTranslation().i18n.dir() === "rtl" ? 1 : -1;
   const edgeWidth = isMobile ? 32 : 64;
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
@@ -42,9 +44,9 @@ export default (function DragOverlay({
       if (e.pointerType === "touch") {
         const edge =
           e.clientX <= edgeWidth
-            ? -1
+            ? leftSteps
             : e.clientX >= window.innerWidth - edgeWidth
-              ? 1
+              ? -leftSteps
               : null;
         setDirection(edge);
       }
@@ -52,7 +54,7 @@ export default (function DragOverlay({
 
     document.addEventListener("pointermove", listener);
     return () => document.removeEventListener("pointermove", listener);
-  }, [edgeWidth]);
+  }, [edgeWidth, leftSteps]);
 
   useEffect(() => {
     if (direction === null) return;
@@ -110,9 +112,9 @@ export default (function DragOverlay({
             className={cn(
               "fixed flex items-center justify-center z-20 left-0 top-0 bottom-0 bg-background hover:opacity-100",
               isMobile ? "w-8" : "w-16",
-              direction === -1 ? "opacity-100" : "opacity-30",
+              direction === leftSteps ? "opacity-100" : "opacity-30",
             )}
-            data-steps="-1"
+            data-steps={leftSteps}
             onPointerEnter={handleMoveEnter}
             onPointerLeave={handleMoveExit}
           >
@@ -123,9 +125,9 @@ export default (function DragOverlay({
             className={cn(
               "fixed flex items-center justify-center z-20 right-0 top-0 bottom-0 bg-background hover:opacity-100",
               isMobile ? "w-8" : "w-16",
-              direction === 1 ? "opacity-100" : "opacity-30",
+              direction === -leftSteps ? "opacity-100" : "opacity-30",
             )}
-            data-steps="1"
+            data-steps={-leftSteps}
             onPointerEnter={handleMoveEnter}
             onPointerLeave={handleMoveExit}
           >

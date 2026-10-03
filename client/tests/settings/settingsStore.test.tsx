@@ -189,10 +189,18 @@ describe("settings store", () => {
     const settings = createSettingsStore().getSnapshot();
 
     expect(settings.dayHeaderPosition).toBe("top");
-    expect(settings.timeLabelPosition).toBe("left");
+    expect(settings.timeLabelPosition).toBe("auto");
     expect(settings.fontSize).toBe(16);
     expect(settings.presets).toEqual([]);
     expect(settings.timezones).toEqual(defaultStoreSettings.timezones);
+  });
+
+  it("keeps a stored language only if a locale file exists for it", () => {
+    seedSettings({ language: "es" });
+    expect(createSettingsStore().getSnapshot().language).toBe("es");
+
+    seedSettings({ language: "xx" });
+    expect(createSettingsStore().getSnapshot().language).toBe("system");
   });
 
   it.each([
@@ -354,6 +362,8 @@ describe("sync rules", () => {
         "agendaEnabled",
         "agendaRangeDays",
         "colors",
+        "dateFormat",
+        "dateTimeFormat",
         "dayHeaderPosition",
         "defaultEventDuration",
         "defaultEventName",
@@ -366,6 +376,7 @@ describe("sync rules", () => {
         "eventEditorRadius",
         "fontFamily",
         "fontSize",
+        "language",
         "lineOpacity",
         "presets",
         "miniCalendarEnabled",
@@ -376,6 +387,7 @@ describe("sync rules", () => {
         "detachRecurringOnEdit",
         "snapMinutes",
         "theme",
+        "timeFormat",
         "timeLabelPosition",
         "timezones",
         "weekStartsOn",

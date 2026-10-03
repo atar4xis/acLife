@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import LanguageSelect from "@/components/LanguageSelect";
 import { LoginForm } from "@/components/login/LoginForm";
 import {
   EmailVerificationRequired,
@@ -30,8 +31,10 @@ import { useUser } from "@/context/UserContext";
 import { deriveMasterKey, randomBytes } from "@/lib/crypt";
 import { useStorage } from "@/context/StorageContext";
 import type { User } from "@/types/User";
+import { useTranslation } from "react-i18next";
 
 export default function LoginDialog() {
+  const { t } = useTranslation();
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<
     "success" | "failure" | "invalid" | null
@@ -190,10 +193,12 @@ export default function LoginDialog() {
         {serverSwitcherOpen ? (
           <>
             <DialogHeader>
-              <DialogTitle className="text-center">Change server</DialogTitle>
+              <DialogTitle className="text-center">
+                {t("login.changeServer")}
+              </DialogTitle>
             </DialogHeader>
             <div className="mt-3 gap-3 grid">
-              <Label htmlFor="server">Server URL</Label>
+              <Label htmlFor="server">{t("login.serverUrl")}</Label>
               <div className="flex w-full items-center gap-2">
                 <Input
                   id="server"
@@ -208,7 +213,7 @@ export default function LoginDialog() {
                   <TooltipTrigger asChild>
                     <Button
                       className="p-1"
-                      aria-label="Test connectivity"
+                      aria-label={t("login.testConnectivityLabel")}
                       onClick={testServerConnection}
                       disabled={!pendingServerURL || testing}
                       variant="outline"
@@ -219,24 +224,24 @@ export default function LoginDialog() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Test Connectivity</p>
+                    <p>{t("login.testConnectivity")}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
               <FieldDescription>
                 {testResult === "success" && (
                   <span className="text-success">
-                    Connection successful. Save to apply changes.
+                    {t("login.connectionSuccess")}
                   </span>
                 )}
                 {testResult === "failure" && (
                   <span className="text-destructive">
-                    Connection failed. Please try again.
+                    {t("login.connectionFailed")}
                   </span>
                 )}
                 {testResult === "invalid" && (
                   <span className="text-warning">
-                    Invalid metadata response. Please confirm the URL.
+                    {t("login.invalidMetadata")}
                   </span>
                 )}
               </FieldDescription>
@@ -246,24 +251,24 @@ export default function LoginDialog() {
               disabled={testResult !== "success" || testing}
               onClick={handleSaveServerURL}
             >
-              Save changes
+              {t("login.saveChanges")}
             </Button>
             <Button
               className="w-full"
               variant="outline"
               onClick={() => setServerSwitcherOpen(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
           </>
         ) : (
           <>
             <DialogHeader>
               <DialogTitle className="text-center">
-                Log in to your account
+                {t("login.title")}
               </DialogTitle>
               <DialogDescription className="text-center">
-                on{" "}
+                {t("login.onServer")}{" "}
                 <button
                   type="button"
                   className="border-b border-dashed border-muted-foreground hover:border-foreground hover:border-solid hover:cursor-pointer"
@@ -292,11 +297,12 @@ export default function LoginDialog() {
               />
             ) : (
               <Button variant="outline" onClick={handleOfflineClick}>
-                Use in Offline Mode
+                {t("login.offlineMode")}
               </Button>
             )}
           </>
         )}
+        <LanguageSelect />
       </DialogContent>
     </Dialog>
   );

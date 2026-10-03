@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import "@testing-library/jest-dom";
+import "../src/i18n";
 import { afterEach, beforeEach, vi } from "vitest";
 
 vi.mock("sonner", () => ({

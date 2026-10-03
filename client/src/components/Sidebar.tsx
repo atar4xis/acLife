@@ -42,6 +42,7 @@ import {
   sameBars,
 } from "@/lib/calendar/eventBars";
 import { EMPTY_ARRAY } from "@/lib/constants";
+import { useTranslation } from "react-i18next";
 
 const START_MONTH = new Date(1900, 0);
 const END_MONTH = new Date(2100, 11);
@@ -216,6 +217,8 @@ export default memo(function AppSidebar({
     if (isMobile) setOpenMobile(false);
   }, [isMobile, setOpenMobile]);
 
+  const { t, i18n } = useTranslation();
+  const side = i18n.dir() === "rtl" ? "right" : "left";
   const [restored, setRestored] = useState(false);
 
   useEffect(() => {
@@ -246,7 +249,7 @@ export default memo(function AppSidebar({
   }, [width, isMobile, restored]);
 
   return (
-    <Sidebar collapsible="offcanvas">
+    <Sidebar collapsible="offcanvas" side={side}>
       <SidebarContent>
         {settings.miniCalendarEnabled && (
           <SidebarGroup>
@@ -255,14 +258,14 @@ export default memo(function AppSidebar({
         )}
         {settings.agendaEnabled && <AgendaList />}
       </SidebarContent>
-      <SidebarRail enableDrag={true} />
+      <SidebarRail enableDrag={true} side={side} />
       <SidebarFooter>
         <div className="flex justify-between">
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="icon"
-              aria-label="Settings"
+              aria-label={t("common.settings")}
               onClick={() => onOpenSettings()}
             >
               <Settings />
@@ -307,8 +310,8 @@ function EventBars({
               data-testid={e ? "event-bar" : undefined}
               className={cn(
                 "h-[26%]",
-                !joinPrev && "ml-[12%] rounded-l-full",
-                !joinNext && "mr-[12%] rounded-r-full",
+                !joinPrev && "ms-[12%] rounded-s-full",
+                !joinNext && "me-[12%] rounded-e-full",
               )}
               style={{
                 backgroundColor: e && (e.color ?? "var(--primary)"),

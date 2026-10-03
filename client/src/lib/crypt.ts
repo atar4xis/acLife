@@ -7,6 +7,7 @@ import {
   type Params,
 } from "@mzattahri/srp";
 import { arrayBufferToBase64, uint8ArrayFromBase64 } from "./utils";
+import { t } from "@/i18n";
 
 export const MAX_PASSWORD_LENGTH = 256;
 
@@ -270,7 +271,7 @@ export const unwrapMasterKeyEnvelope = async (
       wrappingKey,
     );
   } catch {
-    throw new Error("Invalid password.");
+    throw new Error(t("unlock.invalidPassword"));
   }
 
   const [masterKey, bucketKey] = await Promise.all([
@@ -320,7 +321,7 @@ export const unlockMasterKey = async (
     }
   }
 
-  throw new Error("Invalid password.");
+  throw new Error(t("unlock.invalidPassword"));
 };
 
 export const exportKeyPair = async (

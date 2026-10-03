@@ -1,31 +1,31 @@
 import type { DateTime } from "luxon";
+import { t } from "@/i18n";
 import type { RepeatInterval } from "@/types/calendar/Event";
 
-const ORDINAL_SUFFIX = {
-  one: "st",
-  two: "nd",
-  few: "rd",
-  other: "th",
-} as const;
-const ordinalRules = new Intl.PluralRules("en", { type: "ordinal" });
 const NTH = ["first", "second", "third", "fourth", "fifth"];
-
-const ordinal = (n: number) =>
-  `${n}${ORDINAL_SUFFIX[ordinalRules.select(n) as keyof typeof ORDINAL_SUFFIX]}`;
 
 export const monthlyOptions = (start: DateTime, keepLast = false) => {
   const options: {
     value: NonNullable<RepeatInterval["monthly"]>;
     label: string;
   }[] = [
-    { value: "date", label: `on the ${ordinal(start.day)}` },
+    {
+      value: "date",
+      label: t("repeat.onDate", { count: start.day, ordinal: true }),
+    },
     {
       value: "nth",
-      label: `on the ${NTH[Math.ceil(start.day / 7) - 1]} ${start.weekdayLong}`,
+      label: t("repeat.onNth", {
+        nth: t(`repeat.nth.${NTH[Math.ceil(start.day / 7) - 1]}`),
+        weekday: start.weekdayLong,
+      }),
     },
   ];
   if (keepLast || start.day + 7 > start.daysInMonth!) {
-    options.push({ value: "last", label: `on the last ${start.weekdayLong}` });
+    options.push({
+      value: "last",
+      label: t("repeat.onLast", { weekday: start.weekdayLong }),
+    });
   }
   return options;
 };

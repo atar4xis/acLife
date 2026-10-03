@@ -18,12 +18,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useApi } from "@/context/ApiContext";
+import { useTranslation } from "react-i18next";
 
 export default function UserDropdown({
   onOpenAccountSettings,
 }: {
   onOpenAccountSettings: () => void;
 }) {
+  const { t } = useTranslation();
   const { user, setUser, logout } = useUser();
   const { get } = useApi();
 
@@ -33,7 +35,7 @@ export default function UserDropdown({
     const res = await get<string>("stripe/manage");
 
     if (!res.success || !res.data) {
-      toast.error(res.message || "Failed to open management portal.");
+      toast.error(res.message || t("user.portalFailed"));
       return;
     }
 
@@ -43,13 +45,13 @@ export default function UserDropdown({
   return (
     <DropdownMenu>
       <Button asChild size="icon" variant="outline">
-        <DropdownMenuTrigger aria-label="User menu">
+        <DropdownMenuTrigger aria-label={t("user.menu")}>
           <User />
         </DropdownMenuTrigger>
       </Button>
       <DropdownMenuContent side="top" align="start">
         <DropdownMenuLabel>
-          {user.type === "online" ? user.email : "Offline mode"}
+          {user.type === "online" ? user.email : t("user.offlineMode")}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
@@ -57,24 +59,24 @@ export default function UserDropdown({
             <>
               <DropdownMenuItem onClick={onOpenAccountSettings}>
                 <SettingsIcon />
-                Account settings
+                {t("user.accountSettings")}
               </DropdownMenuItem>
               {user.subscription_status && (
                 <DropdownMenuItem onClick={manageSubscription}>
                   <CreditCardIcon />
-                  Manage Subscription
+                  {t("user.manageSubscription")}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={logout}>
                 <LogOutIcon />
-                Log out
+                {t("user.logout")}
               </DropdownMenuItem>
             </>
           ) : (
             <>
               <DropdownMenuItem onClick={() => setUser(null)}>
                 <LogInIcon />
-                Log in
+                {t("user.login")}
               </DropdownMenuItem>
             </>
           )}

@@ -15,7 +15,7 @@ import type { SectionRefs } from "../../src/components/settings/SettingsSection.
 import { MAX_PRESETS } from "../../src/lib/constants.ts";
 import {
   MAX_PRESET_BYTES,
-  PRESET_ERROR_MESSAGES,
+  presetErrorMessage,
 } from "../../src/lib/themePresets.ts";
 import { readSettings, seedSettings } from "../settingsStorage.ts";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
@@ -589,7 +589,7 @@ describe("AppearancePage", () => {
 
     expect(vi.mocked(toast.error)).toHaveBeenCalledTimes(2);
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-      PRESET_ERROR_MESSAGES["too-large"],
+      presetErrorMessage("too-large"),
     );
     expect(readSettings().presets.map((p) => p.name)).toEqual(["Small"]);
   });

@@ -6,10 +6,12 @@ import { browserSupportsPush } from "@/lib/utils";
 import { toast } from "sonner";
 import { useUser } from "@/context/UserContext";
 import { usePushService } from "@/hooks/usePushService";
+import { useTranslation } from "react-i18next";
 
 export default function PushService() {
   const storage = useStorage();
 
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { serverMeta } = useApi();
@@ -45,43 +47,40 @@ export default function PushService() {
     if (!storage) return;
 
     storage.set("pushDismissed", true);
-    toast.message("You can enable the push service later in settings.");
+    toast.message(t("push.later"));
     setOpen(false);
-  }, [storage]);
+  }, [storage, t]);
 
   const handleEnablePushService = useCallback(() => {
     setLoading(true);
     toast.promise(enable(), {
-      loading: "Setting up push service...",
+      loading: t("push.settingUp"),
       success: () => {
         setOpen(false);
-        return "Push service enabled.";
+        return t("push.enabled");
       },
       error: (d) => {
         setLoading(false);
         return d;
       },
     });
-  }, [enable]);
+  }, [enable, t]);
 
   return (
     <YesNoDialog
       open={open}
       disabled={loading}
-      title="Push Service"
-      yesText="Enable it"
-      noText="Keep it off"
-      cancelText="Remind me later"
+      title={t("push.title")}
+      yesText={t("push.yes")}
+      noText={t("push.no")}
+      cancelText={t("push.cancel")}
       onYes={handleEnablePushService}
       onNo={handleDismissPushService}
       onCancel={() => {
         setOpen(false);
       }}
     >
-      <p>
-        Enabling the push service improves data sync between devices and allows
-        push notifications to work.
-      </p>
+      <p>{t("push.description")}</p>
     </YesNoDialog>
   );
 }

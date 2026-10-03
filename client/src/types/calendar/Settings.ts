@@ -5,11 +5,15 @@ export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type WeekStartsOn = "inherit" | Weekday;
 
 export type DayHeaderPosition = "top" | "bottom";
-export type TimeLabelPosition = "left" | "right";
+export type TimeLabelPosition = "auto" | "left" | "right";
 
 export interface CalendarSettings {
+  language: string;
   defaultView: ViewMode;
   weekStartsOn: WeekStartsOn;
+  timeFormat: string;
+  dateFormat: string;
+  dateTimeFormat: string;
   snapMinutes: number;
   lineOpacity: number;
   dayHeaderPosition: DayHeaderPosition;

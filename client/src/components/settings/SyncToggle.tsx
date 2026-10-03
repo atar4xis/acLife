@@ -9,16 +9,18 @@ import { useUser } from "@/context/UserContext";
 import { useSyncSettings } from "@/hooks/useSyncSettings";
 import { cn } from "@/lib/utils";
 import type { SyncableKey } from "@/lib/settingsSync";
+import { useTranslation } from "react-i18next";
 
 export default function SyncToggle({
   settingKey,
   keys = [settingKey as SyncableKey],
-  label = "Sync this setting",
+  label,
 }: {
   settingKey?: SyncableKey;
   keys?: SyncableKey[];
   label?: string;
 }) {
+  const { t } = useTranslation();
   const { user } = useUser();
   const { enabled, overrides, isSynced, setSynced } = useSyncSettings();
 
@@ -34,7 +36,7 @@ export default function SyncToggle({
           variant="ghost"
           size="icon"
           aria-pressed={synced}
-          aria-label={label}
+          aria-label={label ?? t("settings.sync.toggle")}
           disabled={!enabled}
           className={cn(
             "size-5 text-muted-foreground hover:text-foreground",
@@ -52,8 +54,8 @@ export default function SyncToggle({
         </Button>
       </TooltipTrigger>
       <TooltipContent>
-        {synced ? "Synced across devices" : "This device only"}
-        {!enabled && " (settings sync is off)"}
+        {synced ? t("settings.sync.synced") : t("settings.sync.deviceOnly")}
+        {!enabled && ` ${t("settings.sync.off")}`}
       </TooltipContent>
     </Tooltip>
   );

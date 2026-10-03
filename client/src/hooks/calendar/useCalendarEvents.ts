@@ -31,6 +31,7 @@ import type { DateTime } from "luxon";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { CLIENT_ID } from "@/lib/clientId";
+import { t } from "@/i18n";
 
 const withoutPrivateKeys = (event: CalendarEvent) =>
   Object.fromEntries(
@@ -86,7 +87,7 @@ export const useCalendarEvents = (
         try {
           cachedEvents.push(...(await decryptValid(cached, masterKey)));
         } catch {
-          toast.warning("Failed to decrypt event cache - it'll be discarded.");
+          toast.warning(t("events.cacheDecryptFailed"));
         }
       }
 
@@ -134,8 +135,9 @@ export const useCalendarEvents = (
 
         if (!hashRes.success || !hashRes.data) {
           throw new Error(
-            "Failed to sync calendar events" +
-              (hashRes.message ? `: ${hashRes.message}` : "."),
+            t(hashRes.message ? "events.syncFailedWith" : "events.syncFailed", {
+              message: hashRes.message,
+            }),
           );
         }
 
@@ -163,8 +165,9 @@ export const useCalendarEvents = (
 
       if (!res.success || !res.data) {
         throw new Error(
-          "Failed to sync calendar events" +
-            (res.message ? `: ${res.message}` : "."),
+          t(res.message ? "events.syncFailedWith" : "events.syncFailed", {
+            message: res.message,
+          }),
         );
       }
 
@@ -241,7 +244,7 @@ export const useCalendarEvents = (
 
         return finalEvents;
       } catch {
-        toast.error("Failed to decrypt calendar events.");
+        toast.error(t("events.decryptFailed"));
         return [];
       }
     },
@@ -292,7 +295,7 @@ export const useCalendarEvents = (
         const events = getStored("offlineEvents");
         return events ? await decryptOfflineEvents(events, masterKey) : [];
       } catch {
-        toast.error("Failed to decrypt calendar events.");
+        toast.error(t("events.decryptFailed"));
         return [];
       }
     },
@@ -347,9 +350,12 @@ export const useCalendarEvents = (
 
             if (rejected.length > 0) {
               toast.error(
-                rejected.length === 1
-                  ? `"${rejected[0].title}" is too large to save, so the change was undone.`
-                  : `${rejected.length} events are too large to save, so their changes were undone.`,
+                t(
+                  rejected.length === 1
+                    ? "events.tooLarge"
+                    : "events.tooLargeMany",
+                  { count: rejected.length, title: rejected[0].title },
+                ),
               );
             }
             onRejected?.(rejected);
@@ -381,8 +387,9 @@ export const useCalendarEvents = (
 
             if (!res.success) {
               toast.error(
-                "Failed to save calendar events" +
-                  (res.message ? `: ${res.message}` : "."),
+                t(res.message ? "events.saveFailedWith" : "events.saveFailed", {
+                  message: res.message,
+                }),
               );
               setSaving(false);
               return;
@@ -432,7 +439,7 @@ export const useCalendarEvents = (
           cb();
         }
       } catch {
-        toast.error("Failed to save calendar events.");
+        toast.error(t("events.saveFailed"));
         setSaving(false);
       }
     },

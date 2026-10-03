@@ -1,27 +1,19 @@
-import { memo, useEffect, useMemo, useState } from "react";
-import { GripVertical, Plus, Sparkles, X } from "lucide-react";
+import { memo, useState } from "react";
+import { Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   EVENT_COLOR_FALLBACK,
-  MAX_CALENDAR_TIMEZONES,
   MAX_EVENT_COLOR_PRESETS,
   useCalendarSettings,
 } from "@/context/CalendarSettingsContext";
 import { useTheme } from "@/components/ThemeProvider";
 import { defaultCalendarSettings } from "@/lib/settingsDefaults";
 import { DARK_COLORS, LIGHT_COLORS } from "@/lib/themeColors";
-import type { Weekday } from "@/types/calendar/Settings";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
-import { useWeekStart } from "@/hooks/useWeekStart";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { cn, cssColorToHex } from "@/lib/utils";
+import { resolveDefaultName } from "@/lib/calendar/defaultNames";
 import { generateThemeColorPresets } from "@/lib/calendar/colorPresets";
-import {
-  getCachedTimezones,
-  getFriendlyName,
-  loadTimezones,
-  type TimezoneOption,
-} from "@/lib/calendar/timezone";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
 import {
@@ -33,10 +25,6 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SelectItem } from "@/components/ui/select";
-import {
-  SearchableSelect,
-  type SearchableSelectOption,
-} from "@/components/ui/searchable-select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -54,179 +42,10 @@ import SettingsSelect from "../SettingsSelect";
 import SettingsSlider from "../SettingsSlider";
 import EventEditorPreview from "../EventEditorPreview";
 import DeferredContent from "../DeferredContent";
-
-const TimezonesField = memo(function TimezonesField() {
-  const { timezones, defaultTimezone, setSetting } = useCalendarSettings();
-  const [allTimezones, setAllTimezones] = useState<TimezoneOption[]>(
-    () => getCachedTimezones() ?? [],
-  );
-  useEffect(() => {
-    let cancelled = false;
-    loadTimezones().then((tzs) => !cancelled && setAllTimezones(tzs));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  const additionalTimezones = useMemo(
-    () => timezones.filter((tz) => tz !== defaultTimezone),
-    [timezones, defaultTimezone],
-  );
-  const allOptions = useMemo<SearchableSelectOption[]>(
-    () =>
-      allTimezones.map((tz) => ({
-        value: tz.name,
-        label: tz.friendlyName,
-        description: tz.detail,
-        searchText: tz.searchText,
-      })),
-    [allTimezones],
-  );
-  const isLimitReached = timezones.length >= MAX_CALENDAR_TIMEZONES;
-
-  const selectDefaultTimezone = (tz: string) => {
-    setSetting("defaultTimezone", tz);
-    setSetting("timezones", [
-      tz,
-      ...additionalTimezones.filter((t) => t !== tz),
-    ]);
-    toast.success(`Time zone set to ${getFriendlyName(tz)}`);
-  };
-
-  // swaps the promoted time zone with the current default's slot
-  const promoteAdditionalTimezone = (tz: string) => {
-    setSetting("defaultTimezone", tz);
-    setSetting("timezones", [
-      tz,
-      ...additionalTimezones.map((t) => (t === tz ? defaultTimezone : t)),
-    ]);
-    toast.success(`Time zone set to ${getFriendlyName(tz)}`);
-  };
-
-  const addTimezone = (tz: string) => {
-    if (!tz || timezones.includes(tz)) return;
-    setSetting("timezones", [...timezones, tz]);
-  };
-
-  const removeTimezone = (tz: string) => {
-    setSetting(
-      "timezones",
-      timezones.filter((t) => t !== tz),
-    );
-  };
-
-  const {
-    order: orderedAdditionalTimezones,
-    dragIndex,
-    onPointerDown,
-    onKeyDown,
-    setItemRef,
-  } = useDragReorder(additionalTimezones, (next) =>
-    setSetting("timezones", [defaultTimezone, ...next]),
-  );
-
-  const timezoneLabel = (tz: string) =>
-    allTimezones.find((t) => t.name === tz)?.label ?? tz.replace(/_/g, " ");
-
-  return (
-    <FieldGroup className="mt-1 gap-5">
-      <Field orientation="responsive">
-        <div className="flex flex-auto items-center gap-1.5">
-          <FieldTitle id="default-timezone-label" className="font-normal">
-            {settingLabel("calendar-default-timezone")}
-          </FieldTitle>
-          <SyncToggle settingKey="defaultTimezone" />
-        </div>
-        <SearchableSelect
-          className="w-full shrink-0 @md/field-group:w-[250px]!"
-          labelledBy="default-timezone-label"
-          options={allOptions}
-          value={defaultTimezone}
-          onValueChange={selectDefaultTimezone}
-          searchPlaceholder="Type a city or country to search..."
-        />
-      </Field>
-
-      <Field orientation="responsive">
-        <FieldContent>
-          <div className="flex items-center gap-1.5">
-            <FieldTitle id="additional-timezones-label" className="font-normal">
-              Additional time zones
-            </FieldTitle>
-            <SyncToggle settingKey="timezones" />
-          </div>
-          <FieldDescription>
-            Shown alongside the default time zone on the grid.
-          </FieldDescription>
-        </FieldContent>
-        <SearchableSelect
-          className="w-full shrink-0 @md/field-group:w-[250px]!"
-          labelledBy="additional-timezones-label"
-          options={allOptions}
-          value=""
-          onValueChange={addTimezone}
-          disabled={isLimitReached}
-          placeholder="Add a time zone..."
-          searchPlaceholder="Type a city or country to search..."
-        />
-      </Field>
-
-      {isLimitReached && (
-        <span className="text-muted-foreground -mt-1 self-end text-xs">
-          Maximum of {MAX_CALENDAR_TIMEZONES} time zones reached
-        </span>
-      )}
-
-      {orderedAdditionalTimezones.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {orderedAdditionalTimezones.map((tz, index) => (
-            <div
-              key={tz}
-              ref={setItemRef(index)}
-              className={cn(
-                "flex items-center gap-2 transition-opacity",
-                dragIndex === index && "opacity-40",
-              )}
-            >
-              <button
-                type="button"
-                style={{ touchAction: "none" }}
-                aria-label={`Reorder time zone ${timezoneLabel(tz)}`}
-                aria-keyshortcuts="Shift+ArrowUp Shift+ArrowDown"
-                className="text-muted-foreground cursor-grab active:cursor-grabbing"
-                onPointerDown={onPointerDown(index)}
-                onKeyDown={onKeyDown(index)}
-              >
-                <GripVertical className="size-4" />
-              </button>
-              <span className="flex-1 text-sm">{timezoneLabel(tz)}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-label={`Set default ${timezoneLabel(tz)}`}
-                onClick={() => promoteAdditionalTimezone(tz)}
-              >
-                Set default
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                aria-label={`Remove ${timezoneLabel(tz)}`}
-                onClick={() => removeTimezone(tz)}
-              >
-                <X className="size-3.5" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-    </FieldGroup>
-  );
-});
+import { useTranslation } from "react-i18next";
 
 const ColorPresetsField = memo(function ColorPresetsField() {
+  const { t } = useTranslation();
   const { eventColorPresets, setSetting } = useCalendarSettings();
   const { resolvedBase, colors } = useTheme();
   const [newColor, setNewColor] = useState(EVENT_COLOR_FALLBACK);
@@ -249,7 +68,7 @@ const ColorPresetsField = memo(function ColorPresetsField() {
       "eventColorPresets",
       generateThemeColorPresets(brandColors, resolvedBase),
     );
-    toast.success("Colors generated from theme.");
+    toast.success(t("settings.calendar.colorsGenerated"));
   };
 
   const isDuplicate = eventColorPresets.some(
@@ -295,13 +114,13 @@ const ColorPresetsField = memo(function ColorPresetsField() {
                   variant="ghost"
                   size="icon"
                   className="size-5 text-muted-foreground hover:text-foreground"
-                  aria-label="Generate from theme"
+                  aria-label={t("settings.calendar.generate")}
                   onClick={generateFromTheme}
                 >
                   <Sparkles className="size-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Generate from theme</TooltipContent>
+              <TooltipContent>{t("settings.calendar.generate")}</TooltipContent>
             </Tooltip>
             {!isDefaultPresets && (
               <ResetToDefault
@@ -315,26 +134,26 @@ const ColorPresetsField = memo(function ColorPresetsField() {
             )}
           </div>
           <FieldDescription>
-            Drag a color to reorder it, click a color to remove it.
+            {t("settings.calendar.colorsHelp")}
           </FieldDescription>
         </FieldContent>
 
         <div className="flex items-center gap-2">
           <ColorPicker
-            aria-label="New color"
+            aria-label={t("settings.calendar.newColor")}
             value={newColor}
             onChange={setNewColor}
           />
           {isDuplicate || isLimitReached ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keeps tooltip reachable by keyboard */}
+                {/* eslint-disable-next-line */}
                 <span tabIndex={0}>
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    aria-label="Add color"
+                    aria-label={t("settings.calendar.addColor")}
                     disabled
                   >
                     <Plus />
@@ -343,8 +162,10 @@ const ColorPresetsField = memo(function ColorPresetsField() {
               </TooltipTrigger>
               <TooltipContent>
                 {isLimitReached
-                  ? `Maximum of ${MAX_EVENT_COLOR_PRESETS} colors reached`
-                  : "Already added"}
+                  ? t("settings.calendar.colorLimit", {
+                      count: MAX_EVENT_COLOR_PRESETS,
+                    })
+                  : t("settings.calendar.alreadyAdded")}
               </TooltipContent>
             </Tooltip>
           ) : (
@@ -352,7 +173,7 @@ const ColorPresetsField = memo(function ColorPresetsField() {
               type="button"
               variant="outline"
               size="icon"
-              aria-label="Add color"
+              aria-label={t("settings.calendar.addColor")}
               onClick={addColor}
             >
               <Plus />
@@ -368,7 +189,9 @@ const ColorPresetsField = memo(function ColorPresetsField() {
               <button
                 ref={setItemRef(index)}
                 type="button"
-                aria-label={`Remove ${presetColor}`}
+                aria-label={t("settings.calendar.remove", {
+                  name: presetColor,
+                })}
                 aria-keyshortcuts="Shift+ArrowLeft Shift+ArrowRight"
                 onPointerDown={onPointerDown(index, () => removeColor(index))}
                 onKeyDown={(e) => {
@@ -394,6 +217,7 @@ const ColorPresetsField = memo(function ColorPresetsField() {
 });
 
 const DefaultEventNameField = memo(function DefaultEventNameField() {
+  useTranslation();
   const { defaultEventName, setSetting } = useCalendarSettings();
   const field = useDebouncedSetting(defaultEventName, (value) =>
     setSetting("defaultEventName", value),
@@ -404,7 +228,7 @@ const DefaultEventNameField = memo(function DefaultEventNameField() {
       <SettingsLabel settingKey="defaultEventName" onReset={field.cancel} />
       <Input
         aria-labelledby={settingLabelId("defaultEventName")}
-        value={field.value}
+        value={resolveDefaultName("defaultEventName", field.value)}
         onChange={(e) => field.onChange(e.target.value)}
         onBlur={field.flush}
         className="w-[220px]"
@@ -414,6 +238,7 @@ const DefaultEventNameField = memo(function DefaultEventNameField() {
 });
 
 const DefaultTaskNameField = memo(function DefaultTaskNameField() {
+  useTranslation();
   const { defaultTaskName, setSetting } = useCalendarSettings();
   const field = useDebouncedSetting(defaultTaskName, (value) =>
     setSetting("defaultTaskName", value),
@@ -424,7 +249,7 @@ const DefaultTaskNameField = memo(function DefaultTaskNameField() {
       <SettingsLabel settingKey="defaultTaskName" onReset={field.cancel} />
       <Input
         aria-labelledby={settingLabelId("defaultTaskName")}
-        value={field.value}
+        value={resolveDefaultName("defaultTaskName", field.value)}
         onChange={(e) => field.onChange(e.target.value)}
         onBlur={field.flush}
         className="w-[220px]"
@@ -433,31 +258,14 @@ const DefaultTaskNameField = memo(function DefaultTaskNameField() {
   );
 });
 
-const WEEKDAY_NAMES: Record<Weekday, string> = {
-  1: "Monday",
-  2: "Tuesday",
-  3: "Wednesday",
-  4: "Thursday",
-  5: "Friday",
-  6: "Saturday",
-  7: "Sunday",
-};
-
-// listed starting from Saturday
-const WEEK_START_OPTIONS = ([6, 7, 1, 2, 3, 4, 5] as const).map((value) => ({
-  value,
-  label: WEEKDAY_NAMES[value],
-}));
-
 export default function CalendarPage({
   sectionRefs,
 }: {
   sectionRefs: SectionRefs;
 }) {
-  const { weekStart: resolvedWeekStart } = useWeekStart();
+  const { t } = useTranslation();
   const {
     defaultView,
-    weekStartsOn,
     lineOpacity,
     dayHeaderPosition,
     timeLabelPosition,
@@ -488,45 +296,9 @@ export default function CalendarPage({
 
   return (
     <FieldGroup className="gap-8">
-      <h2 className="text-lg font-semibold">Calendar</h2>
-
-      <Section
-        id="region"
-        label={sectionLabel("region")}
-        sectionRefs={sectionRefs}
-      >
-        <Field orientation="responsive">
-          <SettingsLabel settingKey="weekStartsOn" />
-          <SettingsSelect
-            labelledBy={settingLabelId("weekStartsOn")}
-            value={String(weekStartsOn)}
-            onValueChange={(value) =>
-              setSetting(
-                "weekStartsOn",
-                value === "inherit" ? value : (Number(value) as Weekday),
-              )
-            }
-            footer={
-              weekStartsOn === "inherit" && (
-                <span className="text-muted-foreground text-xs">
-                  Currently {WEEKDAY_NAMES[resolvedWeekStart]}
-                </span>
-              )
-            }
-          >
-            <SelectItem value="inherit">Inherit from time zone</SelectItem>
-            {WEEK_START_OPTIONS.map(({ value, label }) => (
-              <SelectItem key={value} value={String(value)}>
-                {label}
-              </SelectItem>
-            ))}
-          </SettingsSelect>
-        </Field>
-
-        <TimezonesField />
-      </Section>
-
-      <Separator />
+      <h2 className="text-lg font-semibold">
+        {t("settings.categories.calendar")}
+      </h2>
 
       <Section
         id="behavior"
@@ -557,8 +329,8 @@ export default function CalendarPage({
               setSetting("defaultView", value as typeof defaultView)
             }
           >
-            <SelectItem value="day">Day</SelectItem>
-            <SelectItem value="week">Week</SelectItem>
+            <SelectItem value="day">{t("view.day")}</SelectItem>
+            <SelectItem value="week">{t("view.week")}</SelectItem>
           </SettingsSelect>
         </Field>
 
@@ -571,8 +343,10 @@ export default function CalendarPage({
               setSetting("dayHeaderPosition", value as typeof dayHeaderPosition)
             }
           >
-            <SelectItem value="top">Top</SelectItem>
-            <SelectItem value="bottom">Bottom</SelectItem>
+            <SelectItem value="top">{t("settings.calendar.top")}</SelectItem>
+            <SelectItem value="bottom">
+              {t("settings.calendar.bottom")}
+            </SelectItem>
           </SettingsSelect>
         </Field>
 
@@ -585,8 +359,11 @@ export default function CalendarPage({
               setSetting("timeLabelPosition", value as typeof timeLabelPosition)
             }
           >
-            <SelectItem value="left">Left</SelectItem>
-            <SelectItem value="right">Right</SelectItem>
+            <SelectItem value="auto">{t("settings.calendar.auto")}</SelectItem>
+            <SelectItem value="left">{t("settings.calendar.left")}</SelectItem>
+            <SelectItem value="right">
+              {t("settings.calendar.right")}
+            </SelectItem>
           </SettingsSelect>
         </Field>
 
@@ -594,7 +371,7 @@ export default function CalendarPage({
           settingKey="snapMinutes"
           min={1}
           max={60}
-          format={(v) => `${v} min`}
+          format={(v) => t("settings.minutesShort", { count: v })}
         />
 
         <SettingsSlider
@@ -620,7 +397,7 @@ export default function CalendarPage({
           settingKey="defaultEventDuration"
           min={1}
           max={120}
-          format={(v) => `${v} min`}
+          format={(v) => t("settings.minutesShort", { count: v })}
         />
       </Section>
 
@@ -773,7 +550,7 @@ export default function CalendarPage({
             settingKey="agendaRangeDays"
             min={1}
             max={14}
-            format={(v) => `${v} ${v === 1 ? "day" : "days"}`}
+            format={(v) => t("settings.days", { count: v })}
             disabled={!agendaEnabled}
           />
         </DeferredContent>

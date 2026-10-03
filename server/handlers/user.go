@@ -131,6 +131,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Current password is incorrect.",
+			Code:    "current_password_incorrect",
 		})
 		return
 	}
@@ -139,6 +140,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Invalid email address.",
+			Code:    "invalid_email",
 		})
 		return
 	}
@@ -147,6 +149,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Emails from this domain are not allowed.",
+			Code:    "email_domain_not_allowed",
 		})
 		return
 	}
@@ -162,6 +165,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 			utils.SendJSON(w, http.StatusConflict, types.Reply[any]{
 				Success: false,
 				Message: "Email already in use.",
+				Code:    "email_in_use",
 			})
 			return
 		}
@@ -178,7 +182,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := createAndQueueVerificationToken(r.Context(), newEmail); err != nil {
+	if err := createAndQueueVerificationToken(r.Context(), newEmail, utils.PreferredLanguage(r, verificationEmailLanguages())); err != nil {
 		utils.LogError("UpdateEmail", "createAndQueueVerificationToken", err)
 	}
 
@@ -195,6 +199,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSON(w, http.StatusForbidden, types.Reply[types.EmailUnverifiedData]{
 		Success: false,
 		Message: "Email verification required.",
+		Code:    "email_verification_required",
 		Data: types.EmailUnverifiedData{
 			Email:                newEmail,
 			RequiresVerification: true,
@@ -239,6 +244,7 @@ func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Current password is incorrect.",
+			Code:    "current_password_incorrect",
 		})
 		return
 	}
@@ -590,6 +596,7 @@ func RevokeSession(w http.ResponseWriter, r *http.Request) {
 			utils.SendJSON(w, http.StatusNotFound, types.Reply[any]{
 				Success: false,
 				Message: "Session not found.",
+				Code:    "session_not_found",
 			})
 			return
 		}
@@ -603,6 +610,7 @@ func RevokeSession(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Cannot terminate the current session.",
+			Code:    "cannot_end_current_session",
 		})
 		return
 	}

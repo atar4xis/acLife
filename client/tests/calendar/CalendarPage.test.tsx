@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { applyLanguage } from "../../src/i18n";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
+import LanguageSync from "../../src/components/LanguageSync.tsx";
+import RegionPage from "../../src/components/settings/pages/RegionPage.tsx";
 import CalendarPage from "../../src/components/settings/pages/CalendarPage.tsx";
 import { CalendarProvider } from "../../src/context/CalendarContext.tsx";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
@@ -16,6 +19,7 @@ function Harness() {
 const renderCalendarPage = () =>
   render(
     <SettingsStoreProvider>
+      <LanguageSync />
       <CalendarProvider>
         <Harness />
       </CalendarProvider>
@@ -34,17 +38,18 @@ const renderLoadedCalendarPage = async () => {
 };
 
 describe("CalendarPage", () => {
+  afterEach(() => applyLanguage("en"));
+
   beforeEach(() => {
     // radix Select relies on pointer capture, which jsdom doesn't implement
     Element.prototype.hasPointerCapture = () => false;
     Element.prototype.scrollIntoView = () => {};
   });
 
-  it("renders current default view and week start selections", () => {
+  it("renders the current default view selection", () => {
     renderCalendarPage();
 
     expect(screen.getByText("Week")).toBeInTheDocument();
-    expect(screen.getByText("Inherit from time zone")).toBeInTheDocument();
   });
 
   it("renders the current snap minutes and default event duration", () => {
@@ -87,8 +92,7 @@ describe("CalendarPage", () => {
     const user = userEvent.setup();
     renderCalendarPage();
 
-    // index 0 is week start, 1/2 are the "Default time zone" and "Add a time zone" selects
-    const [, , , viewTrigger] = screen.getAllByRole("combobox");
+    const [viewTrigger] = screen.getAllByRole("combobox");
     await user.click(viewTrigger);
     const options = await screen.findAllByText("Day");
     await user.click(options[options.length - 1]);
@@ -96,50 +100,34 @@ describe("CalendarPage", () => {
     expect(await screen.findByText("Day")).toBeInTheDocument();
   });
 
-  it("changes the week start via the select", async () => {
+  it("shows the default event and task names in the chosen language until customized", async () => {
     const user = userEvent.setup();
-    renderCalendarPage();
+    render(
+      <SettingsStoreProvider>
+        <LanguageSync />
+        <CalendarProvider>
+          <RegionPage sectionRefs={{ current: new Map() }} />
+          <Harness />
+        </CalendarProvider>
+      </SettingsStoreProvider>,
+    );
 
-    const [weekStartTrigger] = screen.getAllByRole("combobox");
-    await user.click(weekStartTrigger);
-    const options = await screen.findAllByText("Sunday");
-    await user.click(options[options.length - 1]);
+    const [languageTrigger] = screen.getAllByRole("combobox");
+    await user.click(languageTrigger);
+    await user.click(await screen.findByRole("option", { name: "Español" }));
 
-    expect(await screen.findByText("Sunday")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("nuevo evento")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("nueva tarea")).toBeInTheDocument();
+
+    const input = screen.getByDisplayValue("nuevo evento");
+    await user.clear(input);
+    await user.type(input, "standup");
+    await user.tab();
+
+    expect(readSettings().defaultEventName).toBe("standup");
+    expect(screen.getByDisplayValue("standup")).toBeInTheDocument();
   });
 
-  it("shows what inherit resolves to below the week start select, hiding it for an explicit day", async () => {
-    const user = userEvent.setup();
-    renderCalendarPage();
-
-    expect(screen.getByText(/^Currently \w+day$/)).toBeInTheDocument();
-
-    const [weekStartTrigger] = screen.getAllByRole("combobox");
-    await user.click(weekStartTrigger);
-    await user.click(await screen.findByRole("option", { name: "Monday" }));
-
-    expect(screen.queryByText(/^Currently /)).not.toBeInTheDocument();
-  });
-
-  it("lists week start days beginning with Saturday", async () => {
-    const user = userEvent.setup();
-    renderCalendarPage();
-
-    const [weekStartTrigger] = screen.getAllByRole("combobox");
-    await user.click(weekStartTrigger);
-    const options = await screen.findAllByRole("option");
-
-    expect(options.map((o) => o.textContent)).toEqual([
-      "Inherit from time zone",
-      "Saturday",
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-    ]);
-  });
 
   it("increases the snap minutes slider with the keyboard", async () => {
     const user = userEvent.setup();

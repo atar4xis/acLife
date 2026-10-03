@@ -21,7 +21,7 @@ import type { Theme, ThemeColors, ThemePreset } from "@/types/Theme";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
 import { cn, cssColorToHex } from "@/lib/utils";
-import { PRESET_ERROR_MESSAGES } from "@/lib/themePresets";
+import { presetErrorMessage } from "@/lib/themePresets";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,44 +50,9 @@ import SettingsLabel from "../SettingsLabel";
 import SyncToggle from "../SyncToggle";
 import SettingsSelect from "../SettingsSelect";
 import SettingsSlider from "../SettingsSlider";
+import { useTranslation } from "react-i18next";
 
-const THEME_OPTIONS: { value: Theme; label: string }[] = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
-  { value: "custom", label: "Custom" },
-];
-
-const COLOR_LABELS: Record<ThemeColorVar, string> = {
-  background: "Background",
-  foreground: "Foreground",
-  card: "Card",
-  "card-foreground": "Card text",
-  popover: "Popover",
-  "popover-foreground": "Popover text",
-  primary: "Primary",
-  "primary-foreground": "Primary text",
-  secondary: "Secondary",
-  "secondary-foreground": "Secondary text",
-  muted: "Muted",
-  "muted-foreground": "Muted text",
-  accent: "Accent",
-  "accent-foreground": "Accent text",
-  destructive: "Destructive",
-  success: "Success",
-  warning: "Warning",
-  border: "Border",
-  input: "Input",
-  ring: "Ring",
-  sidebar: "Background",
-  "sidebar-foreground": "Text",
-  "sidebar-primary": "Primary",
-  "sidebar-primary-foreground": "Primary text",
-  "sidebar-accent": "Accent",
-  "sidebar-accent-foreground": "Accent text",
-  "sidebar-border": "Border",
-  "sidebar-ring": "Ring",
-};
+const THEME_OPTIONS: Theme[] = ["light", "dark", "system", "custom"];
 
 function isThemeColors(value: unknown): value is ThemeColors {
   if (typeof value !== "object" || value === null) return false;
@@ -192,6 +157,7 @@ const PresetsList = memo(function PresetsList() {
     reorderPresets,
     importPreset,
   } = useTheme();
+  const { t } = useTranslation();
   const [presetName, setPresetName] = useState("");
   const [page, setPage] = useState(0);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -229,10 +195,10 @@ const PresetsList = memo(function PresetsList() {
     const name = renameDraft.trim();
     if (renamingId && name) {
       if (presets.some((p) => p.id !== renamingId && p.name === name)) {
-        toast.error("A theme with that name already exists.");
+        toast.error(t("settings.themes.nameExists"));
       } else {
         const result = renamePreset(renamingId, name);
-        if (result !== "ok") toast.error(PRESET_ERROR_MESSAGES[result]);
+        if (result !== "ok") toast.error(presetErrorMessage(result));
       }
     }
     setRenamingId(null);
@@ -246,12 +212,14 @@ const PresetsList = memo(function PresetsList() {
 
     const result = savePreset(name);
     if (result !== "ok") {
-      toast.error(PRESET_ERROR_MESSAGES[result]);
+      toast.error(presetErrorMessage(result));
       return;
     }
 
     setPresetName("");
-    toast.success(nameExists ? "Theme updated." : "Theme saved.");
+    toast.success(
+      nameExists ? t("settings.themes.updated") : t("settings.themes.saved"),
+    );
   };
 
   const handleImportClick = () => fileInputRef.current?.click();
@@ -260,22 +228,27 @@ const PresetsList = memo(function PresetsList() {
     for (const file of files) {
       const parsed = parsePresetFile(await file.text());
       if (!parsed) {
-        toast.error(`Invalid theme file: ${file.name}`);
+        toast.error(t("settings.themes.invalidFile", { name: file.name }));
         continue;
       }
 
       const result = importPreset(parsed);
       if (result === "limit") {
-        toast.error(PRESET_ERROR_MESSAGES.limit);
+        toast.error(presetErrorMessage("limit"));
         break;
       }
 
       if (result === "too-large") {
-        toast.error(`${PRESET_ERROR_MESSAGES[result]} Skipped: ${file.name}`);
+        toast.error(
+          t("settings.themes.skipped", {
+            message: presetErrorMessage(result),
+            name: file.name,
+          }),
+        );
         continue;
       }
 
-      toast.success(`Imported theme "${parsed.name}".`);
+      toast.success(t("settings.themes.imported", { name: parsed.name }));
     }
   };
 
@@ -290,8 +263,8 @@ const PresetsList = memo(function PresetsList() {
           <Input
             value={presetName}
             onChange={(e) => setPresetName(e.target.value)}
-            placeholder="Theme name"
-            aria-label="Theme name"
+            placeholder={t("settings.themes.name")}
+            aria-label={t("settings.themes.name")}
             className="max-w-[320px] flex-1"
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
           />
@@ -301,17 +274,19 @@ const PresetsList = memo(function PresetsList() {
             disabled={!presetName.trim()}
             onClick={handleSave}
           >
-            {nameExists ? "Overwrite" : "Save"}
+            {nameExists
+              ? t("settings.themes.overwrite")
+              : t("settings.themes.save")}
           </Button>
         </div>
 
         <Button type="button" variant="outline" onClick={handleImportClick}>
-          <Upload /> Import
+          <Upload /> {t("settings.themes.import")}
         </Button>
         <input
           ref={fileInputRef}
           type="file"
-          aria-label="Import theme file"
+          aria-label={t("settings.themes.importFile")}
           accept="application/json"
           multiple
           className="hidden"
@@ -324,7 +299,7 @@ const PresetsList = memo(function PresetsList() {
       </div>
 
       {presets.length === 0 ? (
-        <FieldDescription>No saved themes yet.</FieldDescription>
+        <FieldDescription>{t("settings.themes.none")}</FieldDescription>
       ) : (
         <>
           <div className="flex flex-col gap-2">
@@ -367,14 +342,14 @@ const PresetsList = memo(function PresetsList() {
                     />
                   )}
                   <div
-                    className="relative flex min-w-0 items-center gap-1.5 rounded bg-background/80 pr-1.5"
+                    className="relative flex min-w-0 items-center gap-1.5 rounded bg-background/80 pe-1.5"
                     role="presentation"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       type="button"
                       style={{ touchAction: "none" }}
-                      aria-label="Reorder theme"
+                      aria-label={t("settings.themes.reorder")}
                       aria-keyshortcuts="Shift+ArrowUp Shift+ArrowDown"
                       onKeyDown={onKeyDown(index)}
                       className="text-muted-foreground cursor-grab px-1 py-1 active:cursor-grabbing"
@@ -394,7 +369,7 @@ const PresetsList = memo(function PresetsList() {
                     {renamingId === item.id ? (
                       <Input
                         autoFocus
-                        aria-label="Rename theme"
+                        aria-label={t("settings.themes.rename")}
                         value={renameDraft}
                         className="h-6 w-[200px] px-1.5 py-0 text-sm"
                         onChange={(e) => setRenameDraft(e.target.value)}
@@ -432,11 +407,11 @@ const PresetsList = memo(function PresetsList() {
                   >
                     {isActive && (
                       <span className="px-2 text-xs text-muted-foreground">
-                        Active
+                        {t("settings.themes.active")}
                       </span>
                     )}
                     <IconAction
-                      label="Rename theme"
+                      label={t("settings.themes.rename")}
                       onClick={() => {
                         setRenameDraft(item.name);
                         setRenamingId(item.id);
@@ -445,13 +420,13 @@ const PresetsList = memo(function PresetsList() {
                       <Pencil />
                     </IconAction>
                     <IconAction
-                      label="Export as .json"
+                      label={t("settings.themes.export")}
                       onClick={() => downloadPreset(item)}
                     >
                       <Download />
                     </IconAction>
                     <IconAction
-                      label="Delete theme"
+                      label={t("settings.themes.delete")}
                       onClick={() => deletePreset(item.id)}
                     >
                       <Trash2 />
@@ -468,7 +443,7 @@ const PresetsList = memo(function PresetsList() {
                 checked={previewEnabled}
                 onCheckedChange={(c) => setPreviewEnabled(!!c)}
               />
-              Preview
+              {t("settings.themes.preview")}
             </Label>
             {pageCount > 1 && (
               <div className="flex items-center gap-2">
@@ -477,11 +452,11 @@ const PresetsList = memo(function PresetsList() {
                   variant="ghost"
                   size="icon"
                   className="size-8"
-                  aria-label="Previous page"
+                  aria-label={t("common.previousPage")}
                   disabled={currentPage === 0}
                   onClick={() => setPage(currentPage - 1)}
                 >
-                  <ChevronLeft />
+                  <ChevronLeft className="rtl:-scale-x-100" />
                 </Button>
                 <span className="text-muted-foreground text-sm">
                   {currentPage + 1} / {pageCount}
@@ -491,11 +466,11 @@ const PresetsList = memo(function PresetsList() {
                   variant="ghost"
                   size="icon"
                   className="size-8"
-                  aria-label="Next page"
+                  aria-label={t("common.nextPage")}
                   disabled={currentPage === pageCount - 1}
                   onClick={() => setPage(currentPage + 1)}
                 >
-                  <ChevronRight />
+                  <ChevronRight className="rtl:-scale-x-100" />
                 </Button>
               </div>
             )}
@@ -513,17 +488,15 @@ const CUSTOM_THEMES = [...BUILT_IN_THEMES]
     id: `${BUILT_IN_THEME_ID_PREFIX}${theme.slug}`,
   }));
 
-const CUSTOM_THEME_GROUPS = [
-  { label: "Dark", themes: CUSTOM_THEMES.filter((t) => t.category === "dark") },
-  {
-    label: "Light",
-    themes: CUSTOM_THEMES.filter((t) => t.category === "light"),
-  },
-];
+const CUSTOM_THEME_GROUPS = (["dark", "light"] as const).map((category) => ({
+  category,
+  themes: CUSTOM_THEMES.filter((theme) => theme.category === category),
+}));
 
 const customThemeCache = new Map<string, Omit<ThemePreset, "id">>();
 
 const CustomThemeField = memo(function CustomThemeField() {
+  const { t } = useTranslation();
   const { activePresetId, applyPreset } = useTheme();
   const value = CUSTOM_THEMES.find((t) => t.id === activePresetId)?.id ?? "";
 
@@ -545,7 +518,7 @@ const CustomThemeField = memo(function CustomThemeField() {
 
       applyPreset({ ...parsed, id });
     } catch {
-      toast.error(`Failed to load theme "${theme.name}".`);
+      toast.error(t("settings.themes.loadFailed", { name: theme.name }));
     }
   };
 
@@ -558,11 +531,13 @@ const CustomThemeField = memo(function CustomThemeField() {
         labelledBy="custom-theme-label"
         value={value}
         onValueChange={handleChange}
-        placeholder="None"
+        placeholder={t("settings.themes.noneSelected")}
       >
         {CUSTOM_THEME_GROUPS.map((group) => (
-          <SelectGroup key={group.label}>
-            <SelectLabel className="text-sm">{group.label} themes</SelectLabel>
+          <SelectGroup key={group.category}>
+            <SelectLabel className="text-sm">
+              {t(`settings.themes.group.${group.category}`)}
+            </SelectLabel>
             {group.themes.map((theme) => (
               <SelectItem key={theme.id} value={theme.id}>
                 {theme.name}
@@ -587,6 +562,7 @@ function currentColorValue(
 }
 
 const ThemeModeField = memo(function ThemeModeField() {
+  const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
 
   return (
@@ -600,8 +576,8 @@ const ThemeModeField = memo(function ThemeModeField() {
         onValueChange={(value) => value && setTheme(value as Theme)}
       >
         {THEME_OPTIONS.map((option) => (
-          <ToggleGroupItem key={option.value} value={option.value}>
-            {option.label}
+          <ToggleGroupItem key={option} value={option}>
+            {t(`theme.${option}`)}
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
@@ -610,6 +586,7 @@ const ThemeModeField = memo(function ThemeModeField() {
 });
 
 const FontFamilyField = memo(function FontFamilyField() {
+  const { t } = useTranslation();
   const { fontFamily, setFontFamily } = useTheme();
   const field = useDebouncedSetting(fontFamily, setFontFamily);
 
@@ -622,7 +599,7 @@ const FontFamilyField = memo(function FontFamilyField() {
           value={field.value}
           onChange={(e) => field.onChange(e.target.value)}
           onBlur={field.flush}
-          placeholder="System default"
+          placeholder={t("settings.font.systemDefault")}
           className="w-[220px]"
         />
       </Field>
@@ -652,6 +629,7 @@ const SIDEBAR_COLOR_VARS = THEME_COLOR_VARS.filter((variable) =>
 );
 
 function ColorGridItem({ variable }: { variable: ThemeColorVar }) {
+  const { t } = useTranslation();
   const { resolvedBase, colors, setColor } = useTheme();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -660,7 +638,7 @@ function ColorGridItem({ variable }: { variable: ThemeColorVar }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
       <ColorPicker
-        aria-label={COLOR_LABELS[variable]}
+        aria-label={t(`settings.colors.${variable}`)}
         className="size-8 shrink-0 p-0"
         value={currentColorValue(variable, resolvedBase, colors[variable])}
         onChange={(value) => {
@@ -668,7 +646,9 @@ function ColorGridItem({ variable }: { variable: ThemeColorVar }) {
           timer.current = setTimeout(() => setColor(variable, value), 200);
         }}
       />
-      <FieldTitle className="truncate">{COLOR_LABELS[variable]}</FieldTitle>
+      <FieldTitle className="truncate">
+        {t(`settings.colors.${variable}`)}
+      </FieldTitle>
     </div>
   );
 }
@@ -688,6 +668,7 @@ const ColorsSection = memo(function ColorsSection({
 }: {
   sectionRefs: SectionRefs;
 }) {
+  const { t } = useTranslation();
   const { theme, resetColors } = useTheme();
 
   return (
@@ -704,7 +685,7 @@ const ColorsSection = memo(function ColorsSection({
               onClick={resetColors}
               className="text-muted-foreground hover:text-foreground text-sm"
             >
-              Reset
+              {t("common.reset")}
             </button>
           )}
         </div>
@@ -712,7 +693,9 @@ const ColorsSection = memo(function ColorsSection({
     >
       <DeferredContent skeletonClassName="h-96">
         <ColorGrid variables={GENERAL_COLOR_VARS} />
-        <div className="text-muted-foreground text-sm font-medium">Sidebar</div>
+        <div className="text-muted-foreground text-sm font-medium">
+          {t("settings.colors.sidebarGroup")}
+        </div>
         <ColorGrid variables={SIDEBAR_COLOR_VARS} />
       </DeferredContent>
     </Section>
@@ -724,9 +707,12 @@ export default function AppearancePage({
 }: {
   sectionRefs: SectionRefs;
 }) {
+  const { t } = useTranslation();
   return (
     <FieldGroup className="gap-8">
-      <h2 className="text-lg font-semibold">Appearance</h2>
+      <h2 className="text-lg font-semibold">
+        {t("settings.categories.appearance")}
+      </h2>
 
       <Section
         id="theme"

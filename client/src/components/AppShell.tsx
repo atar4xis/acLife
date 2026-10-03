@@ -19,12 +19,15 @@ import SettingsDialog from "./settings/SettingsDialog";
 import TimezoneChangeDialog from "./calendar/TimezoneChangeDialog";
 import { isSubscriptionMissing } from "@/lib/subscription";
 import { useSettingsSync } from "@/hooks/useSettingsSync";
+import { useTranslation } from "react-i18next";
+import { t as translate } from "@/i18n";
 
 export default function AppShell() {
   useSettingsSync();
   const { defaultView } = useCalendarSettings((s) => ({
     defaultView: s.defaultView,
   }));
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<ViewMode>(
     window.innerWidth < 768 ? "day" : defaultView,
   );
@@ -70,8 +73,8 @@ export default function AppShell() {
       })(),
       {
         id: "loading-calendar-events",
-        loading: "Loading calendar events...",
-        error: "Failed to load calendar events.",
+        loading: translate("appShell.loadingEvents"),
+        error: translate("appShell.loadEventsFailed"),
       },
     );
 
@@ -132,10 +135,10 @@ export default function AppShell() {
       />
       {user.type === "online" && offline && (
         <div className="fixed z-50 top-0 left-0 p-1 right-0 text-center bg-destructive text-background font-semibold">
-          You are offline. Check your connection.
+          {t("appShell.offline")}
         </div>
       )}
-      {saving && <Spinner className="fixed bottom-5 right-5 size-8" />}
+      {saving && <Spinner className="fixed bottom-5 end-5 size-8" />}
       <PushService />
       <AutoLockService />
       <TimezoneChangeDialog />

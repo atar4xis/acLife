@@ -51,6 +51,7 @@ vi.mock("../../src/context/ApiContext.tsx", () => ({
 }));
 
 import AppearancePage from "../../src/components/settings/pages/AppearancePage.tsx";
+import RegionPage from "../../src/components/settings/pages/RegionPage.tsx";
 import CalendarPage from "../../src/components/settings/pages/CalendarPage.tsx";
 import SecurityPage from "../../src/components/settings/pages/SecurityPage.tsx";
 import SyncPage from "../../src/components/settings/pages/SyncPage.tsx";
@@ -96,6 +97,7 @@ describe("settings pages a11y", () => {
 
   it.each([
     ["Appearance", AppearancePage, true],
+    ["Region", RegionPage, true],
     ["Calendar", CalendarPage, true],
     ["Sync", SyncPage, false],
     ["Security", SecurityPage, false],

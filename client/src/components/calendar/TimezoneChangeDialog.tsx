@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { getDeviceTimezone, getFriendlyName } from "@/lib/calendar/timezone";
@@ -13,6 +14,7 @@ import {
 } from "../ui/alert-dialog";
 
 export default function TimezoneChangeDialog() {
+  const { t } = useTranslation();
   const { timezones, lastSeenDeviceTimezone, setSetting } = useCalendarSettings(
     (s) => ({
       timezones: s.timezones,
@@ -43,23 +45,29 @@ export default function TimezoneChangeDialog() {
       detectedTimezone,
       ...timezones.filter((tz) => tz !== detectedTimezone),
     ]);
-    toast.success(`Time zone set to ${getFriendlyName(detectedTimezone)}`);
+    toast.success(
+      t("timezone.setTo", { name: getFriendlyName(detectedTimezone) }),
+    );
     dismiss();
   };
 
   return (
     <AlertDialog open={detectedTimezone !== null}>
       <AlertDialogContent>
-        <AlertDialogTitle>Device time zone changed</AlertDialogTitle>
+        <AlertDialogTitle>{t("timezone.changedTitle")}</AlertDialogTitle>
         <AlertDialogDescription>
-          Your device's time zone changed to{" "}
-          <strong>{detectedTimezone?.replace(/_/g, " ")}</strong>. Would you
-          like to set this as your calendar's default time zone?
+          <Trans
+            i18nKey="timezone.changedDescription"
+            values={{ name: detectedTimezone?.replace(/_/g, " ") }}
+            components={{ strong: <strong /> }}
+          />
         </AlertDialogDescription>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={dismiss}>Keep current</AlertDialogCancel>
+          <AlertDialogCancel onClick={dismiss}>
+            {t("timezone.keep")}
+          </AlertDialogCancel>
           <AlertDialogAction onClick={applyTimezone}>
-            Set as default
+            {t("timezone.setDefault")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

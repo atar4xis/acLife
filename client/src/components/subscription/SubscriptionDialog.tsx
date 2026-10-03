@@ -15,26 +15,26 @@ import { useCallback, useEffect, useState } from "react";
 import type { Price } from "@/types/Subscription";
 import { Skeleton } from "../ui/skeleton";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export default function SubscriptionDialog() {
+  const { t } = useTranslation();
   const { user, logout, checkLogin } = useUser();
   const { get, post } = useApi();
   const [prices, setPrices] = useState<Price[] | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const dialogTitle = "Select Subscription";
-
   const fetchPricing = useCallback(async () => {
     const res = await get<Price[]>("stripe/pricing");
 
     if (!res.success || !res.data) {
-      toast.error("Failed to load pricing");
+      toast.error(t("subscription.pricingFailed"));
       return;
     }
 
     const sorted = res.data.sort((a, b) => a.amount - b.amount);
     setPrices(sorted);
-  }, [get]);
+  }, [get, t]);
 
   useEffect(() => {
     fetchPricing();
@@ -45,7 +45,7 @@ export default function SubscriptionDialog() {
     const res = await post<string>("stripe/checkout", { priceId });
 
     if (!res.success || !res.data) {
-      toast.error("Failed to create checkout.");
+      toast.error(t("subscription.checkoutFailed"));
       setLoading(false);
       return;
     }
@@ -58,9 +58,9 @@ export default function SubscriptionDialog() {
     const newUser = await checkLogin();
 
     if (hasActiveSubscription(newUser || null)) {
-      toast.success("Payment confirmed.");
+      toast.success(t("subscription.paymentConfirmed"));
     } else {
-      toast.warning("It doesn't look like you paid yet.");
+      toast.warning(t("subscription.notPaid"));
     }
 
     setLoading(false);
@@ -77,7 +77,11 @@ export default function SubscriptionDialog() {
             <div className="text-center">
               <div className="text-4xl font-semibold">{formattedPrice}</div>
               <span className="text-sm text-muted-foreground">
-                per {price.billingPeriod}
+                {t(`subscription.per.${price.billingPeriod}`, {
+                  defaultValue: t("subscription.per.other", {
+                    period: price.billingPeriod,
+                  }),
+                })}
               </span>
             </div>
 
@@ -86,7 +90,7 @@ export default function SubscriptionDialog() {
               disabled={loading}
               onClick={() => handlePurchase(price.id)}
             >
-              Select
+              {t("subscription.select")}
             </Button>
           </CardContent>
         </Card>
@@ -99,11 +103,13 @@ export default function SubscriptionDialog() {
     <Dialog open>
       <DialogContent showCloseButton={false} className="w-auto !max-w-[90vw]">
         <DialogHeader>
-          <DialogTitle className="text-center">{dialogTitle}</DialogTitle>
+          <DialogTitle className="text-center">
+            {t("subscription.title")}
+          </DialogTitle>
           <DialogDescription className="text-center">
-            The server you are logged into requires an active subscription.
+            {t("subscription.required")}
             <br />
-            Select one of the following options.
+            {t("subscription.selectOption")}
           </DialogDescription>
         </DialogHeader>
         <div className="flex gap-4 justify-center my-5 flex-wrap">
@@ -122,7 +128,7 @@ export default function SubscriptionDialog() {
           onClick={recheck}
           disabled={loading}
         >
-          I already paid
+          {t("subscription.alreadyPaid")}
         </Button>
 
         <Button
@@ -131,7 +137,7 @@ export default function SubscriptionDialog() {
           onClick={logout}
           disabled={loading}
         >
-          Log out
+          {t("user.logout")}
         </Button>
       </DialogContent>
     </Dialog>

@@ -17,6 +17,7 @@ import {
 import { compress, decompress } from "../gzip";
 import { arrayBufferToBase64, uint8ArrayFromBase64 } from "../utils";
 import { computeEventBuckets } from "./buckets";
+import { t } from "@/i18n";
 
 // mirrors the server's constants.MaxEventLen (bytes of ciphertext)
 export const MAX_ENCRYPTED_EVENT_BYTES = 10000;
@@ -124,9 +125,7 @@ export const migrateToKeyEnvelope = async (
     events: [],
   });
   if (!syncRes.success || !syncRes.data) {
-    throw new Error(
-      syncRes.message || "Failed to fetch calendar events for migration.",
-    );
+    throw new Error(syncRes.message || t("events.migrationFetchFailed"));
   }
 
   const allEncrypted = [...syncRes.data.added, ...syncRes.data.updated];
@@ -149,7 +148,7 @@ export const migrateToKeyEnvelope = async (
     envelopes: [envelope],
   });
   if (!migrateRes.success) {
-    throw new Error(migrateRes.message || "Failed to migrate key envelope.");
+    throw new Error(migrateRes.message || t("events.migrationFailed"));
   }
 
   storage?.set(

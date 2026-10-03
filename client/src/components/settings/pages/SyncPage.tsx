@@ -49,9 +49,11 @@ import ResetToDefault from "../ResetToDefault";
 import SettingsLabel from "../SettingsLabel";
 import SettingsSelect from "../SettingsSelect";
 import SyncToggle from "../SyncToggle";
+import { useTranslation } from "react-i18next";
 
 function SyncGroup({ label, keys }: { label: string; keys: SyncableKey[] }) {
   const { enabled, isSynced, resetSynced } = useSyncSettings();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const syncedCount = keys.filter(isSynced).length;
   const modified = keys.some((key) => isSynced(key) !== syncByDefault[key]);
@@ -60,23 +62,28 @@ function SyncGroup({ label, keys }: { label: string; keys: SyncableKey[] }) {
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className="flex items-center gap-1.5">
         <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm font-medium">
-          <ChevronRight className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
+          <ChevronRight className="size-4 text-muted-foreground rtl:-scale-x-100 transition-transform group-data-[state=open]:rotate-90" />
           {label}
         </CollapsibleTrigger>
         <SyncToggle
           keys={keys}
-          label={`Sync ${label.toLowerCase()} settings`}
+          label={t("settings.sync.groupToggle", {
+            label: label.toLocaleLowerCase(),
+          })}
         />
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           {enabled && syncedCount > 0 && syncedCount < keys.length && (
             <span className="text-xs text-muted-foreground">
-              {syncedCount}/{keys.length} synced
+              {t("settings.sync.counted", {
+                synced: syncedCount,
+                total: keys.length,
+              })}
             </span>
           )}
           {modified && <ResetToDefault onClick={() => resetSynced(keys)} />}
         </div>
       </div>
-      <CollapsibleContent className="flex flex-col pt-2 pb-1 pl-5.5">
+      <CollapsibleContent className="flex flex-col pt-2 pb-1 ps-5.5">
         {keys.map((key) => (
           <div
             key={key}
@@ -85,7 +92,9 @@ function SyncGroup({ label, keys }: { label: string; keys: SyncableKey[] }) {
             <FieldTitle>{settingLabelByKey(key)}</FieldTitle>
             <SyncToggle
               settingKey={key}
-              label={`Sync ${settingLabelByKey(key).toLowerCase()}`}
+              label={t("settings.sync.itemToggle", {
+                label: settingLabelByKey(key).toLocaleLowerCase(),
+              })}
             />
           </div>
         ))}
@@ -99,6 +108,7 @@ export default function SyncPage({
 }: {
   sectionRefs: SectionRefs;
 }) {
+  const { t } = useTranslation();
   const { resyncIntervalMinutes, setSetting } = useCalendarSettings((s) => ({
     resyncIntervalMinutes: s.resyncIntervalMinutes,
     setSetting: s.setSetting,
@@ -115,11 +125,11 @@ export default function SyncPage({
     setLoading(true);
     toast.promise(checked ? enable() : disable(), {
       loading: checked
-        ? "Enabling push service..."
-        : "Disabling push service...",
+        ? t("settings.push.enabling")
+        : t("settings.push.disabling"),
       success: () => {
         setLoading(false);
-        return checked ? "Push service enabled." : "Push service disabled.";
+        return checked ? t("push.enabled") : t("settings.push.disabled");
       },
       error: (d) => {
         setLoading(false);
@@ -130,7 +140,7 @@ export default function SyncPage({
 
   return (
     <FieldGroup className="gap-8">
-      <h2 className="text-lg font-semibold">Sync</h2>
+      <h2 className="text-lg font-semibold">{t("settings.categories.sync")}</h2>
 
       <Section
         id="settings-sync"
@@ -155,18 +165,18 @@ export default function SyncPage({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      aria-label="Manage synced settings"
+                      aria-label={t("settings.sync.manage")}
                       className="size-5 text-muted-foreground hover:text-foreground"
                     >
                       <Settings className="size-3.5" />
                     </Button>
                   </DialogTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Manage synced settings</TooltipContent>
+                <TooltipContent>{t("settings.sync.manage")}</TooltipContent>
               </Tooltip>
             </div>
             <Switch
-              aria-label="Sync across devices"
+              aria-label={t("settings.items.sync-settings-enabled")}
               checked={syncEnabled}
               onCheckedChange={setSyncEnabled}
             />
@@ -180,16 +190,16 @@ export default function SyncPage({
             }}
           >
             <DialogHeader>
-              <DialogTitle>Manage synced settings</DialogTitle>
+              <DialogTitle>{t("settings.sync.manage")}</DialogTitle>
               <DialogDescription>
-                Use the cloud icons to choose what syncs across devices.
+                {t("settings.sync.manageHelp")}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-4">
               {syncGroups.map((group) => (
                 <SyncGroup
                   key={group.id}
-                  label={group.label}
+                  label={t(group.label)}
                   keys={group.keys}
                 />
               ))}
@@ -216,9 +226,7 @@ export default function SyncPage({
         </Field>
 
         {!supported && (
-          <FieldDescription>
-            Push service is not available in this browser.
-          </FieldDescription>
+          <FieldDescription>{t("settings.push.unsupported")}</FieldDescription>
         )}
       </Section>
 
@@ -238,20 +246,17 @@ export default function SyncPage({
               setSetting("resyncIntervalMinutes", Number(value))
             }
           >
-            <SelectItem value="1">1 minute</SelectItem>
-            <SelectItem value="3">3 minutes</SelectItem>
-            <SelectItem value="5">5 minutes</SelectItem>
-            <SelectItem value="10">10 minutes</SelectItem>
+            <SelectItem value="1">{t("move.minutes", { count: 1 })}</SelectItem>
+            <SelectItem value="3">{t("move.minutes", { count: 3 })}</SelectItem>
+            <SelectItem value="5">{t("move.minutes", { count: 5 })}</SelectItem>
+            <SelectItem value="10">
+              {t("move.minutes", { count: 10 })}
+            </SelectItem>
           </SettingsSelect>
         </Field>
 
         <FieldDescription>
-          {enabled && (
-            <>
-              If the push service is on, changes made on other devices sync
-              right away, no matter this interval.
-            </>
-          )}
+          {enabled && <>{t("settings.push.resyncHelp")}</>}
         </FieldDescription>
       </Section>
     </FieldGroup>

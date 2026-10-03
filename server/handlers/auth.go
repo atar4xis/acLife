@@ -197,7 +197,7 @@ func userHasProtectedData(ctx context.Context, uuid string) (bool, error) {
 }
 
 // createAndQueueVerificationToken generates a fresh verification token for the given user, stores it, and queues it for the background worker to send.
-func createAndQueueVerificationToken(ctx context.Context, email string) error {
+func createAndQueueVerificationToken(ctx context.Context, email, lang string) error {
 	var uuid string
 	if err := database.QueryRow(ctx,
 		"SELECT uuid FROM users WHERE email = ?",
@@ -226,12 +226,12 @@ func createAndQueueVerificationToken(ctx context.Context, email string) error {
 		return err
 	}
 
-	subject, body := verificationEmailContent(token)
+	subject, body := verificationEmailContent(token, lang)
 	return mail.QueueMail(ctx, database.DB, email, subject, body)
 }
 
 // queueVerificationTokenTx is createAndQueueVerificationToken's transaction-scoped counterpart, used where the caller already holds a lock on the owner's email_verification_tokens row.
-func queueVerificationTokenTx(ctx context.Context, tx *sql.Tx, uuid, email string) error {
+func queueVerificationTokenTx(ctx context.Context, tx *sql.Tx, uuid, email, lang string) error {
 	token := utils.RandomToken(32)
 	now := time.Now()
 	expires := now.Add(constants.EmailVerificationTTL)
@@ -248,32 +248,8 @@ func queueVerificationTokenTx(ctx context.Context, tx *sql.Tx, uuid, email strin
 		return err
 	}
 
-	subject, body := verificationEmailContent(token)
+	subject, body := verificationEmailContent(token, lang)
 	return mail.QueueMail(ctx, tx, email, subject, body)
-}
-
-// verificationEmailContent builds the subject and body of a verification email for the given token.
-func verificationEmailContent(token string) (subject, body string) {
-	verifyURL := strings.TrimRight(os.Getenv("SERVER_URL"), "/") + "/auth/verify-email?token=" + token
-
-	subject = "Verify your email address for acLife"
-	if tpl := os.Getenv("VERIFICATION_EMAIL_SUBJECT"); tpl != "" {
-		subject = tpl
-	}
-
-	body = fmt.Sprintf(
-		"Hi,\r\n\r\nPlease verify your email address for acLife using the link below:\r\n%s\r\n\r\n"+
-			"This link expires in 24 hours. If you did not create an account, you can ignore this email.\r\n",
-		verifyURL,
-	)
-	if tpl := os.Getenv("VERIFICATION_EMAIL_BODY"); tpl != "" {
-		body = tpl
-	}
-
-	subject = strings.ReplaceAll(subject, "{url}", verifyURL)
-	body = strings.ReplaceAll(body, "{url}", verifyURL)
-
-	return subject, body
 }
 
 /* -------------------- Handlers -------------------- */
@@ -351,6 +327,7 @@ func RegisterChallenge(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Invalid email address.",
+			Code:    "invalid_email",
 		})
 		return
 	}
@@ -359,6 +336,7 @@ func RegisterChallenge(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Emails from this domain are not allowed.",
+			Code:    "email_domain_not_allowed",
 		})
 		return
 	}
@@ -476,6 +454,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Invalid email address.",
+			Code:    "invalid_email",
 		})
 		return
 	}
@@ -484,6 +463,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Emails from this domain are not allowed.",
+			Code:    "email_domain_not_allowed",
 		})
 		return
 	}
@@ -493,6 +473,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Request verification failed. Please try again.",
+			Code:    "request_verification_failed",
 		})
 		return
 	}
@@ -516,6 +497,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 			utils.SendJSON(w, http.StatusConflict, types.Reply[any]{
 				Success: false,
 				Message: "Email already in use.",
+				Code:    "email_in_use",
 			})
 			return
 		}
@@ -554,7 +536,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if constants.Metadata.Registration.Email.VerificationRequired {
-		if err := createAndQueueVerificationToken(r.Context(), triplet.Username()); err != nil {
+		if err := createAndQueueVerificationToken(r.Context(), triplet.Username(), utils.PreferredLanguage(r, verificationEmailLanguages())); err != nil {
 			utils.LogError("Register", "createAndQueueVerificationToken", err)
 		}
 	}
@@ -597,6 +579,7 @@ func LoginStart(w http.ResponseWriter, r *http.Request) {
 			utils.SendJSON(w, http.StatusUnauthorized, types.Reply[any]{
 				Success: false,
 				Message: "Invalid credentials.",
+				Code:    "invalid_credentials",
 			})
 			return
 		}
@@ -624,6 +607,7 @@ func LoginStart(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusUnauthorized, types.Reply[any]{
 			Success: false,
 			Message: "Invalid credentials.",
+			Code:    "invalid_credentials",
 		})
 		return
 	}
@@ -704,6 +688,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusUnauthorized, types.Reply[any]{
 			Success: false,
 			Message: "Invalid or expired session.",
+			Code:    "session_expired",
 		})
 		return
 	}
@@ -716,6 +701,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusUnauthorized, types.Reply[any]{
 			Success: false,
 			Message: "Invalid session.",
+			Code:    "invalid_session",
 		})
 		return
 	}
@@ -726,6 +712,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusUnauthorized, types.Reply[any]{
 			Success: false,
 			Message: "Invalid credentials.",
+			Code:    "invalid_credentials",
 		})
 		return
 	}
@@ -748,6 +735,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusForbidden, types.Reply[types.EmailUnverifiedData]{
 			Success: false,
 			Message: "Email verification required.",
+			Code:    "email_verification_required",
 			Data: types.EmailUnverifiedData{
 				Email:                sess.Email,
 				RequiresVerification: true,
@@ -851,6 +839,7 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Your verification expired. Please sign up again.",
+			Code:    "verification_expired_sign_up",
 		})
 		return
 	}
@@ -859,11 +848,13 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusOK, types.Reply[any]{
 			Success: true,
 			Message: "Verification email sent.",
+			Code:    "verification_email_sent",
 		})
 		return
 	}
 
 	ctx := r.Context()
+	lang := utils.PreferredLanguage(r, verificationEmailLanguages())
 	tx, err := database.DB.BeginTx(ctx, nil)
 	if err != nil {
 		utils.LogError("ResendVerification", "BeginTx", err)
@@ -883,7 +874,7 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 
 	if err == sql.ErrNoRows {
 		// No token on record (e.g. verification was enabled after this account registered)
-		if err := queueVerificationTokenTx(ctx, tx, uuid, req.Email); err != nil {
+		if err := queueVerificationTokenTx(ctx, tx, uuid, req.Email, lang); err != nil {
 			utils.LogError("ResendVerification", "queueVerificationTokenTx", err)
 			utils.SendInternalError(w)
 			return
@@ -898,6 +889,7 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusOK, types.Reply[any]{
 			Success: true,
 			Message: "Verification email sent.",
+			Code:    "verification_email_sent",
 		})
 		return
 	} else if err != nil {
@@ -921,7 +913,7 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if err := queueVerificationTokenTx(ctx, tx, uuid, req.Email); err != nil {
+			if err := queueVerificationTokenTx(ctx, tx, uuid, req.Email, lang); err != nil {
 				utils.LogError("ResendVerification", "queueVerificationTokenTx", err)
 				utils.SendInternalError(w)
 				return
@@ -936,6 +928,7 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 			utils.SendJSON(w, http.StatusOK, types.Reply[any]{
 				Success: true,
 				Message: "Your verification expired. A new verification email has been sent.",
+				Code:    "verification_expired_resent",
 			})
 			return
 		}
@@ -955,6 +948,7 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Your verification expired. Please sign up again.",
+			Code:    "verification_expired_sign_up",
 		})
 		return
 	}
@@ -963,6 +957,8 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusTooManyRequests, types.Reply[any]{
 			Success: false,
 			Message: fmt.Sprintf("Too many attempts. Try again in %d seconds.", int(wait.Seconds())+1),
+			Code:    "too_many_attempts_seconds",
+			Params:  map[string]any{"count": int(wait.Seconds()) + 1},
 		})
 		return
 	}
@@ -977,6 +973,8 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusTooManyRequests, types.Reply[any]{
 			Success: false,
 			Message: fmt.Sprintf("Too many attempts. Try again in %d minutes.", int(wait.Minutes())+1),
+			Code:    "too_many_attempts_minutes",
+			Params:  map[string]any{"count": int(wait.Minutes()) + 1},
 		})
 		return
 	}
@@ -999,7 +997,7 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !hasQueued {
-		subject, body := verificationEmailContent(token)
+		subject, body := verificationEmailContent(token, lang)
 		if err := mail.QueueMail(ctx, tx, req.Email, subject, body); err != nil {
 			utils.LogError("ResendVerification", "mail.QueueMail", err)
 			utils.SendInternalError(w)
@@ -1027,6 +1025,7 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
 		Success: true,
 		Message: "Verification email sent.",
+		Code:    "verification_email_sent",
 	})
 }
 
@@ -1087,6 +1086,7 @@ func ConfirmEmailVerification(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Verification link invalid or expired.",
+			Code:    "verification_link_invalid",
 		})
 		return
 	}
@@ -1101,6 +1101,7 @@ func ConfirmEmailVerification(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
 			Success: false,
 			Message: "Verification link invalid or expired.",
+			Code:    "verification_link_invalid",
 		})
 		return
 	}

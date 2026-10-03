@@ -11,6 +11,7 @@ import {
   type CacheStorage,
 } from "@/lib/calendar/crypt";
 import { uint8ArrayFromBase64 } from "@/lib/utils";
+import { t } from "@/i18n";
 
 type UnlockableUser = {
   envelopes: KeyEnvelope[];
@@ -32,7 +33,7 @@ export async function unlockAccount(
   }
 
   if (!user.salt || !user.challenge) {
-    throw new Error("Invalid password.");
+    throw new Error(t("unlock.invalidPassword"));
   }
 
   // legacy account, unlock the old way, then silently upgrade
@@ -53,7 +54,7 @@ export async function unlockAccount(
       storage,
       exportable,
     );
-    toast.success("Your account security has been upgraded.");
+    toast.success(t("unlock.upgraded"));
     return upgraded;
   } catch (err) {
     console.error("Envelope migration failed:", err);

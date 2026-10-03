@@ -21,6 +21,7 @@ import { CLIENT_ID } from "@/lib/clientId";
 import { isSubscriptionMissing } from "@/lib/subscription";
 import type { APIResponse } from "@/types/API";
 import type { PushEvent } from "@/types/Push";
+import { t } from "@/i18n";
 
 interface RemoteSettings {
   data: string | null;
@@ -138,7 +139,7 @@ export function useSettingsSync() {
 
         if (!saved.data) {
           console.error("Failed to upload settings.", saved.message);
-          toast.error("Failed to sync settings.");
+          toast.error(t("settings.syncFailed"));
           return;
         }
 
@@ -147,7 +148,7 @@ export function useSettingsSync() {
       }
 
       console.error(`Failed to sync settings after ${MAX_ATTEMPTS} attempts.`);
-      toast.error("Failed to sync settings.");
+      toast.error(t("settings.syncFailed"));
     } catch (error) {
       console.error("Failed to sync settings.", error);
     } finally {

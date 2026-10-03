@@ -1,15 +1,14 @@
-import { memo, useState, type CSSProperties } from "react";
+import { memo, useMemo, useState, type CSSProperties } from "react";
 import { DateTime } from "luxon";
 import EventBlock from "@/components/calendar/EventBlock";
 import EventEditor from "@/components/calendar/EventEditor";
 import { createGridFocusStore } from "@/lib/calendar/gridFocus";
 import { createSelectionStore } from "@/lib/calendar/selection";
 import type { CalendarEvent } from "@/types/calendar/Event";
+import { useTranslation } from "react-i18next";
 
-const PREVIEW_EVENT: CalendarEvent = {
+const PREVIEW_EVENT: Omit<CalendarEvent, "title" | "description"> = {
   id: "preview",
-  title: "Preview event",
-  description: "A preview for the event editor.",
   color: "#2563eb",
   start: DateTime.fromObject({ hour: 9 }),
   end: DateTime.fromObject({ hour: 10 }),
@@ -31,6 +30,15 @@ export default memo(function EventEditorPreview({
   radius: number;
   lineOpacity: number;
 }) {
+  const { t } = useTranslation();
+  const previewEvent = useMemo<CalendarEvent>(
+    () => ({
+      ...PREVIEW_EVENT,
+      title: t("settings.preview.title"),
+      description: t("settings.preview.description"),
+    }),
+    [t],
+  );
   const [focusStore] = useState(createGridFocusStore);
   const [selection] = useState(createSelectionStore);
 
@@ -41,7 +49,7 @@ export default memo(function EventEditorPreview({
       className="pointer-events-none select-none relative flex justify-center py-1 overflow-hidden"
       style={{ "--line-opacity": lineOpacity } as CSSProperties}
     >
-      <div className="absolute left-1/2 top-[calc(50%-120px)] -translate-x-1/2 grid auto-rows-[80px] w-64 border-l border-t border-[color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)]">
+      <div className="absolute left-1/2 top-[calc(50%-120px)] -translate-x-1/2 grid auto-rows-[80px] w-64 border-s border-t border-[color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)]">
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
@@ -49,9 +57,9 @@ export default memo(function EventEditorPreview({
           >
             {i === 1 && (
               <EventBlock
-                event={PREVIEW_EVENT}
+                event={previewEvent}
                 day={0}
-                date={PREVIEW_EVENT.start}
+                date={previewEvent.start}
                 style={PREVIEW_BLOCK_STYLE}
                 editing={false}
                 selection={selection}
@@ -73,7 +81,7 @@ export default memo(function EventEditorPreview({
       <div className="relative z-10">
         <EventEditor
           preview={{ opacity, blur, radius }}
-          event={PREVIEW_EVENT}
+          event={previewEvent}
           onSave={noop}
           onMove={noop}
           onDelete={noop}

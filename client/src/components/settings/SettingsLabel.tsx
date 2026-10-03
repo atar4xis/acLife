@@ -5,6 +5,7 @@ import { isSyncable } from "@/lib/settingsSync";
 import ResetToDefault from "./ResetToDefault";
 import { settingLabelByKey, settingLabelId } from "./settingsData";
 import SyncToggle from "./SyncToggle";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsLabel({
   settingKey,
@@ -13,6 +14,7 @@ export default function SettingsLabel({
   settingKey: SettingKey;
   onReset?: () => void;
 }) {
+  useTranslation();
   const { value, defaultValue, set } = useSetting(settingKey);
 
   return (

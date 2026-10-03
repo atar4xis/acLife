@@ -10,6 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useTranslation } from "react-i18next";
 
 interface ColorPickerProps {
   value: string;
@@ -51,6 +52,7 @@ const ColorPicker = ({
   size,
   ...props
 }: Omit<ButtonProps, "value" | "onChange" | "onBlur"> & ColorPickerProps) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const parsedValue = useMemo(() => {
@@ -86,7 +88,7 @@ const ColorPicker = ({
             />
             <HexColorInput
               className="border-input mt-5 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
-              aria-label="Hex color"
+              aria-label={t("common.hexColor")}
               color={parsedValue}
               onChange={onChange}
               prefixed

@@ -9,7 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { toast } from "sonner";
-import CalendarPage from "../../src/components/settings/pages/CalendarPage.tsx";
+import RegionPage from "../../src/components/settings/pages/RegionPage.tsx";
 import { CalendarProvider } from "../../src/context/CalendarContext.tsx";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import type { SectionRefs } from "../../src/components/settings/SettingsSection.tsx";
@@ -19,7 +19,7 @@ import { seedSettings, readSettings } from "../settingsStorage.ts";
 
 function Harness() {
   const sectionRefs: SectionRefs = useRef(new Map());
-  return <CalendarPage sectionRefs={sectionRefs} />;
+  return <RegionPage sectionRefs={sectionRefs} />;
 }
 
 const renderCalendarPage = () =>
@@ -60,7 +60,7 @@ const pickTimezone = async (
   await user.click(await screen.findByRole("option", { name }));
 };
 
-describe("CalendarPage time zones", () => {
+describe("RegionPage time zones", () => {
   beforeEach(() => {
     Element.prototype.hasPointerCapture = () => false;
     Element.prototype.scrollIntoView = () => {};
@@ -70,7 +70,7 @@ describe("CalendarPage time zones", () => {
     renderCalendarPage();
 
     expect(screen.queryByText("Set default")).not.toBeInTheDocument();
-    const [, defaultTrigger] = screen.getAllByRole("combobox");
+    const [, , defaultTrigger] = screen.getAllByRole("combobox");
     // the time zone list loads in the background
     await waitFor(() =>
       expect(defaultTrigger).toHaveTextContent(
@@ -86,7 +86,7 @@ describe("CalendarPage time zones", () => {
 
     expect(screen.queryByText(/tokyo, japan/i)).not.toBeInTheDocument();
 
-    const [, , addTrigger] = screen.getAllByRole("combobox");
+    const [, , , addTrigger] = screen.getAllByRole("combobox");
     await pickTimezone(user, addTrigger, "tokyo", /tokyo, japan/i);
 
     expect(await screen.findByText(/tokyo, japan/i)).toBeInTheDocument();
@@ -98,7 +98,7 @@ describe("CalendarPage time zones", () => {
     seedTimezones(["America/Chicago", "Asia/Tokyo"], "America/Chicago");
     renderCalendarPage();
 
-    const [, defaultTrigger] = screen.getAllByRole("combobox");
+    const [, , defaultTrigger] = screen.getAllByRole("combobox");
     await pickTimezone(
       user,
       defaultTrigger,
@@ -116,7 +116,7 @@ describe("CalendarPage time zones", () => {
     seedTimezones(["America/Chicago"], "America/Chicago");
     renderCalendarPage();
 
-    const [, defaultTrigger] = screen.getAllByRole("combobox");
+    const [, , defaultTrigger] = screen.getAllByRole("combobox");
     await pickTimezone(user, defaultTrigger, "tokyo", /tokyo, japan/i);
 
     expect(toast.success).toHaveBeenCalledWith(
@@ -174,7 +174,7 @@ describe("CalendarPage time zones", () => {
       screen.getByText("Maximum of 6 time zones reached"),
     ).toBeInTheDocument();
 
-    const [, , addTrigger] = screen.getAllByRole("combobox");
+    const [, , , addTrigger] = screen.getAllByRole("combobox");
     expect(addTrigger).toBeDisabled();
   });
 

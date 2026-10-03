@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useApi } from "@/context/ApiContext";
 import type { Session } from "@/types/Session";
+import { t } from "@/i18n";
 
 export function useSessions() {
   const { get } = useApi();
@@ -16,7 +17,7 @@ export function useSessions() {
     if (res.success && res.data) {
       setSessions(res.data);
     } else {
-      toast.error(res.message || "Failed to load sessions.");
+      toast.error(res.message || t("sessions.loadFailed"));
     }
   }, [get]);
 

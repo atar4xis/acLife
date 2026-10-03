@@ -13,6 +13,8 @@ import {
   MOVE_HOUR_STEPS,
   MOVE_UNIT_STEPS,
 } from "@/lib/calendar/moveHelpers";
+import { fmt } from "@/i18n";
+import { useTranslation } from "react-i18next";
 
 /* shared shape between shadcn's DropdownMenu* and ContextMenu* primitives,
    so this menu can be rendered inside either one without duplicating markup */
@@ -33,6 +35,7 @@ export function MoveMenuItems({
   onMove: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   menu: MoveMenuKit;
 }) {
+  const { t } = useTranslation();
   const calendarEvents = useEventList();
   const { selection } = useCalendarActions();
   const selectedEvents = useSelectedEvents(selection);
@@ -63,7 +66,7 @@ export function MoveMenuItems({
 
   const moveToFreeSlot = (direction: "forward" | "backward") => {
     const slot = findFreeSlotForEvent(calendarEvents, event, direction);
-    if (!slot) return toast.error("No free slot found");
+    if (!slot) return toast.error(t("move.noFreeSlot"));
 
     const shift = slot.start.diff(event.start);
     for (const ev of batch) {
@@ -78,7 +81,10 @@ export function MoveMenuItems({
 
     const sameDay = slot.start.hasSame(slot.end, "day");
     toast.success(
-      `Moved to ${slot.start.toFormat("EEE, MMM d, h:mm a")} - ${slot.end.toFormat(sameDay ? "h:mm a" : "EEE, MMM d, h:mm a")}`,
+      t("move.movedTo", {
+        start: slot.start.toFormat(fmt("dateTimeShort")),
+        end: slot.end.toFormat(sameDay ? fmt("time") : fmt("dateTimeShort")),
+      }),
     );
   };
 
@@ -86,18 +92,18 @@ export function MoveMenuItems({
     <Sub>
       <SubTrigger className="gap-2">
         <MoveIcon />
-        Move...
+        {t("move.title")}
       </SubTrigger>
       <SubContent>
         <Sub>
-          <SubTrigger>Forward...</SubTrigger>
+          <SubTrigger>{t("move.forward")}</SubTrigger>
           <SubContent>
             {MOVE_MINUTE_STEPS.map((minutes) => (
               <Item
                 key={`fwd-min-${minutes}`}
                 onClick={() => moveBy("forward", "minutes", minutes)}
               >
-                {minutes} minutes
+                {t("move.minutes", { count: minutes })}
               </Item>
             ))}
             {MOVE_HOUR_STEPS.map((hours) => (
@@ -105,21 +111,21 @@ export function MoveMenuItems({
                 key={`fwd-hour-${hours}`}
                 onClick={() => moveBy("forward", "hours", hours)}
               >
-                {hours} hour{hours > 1 ? "s" : ""}
+                {t("move.hours", { count: hours })}
               </Item>
             ))}
           </SubContent>
         </Sub>
 
         <Sub>
-          <SubTrigger>Backward...</SubTrigger>
+          <SubTrigger>{t("move.backward")}</SubTrigger>
           <SubContent>
             {MOVE_MINUTE_STEPS.map((minutes) => (
               <Item
                 key={`bwd-min-${minutes}`}
                 onClick={() => moveBy("backward", "minutes", minutes)}
               >
-                {minutes} minutes
+                {t("move.minutes", { count: minutes })}
               </Item>
             ))}
             {MOVE_HOUR_STEPS.map((hours) => (
@@ -127,35 +133,35 @@ export function MoveMenuItems({
                 key={`bwd-hour-${hours}`}
                 onClick={() => moveBy("backward", "hours", hours)}
               >
-                {hours} hour{hours > 1 ? "s" : ""}
+                {t("move.hours", { count: hours })}
               </Item>
             ))}
           </SubContent>
         </Sub>
 
         <Sub>
-          <SubTrigger>Next...</SubTrigger>
+          <SubTrigger>{t("move.next")}</SubTrigger>
           <SubContent>
-            {MOVE_UNIT_STEPS.map(({ label, unit }) => (
+            {MOVE_UNIT_STEPS.map((unit) => (
               <Item
                 key={`next-${unit}`}
                 onClick={() => moveBy("forward", unit, 1)}
               >
-                {label}
+                {t(`move.unit.${unit}`)}
               </Item>
             ))}
           </SubContent>
         </Sub>
 
         <Sub>
-          <SubTrigger>Previous...</SubTrigger>
+          <SubTrigger>{t("move.previous")}</SubTrigger>
           <SubContent>
-            {MOVE_UNIT_STEPS.map(({ label, unit }) => (
+            {MOVE_UNIT_STEPS.map((unit) => (
               <Item
                 key={`prev-${unit}`}
                 onClick={() => moveBy("backward", unit, 1)}
               >
-                {label}
+                {t(`move.unit.${unit}`)}
               </Item>
             ))}
           </SubContent>
@@ -163,9 +169,11 @@ export function MoveMenuItems({
 
         <Separator />
 
-        <Item onClick={() => moveToFreeSlot("forward")}>Next free slot</Item>
+        <Item onClick={() => moveToFreeSlot("forward")}>
+          {t("move.nextFree")}
+        </Item>
         <Item onClick={() => moveToFreeSlot("backward")}>
-          Previous free slot
+          {t("move.previousFree")}
         </Item>
       </SubContent>
     </Sub>
