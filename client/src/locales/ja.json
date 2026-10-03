@@ -26,7 +26,7 @@
     "tomorrow": "明日"
   },
   "a11y": {
-    "range": "{{start}}から{{end}}",
+    "range": "{{start}}から{{end}}まで",
     "taskCompleted": "タスク、完了",
     "taskNotCompleted": "タスク、未完了",
     "repeating": "繰り返し",
@@ -61,7 +61,7 @@
     "reset": "リセット",
     "save": "保存",
     "loading": "読み込み中",
-    "hexColor": "16進カラー",
+    "hexColor": "16進数のカラーコード",
     "select": "選択...",
     "search": "検索...",
     "noResults": "結果が見つかりません",
@@ -80,7 +80,7 @@
     "title": "プッシュサービス",
     "yes": "有効にする",
     "no": "無効のままにする",
-    "cancel": "後で通知する",
+    "cancel": "後でリマインドする",
     "description": "プッシュサービスを有効にすると、デバイス間のデータ同期が向上し、プッシュ通知が使えるようになります。",
     "unavailable": "プッシュサービスは利用できません。",
     "permissionDenied": "通知の許可が拒否されました。",
@@ -116,7 +116,7 @@
     },
     "this": "この予定",
     "future": "この予定と今後の予定",
-    "all": "すべての予定",
+    "all": "この繰り返しのすべての予定",
     "keepChanges": "今後の予定への変更を保持する"
   },
   "theme": {
@@ -139,8 +139,8 @@
     "noFreeSlot": "空き時間が見つかりません",
     "movedTo": "{{start}} - {{end}} に移動しました",
     "title": "移動...",
-    "forward": "進める...",
-    "backward": "戻す...",
+    "forward": "後の日時へ...",
+    "backward": "前の日時へ...",
     "next": "次へ...",
     "previous": "前へ...",
     "minutes_other": "{{count}}分",
@@ -161,12 +161,12 @@
   },
   "block": {
     "edit": "編集",
-    "copyParentId": "親のIDをコピー",
+    "copyParentId": "元の予定のIDをコピー",
     "copyId": "IDをコピー",
     "duplicate": "複製",
-    "detach": "親から切り離す",
+    "detach": "元の予定から切り離す",
     "reset": "元の予定に戻す",
-    "completed": "{{title}}を完了"
+    "completed": "{{title}}を完了にしました"
   },
   "login": {
     "changeServer": "サーバーを変更",
@@ -302,7 +302,7 @@
       "presets-list": "ユーザーテーマ",
       "font-family": "フォントファミリー",
       "font-size": "フォントサイズ",
-      "colors-overrides": "色の上書き",
+      "colors-overrides": "カスタムカラー",
       "subscription-status": "サブスクリプションの状態",
       "subscription-manage": "サブスクリプションを管理",
       "account-email": "メールアドレス",
@@ -315,7 +315,7 @@
       "calendar-date-time-format": "日付と時刻の形式",
       "calendar-default-timezone": "既定のタイムゾーン",
       "calendar-timezones-list": "タイムゾーン",
-      "calendar-detach-recurring": "編集時に繰り返しの予定を切り離す",
+      "calendar-detach-recurring": "編集した予定を繰り返しから切り離す",
       "calendar-default-view": "既定の表示",
       "calendar-snap-minutes": "スナップ間隔（分）",
       "calendar-line-opacity": "線の不透明度",
@@ -323,12 +323,12 @@
       "calendar-time-label-position": "時刻ラベルの位置",
       "calendar-default-event-name": "予定の既定名",
       "calendar-default-task-name": "タスクの既定名",
-      "calendar-default-event-duration": "予定の既定の長さ",
+      "calendar-default-event-duration": "予定の既定の所要時間",
       "calendar-event-editor-color-presets": "プリセットカラー",
       "calendar-event-editor-add-colors-automatically": "新しい色を自動的に追加",
       "calendar-event-editor-opacity": "背景の不透明度",
       "calendar-event-editor-blur": "背景のぼかし",
-      "calendar-event-editor-radius": "角の丸み",
+      "calendar-event-editor-radius": "角丸の半径",
       "mini-calendar-enabled": "有効",
       "mini-calendar-event-bars": "予定バーを表示",
       "mini-calendar-week-numbers": "週番号を表示",
@@ -391,7 +391,7 @@
       "import": "インポート",
       "importFile": "テーマファイルをインポート",
       "none": "保存済みのテーマはまだありません。",
-      "reorder": "テーマを並べ替え",
+      "reorder": "テーマの順序を変更",
       "rename": "テーマ名を変更",
       "active": "使用中",
       "export": ".jsonとしてエクスポート",
@@ -437,7 +437,7 @@
       "additionalTzHelp": "グリッドに既定のタイムゾーンと並べて表示されます。",
       "addTz": "タイムゾーンを追加...",
       "tzLimit_other": "タイムゾーンは最大{{count}}件までです",
-      "reorderTz": "タイムゾーン{{name}}を並べ替え",
+      "reorderTz": "タイムゾーン{{name}}の順序を変更",
       "setDefaultTz": "{{name}}を既定に設定",
       "setDefault": "既定に設定",
       "remove": "{{name}}を削除",
@@ -483,7 +483,7 @@
       "masterKeyWarning": "マスターキーがデバイスに保存されています。デバイスにアクセスできる人は誰でもデータにアクセスできます。",
       "autoLock": {
         "disabled": "無効",
-        "focus": "フォーカスを失ったとき"
+        "focus": "アプリがフォーカスを失ったとき"
       }
     },
     "push": {
@@ -517,7 +517,7 @@
     "pricingFailed": "料金を読み込めませんでした",
     "checkoutFailed": "決済手続きを開始できませんでした。",
     "paymentConfirmed": "お支払いを確認しました。",
-    "notPaid": "まだお支払いが確認できていないようです。",
+    "notPaid": "お支払いはまだ確認できていません。",
     "per": {
       "day": "日額",
       "week": "週額",
@@ -563,7 +563,7 @@
     "noLater": "これより後の予定はありません",
     "noEarlier": "これより前の予定はありません",
     "selectedCount": "{{count}}件選択中",
-    "created": "{{title}}を作成しました、{{slot}}",
+    "created": "{{title}}を作成しました（{{slot}}）",
     "deselected": "{{title}}の選択を解除しました",
     "selected": "{{title}}を選択しました",
     "moving": "{{title}}を移動中。矢印キーで移動、Shift＋矢印キーでサイズ変更、Enterで確定、Escapeでキャンセルします。",
@@ -576,11 +576,11 @@
     "toggle": "サイドバーの表示を切り替え"
   },
   "editor": {
-    "endBeforeStart": "予定は開始前に終了できません。",
+    "endBeforeStart": "予定の終了日時は開始日時より前に設定できません。",
     "invalidDuration": "予定の長さが無効です。",
     "tooLong": "予定をこれほど長くすることはできません。",
     "excludesEveryDay": "繰り返しからすべての曜日を除外することはできません。",
-    "repeatEndsBeforeStart": "繰り返しは開始前に終了できません。",
+    "repeatEndsBeforeStart": "繰り返しの終了日は開始日より前に設定できません。",
     "tooLarge": "予定が大きすぎます。",
     "title": "予定を編集",
     "moreActions": "その他の操作",
@@ -598,7 +598,7 @@
     "yearly": "毎年繰り返す",
     "custom": "カスタムの繰り返し",
     "editCustom": "カスタムの繰り返しを編集",
-    "detachWarning": "繰り返しの設定を変更すると、この予定は切り離されます。",
+    "detachWarning": "繰り返しの設定を変更すると、この予定が繰り返しから切り離されます。",
     "description": "説明",
     "task": "タスク",
     "completed": "完了",
@@ -645,7 +645,7 @@
     "noMatches": "一致する予定はありません。",
     "expandSearch": "検索範囲を広げる",
     "grid": "カレンダー",
-    "eventGone": "予定は存在しなくなりました。"
+    "eventGone": "この予定はもう存在しません。"
   },
   "serverErrors": {
     "verification_email_sent": "確認メールを送信しました。",

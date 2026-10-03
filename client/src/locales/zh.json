@@ -1,6 +1,6 @@
 {
   "meta": {
-    "name": "中文"
+    "name": "简体中文"
   },
   "app": {
     "emailVerificationFailed": "邮箱验证失败，请重试。"
@@ -93,7 +93,7 @@
   },
   "picker": {
     "pickDate": "选择日期",
-    "time": "{{label}}的时间"
+    "time": "{{label}}时间"
   },
   "timezone": {
     "setTo": "时区已设置为{{name}}",
@@ -116,7 +116,7 @@
     },
     "this": "此日程",
     "future": "此日程及之后的日程",
-    "all": "所有日程",
+    "all": "此系列中的所有日程",
     "keepChanges": "保留对之后日程的更改"
   },
   "theme": {
@@ -139,8 +139,8 @@
     "noFreeSlot": "未找到空闲时段",
     "movedTo": "已移动到{{start}} - {{end}}",
     "title": "移动...",
-    "forward": "向前移...",
-    "backward": "向后移...",
+    "forward": "推迟...",
+    "backward": "提前...",
     "next": "下一个...",
     "previous": "上一个...",
     "minutes_other": "{{count}}分钟",
@@ -161,10 +161,10 @@
   },
   "block": {
     "edit": "编辑",
-    "copyParentId": "复制父级 ID",
+    "copyParentId": "复制原始日程 ID",
     "copyId": "复制 ID",
     "duplicate": "复制日程",
-    "detach": "与父级分离",
+    "detach": "从原始日程中分离",
     "reset": "恢复为原始日程",
     "completed": "{{title}}已完成"
   },
@@ -214,7 +214,7 @@
   },
   "unlock": {
     "title": "解密数据",
-    "description": "您已登录，但您的数据已加密。",
+    "description": "您已登录，但您的数据仍处于加密状态。",
     "pinCode": "PIN 码",
     "pinPlaceholder": "输入 PIN",
     "invalidPin": "PIN 无效。",
@@ -260,7 +260,7 @@
       "set": "设置 PIN"
     },
     "stayUnlocked": {
-      "failed": "无法启用保持解锁。",
+      "failed": "无法启用“保持解锁”。",
       "title": "保持解锁",
       "description": "您的主密钥将存储在此设备上。任何能访问您设备的人都可以访问您的数据。",
       "enable": "启用"
@@ -302,7 +302,7 @@
       "presets-list": "用户主题",
       "font-family": "字体系列",
       "font-size": "字号",
-      "colors-overrides": "颜色覆盖",
+      "colors-overrides": "自定义颜色",
       "subscription-status": "订阅状态",
       "subscription-manage": "管理订阅",
       "account-email": "电子邮箱",
@@ -315,9 +315,9 @@
       "calendar-date-time-format": "日期和时间格式",
       "calendar-default-timezone": "默认时区",
       "calendar-timezones-list": "时区",
-      "calendar-detach-recurring": "编辑时分离重复日程的实例",
+      "calendar-detach-recurring": "编辑时将该日程从重复系列中分离",
       "calendar-default-view": "默认视图",
-      "calendar-snap-minutes": "分钟吸附间隔",
+      "calendar-snap-minutes": "吸附间隔（分钟）",
       "calendar-line-opacity": "线条不透明度",
       "calendar-day-header-position": "日期标题的位置",
       "calendar-time-label-position": "时间标签的位置",
@@ -331,7 +331,7 @@
       "calendar-event-editor-radius": "圆角半径",
       "mini-calendar-enabled": "启用",
       "mini-calendar-event-bars": "显示日程条",
-      "mini-calendar-week-numbers": "显示周数",
+      "mini-calendar-week-numbers": "显示周编号",
       "mini-calendar-bold-day-numbers": "加粗日期数字",
       "mini-calendar-adaptive-numbers": "自动调整数字位置",
       "mini-calendar-dropdowns": "月份和年份下拉菜单",
@@ -436,7 +436,7 @@
       "additionalTz": "其他时区",
       "additionalTzHelp": "与默认时区一起显示在网格中。",
       "addTz": "添加时区...",
-      "tzLimit_other": "最多只能添加 {{count}} 个时区",
+      "tzLimit_other": "已达到 {{count}} 个时区的上限",
       "reorderTz": "调整时区{{name}}的顺序",
       "setDefaultTz": "将{{name}}设为默认",
       "setDefault": "设为默认",
@@ -446,7 +446,7 @@
       "colorsHelp": "拖动颜色可调整顺序，点击颜色可将其移除。",
       "newColor": "新颜色",
       "addColor": "添加颜色",
-      "colorLimit_other": "最多只能添加 {{count}} 种颜色",
+      "colorLimit_other": "已达到 {{count}} 种颜色的上限",
       "alreadyAdded": "已添加",
       "inherit": "跟随时区",
       "top": "顶部",
@@ -483,7 +483,7 @@
       "masterKeyWarning": "您的主密钥存储在设备上。任何能访问您设备的人都可以访问您的数据。",
       "autoLock": {
         "disabled": "已禁用",
-        "focus": "失去焦点时"
+        "focus": "应用失去焦点时"
       }
     },
     "push": {
@@ -517,7 +517,7 @@
     "pricingFailed": "加载价格失败",
     "checkoutFailed": "无法启动结账流程。",
     "paymentConfirmed": "付款已确认。",
-    "notPaid": "看起来您还没有付款。",
+    "notPaid": "付款尚未确认。",
     "per": {
       "day": "每天",
       "week": "每周",
@@ -543,7 +543,7 @@
     "updateFailed": "更新安全设置失败。"
   },
   "events": {
-    "cacheDecryptFailed": "解密日程缓存失败，缓存将被丢弃。",
+    "cacheDecryptFailed": "解密日程缓存失败，缓存将被清除。",
     "syncFailed": "同步日历日程失败。",
     "syncFailedWith": "同步日历日程失败：{{message}}",
     "decryptFailed": "解密日历日程失败。",
@@ -579,7 +579,7 @@
     "endBeforeStart": "日程的结束时间不能早于开始时间。",
     "invalidDuration": "日程时长无效。",
     "tooLong": "日程不能持续这么长时间。",
-    "excludesEveryDay": "重复设置不能排除所有日期。",
+    "excludesEveryDay": "重复设置不能排除一周中的每一天。",
     "repeatEndsBeforeStart": "重复的结束时间不能早于开始时间。",
     "tooLarge": "日程过大。",
     "title": "编辑日程",
@@ -598,7 +598,7 @@
     "yearly": "每年重复",
     "custom": "自定义重复",
     "editCustom": "编辑自定义重复",
-    "detachWarning": "更改重复设置将使此实例与系列分离。",
+    "detachWarning": "更改重复设置将使此日程与重复系列分离。",
     "description": "描述",
     "task": "任务",
     "completed": "已完成",
@@ -619,7 +619,7 @@
     "excludedDays": "已排除的日期",
     "repeatOn": "在以下日期重复",
     "daysOfMonth": "每月的日期",
-    "forever": "永不结束",
+    "forever": "不设结束日期",
     "ends": "结束方式",
     "endsOn": "结束于",
     "endsAfter": "重复",
@@ -650,7 +650,7 @@
   "serverErrors": {
     "verification_email_sent": "验证邮件已发送。",
     "invalid_email": "邮箱地址无效。",
-    "invalid_credentials": "凭据无效。",
+    "invalid_credentials": "登录凭据无效。",
     "email_verification_required": "需要验证邮箱。",
     "email_domain_not_allowed": "不允许使用此域名的邮箱。",
     "verification_expired_sign_up": "您的验证已过期，请重新注册。",

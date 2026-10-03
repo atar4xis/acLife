@@ -66,7 +66,7 @@
     "reset": "रीसेट करें",
     "save": "सहेजें",
     "loading": "लोड हो रहा है",
-    "hexColor": "हेक्स रंग",
+    "hexColor": "हेक्साडेसिमल रंग कोड",
     "select": "चुनें...",
     "search": "खोजें...",
     "noResults": "कोई परिणाम नहीं मिला",
@@ -94,7 +94,7 @@
   },
   "agenda": {
     "inProgress": "जारी है",
-    "startsIn": "{{duration}} में"
+    "startsIn": "{{duration}} बाद"
   },
   "picker": {
     "pickDate": "तारीख चुनें",
@@ -121,7 +121,7 @@
     },
     "this": "यह इवेंट",
     "future": "यह और इसके बाद के इवेंट",
-    "all": "सभी इवेंट",
+    "all": "इस श्रृंखला के सभी इवेंट",
     "keepChanges": "आगे के इवेंट में किए गए बदलाव बनाए रखें"
   },
   "theme": {
@@ -141,11 +141,11 @@
     "login": "लॉग इन"
   },
   "move": {
-    "noFreeSlot": "कोई खाली स्लॉट नहीं मिला",
+    "noFreeSlot": "कोई खाली समय स्लॉट नहीं मिला",
     "movedTo": "{{start}} - {{end}} पर ले जाया गया",
     "title": "ले जाएँ...",
-    "forward": "आगे...",
-    "backward": "पीछे...",
+    "forward": "बाद के समय पर...",
+    "backward": "पहले के समय पर...",
     "next": "अगला...",
     "previous": "पिछला...",
     "minutes_one": "{{count}} मिनट",
@@ -158,8 +158,8 @@
       "months": "महीना",
       "years": "वर्ष"
     },
-    "nextFree": "अगला खाली स्लॉट",
-    "previousFree": "पिछला खाली स्लॉट"
+    "nextFree": "अगला खाली समय स्लॉट",
+    "previousFree": "पिछला खाली समय स्लॉट"
   },
   "view": {
     "mode": "व्यू मोड",
@@ -168,18 +168,18 @@
   },
   "block": {
     "edit": "संपादित करें",
-    "copyParentId": "पैरेंट ID कॉपी करें",
+    "copyParentId": "मूल इवेंट की ID कॉपी करें",
     "copyId": "ID कॉपी करें",
-    "duplicate": "डुप्लिकेट करें",
-    "detach": "पैरेंट से अलग करें",
-    "reset": "मूल इवेंट पर रीसेट करें",
+    "duplicate": "प्रतिलिपि बनाएँ",
+    "detach": "मूल इवेंट से अलग करें",
+    "reset": "मूल इवेंट पर वापस जाएँ",
     "completed": "{{title}} पूर्ण हुआ"
   },
   "login": {
     "changeServer": "सर्वर बदलें",
     "serverUrl": "सर्वर URL",
-    "testConnectivityLabel": "कनेक्टिविटी जाँचें",
-    "testConnectivity": "कनेक्टिविटी जाँचें",
+    "testConnectivityLabel": "कनेक्शन जाँचें",
+    "testConnectivity": "कनेक्शन जाँचें",
     "connectionSuccess": "कनेक्शन सफल रहा। बदलाव लागू करने के लिए सहेजें।",
     "connectionFailed": "कनेक्शन विफल रहा। कृपया पुनः प्रयास करें।",
     "invalidMetadata": "मेटाडेटा प्रतिक्रिया अमान्य है। कृपया URL की पुष्टि करें।",
@@ -204,8 +204,8 @@
     "haveAccount": "खाता है? लॉग इन करें",
     "createAccount": "खाता बनाएँ",
     "registrationsClosed": "यह सर्वर पंजीकरण स्वीकार नहीं कर रहा है।",
-    "acceptBoth": "मैं <terms>शर्तों</terms> और <privacy>गोपनीयता नीति</privacy> से सहमत हूँ",
-    "acceptTerms": "मैं <terms>शर्तों</terms> से सहमत हूँ",
+    "acceptBoth": "मैं <terms>उपयोग की शर्तों</terms> और <privacy>गोपनीयता नीति</privacy> से सहमत हूँ",
+    "acceptTerms": "मैं <terms>उपयोग की शर्तों</terms> से सहमत हूँ",
     "acceptPrivacy": "मैं <privacy>गोपनीयता नीति</privacy> से सहमत हूँ",
     "emailVerified": "ईमेल सत्यापित हो गया। अब आप लॉग इन कर सकते हैं।",
     "emailVerifyFailed": "ईमेल सत्यापन विफल रहा।",
@@ -245,7 +245,7 @@
         "events": "इवेंट",
         "timezones": "समय क्षेत्र"
       },
-      "groupToggle": "{{label}} सेटिंग्स सिंक करें",
+      "groupToggle": "{{label}} की सेटिंग्स सिंक करें",
       "counted": "{{synced}}/{{total}} सिंक किए गए",
       "itemToggle": "{{label}} सिंक करें",
       "manage": "सिंक की गई सेटिंग्स प्रबंधित करें",
@@ -267,7 +267,7 @@
       "set": "PIN सेट करें"
     },
     "stayUnlocked": {
-      "failed": "अनलॉक स्थिति बनाए रखने में विफल।",
+      "failed": "“अनलॉक रखें” चालू करने में विफल।",
       "title": "अनलॉक रखें",
       "description": "आपकी मास्टर कुंजी इस डिवाइस पर संग्रहीत की जाएगी। आपके डिवाइस तक पहुँच रखने वाला कोई भी व्यक्ति आपका डेटा देख सकता है।",
       "enable": "चालू करें"
@@ -308,37 +308,37 @@
       "custom-theme": "कस्टम थीम",
       "presets-list": "उपयोगकर्ता थीम",
       "font-family": "फ़ॉन्ट परिवार",
-      "font-size": "फ़ॉन्ट आकार",
-      "colors-overrides": "रंग ओवरराइड",
+      "font-size": "फ़ॉन्ट का आकार",
+      "colors-overrides": "कस्टम रंग",
       "subscription-status": "सदस्यता की स्थिति",
       "subscription-manage": "सदस्यता प्रबंधित करें",
       "account-email": "ईमेल पता",
       "account-password": "पासवर्ड",
       "security-unlock-method": "डेटा डिक्रिप्शन विधि",
       "security-auto-lock": "ऑटो-लॉक",
-      "calendar-week-start": "सप्ताह की शुरुआत",
+      "calendar-week-start": "सप्ताह शुरू होने का दिन",
       "calendar-time-format": "समय का प्रारूप",
       "calendar-date-format": "तारीख का प्रारूप",
       "calendar-date-time-format": "तारीख और समय का प्रारूप",
       "calendar-default-timezone": "डिफ़ॉल्ट समय क्षेत्र",
       "calendar-timezones-list": "समय क्षेत्र",
-      "calendar-detach-recurring": "संपादित करने पर दोहराए जाने वाले इवेंट अलग करें",
+      "calendar-detach-recurring": "संपादन पर इवेंट को दोहराव की श्रृंखला से अलग करें",
       "calendar-default-view": "डिफ़ॉल्ट व्यू",
-      "calendar-snap-minutes": "मिनट में स्नैप अंतराल",
+      "calendar-snap-minutes": "स्नैप अंतराल (मिनट)",
       "calendar-line-opacity": "रेखा की अपारदर्शिता",
       "calendar-day-header-position": "दिन के शीर्षक की स्थिति",
       "calendar-time-label-position": "समय लेबल की स्थिति",
-      "calendar-default-event-name": "डिफ़ॉल्ट इवेंट का नाम",
-      "calendar-default-task-name": "डिफ़ॉल्ट कार्य का नाम",
-      "calendar-default-event-duration": "डिफ़ॉल्ट इवेंट अवधि",
+      "calendar-default-event-name": "इवेंट का डिफ़ॉल्ट नाम",
+      "calendar-default-task-name": "कार्य का डिफ़ॉल्ट नाम",
+      "calendar-default-event-duration": "इवेंट की डिफ़ॉल्ट अवधि",
       "calendar-event-editor-color-presets": "रंग प्रीसेट",
       "calendar-event-editor-add-colors-automatically": "नए रंग अपने आप जोड़ें",
       "calendar-event-editor-opacity": "पृष्ठभूमि की अपारदर्शिता",
       "calendar-event-editor-blur": "पृष्ठभूमि का धुंधलापन",
-      "calendar-event-editor-radius": "किनारे की गोलाई",
+      "calendar-event-editor-radius": "कोनों की गोलाई",
       "mini-calendar-enabled": "चालू",
       "mini-calendar-event-bars": "इवेंट बार दिखाएँ",
-      "mini-calendar-week-numbers": "सप्ताह की संख्या दिखाएँ",
+      "mini-calendar-week-numbers": "सप्ताह क्रमांक दिखाएँ",
       "mini-calendar-bold-day-numbers": "दिनांक की संख्याएँ बोल्ड करें",
       "mini-calendar-adaptive-numbers": "संख्याओं की स्थिति अपने आप समायोजित करें",
       "mini-calendar-dropdowns": "महीने और वर्ष के ड्रॉपडाउन",
@@ -422,9 +422,9 @@
       "monthLong": "महीने का नाम",
       "monthShort": "महीने का नाम, संक्षिप्त",
       "monthPadded": "महीना, 2 अंक",
-      "month": "महीने की संख्या",
-      "dayPadded": "दिन, 2 अंक",
-      "day": "दिन की संख्या",
+      "month": "महीने का क्रमांक",
+      "dayPadded": "महीने का दिन, 2 अंक",
+      "day": "महीने का दिन",
       "weekdayLong": "सप्ताह के दिन का नाम",
       "weekdayShort": "सप्ताह का दिन, संक्षिप्त",
       "hour24Padded": "घंटा (24 घंटे), 2 अंक",
@@ -432,7 +432,7 @@
       "hour12Padded": "घंटा (12 घंटे), 2 अंक",
       "hour12": "घंटा (12 घंटे)",
       "minutes": "मिनट, 2 अंक",
-      "meridiem": "AM/PM",
+      "meridiem": "पूर्वाह्न/अपराह्न (AM/PM)",
       "literal": "टेक्स्ट को जैसा लिखा है वैसा दिखाने के लिए उसे सिंगल कोट्स में रखें, जैसे 'पर'।"
     },
     "minutesShort": "{{count}} मि.",
@@ -472,7 +472,7 @@
       "changeEmail": "ईमेल बदलें",
       "verifyWarning": "दोबारा लॉग इन करने से पहले आपको अपना नया ईमेल पता सत्यापित करना होगा। गलत ईमेल दर्ज करने पर आप अपने खाते तक पहुँच खो सकते हैं।",
       "newEmail": "नया ईमेल",
-      "passwordRules": "पासवर्ड 12 से 256 अक्षरों का होना चाहिए और उसमें बड़े और छोटे अक्षर, एक अंक और एक विशेष वर्ण होना चाहिए।",
+      "passwordRules": "पासवर्ड 12 से 256 वर्णों का होना चाहिए और उसमें बड़े और छोटे अक्षर, एक अंक और एक विशेष वर्ण होना चाहिए।",
       "passwordFailed": "पासवर्ड बदलने में विफल।",
       "changePassword": "पासवर्ड बदलें",
       "newPassword": "नया पासवर्ड",
@@ -483,7 +483,7 @@
       "mustDecrypt": "पासवर्ड बदलने के लिए आपका डेटा डिक्रिप्ट होना ज़रूरी है।",
       "passwordUpdated": "पासवर्ड अपडेट हो गया।",
       "endFailed": "सत्र समाप्त करने में विफल।",
-      "refreshSessions": "सत्र रिफ़्रेश करें",
+      "refreshSessions": "सत्रों की सूची रिफ़्रेश करें",
       "noSessions": "कोई सक्रिय सत्र नहीं है।",
       "session": "सत्र #{{number}}",
       "current": "वर्तमान",
@@ -494,7 +494,7 @@
       "masterKeyWarning": "आपकी मास्टर कुंजी आपके डिवाइस पर संग्रहीत है। आपके डिवाइस तक पहुँच रखने वाला कोई भी व्यक्ति आपका डेटा देख सकता है।",
       "autoLock": {
         "disabled": "बंद",
-        "focus": "फ़ोकस हटने पर"
+        "focus": "ऐप से फ़ोकस हटने पर"
       }
     },
     "push": {
@@ -528,7 +528,7 @@
     "pricingFailed": "कीमतें लोड करने में विफल",
     "checkoutFailed": "भुगतान प्रक्रिया शुरू नहीं हो सकी।",
     "paymentConfirmed": "भुगतान की पुष्टि हो गई।",
-    "notPaid": "ऐसा लगता है कि आपने अभी तक भुगतान नहीं किया है।",
+    "notPaid": "भुगतान की पुष्टि अभी नहीं हुई है।",
     "per": {
       "day": "प्रति दिन",
       "week": "प्रति सप्ताह",
@@ -563,7 +563,7 @@
     "tooLarge": "\"{{title}}\" सहेजने के लिए बहुत बड़ा है, इसलिए बदलाव वापस ले लिया गया।",
     "tooLargeMany_other": "{{count}} इवेंट सहेजने के लिए बहुत बड़े हैं, इसलिए उनके बदलाव वापस ले लिए गए।",
     "migrationFetchFailed": "माइग्रेशन के लिए कैलेंडर इवेंट प्राप्त करने में विफल।",
-    "migrationFailed": "की एनवेलप माइग्रेट करने में विफल।"
+    "migrationFailed": "कुंजी का एनवेलप माइग्रेट करने में विफल।"
   },
   "keyboard": {
     "moveCancelled": "स्थानांतरण रद्द किया गया",
@@ -584,7 +584,7 @@
     "loadFailed": "सत्र लोड करने में विफल।"
   },
   "sidebar": {
-    "toggle": "साइडबार टॉगल करें"
+    "toggle": "साइडबार दिखाएँ या छिपाएँ"
   },
   "editor": {
     "endBeforeStart": "कोई इवेंट अपनी शुरुआत से पहले समाप्त नहीं हो सकता।",
@@ -594,7 +594,7 @@
     "repeatEndsBeforeStart": "दोहराव शुरू होने से पहले समाप्त नहीं हो सकता।",
     "tooLarge": "इवेंट बहुत बड़ा है।",
     "title": "इवेंट संपादित करें",
-    "moreActions": "और क्रियाएँ",
+    "moreActions": "अन्य कार्रवाइयाँ",
     "titleColor": "शीर्षक और रंग",
     "eventColor": "इवेंट का रंग",
     "startEnd": "आरंभ और समाप्ति समय",
@@ -609,12 +609,12 @@
     "yearly": "हर साल दोहराएँ",
     "custom": "कस्टम दोहराव",
     "editCustom": "कस्टम दोहराव संपादित करें",
-    "detachWarning": "दोहराव की सेटिंग बदलने से यह इवेंट श्रृंखला से अलग हो जाएगा।",
+    "detachWarning": "दोहराव की सेटिंग बदलने से यह इवेंट दोहराव की श्रृंखला से अलग हो जाएगा।",
     "description": "विवरण",
     "task": "कार्य",
     "completed": "पूर्ण",
     "delete": "इवेंट हटाएँ",
-    "duplicate": "इवेंट डुप्लिकेट करें"
+    "duplicate": "इवेंट की प्रतिलिपि बनाएँ"
   },
   "repeatDialog": {
     "every": "हर",
@@ -628,13 +628,13 @@
     "unit_month_other": "महीने",
     "unit_year_one": "साल",
     "unit_year_other": "साल",
-    "monthDay": "महीने में दोहराने की तारीख",
+    "monthDay": "महीने की तारीख",
     "specificDays": "विशिष्ट तारीखों को",
     "excluding": "छोड़कर",
     "excludedDays": "छोड़े गए दिन",
     "repeatOn": "इन दिनों दोहराएँ",
     "daysOfMonth": "महीने की तारीखें",
-    "forever": "हमेशा",
+    "forever": "समाप्ति की तारीख के बिना",
     "ends": "समाप्ति",
     "endsOn": "इस तारीख को समाप्त",
     "endsAfter": "समाप्ति:",
@@ -668,7 +668,7 @@
   "serverErrors": {
     "verification_email_sent": "सत्यापन ईमेल भेज दिया गया।",
     "invalid_email": "ईमेल पता अमान्य है।",
-    "invalid_credentials": "क्रेडेंशियल अमान्य हैं।",
+    "invalid_credentials": "लॉग इन की जानकारी अमान्य है।",
     "email_verification_required": "ईमेल सत्यापन आवश्यक है।",
     "email_domain_not_allowed": "इस डोमेन के ईमेल की अनुमति नहीं है।",
     "verification_expired_sign_up": "आपका सत्यापन समाप्त हो गया है। कृपया दोबारा साइन अप करें।",
@@ -691,9 +691,9 @@
     "cannot_end_current_session": "वर्तमान सत्र समाप्त नहीं किया जा सकता।",
     "bad_request": "अमान्य अनुरोध।",
     "internal_error": "एक अप्रत्याशित त्रुटि हुई।",
-    "too_many_attempts_seconds_one": "बहुत अधिक प्रयास। {{count}} सेकंड में पुनः प्रयास करें।",
-    "too_many_attempts_seconds_other": "बहुत अधिक प्रयास। {{count}} सेकंड में पुनः प्रयास करें।",
-    "too_many_attempts_minutes_one": "बहुत अधिक प्रयास। {{count}} मिनट में पुनः प्रयास करें।",
-    "too_many_attempts_minutes_other": "बहुत अधिक प्रयास। {{count}} मिनट में पुनः प्रयास करें।"
+    "too_many_attempts_seconds_one": "बहुत अधिक प्रयास। {{count}} सेकंड बाद पुनः प्रयास करें।",
+    "too_many_attempts_seconds_other": "बहुत अधिक प्रयास। {{count}} सेकंड बाद पुनः प्रयास करें।",
+    "too_many_attempts_minutes_one": "बहुत अधिक प्रयास। {{count}} मिनट बाद पुनः प्रयास करें।",
+    "too_many_attempts_minutes_other": "बहुत अधिक प्रयास। {{count}} मिनट बाद पुनः प्रयास करें।"
   }
 }

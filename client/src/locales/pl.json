@@ -41,7 +41,7 @@
   "repeat": {
     "onDate_ordinal_other": "{{count}}. dnia miesiąca",
     "onNth": "{{weekday}} ({{nth}} w miesiącu)",
-    "onLast": "{{weekday}} (ostatni w miesiącu)",
+    "onLast": "{{weekday}} (ostatnie wystąpienie w miesiącu)",
     "nth": {
       "first": "1.",
       "second": "2.",
@@ -119,7 +119,7 @@
     },
     "this": "To wystąpienie",
     "future": "To i przyszłe wystąpienia",
-    "all": "Wszystkie wystąpienia",
+    "all": "Wszystkie wystąpienia w tej serii",
     "keepChanges": "Zachowaj zmiany w przyszłych wystąpieniach"
   },
   "theme": {
@@ -142,8 +142,8 @@
     "noFreeSlot": "Nie znaleziono wolnego terminu",
     "movedTo": "Przeniesiono na {{start}} - {{end}}",
     "title": "Przenieś...",
-    "forward": "Do przodu...",
-    "backward": "Do tyłu...",
+    "forward": "Na później...",
+    "backward": "Na wcześniej...",
     "next": "Następny...",
     "previous": "Poprzedni...",
     "minutes_one": "{{count}} minuta",
@@ -190,13 +190,13 @@
     "onServer": "na",
     "offlineMode": "Użyj w trybie offline",
     "fillAll": "Wypełnij wszystkie pola.",
-    "passwordsMismatch": "Hasła nie są takie same.",
+    "passwordsMismatch": "Hasła nie są zgodne.",
     "passwordLength": "Hasło musi mieć od 12 do 256 znaków.",
     "passwordStrength": "Hasło musi zawierać wielkie i małe litery, cyfrę oraz znak specjalny.",
     "accountCreated": "Konto utworzone. Możesz się teraz zalogować.",
     "integrityFailed": "Nie udało się zweryfikować integralności serwera.",
     "email": "Adres e-mail",
-    "emailPlaceholder": "ja@przyklad.pl",
+    "emailPlaceholder": "ja@example.com",
     "password": "Hasło",
     "passwordPlaceholder": "Wpisz hasło",
     "confirmPassword": "Potwierdź hasło",
@@ -261,7 +261,7 @@
     "currentPassword": "Obecne hasło",
     "pin": {
       "length": "PIN musi mieć od 4 do 16 cyfr.",
-      "mismatch": "Kody PIN nie są takie same.",
+      "mismatch": "Kody PIN nie są zgodne.",
       "failed": "Nie udało się ustawić kodu PIN.",
       "setupTitle": "Ustaw kod PIN",
       "pin": "PIN",
@@ -269,8 +269,8 @@
       "set": "Ustaw PIN"
     },
     "stayUnlocked": {
-      "failed": "Nie udało się włączyć opcji pozostawania bez blokady.",
-      "title": "Pozostaw bez blokady",
+      "failed": "Nie udało się włączyć opcji „Pozostaw odblokowane”.",
+      "title": "Pozostaw odblokowane",
       "description": "Twój klucz główny zostanie zapisany na tym urządzeniu. Każdy, kto ma dostęp do urządzenia, będzie miał dostęp do Twoich danych.",
       "enable": "Włącz"
     },
@@ -311,7 +311,7 @@
       "presets-list": "Motywy użytkownika",
       "font-family": "Rodzina czcionek",
       "font-size": "Rozmiar czcionki",
-      "colors-overrides": "Nadpisane kolory",
+      "colors-overrides": "Niestandardowe kolory",
       "subscription-status": "Status subskrypcji",
       "subscription-manage": "Zarządzaj subskrypcją",
       "account-email": "Adres e-mail",
@@ -324,7 +324,7 @@
       "calendar-date-time-format": "Format daty i godziny",
       "calendar-default-timezone": "Domyślna strefa czasowa",
       "calendar-timezones-list": "Strefy czasowe",
-      "calendar-detach-recurring": "Odłączaj wystąpienia cykliczne podczas edycji",
+      "calendar-detach-recurring": "Odłączaj edytowane wystąpienia od serii",
       "calendar-default-view": "Widok domyślny",
       "calendar-snap-minutes": "Interwał przyciągania w minutach",
       "calendar-line-opacity": "Krycie linii",
@@ -360,7 +360,7 @@
       "card-foreground": "Tekst karty",
       "popover": "Okno podręczne",
       "popover-foreground": "Tekst okna podręcznego",
-      "primary": "Podstawowy",
+      "primary": "Główny",
       "primary-foreground": "Tekst główny",
       "secondary": "Dodatkowy",
       "secondary-foreground": "Tekst dodatkowy",
@@ -368,7 +368,7 @@
       "muted-foreground": "Tekst przygaszony",
       "accent": "Akcent",
       "accent-foreground": "Tekst akcentu",
-      "destructive": "Niebezpieczny",
+      "destructive": "Operacje destrukcyjne",
       "success": "Powodzenie",
       "warning": "Ostrzeżenie",
       "border": "Obramowanie",
@@ -400,7 +400,7 @@
       "import": "Importuj",
       "importFile": "Importuj plik motywu",
       "none": "Brak zapisanych motywów.",
-      "reorder": "Zmień kolejność motywów",
+      "reorder": "Zmień pozycję motywu",
       "rename": "Zmień nazwę motywu",
       "active": "Aktywny",
       "export": "Eksportuj jako .json",
@@ -445,7 +445,7 @@
     "days_many": "{{count}} dni",
     "days_other": "{{count}} dnia",
     "calendar": {
-      "languageSystem": "Domyślny systemowy",
+      "languageSystem": "Domyślny język systemowy",
       "currently": "Obecnie: {{day}}",
       "tzSearch": "Wpisz miasto lub kraj, aby wyszukać...",
       "additionalTz": "Dodatkowe strefy czasowe",
@@ -455,7 +455,7 @@
       "tzLimit_few": "Osiągnięto maksimum: {{count}} strefy czasowe",
       "tzLimit_many": "Osiągnięto maksimum: {{count}} stref czasowych",
       "tzLimit_other": "Osiągnięto maksimum: {{count}} strefy czasowej",
-      "reorderTz": "Zmień kolejność strefy czasowej {{name}}",
+      "reorderTz": "Zmień pozycję strefy czasowej {{name}}",
       "setDefaultTz": "Ustaw {{name}} jako domyślną",
       "setDefault": "Ustaw jako domyślną",
       "remove": "Usuń: {{name}}",
@@ -504,7 +504,7 @@
       "masterKeyWarning": "Twój klucz główny jest zapisany na urządzeniu. Każdy, kto ma dostęp do urządzenia, ma dostęp do Twoich danych.",
       "autoLock": {
         "disabled": "Wyłączona",
-        "focus": "Po utracie fokusu"
+        "focus": "Gdy aplikacja traci fokus"
       }
     },
     "push": {
@@ -538,7 +538,7 @@
     "pricingFailed": "Nie udało się załadować cennika",
     "checkoutFailed": "Nie udało się rozpocząć procesu płatności.",
     "paymentConfirmed": "Płatność potwierdzona.",
-    "notPaid": "Wygląda na to, że jeszcze nie zapłacono.",
+    "notPaid": "Płatność nie została jeszcze potwierdzona.",
     "per": {
       "day": "dziennie",
       "week": "tygodniowo",
@@ -621,7 +621,7 @@
     "yearly": "Powtarzaj co rok",
     "custom": "Własne powtarzanie",
     "editCustom": "Edytuj własne powtarzanie",
-    "detachWarning": "Zmiana ustawień powtarzania spowoduje odłączenie tego wystąpienia.",
+    "detachWarning": "Zmiana ustawień powtarzania spowoduje odłączenie tego wystąpienia od serii.",
     "description": "Opis",
     "task": "Zadanie",
     "completed": "Ukończone",
@@ -648,7 +648,7 @@
     "unit_year_few": "Lata",
     "unit_year_many": "Lat",
     "unit_year_other": "Roku",
-    "monthDay": "Dzień powtarzania w miesiącu",
+    "monthDay": "Dzień miesiąca",
     "specificDays": "w wybrane dni",
     "excluding": "Z wyjątkiem",
     "excludedDays": "Wykluczone dni",
@@ -660,10 +660,10 @@
     "endsAfter": "Kończy się po",
     "endsOnDate": "Data zakończenia",
     "endsAfterCount": "Liczba powtórzeń",
-    "times_one": "razie",
-    "times_few": "razach",
-    "times_many": "razach",
-    "times_other": "razach",
+    "times_one": "powtórzeniu",
+    "times_few": "powtórzeniach",
+    "times_many": "powtórzeniach",
+    "times_other": "powtórzeniach",
     "onSpecificDays": "W wybrane dni"
   },
   "calendar": {

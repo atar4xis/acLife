@@ -81,7 +81,7 @@
     "later": "You can enable the push service later in settings.",
     "settingUp": "Setting up push service...",
     "enabled": "Push service enabled.",
-    "title": "Push Service",
+    "title": "Push service",
     "yes": "Enable it",
     "no": "Keep it off",
     "cancel": "Remind me later",
@@ -120,7 +120,7 @@
     },
     "this": "This event",
     "future": "This and future events",
-    "all": "All events",
+    "all": "All events in this series",
     "keepChanges": "Keep changes to future events"
   },
   "theme": {
@@ -135,7 +135,7 @@
     "menu": "User menu",
     "offlineMode": "Offline mode",
     "accountSettings": "Account settings",
-    "manageSubscription": "Manage Subscription",
+    "manageSubscription": "Manage subscription",
     "logout": "Log out",
     "login": "Log in"
   },
@@ -143,8 +143,8 @@
     "noFreeSlot": "No free slot found",
     "movedTo": "Moved to {{start}} - {{end}}",
     "title": "Move...",
-    "forward": "Forward...",
-    "backward": "Backward...",
+    "forward": "Later...",
+    "backward": "Earlier...",
     "next": "Next...",
     "previous": "Previous...",
     "minutes_one": "{{count}} minute",
@@ -167,10 +167,10 @@
   },
   "block": {
     "edit": "Edit",
-    "copyParentId": "Copy parent ID",
+    "copyParentId": "Copy parent event ID",
     "copyId": "Copy ID",
     "duplicate": "Duplicate",
-    "detach": "Detach from parent",
+    "detach": "Detach from parent event",
     "reset": "Reset to original event",
     "completed": "{{title}} completed"
   },
@@ -178,30 +178,30 @@
     "changeServer": "Change server",
     "serverUrl": "Server URL",
     "testConnectivityLabel": "Test connectivity",
-    "testConnectivity": "Test Connectivity",
+    "testConnectivity": "Test connectivity",
     "connectionSuccess": "Connection successful. Save to apply changes.",
     "connectionFailed": "Connection failed. Please try again.",
     "invalidMetadata": "Invalid metadata response. Please confirm the URL.",
     "saveChanges": "Save changes",
     "title": "Log in to your account",
     "onServer": "on",
-    "offlineMode": "Use in Offline Mode",
+    "offlineMode": "Use in offline mode",
     "fillAll": "Please fill out all the fields.",
     "passwordsMismatch": "Passwords do not match.",
     "passwordLength": "Password must be 12 to 256 characters long.",
-    "passwordStrength": "Password must include uppercase and lowercase letters, a number, and a special character.",
+    "passwordStrength": "Password must include uppercase and lowercase letters, a digit, and a special character.",
     "accountCreated": "Account created. You may now log in.",
     "integrityFailed": "Failed to verify server integrity.",
-    "email": "Email Address",
+    "email": "Email address",
     "emailPlaceholder": "me@example.com",
     "password": "Password",
     "passwordPlaceholder": "Enter password",
-    "confirmPassword": "Confirm Password",
+    "confirmPassword": "Confirm password",
     "confirmPasswordPlaceholder": "Confirm password",
-    "confirmEmail": "Confirm Email",
+    "confirmEmail": "Confirm email",
     "confirmEmailPlaceholder": "Confirm email",
     "haveAccount": "Have an account? Log in",
-    "createAccount": "Create Account",
+    "createAccount": "Create account",
     "registrationsClosed": "This server is not accepting registrations.",
     "acceptBoth": "I accept the <terms>terms</terms> and <privacy>privacy policy</privacy>",
     "acceptTerms": "I accept the <terms>terms</terms>",
@@ -219,8 +219,8 @@
     "backToLogin": "Back to login"
   },
   "unlock": {
-    "title": "Decrypt Data",
-    "description": "You are logged in but your data is encrypted.",
+    "title": "Decrypt data",
+    "description": "You are logged in, but your data is encrypted.",
     "pinCode": "PIN code",
     "pinPlaceholder": "Enter PIN",
     "invalidPin": "Invalid PIN.",
@@ -232,7 +232,7 @@
   "settings": {
     "preview": {
       "title": "Preview event",
-      "description": "A preview for the event editor."
+      "description": "A preview of the event editor."
     },
     "resetToDefault": "Reset to default",
     "sync": {
@@ -266,7 +266,7 @@
       "set": "Set PIN"
     },
     "stayUnlocked": {
-      "failed": "Failed to enable keep unlocked.",
+      "failed": "Failed to enable \"Keep unlocked\".",
       "title": "Keep unlocked",
       "description": "Your master key will be stored on this device. Anyone with access to your device can access your data.",
       "enable": "Enable"
@@ -277,7 +277,7 @@
       "appearance": "Appearance",
       "calendar": "Calendar",
       "subscription": "Subscription",
-      "security": "Account & Security",
+      "security": "Account and security",
       "sync": "Sync"
     },
     "sections": {
@@ -308,7 +308,7 @@
       "presets-list": "User themes",
       "font-family": "Font family",
       "font-size": "Font size",
-      "colors-overrides": "Color overrides",
+      "colors-overrides": "Custom colors",
       "subscription-status": "Subscription status",
       "subscription-manage": "Manage subscription",
       "account-email": "Email address",
@@ -321,12 +321,12 @@
       "calendar-date-time-format": "Date and time format",
       "calendar-default-timezone": "Default time zone",
       "calendar-timezones-list": "Time zones",
-      "calendar-detach-recurring": "Detach recurring instances when edited",
+      "calendar-detach-recurring": "Detach edited occurrences from the series",
       "calendar-default-view": "Default view",
-      "calendar-snap-minutes": "Snap to minutes",
+      "calendar-snap-minutes": "Snap interval (minutes)",
       "calendar-line-opacity": "Line opacity",
       "calendar-day-header-position": "Day header position",
-      "calendar-time-label-position": "Time labels position",
+      "calendar-time-label-position": "Time label position",
       "calendar-default-event-name": "Default event name",
       "calendar-default-task-name": "Default task name",
       "calendar-default-event-duration": "Default event duration",
@@ -339,7 +339,7 @@
       "mini-calendar-event-bars": "Show event bars",
       "mini-calendar-week-numbers": "Show week numbers",
       "mini-calendar-bold-day-numbers": "Bold day numbers",
-      "mini-calendar-adaptive-numbers": "Adaptive number position",
+      "mini-calendar-adaptive-numbers": "Automatically adjust day number positions",
       "mini-calendar-dropdowns": "Month and year dropdowns",
       "calendar-agenda-enabled": "Enabled",
       "calendar-agenda-range": "Range",
@@ -444,10 +444,10 @@
       "additionalTz": "Additional time zones",
       "additionalTzHelp": "Shown alongside the default time zone on the grid.",
       "addTz": "Add a time zone...",
-      "tzLimit_one": "Maximum of {{count}} time zone reached",
-      "tzLimit_other": "Maximum of {{count}} time zones reached",
+      "tzLimit_one": "The limit of {{count}} time zone has been reached",
+      "tzLimit_other": "The limit of {{count}} time zones has been reached",
       "reorderTz": "Reorder time zone {{name}}",
-      "setDefaultTz": "Set default {{name}}",
+      "setDefaultTz": "Set {{name}} as default",
       "setDefault": "Set default",
       "remove": "Remove {{name}}",
       "colorsGenerated": "Colors generated from theme.",
@@ -455,8 +455,8 @@
       "colorsHelp": "Drag a color to reorder it, click a color to remove it.",
       "newColor": "New color",
       "addColor": "Add color",
-      "colorLimit_one": "Maximum of {{count}} color reached",
-      "colorLimit_other": "Maximum of {{count}} colors reached",
+      "colorLimit_one": "The limit of {{count}} color has been reached",
+      "colorLimit_other": "The limit of {{count}} colors has been reached",
       "alreadyAdded": "Already added",
       "inherit": "Inherit from time zone",
       "top": "Top",
@@ -471,7 +471,7 @@
       "changeEmail": "Change email",
       "verifyWarning": "You will need to verify your new email address before you can log in again. Entering the wrong email will lock you out of your account.",
       "newEmail": "New email",
-      "passwordRules": "Password must be 12 to 256 characters long and include uppercase and lowercase letters, a number, and a special character.",
+      "passwordRules": "Password must be 12 to 256 characters long and include uppercase and lowercase letters, a digit, and a special character.",
       "passwordFailed": "Failed to change password.",
       "changePassword": "Change password",
       "newPassword": "New password",
@@ -493,7 +493,7 @@
       "masterKeyWarning": "Your master key is stored on your device. Anyone with access to your device can access your data.",
       "autoLock": {
         "disabled": "Disabled",
-        "focus": "When focus lost"
+        "focus": "When the app loses focus"
       }
     },
     "push": {
@@ -501,18 +501,18 @@
       "disabling": "Disabling push service...",
       "disabled": "Push service disabled.",
       "unsupported": "Push service is not available in this browser.",
-      "resyncHelp": "If the push service is on, changes made on other devices sync right away, no matter this interval."
+      "resyncHelp": "When the push service is enabled, changes made on other devices sync immediately, regardless of this interval."
     },
     "subscription": {
       "none": "No active subscription",
       "status": {
         "active": "Active",
-        "trialing": "Trialing",
+        "trialing": "Trial period",
         "past_due": "Past due",
         "canceled": "Canceled",
         "unpaid": "Unpaid",
         "incomplete": "Incomplete",
-        "incomplete_expired": "Incomplete expired",
+        "incomplete_expired": "Incomplete and expired",
         "paused": "Paused"
       },
       "portalFailed": "Failed to open billing portal.",
@@ -523,11 +523,11 @@
     }
   },
   "subscription": {
-    "title": "Select Subscription",
+    "title": "Select subscription",
     "pricingFailed": "Failed to load pricing",
-    "checkoutFailed": "Failed to create checkout.",
+    "checkoutFailed": "Failed to start checkout.",
     "paymentConfirmed": "Payment confirmed.",
-    "notPaid": "It doesn't look like you paid yet.",
+    "notPaid": "Payment has not been confirmed yet.",
     "per": {
       "day": "per day",
       "week": "per week",
@@ -553,7 +553,7 @@
     "updateFailed": "Failed to update security settings."
   },
   "events": {
-    "cacheDecryptFailed": "Failed to decrypt event cache - it'll be discarded.",
+    "cacheDecryptFailed": "Failed to decrypt the event cache; it will be discarded.",
     "syncFailed": "Failed to sync calendar events.",
     "syncFailedWith": "Failed to sync calendar events: {{message}}",
     "decryptFailed": "Failed to decrypt calendar events.",
@@ -565,7 +565,7 @@
     "migrationFailed": "Failed to migrate key envelope."
   },
   "keyboard": {
-    "moveCancelled": "Move cancelled",
+    "moveCancelled": "Move canceled",
     "movedMany": "Moved {{count}} events",
     "moved": "Moved {{title}} to {{when}}",
     "notCompleted": "{{title}} not completed",
@@ -583,20 +583,20 @@
     "loadFailed": "Failed to load sessions."
   },
   "sidebar": {
-    "toggle": "Toggle Sidebar"
+    "toggle": "Toggle sidebar"
   },
   "editor": {
     "endBeforeStart": "An event cannot end before it starts.",
     "invalidDuration": "Invalid event duration.",
     "tooLong": "An event cannot last this long.",
-    "excludesEveryDay": "Repeat cannot exclude every day.",
-    "repeatEndsBeforeStart": "Repeat cannot end before it starts.",
+    "excludesEveryDay": "You cannot exclude every day from the repeat schedule.",
+    "repeatEndsBeforeStart": "The repeat schedule cannot end before it starts.",
     "tooLarge": "The event is too large.",
-    "title": "Edit Event",
+    "title": "Edit event",
     "moreActions": "More actions",
-    "titleColor": "Title & Color",
+    "titleColor": "Title and color",
     "eventColor": "Event color",
-    "startEnd": "Start & End Time",
+    "startEnd": "Start and end time",
     "start": "Start",
     "end": "End",
     "repeat": "Repeat",
@@ -608,7 +608,7 @@
     "yearly": "Repeat yearly",
     "custom": "Custom repeat",
     "editCustom": "Edit custom repeat",
-    "detachWarning": "Changing repeat settings will detach this instance.",
+    "detachWarning": "Changing repeat settings will detach this event from the series.",
     "description": "Description",
     "task": "Task",
     "completed": "Completed",
@@ -617,7 +617,7 @@
   },
   "repeatDialog": {
     "every": "Repeat every",
-    "unit": "Repeat unit",
+    "unit": "Repeat interval unit",
     "unitPlaceholder": "Unit",
     "unit_day_one": "Day",
     "unit_day_other": "Days",
@@ -627,7 +627,7 @@
     "unit_month_other": "Months",
     "unit_year_one": "Year",
     "unit_year_other": "Years",
-    "monthDay": "Repeat month day",
+    "monthDay": "Day of the month",
     "specificDays": "on specific days",
     "excluding": "Excluding",
     "excludedDays": "Excluded days",
@@ -638,7 +638,7 @@
     "endsOn": "Ends on",
     "endsAfter": "Ends after",
     "endsOnDate": "Ends on date",
-    "endsAfterCount": "Ends after repetitions",
+    "endsAfterCount": "Number of repetitions",
     "times_one": "time",
     "times_other": "times",
     "onSpecificDays": "On specific days"

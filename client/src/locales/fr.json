@@ -118,7 +118,7 @@
     },
     "this": "Cet événement",
     "future": "Cet événement et les suivants",
-    "all": "Tous les événements",
+    "all": "Tous les événements de cette série",
     "keepChanges": "Conserver les modifications des événements futurs"
   },
   "theme": {
@@ -141,8 +141,8 @@
     "noFreeSlot": "Aucun créneau libre trouvé",
     "movedTo": "Déplacé à {{start}} - {{end}}",
     "title": "Déplacer...",
-    "forward": "Avancer de...",
-    "backward": "Reculer de...",
+    "forward": "Plus tard...",
+    "backward": "Plus tôt...",
     "next": "Suivant...",
     "previous": "Précédent...",
     "minutes_one": "{{count}} minute",
@@ -165,10 +165,10 @@
   },
   "block": {
     "edit": "Modifier",
-    "copyParentId": "Copier l'ID du parent",
+    "copyParentId": "Copier l'ID de l'événement parent",
     "copyId": "Copier l'ID",
     "duplicate": "Dupliquer",
-    "detach": "Détacher du parent",
+    "detach": "Détacher de l'événement parent",
     "reset": "Rétablir l'événement d'origine",
     "completed": "{{title}} terminé"
   },
@@ -191,7 +191,7 @@
     "accountCreated": "Compte créé. Vous pouvez maintenant vous connecter.",
     "integrityFailed": "Impossible de vérifier l'intégrité du serveur.",
     "email": "Adresse e-mail",
-    "emailPlaceholder": "moi@exemple.com",
+    "emailPlaceholder": "moi@example.com",
     "password": "Mot de passe",
     "passwordPlaceholder": "Saisissez le mot de passe",
     "confirmPassword": "Confirmer le mot de passe",
@@ -264,14 +264,14 @@
       "set": "Définir le PIN"
     },
     "stayUnlocked": {
-      "failed": "Impossible d'activer le maintien du déverrouillage.",
+      "failed": "Impossible d'activer « Rester déverrouillé ».",
       "title": "Rester déverrouillé",
-      "description": "Votre clé maître sera stockée sur cet appareil. Toute personne ayant accès à votre appareil pourra accéder à vos données.",
+      "description": "Votre clé maîtresse sera stockée sur cet appareil. Toute personne ayant accès à votre appareil pourra accéder à vos données.",
       "enable": "Activer"
     },
     "syncFailed": "Impossible de synchroniser les paramètres.",
     "categories": {
-      "region": "Réglages régionaux",
+      "region": "Paramètres régionaux",
       "appearance": "Apparence",
       "calendar": "Calendrier",
       "subscription": "Abonnement",
@@ -319,20 +319,20 @@
       "calendar-date-time-format": "Format de la date et de l'heure",
       "calendar-default-timezone": "Fuseau horaire par défaut",
       "calendar-timezones-list": "Fuseaux horaires",
-      "calendar-detach-recurring": "Détacher les occurrences récurrentes lors de leur modification",
+      "calendar-detach-recurring": "Détacher les occurrences modifiées de la série",
       "calendar-default-view": "Vue par défaut",
-      "calendar-snap-minutes": "Aimantation en minutes",
+      "calendar-snap-minutes": "Intervalle d'alignement (minutes)",
       "calendar-line-opacity": "Opacité des lignes",
       "calendar-day-header-position": "Position de l'en-tête du jour",
       "calendar-time-label-position": "Position des étiquettes d'heure",
-      "calendar-default-event-name": "Nom d'événement par défaut",
-      "calendar-default-task-name": "Nom de tâche par défaut",
-      "calendar-default-event-duration": "Durée d'événement par défaut",
+      "calendar-default-event-name": "Nom par défaut de l'événement",
+      "calendar-default-task-name": "Nom par défaut de la tâche",
+      "calendar-default-event-duration": "Durée par défaut de l'événement",
       "calendar-event-editor-color-presets": "Couleurs prédéfinies",
       "calendar-event-editor-add-colors-automatically": "Ajouter automatiquement les nouvelles couleurs",
       "calendar-event-editor-opacity": "Opacité de l'arrière-plan",
       "calendar-event-editor-blur": "Flou de l'arrière-plan",
-      "calendar-event-editor-radius": "Rayon des bordures",
+      "calendar-event-editor-radius": "Rayon des coins",
       "mini-calendar-enabled": "Activé",
       "mini-calendar-event-bars": "Afficher les barres d'événements",
       "mini-calendar-week-numbers": "Afficher les numéros de semaine",
@@ -380,7 +380,7 @@
       "sidebarGroup": "Barre latérale"
     },
     "font": {
-      "systemDefault": "Par défaut du système"
+      "systemDefault": "Police par défaut du système"
     },
     "themes": {
       "nameExists": "Un thème portant ce nom existe déjà.",
@@ -395,7 +395,7 @@
       "import": "Importer",
       "importFile": "Importer un fichier de thème",
       "none": "Aucun thème enregistré pour le moment.",
-      "reorder": "Réorganiser les thèmes",
+      "reorder": "Réorganiser le thème",
       "rename": "Renommer le thème",
       "active": "Actif",
       "export": "Exporter en .json",
@@ -436,7 +436,7 @@
     "days_one": "{{count}} jour",
     "days_other": "{{count}} jours",
     "calendar": {
-      "languageSystem": "Par défaut du système",
+      "languageSystem": "Langue par défaut du système",
       "currently": "Actuellement : {{day}}",
       "tzSearch": "Saisissez une ville ou un pays pour rechercher...",
       "additionalTz": "Fuseaux horaires supplémentaires",
@@ -488,10 +488,10 @@
       "expires": "Expire {{when}}",
       "endSession": "Terminer la session",
       "changePin": "Modifier le PIN",
-      "masterKeyWarning": "Votre clé maître est stockée sur votre appareil. Toute personne ayant accès à votre appareil peut accéder à vos données.",
+      "masterKeyWarning": "Votre clé maîtresse est stockée sur votre appareil. Toute personne ayant accès à votre appareil peut accéder à vos données.",
       "autoLock": {
         "disabled": "Désactivé",
-        "focus": "Lorsque le focus est perdu"
+        "focus": "Quand l'application perd le focus"
       }
     },
     "push": {
@@ -525,7 +525,7 @@
     "pricingFailed": "Impossible de charger les tarifs",
     "checkoutFailed": "Impossible de lancer le processus de paiement.",
     "paymentConfirmed": "Paiement confirmé.",
-    "notPaid": "Il semble que vous n'ayez pas encore payé.",
+    "notPaid": "Le paiement n'a pas encore été confirmé.",
     "per": {
       "day": "par jour",
       "week": "par semaine",
@@ -606,7 +606,7 @@
     "yearly": "Répéter tous les ans",
     "custom": "Répétition personnalisée",
     "editCustom": "Modifier la répétition personnalisée",
-    "detachWarning": "Modifier les paramètres de répétition détachera cet événement.",
+    "detachWarning": "Modifier les paramètres de répétition détachera cette occurrence de la série.",
     "description": "Description",
     "task": "Tâche",
     "completed": "Terminée",
@@ -614,7 +614,7 @@
     "duplicate": "Dupliquer l'événement"
   },
   "repeatDialog": {
-    "every": "Répéter tous les",
+    "every": "Répéter à intervalles de",
     "unit": "Unité de répétition",
     "unitPlaceholder": "Unité",
     "unit_day_one": "jour",
@@ -625,13 +625,13 @@
     "unit_month_other": "mois",
     "unit_year_one": "an",
     "unit_year_other": "ans",
-    "monthDay": "Jour du mois de répétition",
+    "monthDay": "Jour du mois",
     "specificDays": "certains jours",
     "excluding": "Sauf",
     "excludedDays": "Jours exclus",
     "repeatOn": "Répéter le",
     "daysOfMonth": "Jours du mois",
-    "forever": "Pour toujours",
+    "forever": "Sans date de fin",
     "ends": "Fin",
     "endsOn": "Se termine le",
     "endsAfter": "Se termine après",
