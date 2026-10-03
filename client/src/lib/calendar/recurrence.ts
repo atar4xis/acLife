@@ -384,7 +384,7 @@ export function nearbyOccurrences(
 }
 
 function closestToNow(events: CalendarEvent[], now: DateTime, perSide: number) {
-  const sorted = [...events].sort(
+  const sorted = events.toSorted(
     (a, b) => a.start.toMillis() - b.start.toMillis(),
   );
   const split = sorted.findIndex((e) => e.start >= now);

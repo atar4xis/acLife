@@ -99,7 +99,7 @@ export function* occurrences(
   for (; ; period++) {
     const starts = periodCandidates(anchor, repeat, period)
       .filter((d) => d >= anchor && !isOccurrenceExcluded(repeat, d))
-      .sort((a, b) => a.toMillis() - b.toMillis());
+      .toSorted((a, b) => a.toMillis() - b.toMillis());
 
     if (!starts.length) {
       if (++empty > MAX_EMPTY_PERIODS) return;

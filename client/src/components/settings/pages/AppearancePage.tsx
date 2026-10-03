@@ -481,12 +481,12 @@ const PresetsList = memo(function PresetsList() {
   );
 });
 
-const CUSTOM_THEMES = [...BUILT_IN_THEMES]
-  .sort((a, b) => a.name.localeCompare(b.name))
-  .map((theme) => ({
-    ...theme,
-    id: `${BUILT_IN_THEME_ID_PREFIX}${theme.slug}`,
-  }));
+const CUSTOM_THEMES = BUILT_IN_THEMES.toSorted((a, b) =>
+  a.name.localeCompare(b.name),
+).map((theme) => ({
+  ...theme,
+  id: `${BUILT_IN_THEME_ID_PREFIX}${theme.slug}`,
+}));
 
 const CUSTOM_THEME_GROUPS = (["dark", "light"] as const).map((category) => ({
   category,

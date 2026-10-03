@@ -97,7 +97,7 @@ function SearchableSelect({
     }
     // stable sort keeps the original option order within equal scores
     return matches
-      .sort((a, b) => a.score - b.score)
+      .toSorted((a, b) => a.score - b.score)
       .slice(0, maxResults)
       .map((m) => m.option);
   }, [options, debouncedQuery, maxResults]);

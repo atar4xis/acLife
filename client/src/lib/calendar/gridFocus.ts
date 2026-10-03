@@ -127,7 +127,7 @@ export function eventsAtSlot(
 
   return (events ?? [])
     .filter((e) => e.start < end && e.end > start)
-    .sort(
+    .toSorted(
       (a, b) =>
         a.start.toMillis() - b.start.toMillis() ||
         eventKey(a).localeCompare(eventKey(b)),
@@ -152,7 +152,7 @@ export function adjacentEvent(
         };
       }),
     )
-    .sort((a, b) => a.startMs - b.startMs || a.key.localeCompare(b.key));
+    .toSorted((a, b) => a.startMs - b.startMs || a.key.localeCompare(b.key));
 
   const at = from.eventKey
     ? entries.findIndex((e) => e.day === from.day && e.key === from.eventKey)
@@ -167,7 +167,7 @@ export function adjacentEvent(
       ? entries[at + direction]
       : direction > 0
         ? entries.find((e) => e.startMs > fromMs)
-        : entries.filter((e) => e.startMs < fromMs).at(-1);
+        : entries.findLast((e) => e.startMs < fromMs);
   if (!target) return null;
 
   return {

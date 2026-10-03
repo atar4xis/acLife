@@ -62,7 +62,7 @@ export const useCalendarSearch = (
             )
           : [],
       )
-      .sort(
+      .toSorted(
         (a, b) =>
           Math.abs(a.start.toMillis() - now) -
           Math.abs(b.start.toMillis() - now),

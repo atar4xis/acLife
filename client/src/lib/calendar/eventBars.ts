@@ -16,7 +16,7 @@ export function layoutBars(
   for (const date of dateKeys) {
     const slots: BarSlots = new Array(BAR_SLOTS).fill(undefined);
     const pending: CalendarEvent[] = [];
-    const events = [...(eventMap.get(date) ?? [])].sort(
+    const events = (eventMap.get(date) ?? []).toSorted(
       (a, b) => a.start.toMillis() - b.start.toMillis(),
     );
 

@@ -51,7 +51,7 @@ const rejectOversized = (
     if (mine.at(-1)!.type === "deleted") continue;
     rejected.push({
       id,
-      title: mine.filter((c) => c.event).at(-1)!.event!.title,
+      title: mine.findLast((c) => c.event)!.event!.title,
       wasAdded: mine.some((c) => c.type === "added"),
       previous: previous.get(id),
     });

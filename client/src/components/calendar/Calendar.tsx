@@ -841,7 +841,7 @@ export default memo(function AppCalendar({
           originalEnd: state.originalEnd,
         },
         ...(state.selection ?? []),
-      ].sort(
+      ].toSorted(
         (a, b) =>
           Number(isChainParent(a.event)) - Number(isChainParent(b.event)),
       );
@@ -1211,7 +1211,7 @@ export default memo(function AppCalendar({
     return [
       event,
       ...resolveSelection(eventMapRef.current, selected, key),
-    ].sort((a, b) => Number(isChainParent(a)) - Number(isChainParent(b)));
+    ].toSorted((a, b) => Number(isChainParent(a)) - Number(isChainParent(b)));
   }, []);
 
   const onEventEdit = useCallback(
@@ -2273,7 +2273,7 @@ export default memo(function AppCalendar({
         {d.label}
       </HeaderCell>
     ));
-    return rtl ? cells.reverse() : cells;
+    return rtl ? cells.toReversed() : cells;
   }, [visibleDays, now, headerBottom, t, rtl]);
 
   const tzColWidth = useMemo(
@@ -2371,7 +2371,7 @@ export default memo(function AppCalendar({
           <div key={hour} role="row" className="contents">
             {!labelsRight && timeLabels}
 
-            {(rtl ? [...visibleDays].reverse() : visibleDays).map((d) => {
+            {(rtl ? visibleDays.toReversed() : visibleDays).map((d) => {
               const dayIndex = visibleDays.indexOf(d);
               const key = d.date.toISODate()!;
               const dayEvents = eventMap.get(key) || [];

@@ -245,7 +245,9 @@ function RepeatForm({
           selected={draft.days?.map((d) => new Date(PICKER_YEAR, 0, d))}
           onSelect={(dates) =>
             dates?.length &&
-            patch({ days: dates.map((d) => d.getDate()).sort((a, b) => a - b) })
+            patch({
+              days: dates.map((d) => d.getDate()).toSorted((a, b) => a - b),
+            })
           }
         />
       )}
@@ -289,7 +291,7 @@ function RepeatForm({
                 patch({
                   yearDays: dates
                     .map((d) => DateTime.fromJSDate(d).toFormat("MM-dd"))
-                    .sort(),
+                    .toSorted(),
                 })
               }
             />

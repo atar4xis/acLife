@@ -478,13 +478,13 @@ function padUint8(arr: Uint8Array, length: number): Uint8Array {
 function bigintToUint8Array(value: bigint, length?: number): Uint8Array {
   if (value === 0n) return new Uint8Array(length ?? 1).fill(0);
 
-  const bytes: number[] = [];
+  const reversed: number[] = [];
   let temp = value;
   while (temp > 0) {
-    bytes.push(Number(temp & 0xffn));
+    reversed.push(Number(temp & 0xffn));
     temp >>= 8n;
   }
-  bytes.reverse();
+  const bytes = reversed.toReversed();
 
   if (length !== undefined) {
     if (bytes.length > length) {

@@ -63,7 +63,7 @@ export const getDayEventStyles = (
   // map events to positions
   const positioned: PositionedEvent[] = events
     .map((ev) => getEventPixelPosition(ev, day, hourHeight))
-    .sort((a, b) => a.start.toMillis() - b.start.toMillis());
+    .toSorted((a, b) => a.start.toMillis() - b.start.toMillis());
 
   const columns: PositionedEvent[][] = [];
 

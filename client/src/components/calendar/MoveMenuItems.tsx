@@ -49,7 +49,9 @@ export function MoveMenuItems({
           ...Array.from(selectedEvents.entries())
             .filter(([key]) => key !== eventKey(event))
             .map(([, ev]) => ev),
-        ].sort((a, b) => Number(isChainParent(a)) - Number(isChainParent(b)))
+        ].toSorted(
+          (a, b) => Number(isChainParent(a)) - Number(isChainParent(b)),
+        )
       : [event];
 
   const moveBy = (

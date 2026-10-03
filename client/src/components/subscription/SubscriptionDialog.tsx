@@ -32,7 +32,7 @@ export default function SubscriptionDialog() {
       return;
     }
 
-    const sorted = res.data.sort((a, b) => a.amount - b.amount);
+    const sorted = res.data.toSorted((a, b) => a.amount - b.amount);
     setPrices(sorted);
   }, [get, t]);
 

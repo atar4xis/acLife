@@ -147,7 +147,9 @@ export const loadTimezones = (): Promise<TimezoneOption[]> => {
     TIMEZONE_BATCH_SIZE,
   ).then(
     (options) =>
-      (timezonesCache = options.sort((a, b) => a.label.localeCompare(b.label))),
+      (timezonesCache = options.toSorted((a, b) =>
+        a.label.localeCompare(b.label),
+      )),
   );
   return timezonesPromise;
 };

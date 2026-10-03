@@ -24,7 +24,9 @@ export const computeBucketId = async (
 export const computeBucketHash = async (
   events: { id: string; ts: number }[],
 ): Promise<string> => {
-  const lines = events.map((ev) => `${ev.id.toLowerCase()}:${ev.ts}`).sort();
+  const lines = events
+    .map((ev) => `${ev.id.toLowerCase()}:${ev.ts}`)
+    .toSorted();
   const hash = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(lines.join("\n")),

@@ -47,7 +47,7 @@ export default memo(function AgendaList() {
             !e._continued &&
             !(e.isTask && e.completed),
         )
-        .sort((a, b) => a.start.toMillis() - b.start.toMillis());
+        .toSorted((a, b) => a.start.toMillis() - b.start.toMillis());
 
       if (upcoming.length) {
         result.set(date, upcoming);
