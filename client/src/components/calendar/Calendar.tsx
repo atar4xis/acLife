@@ -449,6 +449,45 @@ const applyDragDelta = (
   return { ...primary, changed };
 };
 
+const applyDragWithResize = (
+  state: NonNullable<EventDragRef>,
+  dayDelta: number,
+  deltaMinutes: number,
+  snapMins: number,
+) => {
+  state.dayDelta = dayDelta;
+  state.deltaMinutes = deltaMinutes;
+  const dragged = applyDragDelta(state, dayDelta, deltaMinutes, snapMins);
+  const resize = state.resize;
+  if (!resize || state.selection?.length) return dragged;
+
+  let { newStart, newEnd } = dragged;
+  if (resize.start)
+    newStart = getDraggedTimes(
+      "resize_start",
+      newStart,
+      newEnd,
+      0,
+      resize.start,
+      snapMins,
+    ).newStart;
+  if (resize.end)
+    newEnd = getDraggedTimes(
+      "resize_end",
+      newStart,
+      newEnd,
+      0,
+      resize.end,
+      snapMins,
+    ).newEnd;
+
+  return {
+    newStart,
+    newEnd,
+    changed: applyTimes(state.event, { newStart, newEnd }) || dragged.changed,
+  };
+};
+
 /* -------------------------------------------------------------------------- */
 
 // TODO: clean this up, separate into smaller components and hooks
@@ -755,6 +794,24 @@ export default memo(function AppCalendar({
 
   /* -------------------------------------------------------------------------- */
 
+  const showDragStep = useCallback(
+    (
+      state: NonNullable<EventDragRef>,
+      step: { newStart: DateTime; newEnd: DateTime; changed: boolean },
+    ) => {
+      state.label = describeDragLabel(
+        step.newStart,
+        step.newEnd,
+        state.selection?.length,
+      );
+      if (step.changed) {
+        state.moved = true;
+        forceRender((tick) => tick + 1);
+      }
+    },
+    [],
+  );
+
   const onGlobalPointerMove = useCallback(
     (e: PointerEvent) => {
       const state = dragRef.current;
@@ -784,28 +841,20 @@ export default memo(function AppCalendar({
 
       const dayDelta = dayIndex - state.originalDay;
 
-      const { newStart, newEnd, changed } = applyDragDelta(
-        state,
-        dayDelta,
-        deltaMinutes,
-        settings.snapMinutes,
-      );
-
       // when dragging, label tells the new start/end times and follows the pointer
-      state.label = describeDragLabel(
-        newStart,
-        newEnd,
-        state.selection?.length,
-      );
       state.x = e.clientX;
       state.y = e.clientY;
-
-      if (changed) {
-        state.moved = true;
-        forceRender((tick) => tick + 1);
-      }
+      showDragStep(
+        state,
+        applyDragWithResize(
+          state,
+          dayDelta,
+          deltaMinutes,
+          settings.snapMinutes,
+        ),
+      );
     },
-    [visibleDays, hourHeight, settings.snapMinutes],
+    [visibleDays, hourHeight, settings.snapMinutes, showDragStep],
   );
 
   const pointerUpRef = useRef<(e: PointerEvent) => void>(null);
@@ -1153,27 +1202,20 @@ export default memo(function AppCalendar({
       if (state?.pointerId !== KEYBOARD_DRAG_ID) return null;
 
       state.type = type;
-      if (
+      showDragStep(
+        state,
         applyDragDelta(
           state,
           dayDelta,
           deltaMinutes,
           settings.snapMinutes,
           "current",
-        ).changed
-      ) {
-        state.moved = true;
-        state.label = describeDragLabel(
-          state.event.start,
-          state.event.end,
-          state.selection?.length,
-        );
-        forceRender((tick) => tick + 1);
-      }
+        ),
+      );
 
       return state.event;
     },
-    [settings.snapMinutes],
+    [settings.snapMinutes, showDragStep],
   );
 
   const cancelKeyboardMove = useCallback(() => {
@@ -1771,6 +1813,54 @@ export default memo(function AppCalendar({
     ],
   );
 
+  const onResizeTouchMove = useCallback(
+    (e: TouchEvent) => {
+      const state = dragRef.current;
+      const resize = state?.resize;
+      const touch = resize?.touch;
+      if (!state || !resize || !touch) return;
+      const finger = Array.from(e.touches).find(
+        (t) => t.identifier === touch.id,
+      );
+      if (!finger) return;
+
+      resize[touch.side] =
+        touch.base +
+        snapMinutes(
+          yToMinutes(finger.clientY - touch.y, hourHeightRef.current),
+          settings.snapMinutes,
+        );
+
+      showDragStep(
+        state,
+        applyDragWithResize(
+          state,
+          state.dayDelta ?? 0,
+          state.deltaMinutes ?? 0,
+          settings.snapMinutes,
+        ),
+      );
+    },
+    [settings.snapMinutes, showDragStep],
+  );
+
+  const onResizeTouchEnd = useCallback(
+    (e: TouchEvent) => {
+      const resize = dragRef.current?.resize;
+      const id = resize?.touch?.id;
+      if (
+        id !== undefined &&
+        !Array.from(e.changedTouches).some((t) => t.identifier === id)
+      )
+        return;
+      if (resize) resize.touch = undefined;
+      window.removeEventListener("touchmove", onResizeTouchMove);
+      window.removeEventListener("touchend", onResizeTouchEnd);
+      window.removeEventListener("touchcancel", onResizeTouchEnd);
+    },
+    [onResizeTouchMove],
+  );
+
   const gridTouchStart = useCallback(
     (e: React.TouchEvent) => {
       const drag = dragRef.current;
@@ -1779,8 +1869,23 @@ export default memo(function AppCalendar({
         drag &&
         drag.pointerId !== KEYBOARD_DRAG_ID &&
         !evPendingRef.current
-      )
-        onGlobalPointerCancel({ pointerId: drag.pointerId } as PointerEvent);
+      ) {
+        const finger = e.changedTouches[0];
+        if (drag.type === "move" && !drag.resize?.touch) {
+          const side = finger.clientY < drag.y ? "start" : "end";
+          drag.resize ??= { start: 0, end: 0 };
+          drag.resize.touch = {
+            id: finger.identifier,
+            side,
+            y: finger.clientY,
+            base: drag.resize[side],
+          };
+          window.addEventListener("touchmove", onResizeTouchMove);
+          window.addEventListener("touchend", onResizeTouchEnd);
+          window.addEventListener("touchcancel", onResizeTouchEnd);
+        }
+        return;
+      }
 
       const targetElement = e.target as Element;
       if (
@@ -1797,7 +1902,7 @@ export default memo(function AppCalendar({
         },
       };
     },
-    [onGlobalPointerCancel],
+    [onResizeTouchMove, onResizeTouchEnd],
   );
 
   const gridTouchMove = useCallback((e: React.TouchEvent) => {

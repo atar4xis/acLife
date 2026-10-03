@@ -95,6 +95,13 @@ export type EventDragRef = {
   label: string;
   dayRects: { day: number; rect: DOMRect }[];
   moved: boolean;
+  dayDelta?: number;
+  deltaMinutes?: number;
+  resize?: {
+    start: number;
+    end: number;
+    touch?: { id: number; side: "start" | "end"; y: number; base: number };
+  };
   selection?: {
     event: CalendarEvent;
     originalStart: DateTime;

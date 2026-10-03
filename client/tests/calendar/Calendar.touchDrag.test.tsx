@@ -24,10 +24,14 @@ const touch = {
   clientY: timeToClientY(9),
 };
 
-const finger = (clientX: number, clientY: number) => ({ clientX, clientY });
+const finger = (clientX: number, clientY: number, identifier = 0) => ({
+  clientX,
+  clientY,
+  identifier,
+});
 
 const fireTouch = (
-  type: "touchstart" | "touchmove",
+  type: "touchstart" | "touchmove" | "touchend",
   target: Element,
   ...list: ReturnType<typeof finger>[]
 ) => {
@@ -35,6 +39,7 @@ const fireTouch = (
   Object.defineProperty(event, "touches", {
     value: Object.assign(list, { item: (i: number) => list[i] }),
   });
+  Object.defineProperty(event, "changedTouches", { value: [list.at(-1)] });
   act(() => {
     target.dispatchEvent(event);
   });
@@ -139,20 +144,48 @@ describe("touch drag: pinch", () => {
     expect(saveEvents).not.toHaveBeenCalled();
   });
 
-  it("aborts a running drag when a second finger lands", async () => {
+  const first = finger(dayCenterX(2), timeToClientY(9));
+  const swipe = (block: Element, id: number, from: number, to: number) => {
+    const x = dayCenterX(4);
+    fireTouch("touchstart", block, first, finger(x, timeToClientY(from), id));
+    fireTouch("touchmove", block, first, finger(x, timeToClientY(to), id));
+  };
+
+  it.each([
+    ["above", 7, 6, 8, 10],
+    ["below", 11, 12, 9, 11],
+  ])(
+    "resizes when a second finger swipes %s the dragging finger",
+    async (_, from, to, startHour, endHour) => {
+      const saveEvents = vi.fn();
+      renderCalendar({ mode: "week", events: [buildPlainEvent()], saveEvents });
+
+      await longPress("Planning");
+      moveFinger(timeToClientY(9));
+      swipe(await getEventBlock("Planning"), 1, from, to);
+      releaseFinger(timeToClientY(9));
+      await advanceSave();
+
+      const [saved] = getLastSavedEvents(saveEvents);
+      expect(saved.start.hour).toBe(startHour);
+      expect(saved.end.hour).toBe(endHour);
+    },
+  );
+
+  it("keeps resizing with a new finger after the second finger lifts", async () => {
     const saveEvents = vi.fn();
     renderCalendar({ mode: "week", events: [buildPlainEvent()], saveEvents });
 
     await longPress("Planning");
-    moveFinger(timeToClientY(11));
-    secondFinger(await getEventBlock("Planning"));
-    releaseFinger(timeToClientY(11));
+    moveFinger(timeToClientY(9));
+    const block = await getEventBlock("Planning");
+    swipe(block, 1, 7, 6);
+    fireTouch("touchend", block, finger(dayCenterX(4), timeToClientY(6), 1));
+    swipe(block, 2, 7, 6);
+    releaseFinger(timeToClientY(9));
     await advanceSave();
 
-    expect(saveEvents).not.toHaveBeenCalled();
-    const scroll = new Event("touchmove", { cancelable: true });
-    window.dispatchEvent(scroll);
-    expect(scroll.defaultPrevented).toBe(false);
+    expect(getLastSavedEvents(saveEvents)[0].start.hour).toBe(7);
   });
 
   it("zooms the grid with two fingers", async () => {
