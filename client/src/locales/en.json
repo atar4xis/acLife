@@ -53,6 +53,8 @@
     }
   },
   "common": {
+    "undo": "Undo",
+    "redo": "Redo",
     "settings": "Settings",
     "cancel": "Cancel",
     "yes": "Yes",

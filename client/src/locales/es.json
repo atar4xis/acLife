@@ -50,6 +50,8 @@
     }
   },
   "common": {
+    "undo": "Deshacer",
+    "redo": "Rehacer",
     "settings": "Ajustes",
     "cancel": "Cancelar",
     "yes": "Sí",

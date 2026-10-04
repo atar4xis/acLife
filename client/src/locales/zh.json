@@ -49,6 +49,8 @@
     }
   },
   "common": {
+    "undo": "撤销",
+    "redo": "重做",
     "settings": "设置",
     "cancel": "取消",
     "yes": "是",

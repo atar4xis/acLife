@@ -140,7 +140,9 @@ export default function AppShell() {
           {t("appShell.offline")}
         </div>
       )}
-      {saving && <Spinner className="fixed bottom-5 end-5 size-8" />}
+      {saving && (
+        <Spinner className="fixed bottom-5 end-5 size-8 in-[[data-has-undo-buttons]]:end-32" />
+      )}
       <PushService />
       <AutoLockService />
       <TimezoneChangeDialog />

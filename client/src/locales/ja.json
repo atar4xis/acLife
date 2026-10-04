@@ -49,6 +49,8 @@
     }
   },
   "common": {
+    "undo": "元に戻す",
+    "redo": "やり直す",
     "settings": "設定",
     "cancel": "キャンセル",
     "yes": "はい",

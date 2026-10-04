@@ -99,6 +99,7 @@ import useGridKeyboard from "@/hooks/useGridKeyboard";
 import { useKeyboardMode } from "@/hooks/useGridFocus";
 import { SpokenMessage, SlotIndicator } from "./GridFocus";
 import ScrollThumb from "./ScrollThumb";
+import UndoRedoButtons from "./UndoRedoButtons";
 import { getTimezoneHourLabel } from "@/lib/calendar/timezone";
 import { useWeekStart } from "@/hooks/useWeekStart";
 import {
@@ -410,6 +411,13 @@ export default memo(function AppCalendar({
     past: CalendarEvent[][];
     future: CalendarEvent[][];
   }>({ past: [], future: [] });
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const syncHistory = useCallback(() => {
+    const { past, future } = historyRef.current;
+    setCanUndo(past.length > 0);
+    setCanRedo(future.length > 0);
+  }, []);
   const clipboardRef = useRef<CalendarEvent[]>([]);
   const gridPointerRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -498,11 +506,12 @@ export default memo(function AppCalendar({
       const history = historyRef.current;
       history.past = history.past.map(restore);
       history.future = history.future.map(restore);
+      syncHistory();
       dispatch({ type: "set", events: restore(calendarEventsRef.current) });
 
       if (rejected.some((r) => !r.previous && !r.wasAdded)) resyncRef.current();
     },
-    [dispatch],
+    [dispatch, syncHistory],
   );
 
   const saveIfChanged = useCallback(() => {
@@ -533,7 +542,8 @@ export default memo(function AppCalendar({
     history.past.push(calendarEventsRef.current);
     if (history.past.length > HISTORY_LIMIT) history.past.shift();
     history.future = [];
-  }, []);
+    syncHistory();
+  }, [syncHistory]);
 
   const applyHistorySnapshot = useCallback(
     (target: CalendarEvent[]) => {
@@ -558,7 +568,8 @@ export default memo(function AppCalendar({
     history.future.push(calendarEventsRef.current);
     if (history.future.length > HISTORY_LIMIT) history.future.shift();
     applyHistorySnapshot(target);
-  }, [applyHistorySnapshot]);
+    syncHistory();
+  }, [applyHistorySnapshot, syncHistory]);
 
   const redo = useCallback(() => {
     const history = historyRef.current;
@@ -568,7 +579,8 @@ export default memo(function AppCalendar({
     history.past.push(calendarEventsRef.current);
     if (history.past.length > HISTORY_LIMIT) history.past.shift();
     applyHistorySnapshot(target);
-  }, [applyHistorySnapshot]);
+    syncHistory();
+  }, [applyHistorySnapshot, syncHistory]);
 
   /* -------------------------------------------------------------------------- */
 
@@ -3161,6 +3173,15 @@ export default memo(function AppCalendar({
           visibleDays={visibleDays}
         />
       </div>
+
+      {isMobile && (
+        <UndoRedoButtons
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={undo}
+          onRedo={redo}
+        />
+      )}
 
       <RecurringUpdateDialog
         action="Update"

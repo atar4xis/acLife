@@ -51,6 +51,8 @@
     }
   },
   "common": {
+    "undo": "Annuler",
+    "redo": "Rétablir",
     "settings": "Paramètres",
     "cancel": "Annuler",
     "yes": "Oui",

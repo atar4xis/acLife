@@ -52,6 +52,8 @@
     }
   },
   "common": {
+    "undo": "Cofnij",
+    "redo": "Ponów",
     "settings": "Ustawienia",
     "cancel": "Anuluj",
     "yes": "Tak",
