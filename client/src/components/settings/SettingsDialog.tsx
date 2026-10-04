@@ -204,7 +204,10 @@ export default function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(840px,85vh)] w-[min(1280px,95vw)] max-w-none flex-col gap-0 p-0 sm:max-w-none">
+      <DialogContent
+        onInteractOutside={isMobile ? (e) => e.preventDefault() : undefined}
+        className="flex h-[min(840px,85vh)] w-[min(1280px,95vw)] max-w-none flex-col gap-0 p-0 sm:max-w-none"
+      >
         <DialogTitle className="sr-only">{t("common.settings")}</DialogTitle>
         {isMobile && (
           <button
