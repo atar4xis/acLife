@@ -10,7 +10,7 @@ import {
 
 setupCalendarTests();
 
-const editor = () => screen.getByRole("dialog", { name: "Edit Event" });
+const editor = () => screen.getByRole("dialog", { name: "Edit event" });
 const header = () => editor().querySelector("h3")!.parentElement!;
 const placement = () => {
   const { style } = document.querySelector<HTMLElement>(".event-editor")!;

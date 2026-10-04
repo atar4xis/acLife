@@ -32,14 +32,14 @@ import { expectNoViolations } from "../a11y/axe.ts";
 setupCalendarTests();
 
 const today = FIXED_NOW.startOf("day");
-const editor = () => screen.getByRole("dialog", { name: "Edit Event" });
+const editor = () => screen.getByRole("dialog", { name: "Edit event" });
 
 // Planning is 9:00-10:00, so one hour up from the start slot lands on it
 const openFromKeyboard = async (user: ReturnType<typeof userEvent.setup>) => {
   await screen.findByText("Planning");
   focusGrid();
   await user.keyboard("{PageUp}{Enter}{Enter}");
-  await screen.findByRole("dialog", { name: "Edit Event" });
+  await screen.findByRole("dialog", { name: "Edit event" });
 };
 
 const expectBackOnEvent = async (block?: HTMLElement) => {
@@ -55,7 +55,7 @@ describe("Event editor dialog", () => {
 
     const dialog = editor();
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(dialog).toHaveAccessibleName("Edit Event");
+    expect(dialog).toHaveAccessibleName("Edit event");
     expect(dialog.querySelector("h3")).toHaveAttribute(
       "id",
       dialog.getAttribute("aria-labelledby"),
@@ -170,7 +170,7 @@ describe("Event editor focus: opened from the keyboard", () => {
     await user.keyboard("{Enter}");
     focusGrid();
     await user.keyboard("{Enter}");
-    await screen.findByRole("dialog", { name: "Edit Event" });
+    await screen.findByRole("dialog", { name: "Edit event" });
     await user.click(screen.getByRole("button", { name: "Close" }));
     await expectBackOnEvent();
   });
@@ -216,7 +216,7 @@ describe("Event editor focus: opened from the keyboard", () => {
     await user.keyboard("{ArrowDown}");
     await user.keyboard("{Enter}");
 
-    await screen.findByRole("dialog", { name: "Edit Event" });
+    await screen.findByRole("dialog", { name: "Edit event" });
     await waitFor(() =>
       expect(screen.getByDisplayValue("Planning")).toHaveFocus(),
     );
@@ -256,7 +256,7 @@ describe("Event editor focus: opened from the keyboard", () => {
       .find((button) => button !== null)!;
     act(() => agendaButton.focus());
     await user.keyboard("{Enter}");
-    await screen.findByRole("dialog", { name: "Edit Event" });
+    await screen.findByRole("dialog", { name: "Edit event" });
     expect(screen.getByDisplayValue("Retro")).toHaveFocus();
     await user.keyboard("{Escape}");
 
@@ -295,7 +295,7 @@ describe("Event editor focus: opened from the keyboard", () => {
       .find((button) => button !== null)!;
     act(() => agendaButton.focus());
     await user.keyboard("{Enter}");
-    await screen.findByRole("dialog", { name: "Edit Event" });
+    await screen.findByRole("dialog", { name: "Edit event" });
     await user.click(screen.getByRole("button", { name: "Delete event" }));
 
     await waitFor(() => expect(grid()).toHaveFocus());
@@ -338,7 +338,7 @@ describe("Event editor focus: opened with a pointer", () => {
     await openEventMenu(user, "Planning");
     await user.click(await screen.findByRole("menuitem", { name: /edit/i }));
 
-    await screen.findByRole("dialog", { name: "Edit Event" });
+    await screen.findByRole("dialog", { name: "Edit event" });
     expect(editor().contains(document.activeElement)).toBe(false);
   });
 });
@@ -499,7 +499,7 @@ describe("Recurring dialog focus", () => {
     await screen.findByText("Daily standup");
     focusGrid();
     await user.keyboard("{PageUp}{PageUp}{Enter}{Enter}");
-    await screen.findByRole("dialog", { name: "Edit Event" });
+    await screen.findByRole("dialog", { name: "Edit event" });
     await user.click(screen.getByRole("button", { name: "Delete event" }));
     await user.click(await screen.findByRole("button", { name: "Delete" }));
 

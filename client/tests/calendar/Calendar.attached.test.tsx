@@ -74,7 +74,7 @@ const confirm = async (
   await advanceSave();
 };
 
-const warning = /will detach this instance/i;
+const warning = /will detach this event from the series/i;
 
 describe("attached recurring instances", () => {
   it("keeps a dragged instance attached", async () => {
@@ -211,7 +211,7 @@ describe("attached recurring instances", () => {
     await screen.findByText("Daily standup");
     focusGrid();
     await user.keyboard("{Control>}{ArrowUp}{/Control}{Enter}");
-    expect(await screen.findByRole("dialog", { name: "Edit Event" })).toBeVisible();
+    expect(await screen.findByRole("dialog", { name: "Edit event" })).toBeVisible();
     const [startDate, endDate] = screen.getAllByRole("button", {
       name: "18 Mar 2026",
     });
@@ -507,7 +507,7 @@ describe("attached instances moved without the dialog", () => {
     await openEventMenu(user, "Daily standup");
     fireEvent.click(await screen.findByRole("menuitem", { name: /move\.\.\./i }));
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: /forward\.\.\./i }),
+      await screen.findByRole("menuitem", { name: /later\.\.\./i }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "1 hour" }));
     await advanceSave();
@@ -953,7 +953,7 @@ describe("attached instance menus", () => {
     expect(screen.queryByText(warning)).toBeNull();
     await chooseRepeat(user, /weekly/i);
     expect(
-      screen.getByText("Changing repeat settings will detach this instance."),
+      screen.getByText("Changing repeat settings will detach this event from the series."),
     ).toBeInTheDocument();
   });
 

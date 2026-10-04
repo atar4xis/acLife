@@ -223,9 +223,9 @@ describe("keyboard move: screen reader focus", () => {
       "Moved Planning to Wednesday 18 March, 9:05 to 10:05 AM",
     );
     await user.keyboard("m{ArrowDown}{Escape}");
-    expect(activeElement()).toHaveAccessibleName("Move cancelled");
+    expect(activeElement()).toHaveAccessibleName("Move canceled");
     await user.keyboard("m{Enter}");
-    expect(activeElement()).toHaveAccessibleName("Move cancelled");
+    expect(activeElement()).toHaveAccessibleName("Move canceled");
 
     await user.keyboard("m");
     act(() => grid().blur());
@@ -487,7 +487,7 @@ describe("keyboard move: confirming", () => {
     await advanceSave();
 
     expect(saveEvents).not.toHaveBeenCalled();
-    expect(spoken()).toBe("Move cancelled");
+    expect(spoken()).toBe("Move canceled");
     expect(await top("Planning")).toBe("540px");
     expect(grid()).toHaveAttribute("data-keyboard-mode");
   });
@@ -602,8 +602,8 @@ describe("keyboard move: cancelling", () => {
     expect(block.style.top).toBe("540px");
     expect(block.style.height).toBe("60px");
     expect(saveEvents).not.toHaveBeenCalled();
-    expect(spoken()).toBe("Move cancelled");
-    expect(activeElement()).toHaveAccessibleName("Move cancelled");
+    expect(spoken()).toBe("Move canceled");
+    expect(activeElement()).toHaveAccessibleName("Move canceled");
     expect(grid()).toHaveAttribute("data-keyboard-mode");
   });
 

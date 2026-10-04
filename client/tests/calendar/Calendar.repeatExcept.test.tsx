@@ -38,7 +38,7 @@ describe("Calendar repeat exclusions", () => {
     await save(user);
 
     expect(toast.warning).toHaveBeenCalledWith(
-      "Repeat cannot exclude every day.",
+      "You cannot exclude every day from the repeat schedule.",
       expect.anything(),
     );
     expect(saveEvents).not.toHaveBeenCalled();
@@ -93,7 +93,7 @@ describe("Calendar custom repeat dialog", () => {
     const every = await screen.findByRole("spinbutton", { name: "Repeat every" });
     await user.clear(every);
     await user.type(every, "2");
-    await user.click(screen.getByRole("combobox", { name: "Repeat unit" }));
+    await user.click(screen.getByRole("combobox", { name: "Repeat interval unit" }));
     await user.click(screen.getByRole("option", { name: "Weeks" }));
     await user.click(screen.getByRole("checkbox", { name: "Forever" }));
     await user.click(screen.getByRole("combobox", { name: "Ends" }));

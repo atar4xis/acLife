@@ -223,7 +223,7 @@ describe("Calendar grid a11y", () => {
     await user.click(screen.getByRole("button", { name: "Edit custom repeat" }));
 
     expect(
-      await screen.findByRole("combobox", { name: "Repeat unit" }),
+      await screen.findByRole("combobox", { name: "Repeat interval unit" }),
     ).toBeInTheDocument();
   });
 
@@ -235,12 +235,12 @@ describe("Calendar grid a11y", () => {
     await user.click(screen.getByRole("button", { name: "Edit custom repeat" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Custom repeat" });
-    await user.click(screen.getByRole("combobox", { name: "Repeat month day" }));
+    await user.click(screen.getByRole("combobox", { name: "Day of the month" }));
     await user.click(screen.getByRole("option", { name: "on specific days" }));
     expect(screen.getByRole("grid", { name: "Days of the month" })).toBeInTheDocument();
     await expectNoViolations(dialog);
 
-    await user.click(screen.getByRole("combobox", { name: "Repeat unit" }));
+    await user.click(screen.getByRole("combobox", { name: "Repeat interval unit" }));
     await user.click(screen.getByRole("option", { name: "Weeks" }));
     expect(screen.getByRole("button", { name: "Monday" })).toBeInTheDocument();
     await expectNoViolations(dialog);

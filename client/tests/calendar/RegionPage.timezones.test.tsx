@@ -171,7 +171,7 @@ describe("RegionPage time zones", () => {
     renderCalendarPage();
 
     expect(
-      screen.getByText("Maximum of 6 time zones reached"),
+      screen.getByText("The limit of 6 time zones has been reached"),
     ).toBeInTheDocument();
 
     const [, , , addTrigger] = screen.getAllByRole("combobox");

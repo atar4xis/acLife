@@ -544,7 +544,7 @@ describe("Calendar grid keyboard: jumping between events", () => {
     focusGrid();
     await user.keyboard("{Control>}{ArrowUp}{/Control}{Enter}");
 
-    expect(screen.getByRole("dialog", { name: "Edit Event" })).toBeVisible();
+    expect(screen.getByRole("dialog", { name: "Edit event" })).toBeVisible();
     expect(screen.getByDisplayValue("Overlap")).toBeInTheDocument();
   });
 
@@ -700,7 +700,7 @@ describe("Calendar grid keyboard: context menu", () => {
     await user.keyboard("{Enter}");
 
     expect(
-      await screen.findByRole("dialog", { name: "Edit Event" }),
+      await screen.findByRole("dialog", { name: "Edit event" }),
     ).toBeInTheDocument();
   });
 

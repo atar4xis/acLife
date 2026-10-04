@@ -35,7 +35,7 @@ describe("Calendar move menu", () => {
 
     await openMoveSubmenu(user, "Planning");
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: /forward\.\.\./i }),
+      await screen.findByRole("menuitem", { name: /later\.\.\./i }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "30 minutes" }));
 
@@ -59,7 +59,7 @@ describe("Calendar move menu", () => {
 
     await openMoveSubmenu(user, "Planning");
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: /backward\.\.\./i }),
+      await screen.findByRole("menuitem", { name: /earlier\.\.\./i }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "2 hours" }));
 
@@ -155,7 +155,7 @@ describe("Calendar move menu", () => {
 
     await openMoveSubmenu(user, "Daily standup");
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: /forward\.\.\./i }),
+      await screen.findByRole("menuitem", { name: /later\.\.\./i }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "1 hour" }));
 
@@ -195,7 +195,7 @@ describe("Calendar move menu", () => {
 
     await openMoveSubmenu(user, "Planning");
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: /forward\.\.\./i }),
+      await screen.findByRole("menuitem", { name: /later\.\.\./i }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "1 hour" }));
 

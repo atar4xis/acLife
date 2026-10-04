@@ -131,7 +131,7 @@ describe("UnlockDialog visibility", () => {
     userMock.user = { type: "offline" };
     render(<UnlockDialog />);
 
-    expect(screen.queryByText("Decrypt Data")).not.toBeInTheDocument();
+    expect(screen.queryByText("Decrypt data")).not.toBeInTheDocument();
 
     userMock.user = null;
   });
@@ -140,7 +140,7 @@ describe("UnlockDialog visibility", () => {
     setStorage({}, false);
     render(<UnlockDialog />);
 
-    expect(screen.queryByText("Decrypt Data")).not.toBeInTheDocument();
+    expect(screen.queryByText("Decrypt data")).not.toBeInTheDocument();
   });
 });
 
@@ -157,7 +157,7 @@ describe("UnlockDialog stay-unlocked", () => {
     );
     expect(cryptMock.importKeyPair).toHaveBeenCalledWith("m", "b");
     expect(userMock.setBucketKey).toHaveBeenCalledWith(bucketKey);
-    expect(screen.queryByText("Decrypt Data")).not.toBeInTheDocument();
+    expect(screen.queryByText("Decrypt data")).not.toBeInTheDocument();
   });
 
   it("falls back to the password form when the stored keys are unusable", async () => {

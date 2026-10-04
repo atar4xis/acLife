@@ -53,13 +53,13 @@ describe("Calendar", () => {
     });
 
     await openEventEditor(user, "Daily standup");
-    expect(screen.queryByText(/will detach this instance/i)).toBeNull();
+    expect(screen.queryByText(/will detach this event from the series/i)).toBeNull();
 
     await user.click(screen.getByRole("combobox", { name: /repeat/i }));
     await user.click(await screen.findByRole("option", { name: /weekly/i }));
 
     expect(
-      screen.getByText("Changing repeat settings will detach this instance."),
+      screen.getByText("Changing repeat settings will detach this event from the series."),
     ).toBeInTheDocument();
   });
 

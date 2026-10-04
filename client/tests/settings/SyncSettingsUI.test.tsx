@@ -250,11 +250,11 @@ describe("SyncPage settings sync section", () => {
     await openManage(user);
 
     expect(
-      screen.queryByRole("button", { name: "Sync snap to minutes" }),
+      screen.queryByRole("button", { name: "Sync snap interval (minutes)" }),
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Calendar/ }));
-    const snap = screen.getByRole("button", { name: "Sync snap to minutes" });
+    const snap = screen.getByRole("button", { name: "Sync snap interval (minutes)" });
     expect(snap).toHaveAttribute("aria-pressed", "false");
 
     await user.click(snap);
@@ -286,7 +286,7 @@ describe("SyncPage settings sync section", () => {
     await user.click(screen.getByRole("button", { name: /Calendar/ }));
 
     expect(
-      screen.getByRole("button", { name: "Sync snap to minutes" }),
+      screen.getByRole("button", { name: "Sync snap interval (minutes)" }),
     ).toBeDisabled();
   });
 
