@@ -42,6 +42,7 @@ export interface EventBlockProps {
   day: number;
   date: DateTime;
   style: { top: number; left: number; width: number; height: number };
+  titleSpan?: number;
   editing: boolean;
   selection: SelectionStore;
   focusStore: GridFocusStore;

@@ -19,6 +19,8 @@ type FocusMove = { day: number; minutes: number; dayShift: -1 | 0 | 1 };
 
 export const MINUTES_PER_DAY = 24 * 60;
 
+export const ALL_DAY_SLOT = -1;
+
 export const lastSlot = (snapMins: number) =>
   Math.floor((MINUTES_PER_DAY - 1) / snapMins) * snapMins;
 
@@ -47,25 +49,32 @@ export function moveFocus(
     snapMins,
     dayCount,
     rtl,
-  }: { snapMins: number; dayCount: number; rtl?: boolean },
+    allDayLane,
+  }: {
+    snapMins: number;
+    dayCount: number;
+    rtl?: boolean;
+    allDayLane?: boolean;
+  },
 ): FocusMove | null {
   const key = mirrorKey(rawKey, rtl);
   const { day, minutes } = from;
   const vertical = (m: number): FocusMove => ({
     day,
-    minutes: clampSlot(m, snapMins),
+    minutes: m < 0 && allDayLane ? ALL_DAY_SLOT : clampSlot(m, snapMins),
     dayShift: 0,
   });
+  const slot = Math.max(minutes, 0);
 
   switch (key) {
     case "ArrowUp":
-      return vertical(minutes - snapMins);
+      return vertical(minutes < 0 ? -1 : minutes - snapMins);
     case "ArrowDown":
-      return vertical(minutes + snapMins);
+      return vertical(minutes < 0 ? 0 : minutes + snapMins);
     case "PageUp":
-      return vertical(minutes - 60);
+      return vertical(slot - 60);
     case "PageDown":
-      return vertical(minutes + 60);
+      return vertical(slot + 60);
     case "Home":
       return vertical(0);
     case "End":
@@ -126,7 +135,9 @@ export function eventsAtSlot(
   const end = start.plus({ minutes: snapMins });
 
   return (events ?? [])
-    .filter((e) => e.start < end && e.end > start)
+    .filter((e) =>
+      minutes < 0 ? e.allDay : !e.allDay && e.start < end && e.end > start,
+    )
     .toSorted(
       (a, b) =>
         a.start.toMillis() - b.start.toMillis() ||
@@ -148,7 +159,10 @@ export function adjacentEvent(
           day,
           key: eventKey(event),
           dayStart,
-          startMs: Math.max(event.start.toMillis(), dayStart.toMillis()),
+          allDay: event.allDay,
+          startMs: event.allDay
+            ? dayStart.toMillis() + ALL_DAY_SLOT * 60000
+            : Math.max(event.start.toMillis(), dayStart.toMillis()),
         };
       }),
     )
@@ -172,10 +186,12 @@ export function adjacentEvent(
 
   return {
     day: target.day,
-    minutes: clampSlot(
-      (target.startMs - target.dayStart.toMillis()) / 60000,
-      snapMins,
-    ),
+    minutes: target.allDay
+      ? ALL_DAY_SLOT
+      : clampSlot(
+          (target.startMs - target.dayStart.toMillis()) / 60000,
+          snapMins,
+        ),
     eventKey: target.key,
   };
 }

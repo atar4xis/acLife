@@ -166,6 +166,7 @@ export const makeOccurrence = (
     description,
     color,
     title,
+    allDay,
   } = override ?? {};
 
   return {
@@ -176,6 +177,7 @@ export const makeOccurrence = (
         ? event.description
         : (description ?? undefined),
     color: color === undefined ? event.color : (color ?? undefined),
+    allDay: allDay ?? event.allDay,
     _instanceId: `${event.id}_${key}`,
     start: start.plus(startShift),
     end: start.plus(duration).plus(endShift),

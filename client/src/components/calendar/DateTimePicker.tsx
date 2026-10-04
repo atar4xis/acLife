@@ -1,6 +1,7 @@
 import { CalendarIcon } from "lucide-react";
 import { DateTime } from "luxon";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Button } from "../ui/button";
@@ -14,12 +15,14 @@ type DateTimePickerProps = {
   value: Date | undefined;
   onChange: (val: Date | undefined) => void;
   label?: string;
+  dateOnly?: boolean;
 };
 
 export function DateTimePicker({
   value,
   onChange,
   label,
+  dateOnly,
 }: DateTimePickerProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -34,7 +37,10 @@ export function DateTimePicker({
           <Button
             variant="outline"
             data-empty={!value}
-            className="data-[empty=true]:text-muted-foreground justify-start text-start font-normal"
+            className={cn(
+              "data-[empty=true]:text-muted-foreground justify-start text-start font-normal",
+              dateOnly && "flex-1",
+            )}
           >
             <CalendarIcon />
             {value ? (
@@ -70,18 +76,20 @@ export function DateTimePicker({
         </PopoverContent>
       </Popover>
 
-      <Input
-        type="time"
-        step="60"
-        aria-label={label && t("picker.time", { label })}
-        value={zoned ? zoned.toFormat("HH:mm") : ""}
-        onChange={(e) => {
-          if (!zoned) return;
-          const [hour, minute] = e.target.value.split(":").map(Number);
-          onChange(zoned.set({ hour, minute }).toJSDate());
-        }}
-        className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-      />
+      {!dateOnly && (
+        <Input
+          type="time"
+          step="60"
+          aria-label={label && t("picker.time", { label })}
+          value={zoned ? zoned.toFormat("HH:mm") : ""}
+          onChange={(e) => {
+            if (!zoned) return;
+            const [hour, minute] = e.target.value.split(":").map(Number);
+            onChange(zoned.set({ hour, minute }).toJSDate());
+          }}
+          className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+        />
+      )}
     </div>
   );
 }

@@ -30,6 +30,8 @@ export type GridSelectionRef = {
   y0: number;
   x1: number;
   y1: number;
+  px: number; // last pointer position, viewport coordinates
+  py: number;
   moved: boolean;
   toggle?: CalendarEvent;
   base: CalendarEvent[];

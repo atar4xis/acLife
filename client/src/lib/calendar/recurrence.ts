@@ -484,6 +484,9 @@ export function detachSingleOccurrence(
     if (event.color !== originalParent.color) {
       override.color = event.color ?? null;
     }
+    if (!!event.allDay !== !!originalParent.allDay) {
+      override.allDay = !!event.allDay;
+    }
 
     const untouched = isEmptyOverride(override);
     if (isParent && (untouched || next)) {

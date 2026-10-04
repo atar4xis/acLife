@@ -6,6 +6,7 @@ export type OccurrenceOverride = {
   title?: string;
   description?: string | null; // null clears the series value
   color?: string | null;
+  allDay?: boolean;
   startShift?: number; // millis from the nominal start
   endShift?: number; // millis from the nominal end
 };
@@ -32,6 +33,7 @@ export type CalendarEvent = {
   color?: string;
   repeat?: RepeatInterval;
   isTask?: boolean;
+  allDay?: boolean;
   completed?: boolean; // completion state for non-recurring tasks
   completedInstances?: string[]; // ISO dates of completed occurrences, for recurring tasks
   deadline?: DateTime;
@@ -92,6 +94,7 @@ export type EventDragRef = {
   originalDay: number;
   originalStart: DateTime;
   originalEnd: DateTime;
+  allDay?: boolean;
   label: string;
   dayRects: { day: number; rect: DOMRect }[];
   moved: boolean;
@@ -106,6 +109,7 @@ export type EventDragRef = {
     event: CalendarEvent;
     originalStart: DateTime;
     originalEnd: DateTime;
+    allDay?: boolean;
   }[];
 } | null;
 

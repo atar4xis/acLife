@@ -8,7 +8,14 @@ import {
   type CSSProperties,
 } from "react";
 import { DateTime } from "luxon";
-import { ArrowLeft, ArrowRight, SearchIcon, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  SearchIcon,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,25 +54,58 @@ import {
   isSameDate,
   getDateRangeString,
 } from "@/lib/calendar/date";
+import {
+  ALL_DAY_MAX_ROWS,
+  ALL_DAY_MIN_ROWS,
+  ALL_DAY_ROW_HEIGHT,
+  barKey,
+  barRow,
+  barSpans,
+  layoutBars,
+  resizeAllDay,
+} from "@/lib/calendar/eventBars";
 import { getDayRects, getEventRects } from "@/lib/calendar/dom";
+import {
+  GRID_HEADER_HEIGHT,
+  NO_BOTTOM_BORDER,
+  BOTTOM_BORDER_ONLY,
+  ALL_DAY_CELL,
+  getTimezoneColWidth,
+  GRID_CONFIG,
+  HOURS,
+} from "@/lib/calendar/gridLayout";
+import {
+  SELECT_DRAG_THRESHOLD,
+  AUTO_SCROLL_ZONE,
+  AUTO_SCROLL_SPEED,
+  resolveSelection,
+  getBoxedKeys,
+  getEventsByKey,
+  getDraggedTimes,
+  KEYBOARD_DRAG_ID,
+  describeDragLabel,
+  isAtOriginal,
+  applyTimes,
+  toAllDay,
+  toTimed,
+  applyDragDelta,
+  applyDragWithResize,
+} from "@/lib/calendar/drag";
+
 import { describeFullDay } from "@/lib/calendar/a11y";
 import { shortcutsApply } from "@/lib/calendar/shortcutScope";
-import { createGridFocusStore } from "@/lib/calendar/gridFocus";
+import { ALL_DAY_SLOT, createGridFocusStore } from "@/lib/calendar/gridFocus";
 import useGridKeyboard from "@/hooks/useGridKeyboard";
 import { useKeyboardMode } from "@/hooks/useGridFocus";
 import { SpokenMessage, SlotIndicator } from "./GridFocus";
 import ScrollThumb from "./ScrollThumb";
-import {
-  getTimezoneHourLabel,
-  getTimezoneShortLabel,
-} from "@/lib/calendar/timezone";
+import { getTimezoneHourLabel } from "@/lib/calendar/timezone";
 import { useWeekStart } from "@/hooks/useWeekStart";
 import {
   eventKey,
   getDayEventStyles,
   getEventMap,
   getEventPixelPosition,
-  MAX_EVENT_DURATION_MINUTES,
 } from "@/lib/calendar/event";
 import { weekLabel } from "@/lib/calendar/buckets";
 import { useUser } from "@/context/UserContext";
@@ -127,6 +167,7 @@ const eventUnchanged = (a: CalendarEvent, b: CalendarEvent) =>
   a.start.toMillis() === b.start.toMillis() &&
   a.end.toMillis() === b.end.toMillis() &&
   a.isTask === b.isTask &&
+  a.allDay === b.allDay &&
   a.completed === b.completed &&
   repeatEqual(a.repeat, b.repeat);
 
@@ -207,286 +248,9 @@ const releaseTouchBlock = () => {
   window.removeEventListener("touchmove", blockTouchMove);
 };
 
-const GRID_HEADER_HEIGHT = 48;
-
-const SELECT_DRAG_THRESHOLD = 4;
 const HISTORY_LIMIT = 40;
 
-const TIMEZONE_COL_MIN_WIDTH = "3.5rem";
-const TIMEZONE_COL_MAX_WIDTH = "6rem";
-
-const getTimezoneColWidth = (timezones: string[], dayCount: number) => {
-  if (timezones.length < 2) return TIMEZONE_COL_MIN_WIDTH;
-  const longest = Math.max(
-    ...timezones.map((tz) => getTimezoneShortLabel(tz).length),
-  );
-  const fitsLabel = `clamp(${TIMEZONE_COL_MIN_WIDTH}, ${longest}ch + 0.5rem, ${TIMEZONE_COL_MAX_WIDTH})`;
-  return `min(${fitsLabel}, calc(100cqw / ${timezones.length + dayCount}))`;
-};
-
-const GRID_CONFIG = {
-  day: {
-    cols: (tzCount: number, tzWidth: string, labelsRight: boolean) => {
-      const labels = `repeat(${tzCount}, ${tzWidth})`;
-      return labelsRight ? `1fr ${labels}` : `${labels} 1fr`;
-    },
-    rows: (h: number, headerBottom: boolean) =>
-      headerBottom ? `repeat(24, ${h}px) 48px` : `48px repeat(24, ${h}px)`,
-  },
-  week: {
-    cols: (tzCount: number, tzWidth: string, labelsRight: boolean) => {
-      const labels = `repeat(${tzCount}, ${tzWidth})`;
-      return labelsRight
-        ? `repeat(7, 1fr) ${labels}`
-        : `${labels} repeat(7, 1fr)`;
-    },
-    rows: (h: number, headerBottom: boolean) =>
-      headerBottom ? `repeat(24, ${h}px) 48px` : `48px repeat(24, ${h}px)`,
-  },
-} as const;
-
-const HOURS = Array.from(
-  { length: 24 },
-  (_, i) => `${((i + 11) % 12) + 1} ${i < 12 ? "AM" : "PM"}`,
-);
-
 const NO_DRAG = { exclude: EMPTY_ARRAY, append: EMPTY_ARRAY };
-
-const resolveSelection = (
-  eventMap: Map<string, CalendarEvent[]> | null,
-  selected: Map<string, CalendarEvent>,
-  excludeKey: string,
-) => {
-  const live = new Map<string, CalendarEvent>();
-
-  for (const dayEvents of eventMap?.values() ?? []) {
-    for (const ev of dayEvents) {
-      if (ev._continued) continue;
-
-      const key = eventKey(ev);
-      if (selected.has(key) && !live.has(key)) live.set(key, ev);
-    }
-  }
-
-  const resolved: CalendarEvent[] = [];
-  for (const [key, stored] of selected) {
-    if (key === excludeKey) continue;
-    resolved.push(live.get(key) ?? stored);
-  }
-
-  return resolved;
-};
-
-const getBoxedKeys = (state: GridSelectionRef) => {
-  const left = Math.min(state.x0, state.x1);
-  const right = Math.max(state.x0, state.x1);
-  const top = Math.min(state.y0, state.y1);
-  const bottom = Math.max(state.y0, state.y1);
-
-  const keys = new Set<string>();
-
-  for (const rect of state.rects) {
-    if (
-      rect.left <= right &&
-      rect.right >= left &&
-      rect.top <= bottom &&
-      rect.bottom >= top
-    ) {
-      keys.add(rect.key);
-    }
-  }
-
-  return keys;
-};
-
-const getEventsByKey = (
-  eventMap: Map<string, CalendarEvent[]> | null,
-  keys: Set<string>,
-) => {
-  const found: CalendarEvent[] = [];
-  const seen = new Set<string>();
-
-  for (const dayEvents of eventMap?.values() ?? []) {
-    for (const ev of dayEvents) {
-      const key = eventKey(ev);
-      if (ev._continued || seen.has(key) || !keys.has(key)) continue;
-
-      seen.add(key);
-      found.push(ev);
-    }
-  }
-
-  return found;
-};
-
-const getDraggedTimes = (
-  type: "move" | "resize_start" | "resize_end" | "new",
-  originalStart: DateTime,
-  originalEnd: DateTime,
-  dayDelta: number,
-  deltaMinutes: number,
-  snapMins: number,
-) => {
-  let newStart = originalStart;
-  let newEnd = originalEnd;
-
-  if (type === "move") {
-    newStart = originalStart.plus({ days: dayDelta, minutes: deltaMinutes });
-    newEnd = originalEnd.plus({ days: dayDelta, minutes: deltaMinutes });
-  } else if (type === "resize_start") {
-    newStart = originalStart.plus({ days: dayDelta, minutes: deltaMinutes });
-    if (newStart >= newEnd) {
-      newStart = newEnd.minus({ minutes: snapMins });
-    }
-    if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
-      newStart = newEnd.minus({ minutes: MAX_EVENT_DURATION_MINUTES });
-    }
-  } else if (type === "resize_end") {
-    newEnd = originalEnd.plus({ days: dayDelta, minutes: deltaMinutes });
-    if (newEnd <= newStart) {
-      newEnd = newStart.plus({ minutes: snapMins });
-    }
-    if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
-      newEnd = newStart.plus({ minutes: MAX_EVENT_DURATION_MINUTES });
-    }
-  } else if (type === "new") {
-    const anchor = originalStart;
-    const pointerTime = anchor.plus({ days: dayDelta, minutes: deltaMinutes });
-
-    if (pointerTime >= anchor) {
-      newStart = anchor;
-      newEnd = pointerTime;
-      if (newEnd <= newStart) {
-        newEnd = newStart.plus({ minutes: snapMins });
-      }
-      if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
-        newEnd = newStart.plus({ minutes: MAX_EVENT_DURATION_MINUTES });
-      }
-    } else {
-      newStart = pointerTime;
-      newEnd = anchor;
-      if (newStart >= newEnd) {
-        newStart = newEnd.minus({ minutes: snapMins });
-      }
-      if (newEnd.diff(newStart).as("minutes") > MAX_EVENT_DURATION_MINUTES) {
-        newStart = newEnd.minus({ minutes: MAX_EVENT_DURATION_MINUTES });
-      }
-    }
-  }
-
-  return { newStart, newEnd };
-};
-
-// pointerId stand-in for drags started from the keyboard
-const KEYBOARD_DRAG_ID = -1;
-
-const describeDragLabel = (start: DateTime, end: DateTime, extraCount = 0) => {
-  const diff = end.diff(start).shiftTo("hours", "minutes");
-  const hours = Math.floor(diff.hours);
-  const minutes = Math.round(diff.minutes);
-  const durText = [];
-  if (hours > 0) durText.push(translate("calendar.hours", { count: hours }));
-  if (minutes > 0)
-    durText.push(translate("calendar.minutes", { count: minutes }));
-
-  let label = `${start.toFormat(fmt("time"))} - ${end.toFormat(fmt("time"))}\n${durText.join(" ")}`;
-  if (extraCount) {
-    label += `\n${translate("calendar.eventsCount", { count: extraCount + 1 })}`;
-  }
-  return label;
-};
-
-const isAtOriginal = (
-  ev: CalendarEvent,
-  originalStart: DateTime,
-  originalEnd: DateTime,
-) =>
-  ev.start.toMillis() === originalStart.toMillis() &&
-  ev.end.toMillis() === originalEnd.toMillis();
-
-const applyTimes = (
-  target: { start: DateTime; end: DateTime },
-  times: { newStart: DateTime; newEnd: DateTime },
-) => {
-  if (
-    target.start.toMillis() === times.newStart.toMillis() &&
-    target.end.toMillis() === times.newEnd.toMillis()
-  )
-    return false;
-
-  target.start = times.newStart;
-  target.end = times.newEnd;
-  return true;
-};
-
-const applyDragDelta = (
-  state: NonNullable<EventDragRef>,
-  dayDelta: number,
-  deltaMinutes: number,
-  snapMins: number,
-  from: "original" | "current" = "original",
-) => {
-  const timesFor = (
-    target: { start: DateTime; end: DateTime },
-    original: { originalStart: DateTime; originalEnd: DateTime },
-  ) =>
-    getDraggedTimes(
-      state.type,
-      from === "original" ? original.originalStart : target.start,
-      from === "original" ? original.originalEnd : target.end,
-      dayDelta,
-      deltaMinutes,
-      snapMins,
-    );
-
-  const primary = timesFor(state.event, state);
-  let changed = applyTimes(state.event, primary);
-
-  for (const entry of state.selection ?? []) {
-    if (applyTimes(entry.event, timesFor(entry.event, entry))) changed = true;
-  }
-
-  return { ...primary, changed };
-};
-
-const applyDragWithResize = (
-  state: NonNullable<EventDragRef>,
-  dayDelta: number,
-  deltaMinutes: number,
-  snapMins: number,
-) => {
-  state.dayDelta = dayDelta;
-  state.deltaMinutes = deltaMinutes;
-  const dragged = applyDragDelta(state, dayDelta, deltaMinutes, snapMins);
-  const resize = state.resize;
-  if (!resize || state.selection?.length) return dragged;
-
-  let { newStart, newEnd } = dragged;
-  if (resize.start)
-    newStart = getDraggedTimes(
-      "resize_start",
-      newStart,
-      newEnd,
-      0,
-      resize.start,
-      snapMins,
-    ).newStart;
-  if (resize.end)
-    newEnd = getDraggedTimes(
-      "resize_end",
-      newStart,
-      newEnd,
-      0,
-      resize.end,
-      snapMins,
-    ).newEnd;
-
-  return {
-    newStart,
-    newEnd,
-    changed: applyTimes(state.event, { newStart, newEnd }) || dragged.changed,
-  };
-};
 
 /* -------------------------------------------------------------------------- */
 
@@ -518,6 +282,8 @@ export default memo(function AppCalendar({
     clear: clearSelection,
   } = selection;
   const [isDragging, setIsDragging] = useState(false);
+  const [allDayExpanded, setAllDayExpanded] = useState(false);
+  const autoExpanded = useRef(false);
   const [hourHeight, setHourHeight] = useState(60);
   const [updateRepeatDialogOpen, setUpdateRepeatDialogOpen] = useState(false);
   const [deleteRepeatDialogOpen, setDeleteRepeatDialogOpen] = useState(false);
@@ -591,7 +357,19 @@ export default memo(function AppCalendar({
     settings.timeLabelPosition === "auto"
       ? rtl
       : settings.timeLabelPosition === "right";
-  const gridHeaderOffset = headerBottom ? 0 : GRID_HEADER_HEIGHT;
+  const headerZoneRef = useRef(GRID_HEADER_HEIGHT);
+  const getGridHeaderOffset = useCallback(
+    () => (headerBottom ? 0 : headerZoneRef.current),
+    [headerBottom],
+  );
+
+  const isOverAllDay = useCallback(
+    (y: number, rect: DOMRect) =>
+      headerBottom
+        ? y > rect.bottom - headerZoneRef.current
+        : y < rect.top + headerZoneRef.current,
+    [headerBottom],
+  );
 
   const gridRef = useRef<HTMLDivElement>(null);
   const [focusStore] = useState(createGridFocusStore);
@@ -672,11 +450,11 @@ export default memo(function AppCalendar({
     container.scrollTo({
       top: Math.max(
         0,
-        getNowY() + gridHeaderOffset - container.clientHeight / 2,
+        getNowY() + getGridHeaderOffset() - container.clientHeight / 2,
       ),
       behavior: "smooth",
     });
-  }, [setCurrentDate, getNowY, gridHeaderOffset]);
+  }, [setCurrentDate, getNowY, getGridHeaderOffset]);
 
   const updateChange = useCallback(
     (change: EventChange) => {
@@ -800,8 +578,11 @@ export default memo(function AppCalendar({
       step: { newStart: DateTime; newEnd: DateTime; changed: boolean },
     ) => {
       state.label = describeDragLabel(
-        step.newStart,
-        step.newEnd,
+        {
+          start: step.newStart,
+          end: step.newEnd,
+          allDay: state.event.allDay,
+        },
         state.selection?.length,
       );
       if (step.changed) {
@@ -833,13 +614,90 @@ export default memo(function AppCalendar({
       const dayDate = visibleDays[dayIndex]?.date;
       if (!dayDate) return;
 
+      const rect = container.getBoundingClientRect();
+      const pointerMinutes = snapMinutes(
+        yToMinutes(
+          e.clientY + container.scrollTop - rect.top - getGridHeaderOffset(),
+          hourHeight,
+        ),
+        settings.snapMinutes,
+      );
+
+      const dayDelta = dayIndex - state.originalDay;
+
+      const overAllDay = isOverAllDay(e.clientY, rect);
+      const entries = [
+        {
+          event: state.event,
+          originalStart: state.originalStart,
+          originalEnd: state.originalEnd,
+          allDay: state.allDay,
+        },
+        ...(state.selection ?? []),
+      ];
+      const applyEntries = (
+        apply: (en: (typeof entries)[number]) => boolean,
+      ) => {
+        let changed = false;
+        for (const en of entries) changed = apply(en) || changed;
+        state.x = e.clientX;
+        state.y = e.clientY;
+        showDragStep(state, {
+          newStart: state.event.start,
+          newEnd: state.event.end,
+          changed,
+        });
+      };
+
+      if (
+        state.type === "move" &&
+        (overAllDay || entries.some((en) => en.allDay || en.event.allDay))
+      ) {
+        applyEntries((en) => {
+          const day = en.originalStart.plus({ days: dayDelta });
+          const duration = en.originalEnd.diff(en.originalStart);
+          if (overAllDay)
+            return toAllDay(en.event, day, en.allDay ? duration : undefined);
+          if (en.allDay)
+            return toTimed(
+              en.event,
+              day.startOf("day").plus({ minutes: pointerMinutes }),
+              { minutes: settings.defaultEventDuration },
+            );
+          return toTimed(en.event, day, duration);
+        });
+        return;
+      }
+
       // calculate minutes based on pointer Y within the grid
       const deltaMinutes = snapMinutes(
         yToMinutes(e.clientY + container.scrollTop - state.startY, hourHeight),
         settings.snapMinutes,
       );
 
-      const dayDelta = dayIndex - state.originalDay;
+      if (state.type !== "move" && entries.some((en) => en.event.allDay)) {
+        applyEntries((en) =>
+          applyTimes(
+            en.event,
+            en.event.allDay
+              ? resizeAllDay(
+                  state.type,
+                  en.originalStart,
+                  en.originalEnd,
+                  dayDelta,
+                )
+              : getDraggedTimes(
+                  state.type,
+                  en.originalStart,
+                  en.originalEnd,
+                  dayDelta,
+                  deltaMinutes,
+                  settings.snapMinutes,
+                ),
+          ),
+        );
+        return;
+      }
 
       // when dragging, label tells the new start/end times and follows the pointer
       state.x = e.clientX;
@@ -854,7 +712,15 @@ export default memo(function AppCalendar({
         ),
       );
     },
-    [visibleDays, hourHeight, settings.snapMinutes, showDragStep],
+    [
+      visibleDays,
+      hourHeight,
+      settings.snapMinutes,
+      settings.defaultEventDuration,
+      isOverAllDay,
+      getGridHeaderOffset,
+      showDragStep,
+    ],
   );
 
   const pointerUpRef = useRef<(e: PointerEvent) => void>(null);
@@ -905,7 +771,7 @@ export default memo(function AppCalendar({
           dispatch({
             type: "update",
             id: moved.id,
-            data: { start: moved.start, end: moved.end },
+            data: { start: moved.start, end: moved.end, allDay: moved.allDay },
           });
 
           updateChange({ type: "updated", event: moved });
@@ -944,13 +810,14 @@ export default memo(function AppCalendar({
   const commitSingleDrag = useCallback(
     (state: NonNullable<EventDragRef>) => {
       const event = state.event;
+      const changed =
+        !!event.allDay !== !!state.allDay ||
+        event.start.toMillis() !== state.originalStart.toMillis() ||
+        event.end.toMillis() !== state.originalEnd.toMillis();
 
       // update the edited event in state
       if (!event._parent && !event.repeat) {
-        if (
-          event.start.toMillis() !== state.originalStart.toMillis() ||
-          event.end.toMillis() !== state.originalEnd.toMillis()
-        ) {
+        if (changed) {
           // creating a new event already pushed history in startNewEvent
           if (state.type !== "new") pushHistory();
 
@@ -962,6 +829,7 @@ export default memo(function AppCalendar({
             data: {
               start: newEvent.start,
               end: newEvent.end,
+              allDay: newEvent.allDay,
             },
           });
 
@@ -973,11 +841,7 @@ export default memo(function AppCalendar({
 
         dragRef.current = null;
         save();
-      } else if (
-        state.moved &&
-        (event.start.toMillis() !== state.originalStart.toMillis() ||
-          event.end.toMillis() !== state.originalEnd.toMillis())
-      ) {
+      } else if (state.moved && changed) {
         // if the event has or is a parent, ask what to do
         askUpdateScope(event, null);
       } else {
@@ -1014,14 +878,13 @@ export default memo(function AppCalendar({
 
   pointerUpRef.current = onGlobalPointerUp;
 
-  const onSelectionPointerMove = useCallback(
-    (e: PointerEvent) => {
-      const state = selectionBoxRef.current;
+  const updateSelection = useCallback(
+    (state: NonNullable<typeof selectionBoxRef.current>) => {
       const container = gridRef.current;
-      if (!state || e.pointerId !== state.pointerId || !container) return;
+      if (!container) return;
 
-      state.x1 = e.clientX + container.scrollLeft;
-      state.y1 = e.clientY + container.scrollTop;
+      state.x1 = state.px + container.scrollLeft;
+      state.y1 = state.py + container.scrollTop;
 
       state.moved ||=
         Math.abs(state.x1 - state.x0) > SELECT_DRAG_THRESHOLD ||
@@ -1035,6 +898,18 @@ export default memo(function AppCalendar({
       forceRender((tick) => tick + 1);
     },
     [selectEvents],
+  );
+
+  const onSelectionPointerMove = useCallback(
+    (e: PointerEvent) => {
+      const state = selectionBoxRef.current;
+      if (!state || e.pointerId !== state.pointerId) return;
+
+      state.px = e.clientX;
+      state.py = e.clientY;
+      updateSelection(state);
+    },
+    [updateSelection],
   );
 
   const onSelectionPointerUp = useCallback(
@@ -1067,6 +942,8 @@ export default memo(function AppCalendar({
         y0: e.clientY + offsetY,
         x1: e.clientX + offsetX,
         y1: e.clientY + offsetY,
+        px: e.clientX,
+        py: e.clientY,
         moved: false,
         toggle,
         base: Array.from(selectedEventsRef.current.values()),
@@ -1075,8 +952,57 @@ export default memo(function AppCalendar({
 
       window.addEventListener("pointermove", onSelectionPointerMove);
       window.addEventListener("pointerup", onSelectionPointerUp);
+
+      const scrollNearEdge = () => {
+        const state = selectionBoxRef.current;
+        if (!state) return;
+
+        const rect = container.getBoundingClientRect();
+        const speed = (pointer: number, min: number, max: number) => {
+          const depth = Math.max(
+            min + AUTO_SCROLL_ZONE - pointer,
+            pointer - max + AUTO_SCROLL_ZONE,
+          );
+          const ease = clamp(depth / AUTO_SCROLL_ZONE, 0, 1) ** 2;
+          return Math.round(
+            AUTO_SCROLL_SPEED * ease * (pointer < (min + max) / 2 ? -1 : 1),
+          );
+        };
+        const left = container.scrollLeft;
+        const top = container.scrollTop;
+        container.scrollLeft = clamp(
+          left +
+            speed(
+              state.px,
+              Math.max(rect.left, 0),
+              Math.min(rect.right, window.innerWidth),
+            ),
+          0,
+          container.scrollWidth - container.clientWidth,
+        );
+        container.scrollTop = clamp(
+          top +
+            speed(
+              state.py,
+              Math.max(rect.top, 0),
+              Math.min(rect.bottom, window.innerHeight),
+            ),
+          0,
+          container.scrollHeight - container.clientHeight,
+        );
+        if (container.scrollLeft !== left || container.scrollTop !== top) {
+          // sticky blocks (all day strip) move relative to the content on scroll
+          state.rects = getEventRects(
+            container.scrollLeft,
+            container.scrollTop,
+          );
+          updateSelection(state);
+        }
+        requestAnimationFrame(scrollNearEdge);
+      };
+      requestAnimationFrame(scrollNearEdge);
     },
-    [onSelectionPointerMove, onSelectionPointerUp],
+    [onSelectionPointerMove, onSelectionPointerUp, updateSelection],
   );
 
   const getDragSelection = useCallback(
@@ -1086,6 +1012,7 @@ export default memo(function AppCalendar({
             event: { ...ev },
             originalStart: ev.start,
             originalEnd: ev.end,
+            allDay: ev.allDay,
           }))
         : undefined,
     [],
@@ -1129,6 +1056,7 @@ export default memo(function AppCalendar({
         originalDay: dayIndex,
         originalStart: event.start,
         originalEnd: event.end,
+        allDay: event.allDay,
         label: "",
         dayRects: getDayRects(),
         moved: false,
@@ -1180,7 +1108,7 @@ export default memo(function AppCalendar({
         originalDay: dayIndex,
         originalStart: event.start,
         originalEnd: event.end,
-        label: describeDragLabel(event.start, event.end, selection?.length),
+        label: describeDragLabel(event, selection?.length),
         dayRects: [],
         moved: false,
         selection,
@@ -1202,6 +1130,37 @@ export default memo(function AppCalendar({
       if (state?.pointerId !== KEYBOARD_DRAG_ID) return null;
 
       state.type = type;
+
+      const event = state.event;
+      const lane = headerZoneRef.current > GRID_HEADER_HEIGHT;
+      const enters =
+        lane &&
+        !event.allDay &&
+        event.start.diff(event.start.startOf("day"), "minutes").minutes +
+          deltaMinutes <
+          0;
+      const leaves = !!event.allDay && deltaMinutes > 0;
+
+      if (enters || leaves) {
+        let changed = false;
+        for (const { event: ev } of [state, ...(state.selection ?? [])]) {
+          if (enters && !ev.allDay) changed = toAllDay(ev, ev.start) || changed;
+          if (leaves && ev.allDay) {
+            changed =
+              toTimed(ev, ev.start.startOf("day"), {
+                minutes: settings.defaultEventDuration,
+              }) || changed;
+          }
+        }
+        showDragStep(state, {
+          newStart: event.start,
+          newEnd: event.end,
+          changed,
+        });
+        return event;
+      }
+      if (event.allDay && deltaMinutes) return event;
+
       showDragStep(
         state,
         applyDragDelta(
@@ -1215,7 +1174,7 @@ export default memo(function AppCalendar({
 
       return state.event;
     },
-    [settings.snapMinutes, showDragStep],
+    [settings.snapMinutes, settings.defaultEventDuration, showDragStep],
   );
 
   const cancelKeyboardMove = useCallback(() => {
@@ -1307,6 +1266,7 @@ export default memo(function AppCalendar({
           patch.repeat = event.repeat;
         }
         if (event.isTask !== originalEvent.isTask) patch.isTask = event.isTask;
+        if (event.allDay !== originalEvent.allDay) patch.allDay = event.allDay;
         if (event.completed !== originalEvent.completed) {
           patch.completed = event.completed;
         }
@@ -1651,10 +1611,11 @@ export default memo(function AppCalendar({
     const rect = container.getBoundingClientRect();
     const y = pointer.y + container.scrollTop;
     const minutes = snapMinutes(
-      yToMinutes(y - rect.top - gridHeaderOffset, hourHeight),
+      yToMinutes(y - rect.top - getGridHeaderOffset(), hourHeight),
       settings.snapMinutes,
     );
     const anchorTime = dayDate.plus({ minutes });
+    const overAllDay = isOverAllDay(pointer.y, rect);
 
     const anchorStart = clipboard.reduce(
       (min, ev) => (ev.start < min ? ev.start : min),
@@ -1666,15 +1627,26 @@ export default memo(function AppCalendar({
     const pasted: CalendarEvent[] = [];
 
     for (const ev of clipboard) {
-      const offset = ev.start.diff(anchorStart);
+      const allDay = overAllDay || ev.allDay;
       const duration = ev.end.diff(ev.start);
-      const newStart = anchorTime.plus(offset);
+      const newStart = allDay
+        ? dayDate
+            .startOf("day")
+            .plus(
+              ev.start.startOf("day").diff(anchorStart.startOf("day"), "days"),
+            )
+        : anchorTime.plus(ev.start.diff(anchorStart));
 
       const newEvent = {
         ...ev,
         id: crypto.randomUUID(),
         start: newStart,
-        end: newStart.plus(duration),
+        end: ev.allDay
+          ? newStart.plus(duration)
+          : allDay
+            ? newStart.endOf("day")
+            : newStart.plus(duration),
+        allDay: allDay || undefined,
         timestamp: Date.now(),
       } as CalendarEvent;
 
@@ -1693,7 +1665,8 @@ export default memo(function AppCalendar({
   }, [
     visibleDays,
     hourHeight,
-    gridHeaderOffset,
+    getGridHeaderOffset,
+    isOverAllDay,
     settings.snapMinutes,
     dispatch,
     updateChange,
@@ -1705,7 +1678,7 @@ export default memo(function AppCalendar({
   /* -------------------------------------------------------------------------- */
 
   const addNewEvent = useCallback(
-    (start: DateTime, isTask: boolean) => {
+    (start: DateTime, isTask: boolean, allDayEnd?: DateTime) => {
       const newEvent = {
         id: crypto.randomUUID(),
         title: isTask
@@ -1713,9 +1686,11 @@ export default memo(function AppCalendar({
           : resolveDefaultName("defaultEventName", settings.defaultEventName),
         color: settings.eventColorPresets[0] ?? EVENT_COLOR_FALLBACK,
         start,
-        end: start.plus({ minutes: settings.defaultEventDuration }),
+        end:
+          allDayEnd ?? start.plus({ minutes: settings.defaultEventDuration }),
         timestamp: Date.now(),
         isTask,
+        allDay: allDayEnd ? true : undefined,
       } as CalendarEvent;
 
       pushHistory();
@@ -1735,19 +1710,26 @@ export default memo(function AppCalendar({
     ],
   );
 
+  const addAllDayEvent = useCallback(
+    (date: DateTime) =>
+      addNewEvent(date.startOf("day"), false, date.endOf("day")),
+    [addNewEvent],
+  );
+
   const createEventAtSlot = useCallback(
     (dayIndex: number, minutes: number) => {
       clearSelection();
 
-      const newEvent = addNewEvent(
-        visibleDays[dayIndex].date.plus({ minutes }),
-        false,
-      );
+      const { date } = visibleDays[dayIndex];
+      const newEvent =
+        minutes < 0
+          ? addAllDayEvent(date)
+          : addNewEvent(date.plus({ minutes }), false);
       save();
 
       return newEvent;
     },
-    [visibleDays, addNewEvent, save, clearSelection],
+    [visibleDays, addNewEvent, addAllDayEvent, save, clearSelection],
   );
 
   const startNewEvent = useCallback(
@@ -1768,7 +1750,7 @@ export default memo(function AppCalendar({
       const startY = e.clientY + container.scrollTop;
 
       const startMinutes = yToMinutes(
-        startY - rect.top - gridHeaderOffset,
+        startY - rect.top - getGridHeaderOffset(),
         hourHeight,
       );
 
@@ -1801,7 +1783,7 @@ export default memo(function AppCalendar({
     },
     [
       hourHeight,
-      gridHeaderOffset,
+      getGridHeaderOffset,
       settings.snapMinutes,
       addNewEvent,
       visibleDays,
@@ -2279,6 +2261,112 @@ export default memo(function AppCalendar({
 
   eventMapRef.current = eventMap;
 
+  const { timedMap, allDayMap } = useMemo(() => {
+    const timed = new Map(eventMap);
+    const allDay = new Map<string, CalendarEvent[]>();
+    for (const [key, dayEvents] of eventMap) {
+      if (!dayEvents.some((e) => e.allDay)) continue;
+      timed.set(
+        key,
+        dayEvents.filter((e) => !e.allDay),
+      );
+      allDay.set(
+        key,
+        dayEvents.filter((e) => e.allDay),
+      );
+    }
+    return { timedMap: timed, allDayMap: allDay };
+  }, [eventMap]);
+
+  const visibleKeys = useMemo(
+    () => visibleDates.map((d) => d.toISODate()!),
+    [visibleDates],
+  );
+  const allDayLayout = useMemo(
+    () =>
+      layoutBars(
+        visibleKeys,
+        allDayMap,
+        Array.from(allDayMap.values()).flat().length,
+      ),
+    [visibleKeys, allDayMap],
+  );
+  const allDayTitles = useMemo(
+    () => barSpans(allDayLayout, visibleKeys),
+    [allDayLayout, visibleKeys],
+  );
+  const allDayRows = Math.max(
+    0,
+    ...Array.from(
+      allDayLayout.values(),
+      ({ slots }) => slots.findLastIndex(Boolean) + 1,
+    ),
+  );
+  const allDayOverflows = allDayRows > ALL_DAY_MAX_ROWS;
+  const visibleRows = allDayOverflows
+    ? allDayExpanded
+      ? allDayRows + 1
+      : ALL_DAY_MAX_ROWS
+    : allDayRows;
+  const stripHeight = allDayRows
+    ? Math.max(ALL_DAY_MIN_ROWS, visibleRows) * ALL_DAY_ROW_HEIGHT
+    : 0;
+  headerZoneRef.current = GRID_HEADER_HEIGHT + stripHeight;
+
+  // open the strip while a dragged bar would hide behind the collapsed box
+  useEffect(() => {
+    const state = dragRef.current;
+    if (!state) return;
+    const hidden =
+      allDayOverflows &&
+      [state.event, ...(state.selection ?? []).map((s) => s.event)]
+        .filter((ev) => ev.allDay)
+        .some(
+          (ev) =>
+            (barRow(allDayLayout, eventKey(ev)) ?? 0) >= ALL_DAY_MAX_ROWS - 1,
+        );
+    if (hidden !== allDayExpanded && (hidden || autoExpanded.current)) {
+      autoExpanded.current = hidden;
+      setAllDayExpanded(hidden);
+    }
+  }, [allDayLayout, allDayOverflows, allDayExpanded]);
+
+  // open the strip while keyboard focus is on an event of a day with a collapsed box
+  const editing = !!editingEvent;
+  useEffect(() => {
+    const sync = () => {
+      if (dragRef.current) return;
+      const focus = focusStore.getFocus();
+      const inBoxDay =
+        (editing || focusStore.getKeyboardMode()) &&
+        !!focus?.eventKey &&
+        focus.minutes === ALL_DAY_SLOT &&
+        allDayOverflows &&
+        (allDayLayout.get(visibleKeys[focus.day])?.slots ?? []).some(
+          (e, i) => e && i >= ALL_DAY_MAX_ROWS - 1,
+        );
+      if (inBoxDay && !allDayExpanded) {
+        autoExpanded.current = true;
+        setAllDayExpanded(true);
+      } else if (!inBoxDay && autoExpanded.current) {
+        autoExpanded.current = false;
+        setAllDayExpanded(false);
+      }
+    };
+    sync();
+    const unsubscribe = focusStore.subscribe(sync);
+    return () => {
+      unsubscribe();
+    };
+  }, [
+    focusStore,
+    allDayLayout,
+    allDayOverflows,
+    allDayExpanded,
+    visibleKeys,
+    editing,
+  ]);
+
   const {
     gridProps: gridKeyboardProps,
     restoreFocus,
@@ -2293,7 +2381,8 @@ export default memo(function AppCalendar({
     snapMins: settings.snapMinutes,
     rtl,
     hourHeight,
-    headerHeight: GRID_HEADER_HEIGHT,
+    headerHeight: headerZoneRef.current,
+    allDayLane: stripHeight > 0,
     now,
     move,
     setCurrentDate,
@@ -2332,14 +2421,14 @@ export default memo(function AppCalendar({
       const key = d.date.toISODate();
       if (!key) continue;
 
-      const events = eventMap.get(key);
+      const events = timedMap.get(key);
       if (!events?.length) continue;
 
       map.set(key, getDayEventStyles(events, d.date, hourHeight));
     }
 
     return map;
-  }, [visibleDays, eventMap, hourHeight]);
+  }, [visibleDays, timedMap, hourHeight]);
 
   // fallback day index for editingEvent when no explicit day was given (e.g. agenda click)
   const editingEventFirstDayIndex = useMemo(() => {
@@ -2372,14 +2461,134 @@ export default memo(function AppCalendar({
     // eslint-disable-next-line
   }, [gridTouchRef.current?.delta?.x]);
 
+  const createAllDayEvent = useCallback(
+    (e: React.MouseEvent<HTMLElement>, dayIndex: number) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const inBottomHalf = e.clientY - rect.top > rect.height / 2;
+      if (inBottomHalf === headerBottom) return;
+
+      createEventAtSlot(dayIndex, ALL_DAY_SLOT);
+    },
+    [headerBottom, createEventAtSlot],
+  );
+
+  const startAllDayEvent = useCallback(
+    (e: React.PointerEvent, from: number) => {
+      if (e.target !== e.currentTarget || e.button !== 0) return;
+
+      if (e.ctrlKey) {
+        beginSelectionBox(e);
+        return;
+      }
+
+      clearSelection();
+      const rects = getDayRects();
+      const centerX = ({ rect }: (typeof rects)[number]) =>
+        (rect.left + rect.right) / 2;
+      const dayAt = (x: number) =>
+        rects.reduce((a, b) =>
+          Math.abs(x - centerX(b)) < Math.abs(x - centerX(a)) ? b : a,
+        ).day;
+      const span = (to: number) => ({
+        start: visibleDays[Math.min(from, to)].date.startOf("day"),
+        end: visibleDays[Math.max(from, to)].date.endOf("day"),
+      });
+
+      const created = addAllDayEvent(visibleDays[from].date);
+      let last = from;
+
+      const onMove = (ev: PointerEvent) => {
+        const to = dayAt(ev.clientX);
+        if (to === last) return;
+        last = to;
+        dispatch({ type: "update", id: created.id, data: span(to) });
+      };
+      const finish = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", finish);
+        window.removeEventListener("pointercancel", finish);
+        updateChange({ type: "updated", event: { ...created, ...span(last) } });
+        save();
+      };
+
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", finish);
+      window.addEventListener("pointercancel", finish);
+    },
+    [
+      visibleDays,
+      addAllDayEvent,
+      dispatch,
+      updateChange,
+      save,
+      clearSelection,
+      beginSelectionBox,
+    ],
+  );
+
+  const renderEvent = useCallback(
+    (
+      event: CalendarEvent,
+      dayIndex: number,
+      date: DateTime,
+      style: EventStyle,
+      titleSpan?: number,
+    ) => (
+      <EventBlock
+        key={eventKey(event)}
+        event={event}
+        day={dayIndex}
+        date={date}
+        style={style}
+        titleSpan={titleSpan}
+        editing={
+          (editingEvent?._instanceId ?? editingEvent?.id) ===
+            (event._instanceId ?? event.id) &&
+          (editingEventDay == null
+            ? editingEventFirstDayIndex === dayIndex
+            : editingEventDay === dayIndex)
+        }
+        selection={selection}
+        focusStore={focusStore}
+        restoreFocus={restoreFocus}
+        onPointerDown={onEventPointerDown}
+        onEventEdit={onEventEdit}
+        onEventMove={onEventMove}
+        onEventDelete={onEventDelete}
+        onDuplicate={onEventDuplicate}
+        onDetach={onEventDetach}
+        onReset={onEventReset}
+        setEditingEvent={setEditingEvent}
+      />
+    ),
+    [
+      editingEvent,
+      editingEventDay,
+      editingEventFirstDayIndex,
+      selection,
+      focusStore,
+      restoreFocus,
+      onEventPointerDown,
+      onEventEdit,
+      onEventMove,
+      onEventDelete,
+      onEventDuplicate,
+      onEventDetach,
+      onEventReset,
+      setEditingEvent,
+    ],
+  );
+
   // headers in day/week view, one for every visibleDay
   const dayWeekHeaders = useMemo(() => {
     const cells = visibleDays.map((d, dayIndex) => (
       <HeaderCell
         key={dayIndex}
+        onClick={(e) => createAllDayEvent(e, dayIndex)}
         className={cn(
           "select-none",
           headerBottom && "top-auto bottom-0",
+          stripHeight > 0 && !headerBottom && NO_BOTTOM_BORDER,
           isSameDate(d.date, now) && "bg-card font-bold",
         )}
         aria-label={
@@ -2391,7 +2600,7 @@ export default memo(function AppCalendar({
       </HeaderCell>
     ));
     return rtl ? cells.toReversed() : cells;
-  }, [visibleDays, now, headerBottom, t, rtl]);
+  }, [visibleDays, now, headerBottom, t, rtl, createAllDayEvent, stripHeight]);
 
   const tzColWidth = useMemo(
     () => getTimezoneColWidth(settings.timezones, visibleDays.length),
@@ -2422,6 +2631,145 @@ export default memo(function AppCalendar({
       )),
     [settings.timezones, headerBottom, labelsRight, tzStickyStyle],
   );
+
+  const allDayRow = useMemo(() => {
+    if (!stripHeight) return null;
+    const edge = { [headerBottom ? "bottom" : "top"]: GRID_HEADER_HEIGHT };
+    const rowHeight = stripHeight / visibleRows;
+    const cells = visibleDays.map((d, dayIndex) => {
+      const slots = allDayLayout.get(d.date.toISODate()!)?.slots ?? [];
+      const capped = allDayOverflows && !allDayExpanded;
+      const hidden = capped
+        ? slots.slice(ALL_DAY_MAX_ROWS - 1).filter(Boolean).length
+        : 0;
+      const titleSpan = (event: CalendarEvent) => {
+        const title = allDayTitles.get(barKey(event)!);
+        return title?.day === dayIndex ? title.span : undefined;
+      };
+      const spanning = slots.some((e) => e && (titleSpan(e) ?? 0) > 1);
+      const boxOnTop = headerBottom && allDayOverflows ? 1 : 0;
+      const hasBox =
+        allDayOverflows && slots.some((e, i) => e && i >= ALL_DAY_MAX_ROWS - 1);
+
+      return (
+        <div
+          key={dayIndex}
+          role="gridcell"
+          className={cn(
+            ALL_DAY_CELL,
+            headerBottom && NO_BOTTOM_BORDER,
+            spanning && "z-17",
+          )}
+          style={edge}
+          onPointerDown={(e) => startAllDayEvent(e, dayIndex)}
+        >
+          <SlotIndicator
+            store={focusStore}
+            day={dayIndex}
+            date={d.date}
+            isToday={isSameDate(d.date, now)}
+            events={allDayMap.get(d.date.toISODate()!) ?? []}
+            hourHeight={hourHeight}
+            snapMins={settings.snapMinutes}
+            allDay
+          />
+          {slots.map(
+            (event, i) =>
+              event &&
+              (!capped || i < ALL_DAY_MAX_ROWS - 1) &&
+              renderEvent(
+                event,
+                dayIndex,
+                d.date,
+                {
+                  top: (i + boxOnTop) * rowHeight,
+                  height: rowHeight,
+                  left: 0,
+                  width: 100,
+                },
+                titleSpan(event),
+              ),
+          )}
+          {hasBox && (
+            <button
+              type="button"
+              aria-label={t(
+                capped ? "calendar.expandAllDay" : "calendar.collapseAllDay",
+              )}
+              className="absolute inset-x-0 z-10 flex cursor-pointer items-center justify-center gap-0.5 text-xs text-muted-foreground hover:bg-accent"
+              style={{
+                top: boxOnTop
+                  ? 0
+                  : (capped ? ALL_DAY_MAX_ROWS - 1 : allDayRows) * rowHeight,
+                height: rowHeight,
+              }}
+              onClick={() => {
+                autoExpanded.current = false;
+                setAllDayExpanded(capped);
+              }}
+            >
+              {capped && `+${hidden}`}
+              {capped !== headerBottom ? (
+                <ChevronDown className="size-3" />
+              ) : (
+                <ChevronUp className="size-3" />
+              )}
+            </button>
+          )}
+        </div>
+      );
+    });
+    const tzCount = settings.timezones.length;
+    const labelIndex = labelsRight ? 0 : tzCount - 1;
+    const labels = settings.timezones.map((tz, i) => (
+      <div
+        key={tz}
+        role="rowheader"
+        className={cn(
+          ALL_DAY_CELL,
+          "flex items-center text-xs text-muted-foreground px-1",
+          tzCount === 1 && "justify-center",
+          tzCount > 1 &&
+            (labelsRight ? "justify-start ps-2" : "justify-end pe-2"),
+          i < tzCount - 1 && BOTTOM_BORDER_ONLY,
+        )}
+        style={{ ...edge, ...tzStickyStyle(i) }}
+      >
+        {i === labelIndex && (
+          <span className="truncate">{t("editor.allDay")}</span>
+        )}
+      </div>
+    ));
+    return (
+      <div role="row" className="contents">
+        {!labelsRight && labels}
+        {rtl ? cells.toReversed() : cells}
+        {labelsRight && labels}
+      </div>
+    );
+  }, [
+    stripHeight,
+    allDayOverflows,
+    allDayExpanded,
+    allDayLayout,
+    allDayTitles,
+    allDayRows,
+    visibleRows,
+    startAllDayEvent,
+    headerBottom,
+    visibleDays,
+    allDayMap,
+    focusStore,
+    now,
+    hourHeight,
+    settings.snapMinutes,
+    renderEvent,
+    settings.timezones,
+    tzStickyStyle,
+    labelsRight,
+    rtl,
+    t,
+  ]);
 
   const headerRow = labelsRight ? (
     <div role="row" className="contents">
@@ -2491,7 +2839,7 @@ export default memo(function AppCalendar({
             {(rtl ? visibleDays.toReversed() : visibleDays).map((d) => {
               const dayIndex = visibleDays.indexOf(d);
               const key = d.date.toISODate()!;
-              const dayEvents = eventMap.get(key) || [];
+              const dayEvents = timedMap.get(key) || [];
               const styles = stylesMap.get(key) || {};
 
               return (
@@ -2536,36 +2884,15 @@ export default memo(function AppCalendar({
                       />
 
                       {/* today's events */}
-                      {dayEvents.map((event) => (
-                        <EventBlock
-                          key={eventKey(event)}
-                          event={event}
-                          day={dayIndex}
-                          date={d.date}
-                          style={
-                            styles[event._instanceId ?? event.id] ??
-                            styles[event.id]
-                          }
-                          editing={
-                            (editingEvent?._instanceId ?? editingEvent?.id) ===
-                              (event._instanceId ?? event.id) &&
-                            (editingEventDay == null
-                              ? editingEventFirstDayIndex === dayIndex
-                              : editingEventDay === dayIndex)
-                          }
-                          selection={selection}
-                          focusStore={focusStore}
-                          restoreFocus={restoreFocus}
-                          onPointerDown={onEventPointerDown}
-                          onEventEdit={onEventEdit}
-                          onEventMove={onEventMove}
-                          onEventDelete={onEventDelete}
-                          onDuplicate={onEventDuplicate}
-                          onDetach={onEventDetach}
-                          onReset={onEventReset}
-                          setEditingEvent={setEditingEvent}
-                        />
-                      ))}
+                      {dayEvents.map((event) =>
+                        renderEvent(
+                          event,
+                          dayIndex,
+                          d.date,
+                          styles[event._instanceId ?? event.id] ??
+                            styles[event.id],
+                        ),
+                      )}
                     </div>
                   )}
                 </GridCell>
@@ -2577,28 +2904,16 @@ export default memo(function AppCalendar({
         );
       }),
     [
-      eventMap,
+      timedMap,
       stylesMap,
       visibleDays,
       now,
       getNowY,
       hourHeight,
-      onEventEdit,
-      onEventMove,
-      onEventDelete,
-      onEventDuplicate,
-      onEventDetach,
-      onEventReset,
-      setEditingEvent,
-      onEventPointerDown,
+      renderEvent,
       startNewEvent,
       focusStore,
-      restoreFocus,
       settings.snapMinutes,
-      editingEvent,
-      editingEventDay,
-      editingEventFirstDayIndex,
-      selection,
       hourLabels,
       labelsRight,
       rtl,
@@ -2807,7 +3122,7 @@ export default memo(function AppCalendar({
               tzColWidth,
               labelsRight,
             ),
-            gridTemplateRows: rows(hourHeight, headerBottom),
+            gridTemplateRows: rows(hourHeight, headerBottom, stripHeight),
           }}
           onTouchStart={gridTouchStart}
           onTouchMove={gridTouchMove}
@@ -2817,7 +3132,9 @@ export default memo(function AppCalendar({
           }}
         >
           {!headerBottom && headerRow}
+          {!headerBottom && allDayRow}
           {timeGrid}
+          {headerBottom && allDayRow}
           {headerBottom && headerRow}
 
           {isDragging && (

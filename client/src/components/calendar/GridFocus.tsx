@@ -5,6 +5,7 @@ import {
   useSpokenActive,
 } from "@/hooks/useGridFocus";
 import { describeSlot } from "@/lib/calendar/a11y";
+import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import {
   eventsAtSlot,
@@ -41,6 +42,7 @@ export const SlotIndicator = memo(function SlotIndicator({
   events,
   hourHeight,
   snapMins,
+  allDay,
 }: {
   store: GridFocusStore;
   day: number;
@@ -49,6 +51,7 @@ export const SlotIndicator = memo(function SlotIndicator({
   events: CalendarEvent[];
   hourHeight: number;
   snapMins: number;
+  allDay?: boolean;
 }) {
   const focus = useDayFocus(store, day);
   const keyboardMode = useKeyboardMode(store);
@@ -56,7 +59,8 @@ export const SlotIndicator = memo(function SlotIndicator({
   const spokenActive = useSpokenActive(store);
   const ref = useActiveDescendant(keyboardMode && !spokenActive ? id : null);
 
-  if (!focus || !id) return null;
+  const inStrip = !!focus && focus.minutes < 0;
+  if (!focus || !id || inStrip !== !!allDay) return null;
 
   return (
     <div
@@ -72,11 +76,18 @@ export const SlotIndicator = memo(function SlotIndicator({
         isToday,
         eventsAtSlot(events, date, focus.minutes, snapMins).map((e) => e.title),
       )}
-      className="pointer-events-none absolute left-0 right-0 z-20 border-2 border-foreground bg-foreground/15 shadow-[0_0_0_1px_var(--background)] opacity-0 group-data-[keyboard-mode]/grid:opacity-100"
-      style={{
-        top: (focus.minutes / 60) * hourHeight,
-        height: Math.max(MIN_HEIGHT, (snapMins / 60) * hourHeight),
-      }}
+      className={cn(
+        "pointer-events-none absolute left-0 right-0 z-20 border-2 border-foreground bg-foreground/15 shadow-[0_0_0_1px_var(--background)] opacity-0 group-data-[keyboard-mode]/grid:opacity-100",
+        allDay && "inset-y-0",
+      )}
+      style={
+        allDay
+          ? undefined
+          : {
+              top: (focus.minutes / 60) * hourHeight,
+              height: Math.max(MIN_HEIGHT, (snapMins / 60) * hourHeight),
+            }
+      }
     />
   );
 });

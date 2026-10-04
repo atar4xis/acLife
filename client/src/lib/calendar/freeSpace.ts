@@ -1,19 +1,55 @@
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { DateTime, Duration } from "luxon";
-import { resolveInstanceCompleted } from "./event";
-import { occurrences } from "./occurrences";
+import { makeOccurrence, resolveInstanceCompleted } from "./event";
+import { nominalOnDate, occurrences, slotKey } from "./occurrences";
 
 const SEARCH_HORIZON_DAYS = 365;
 const MAX_CANDIDATES = 5000;
 
 type Occurrence = { start: DateTime; end: DateTime };
 
-/**
- * Finds the first occurrence (base or repeated) of any event other than
- * `excludeKey` that overlaps [rangeStart, rangeEnd). Mirrors the instance-id
- * scheme used by `processRepeats` in `lib/calendar/event.ts` so the moved
- * event's own occurrence can be excluded correctly.
- */
+// every occurrence of a series that may reach [rangeStart, rangeEnd], with overrides applied
+function* seriesOccurrences(
+  series: CalendarEvent,
+  rangeStart: DateTime,
+  rangeEnd: DateTime,
+) {
+  const repeat = series.repeat!;
+  const duration = series.end.diff(series.start);
+  const pad = Math.max(
+    0,
+    ...Object.values(repeat.overrides ?? {}).flatMap((o) => [
+      Math.abs(o.startShift ?? 0),
+      Math.abs(o.endShift ?? 0),
+    ]),
+  );
+  const occurrence = (cursor: DateTime) =>
+    makeOccurrence(series, cursor, cursor.toISODate()!, duration);
+
+  // overrides before the anchor are left behind when the parent moves forward
+  const anchorKey = slotKey(series.start);
+  for (const key of Object.keys(repeat.overrides ?? {})) {
+    if (key < anchorKey) yield occurrence(nominalOnDate(series.start, key));
+  }
+
+  for (const cursor of occurrences(
+    series.start,
+    repeat,
+    rangeStart.minus(duration).minus(pad),
+  )) {
+    if (cursor > rangeEnd.plus(pad)) break;
+    yield cursor.toMillis() === series.start.toMillis()
+      ? {
+          ...series,
+          _instanceId: series.id,
+          completed: series.isTask
+            ? resolveInstanceCompleted(series, cursor.toISODate()!)
+            : undefined,
+        }
+      : occurrence(cursor);
+  }
+}
+
 function findOverlappingOccurrence(
   events: CalendarEvent[],
   rangeStart: DateTime,
@@ -23,34 +59,15 @@ function findOverlappingOccurrence(
   for (const e of events) {
     if (!e.id) continue;
 
-    if (!e.repeat) {
-      if (e.id === excludeKey) continue;
-      if (e.isTask && e.completed) continue;
-      if (e.start < rangeEnd && e.end > rangeStart) {
-        return { start: e.start, end: e.end };
-      }
-      continue;
-    }
+    const candidates = e.repeat
+      ? seriesOccurrences(e, rangeStart, rangeEnd)
+      : [{ ...e, _instanceId: e.id }];
 
-    const duration = e.end.diff(e.start);
-
-    for (const cursor of occurrences(
-      e.start,
-      e.repeat,
-      rangeStart.minus(duration),
-    )) {
-      if (cursor > rangeEnd) break;
-
-      const key = cursor.toISODate()!;
-      const instanceId =
-        cursor.toMillis() === e.start.toMillis() ? e.id : `${e.id}_${key}`;
-      const completed = e.isTask && resolveInstanceCompleted(e, key);
-
-      if (!completed && instanceId !== excludeKey) {
-        const occEnd = cursor.plus(duration);
-        if (cursor < rangeEnd && occEnd > rangeStart) {
-          return { start: cursor, end: occEnd };
-        }
+    for (const occ of candidates) {
+      if (occ._instanceId === excludeKey) continue;
+      if (occ.allDay || (occ.isTask && occ.completed)) continue;
+      if (occ.start < rangeEnd && occ.end > rangeStart) {
+        return { start: occ.start, end: occ.end };
       }
     }
   }

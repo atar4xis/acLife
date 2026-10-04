@@ -3,6 +3,7 @@ import { fireEvent, screen } from "@testing-library/react";
 import type userEvent from "@testing-library/user-event";
 import {
   FIXED_NOW,
+  buildEvent,
   buildPlainEvent,
   buildSecondEvent,
   buildRecurringEvent,
@@ -211,5 +212,26 @@ describe("Calendar move menu", () => {
     expect(retro?.start.toISO()).toBe(
       FIXED_NOW.startOf("day").plus({ hours: 14 }).toISO(),
     );
+  });
+});
+
+describe("Calendar move menu for all day events", () => {
+  it("only offers day-based moves", async () => {
+    const { user } = renderCalendar({
+      events: [
+        buildEvent({
+          allDay: true,
+          start: FIXED_NOW.startOf("day"),
+          end: FIXED_NOW.endOf("day"),
+        }),
+      ],
+    });
+
+    await openMoveSubmenu(user, "Planning");
+
+    expect(await screen.findByRole("menuitem", { name: /next\.\.\./i })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: /later\.\.\./i })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: /earlier\.\.\./i })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: /free slot/i })).toBeNull();
   });
 });

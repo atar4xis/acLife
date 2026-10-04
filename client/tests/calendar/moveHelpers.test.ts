@@ -3,7 +3,11 @@ import {
   getMovedEvent,
   findFreeSlotForEvent,
 } from "../../src/lib/calendar/moveHelpers";
-import type { CalendarEvent } from "../../src/types/calendar/Event.ts";
+import type { DateTime } from "luxon";
+import type {
+  CalendarEvent,
+  OccurrenceOverride,
+} from "../../src/types/calendar/Event.ts";
 import { FIXED_NOW, buildEvent, setupCalendarTests } from "./helpers";
 
 setupCalendarTests();
@@ -193,6 +197,127 @@ describe("moveHelpers", () => {
     expect(nextDaySlot?.start.toISO()).toBe(
       FIXED_NOW.startOf("day").plus({ days: 1, hours: 11 }).toISO(),
     );
+  });
+
+  it("findFreeSlotForEvent ignores all day events", () => {
+    const day = FIXED_NOW.startOf("day");
+    const target = buildEvent({
+      id: "target-all-day",
+      start: day.plus({ hours: 9 }),
+      end: day.plus({ hours: 10 }),
+    });
+    const holiday = buildEvent({
+      id: "holiday",
+      allDay: true,
+      start: day,
+      end: day.endOf("day"),
+    });
+    const busy = buildEvent({
+      id: "busy",
+      start: day.plus({ hours: 10 }),
+      end: day.plus({ hours: 11 }),
+    });
+
+    const forward = findFreeSlotForEvent(
+      [target, holiday, busy],
+      target,
+      "forward",
+    );
+    expect(forward?.start.toISO()).toBe(day.plus({ hours: 11 }).toISO());
+
+    const backward = findFreeSlotForEvent(
+      [target, holiday],
+      target,
+      "backward",
+    );
+    expect(backward?.start.toISO()).toBe(day.plus({ hours: 8 }).toISO());
+  });
+
+  it("findFreeSlotForEvent ignores recurring all day occurrences", () => {
+    const day = FIXED_NOW.startOf("day");
+    const target = buildEvent({
+      id: "target-recurring-all-day",
+      start: day.plus({ hours: 9 }),
+      end: day.plus({ hours: 10 }),
+    });
+    const repeat = { interval: 1, unit: "day" as const };
+    const series = buildEvent({
+      id: "series",
+      allDay: true,
+      start: day,
+      end: day.endOf("day"),
+      repeat,
+    });
+
+    const slot = findFreeSlotForEvent([target, series], target, "forward");
+    expect(slot?.start.toISO()).toBe(day.plus({ hours: 10 }).toISO());
+  });
+
+  describe("recurring series with overrides", () => {
+    const day = FIXED_NOW.startOf("day");
+    const tomorrow = day.plus({ days: 1 });
+    const key = (d: DateTime) => d.toUTC().toISODate()!;
+    const target = (at: DateTime, hour: number) =>
+      buildEvent({
+        id: "target-series",
+        start: at.plus({ hours: hour }),
+        end: at.plus({ hours: hour + 1 }),
+      });
+    const series = (
+      overrides?: Record<string, OccurrenceOverride>,
+      from = day,
+    ) =>
+      buildEvent({
+        id: "series",
+        start: from.plus({ hours: 10 }),
+        end: from.plus({ hours: 11 }),
+        repeat: { interval: 1, unit: "day" as const, overrides },
+      });
+    const forward = (events: CalendarEvent[], t: CalendarEvent) =>
+      findFreeSlotForEvent([t, ...events], t, "forward")?.start.toISO();
+
+    it("ignores a series occurrence overridden to all day", () => {
+      const t = target(tomorrow, 9);
+
+      expect(forward([series()], t)).toBe(tomorrow.plus({ hours: 11 }).toISO());
+      expect(
+        forward([series({ [key(tomorrow)]: { allDay: true } })], t),
+      ).toBe(tomorrow.plus({ hours: 10 }).toISO());
+    });
+
+    it("uses the shifted time of an overridden occurrence", () => {
+      const moved = series({
+        [key(tomorrow)]: { startShift: 2 * 3600000, endShift: 2 * 3600000 },
+      });
+
+      expect(forward([moved], target(tomorrow, 9))).toBe(
+        tomorrow.plus({ hours: 10 }).toISO(),
+      );
+      expect(forward([moved], target(tomorrow, 11))).toBe(
+        tomorrow.plus({ hours: 13 }).toISO(),
+      );
+    });
+
+    it("finds an occurrence shifted into the range from another day", () => {
+      const moved = series({
+        [key(tomorrow)]: { startShift: -23 * 3600000, endShift: -23 * 3600000 },
+      });
+
+      expect(forward([moved], target(day, 9))).toBe(
+        day.plus({ hours: 12 }).toISO(),
+      );
+      expect(forward([moved], target(tomorrow, 9))).toBe(
+        tomorrow.plus({ hours: 10 }).toISO(),
+      );
+    });
+
+    it("keeps an override left behind before the series anchor", () => {
+      const leftBehind = series({ [key(day)]: { title: "Kept" } }, tomorrow);
+
+      expect(forward([leftBehind], target(day, 9))).toBe(
+        day.plus({ hours: 11 }).toISO(),
+      );
+    });
   });
 
   it("findFreeSlotForEvent returns null when nothing is free within the search horizon", () => {

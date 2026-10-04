@@ -1,8 +1,13 @@
-import type { CalendarEvent } from "@/types/calendar/Event";
+import { DateTime } from "luxon";
+import type { CalendarEvent, EventDragRef } from "@/types/calendar/Event";
 
 export type BarSlots = (CalendarEvent | undefined)[];
 
 export const BAR_SLOTS = 3;
+
+export const ALL_DAY_ROW_HEIGHT = 24;
+export const ALL_DAY_MIN_ROWS = 1;
+export const ALL_DAY_MAX_ROWS = 4;
 
 // bar geometry in %
 export const BARS_BOTTOM = 24; // of day cell
@@ -20,42 +25,77 @@ export const numberPadding = (rows: number) =>
 
 export const barKey = (e?: CalendarEvent) => e && (e._instanceId ?? e.id);
 
-// assigns each event a fixed row so multi-day events line up across days
+const isMultiDay = (e: CalendarEvent) => !e.start.hasSame(e.end, "day");
+
+// one row per event across all its days, so multi-day events stay connected
 export function layoutBars(
   dateKeys: string[],
   eventMap: Map<string, CalendarEvent[]>,
+  slotCount = BAR_SLOTS,
 ) {
+  const spans = new Map<string, { day: number; event: CalendarEvent }[]>();
+  dateKeys.forEach((date, day) => {
+    for (const event of eventMap.get(date) ?? []) {
+      const key = barKey(event)!;
+      const span = spans.get(key) ?? [];
+      span.push({ day, event });
+      spans.set(key, span);
+    }
+  });
+
+  const grid: BarSlots[] = dateKeys.map(() =>
+    new Array(slotCount).fill(undefined),
+  );
+  const ordered = Array.from(spans).toSorted(
+    ([ka, a], [kb, b]) =>
+      Number(isMultiDay(b[0].event)) - Number(isMultiDay(a[0].event)) ||
+      a[0].event.start.toMillis() - b[0].event.start.toMillis() ||
+      Number(ka > kb) - Number(ka < kb),
+  );
+
+  for (const [, days] of ordered) {
+    const fits = (row: number) => days.every(({ day }) => !grid[day][row]);
+    let row = 0;
+    while (row < slotCount && !fits(row)) row++;
+    if (row === slotCount) continue;
+    for (const { day, event } of days) grid[day][row] = event;
+  }
+
   const result = new Map<string, { slots: BarSlots; overflow: number }>();
-  let prev: BarSlots = [];
-
-  for (const date of dateKeys) {
-    const slots: BarSlots = new Array(BAR_SLOTS).fill(undefined);
-    const pending: CalendarEvent[] = [];
-    const events = (eventMap.get(date) ?? []).toSorted(
-      (a, b) => a.start.toMillis() - b.start.toMillis(),
-    );
-
-    for (const e of events) {
-      const i = prev.findIndex((p) => barKey(p) === barKey(e));
-      if (e._continued && i !== -1) slots[i] = e;
-      else pending.push(e);
-    }
-    for (const e of pending) {
-      const i = slots.indexOf(undefined);
-      if (i !== -1) slots[i] = e;
-    }
-
+  dateKeys.forEach((date, day) => {
+    const slots = grid[day];
     result.set(date, {
       slots,
-      overflow: events.length - slots.filter(Boolean).length,
+      overflow:
+        (eventMap.get(date)?.length ?? 0) - slots.filter(Boolean).length,
     });
-    prev = slots;
-  }
+  });
 
   return result;
 }
 
 type BarLayout = ReturnType<typeof layoutBars>;
+
+export const barSpans = (layout: BarLayout, dateKeys: string[]) => {
+  const spans = new Map<string, { day: number; span: number }>();
+  dateKeys.forEach((date, day) => {
+    for (const event of layout.get(date)?.slots ?? []) {
+      const key = barKey(event);
+      if (!key) continue;
+      const found = spans.get(key);
+      if (found) found.span++;
+      else spans.set(key, { day, span: 1 });
+    }
+  });
+  return spans;
+};
+
+export const barRow = (layout: BarLayout, key: string) => {
+  for (const { slots } of layout.values()) {
+    const row = slots.findIndex((e) => barKey(e) === key);
+    if (row !== -1) return row;
+  }
+};
 
 // true when both layouts render the same bars (event copies differ by identity)
 export function sameBars(a: BarLayout, b: BarLayout) {
@@ -76,3 +116,25 @@ export function sameBars(a: BarLayout, b: BarLayout) {
 
   return true;
 }
+
+export const resizeAllDay = (
+  type: NonNullable<EventDragRef>["type"],
+  originalStart: DateTime,
+  originalEnd: DateTime,
+  dayDelta: number,
+) =>
+  type === "resize_start"
+    ? {
+        newStart: DateTime.min(
+          originalStart.plus({ days: dayDelta }).startOf("day"),
+          originalEnd.startOf("day"),
+        ),
+        newEnd: originalEnd,
+      }
+    : {
+        newStart: originalStart,
+        newEnd: DateTime.max(
+          originalEnd.plus({ days: dayDelta }).endOf("day"),
+          originalStart.endOf("day"),
+        ),
+      };

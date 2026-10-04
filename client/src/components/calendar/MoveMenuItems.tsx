@@ -97,49 +97,53 @@ export function MoveMenuItems({
         {t("move.title")}
       </SubTrigger>
       <SubContent>
-        <Sub>
-          <SubTrigger>{t("move.forward")}</SubTrigger>
-          <SubContent>
-            {MOVE_MINUTE_STEPS.map((minutes) => (
-              <Item
-                key={`fwd-min-${minutes}`}
-                onClick={() => moveBy("forward", "minutes", minutes)}
-              >
-                {t("move.minutes", { count: minutes })}
-              </Item>
-            ))}
-            {MOVE_HOUR_STEPS.map((hours) => (
-              <Item
-                key={`fwd-hour-${hours}`}
-                onClick={() => moveBy("forward", "hours", hours)}
-              >
-                {t("move.hours", { count: hours })}
-              </Item>
-            ))}
-          </SubContent>
-        </Sub>
+        {!event.allDay && (
+          <>
+            <Sub>
+              <SubTrigger>{t("move.forward")}</SubTrigger>
+              <SubContent>
+                {MOVE_MINUTE_STEPS.map((minutes) => (
+                  <Item
+                    key={`fwd-min-${minutes}`}
+                    onClick={() => moveBy("forward", "minutes", minutes)}
+                  >
+                    {t("move.minutes", { count: minutes })}
+                  </Item>
+                ))}
+                {MOVE_HOUR_STEPS.map((hours) => (
+                  <Item
+                    key={`fwd-hour-${hours}`}
+                    onClick={() => moveBy("forward", "hours", hours)}
+                  >
+                    {t("move.hours", { count: hours })}
+                  </Item>
+                ))}
+              </SubContent>
+            </Sub>
 
-        <Sub>
-          <SubTrigger>{t("move.backward")}</SubTrigger>
-          <SubContent>
-            {MOVE_MINUTE_STEPS.map((minutes) => (
-              <Item
-                key={`bwd-min-${minutes}`}
-                onClick={() => moveBy("backward", "minutes", minutes)}
-              >
-                {t("move.minutes", { count: minutes })}
-              </Item>
-            ))}
-            {MOVE_HOUR_STEPS.map((hours) => (
-              <Item
-                key={`bwd-hour-${hours}`}
-                onClick={() => moveBy("backward", "hours", hours)}
-              >
-                {t("move.hours", { count: hours })}
-              </Item>
-            ))}
-          </SubContent>
-        </Sub>
+            <Sub>
+              <SubTrigger>{t("move.backward")}</SubTrigger>
+              <SubContent>
+                {MOVE_MINUTE_STEPS.map((minutes) => (
+                  <Item
+                    key={`bwd-min-${minutes}`}
+                    onClick={() => moveBy("backward", "minutes", minutes)}
+                  >
+                    {t("move.minutes", { count: minutes })}
+                  </Item>
+                ))}
+                {MOVE_HOUR_STEPS.map((hours) => (
+                  <Item
+                    key={`bwd-hour-${hours}`}
+                    onClick={() => moveBy("backward", "hours", hours)}
+                  >
+                    {t("move.hours", { count: hours })}
+                  </Item>
+                ))}
+              </SubContent>
+            </Sub>
+          </>
+        )}
 
         <Sub>
           <SubTrigger>{t("move.next")}</SubTrigger>
@@ -169,14 +173,18 @@ export function MoveMenuItems({
           </SubContent>
         </Sub>
 
-        <Separator />
+        {!event.allDay && (
+          <>
+            <Separator />
 
-        <Item onClick={() => moveToFreeSlot("forward")}>
-          {t("move.nextFree")}
-        </Item>
-        <Item onClick={() => moveToFreeSlot("backward")}>
-          {t("move.previousFree")}
-        </Item>
+            <Item onClick={() => moveToFreeSlot("forward")}>
+              {t("move.nextFree")}
+            </Item>
+            <Item onClick={() => moveToFreeSlot("backward")}>
+              {t("move.previousFree")}
+            </Item>
+          </>
+        )}
       </SubContent>
     </Sub>
   );

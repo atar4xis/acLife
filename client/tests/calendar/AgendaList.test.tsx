@@ -106,6 +106,21 @@ describe("AgendaList", () => {
     expect(screen.queryByText("Outside range")).not.toBeInTheDocument();
   });
 
+  it("labels all day events instead of showing a time range", () => {
+    renderAgendaList([
+      buildEvent({
+        id: "holiday",
+        title: "Holiday",
+        allDay: true,
+        start: FIXED_NOW.startOf("day"),
+        end: FIXED_NOW.endOf("day"),
+      }),
+    ]);
+
+    expect(screen.getByText("All day")).toBeInTheDocument();
+    expect(screen.queryByText(/12:00 AM/)).not.toBeInTheDocument();
+  });
+
   it("includes events further out when agendaRangeDays is increased", () => {
     seedSettings({ agendaRangeDays: 7 });
 

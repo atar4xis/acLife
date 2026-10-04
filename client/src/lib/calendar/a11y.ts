@@ -19,6 +19,15 @@ function describeTimeRange(start: DateTime, end: DateTime) {
 }
 
 export function describeWhen(event: CalendarEvent) {
+  if (event.allDay) {
+    const days = event.start.hasSame(event.end, "day")
+      ? describeDay(event.start)
+      : t("a11y.range", {
+          start: describeDay(event.start),
+          end: describeDay(event.end),
+        });
+    return `${days}, ${t("editor.allDay")}`;
+  }
   return event.start.hasSame(event.end, "day")
     ? `${describeDay(event.start)}, ${describeTimeRange(event.start, event.end)}`
     : t("a11y.range", {
@@ -48,7 +57,9 @@ export function describeSlot(
   titles: string[],
 ) {
   return [
-    describeTime(date.startOf("day").plus({ minutes })),
+    minutes < 0
+      ? t("editor.allDay")
+      : describeTime(date.startOf("day").plus({ minutes })),
     describeFullDay(date) + (isToday ? `, ${t("a11y.today")}` : ""),
     titles.length > 0 &&
       t("a11y.eventCount", { count: titles.length, titles: titles.join(", ") }),

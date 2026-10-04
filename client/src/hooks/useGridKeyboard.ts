@@ -5,6 +5,7 @@ import { describeSlot, describeWhen } from "@/lib/calendar/a11y";
 import { getWeekDays, isSameDate } from "@/lib/calendar/date";
 import { eventKey } from "@/lib/calendar/event";
 import {
+  ALL_DAY_SLOT,
   MINUTES_PER_DAY,
   eventDomId,
   clampSlot,
@@ -31,6 +32,7 @@ type Params = {
   rtl: boolean;
   hourHeight: number;
   headerHeight: number;
+  allDayLane: boolean;
   now: DateTime;
   move: (steps: number) => void;
   setCurrentDate: (date: DateTime) => void;
@@ -342,16 +344,20 @@ export default function useGridKeyboard(params: Params) {
 
       const next = {
         day,
-        minutes: slotWithinDay(updated.start, updated.start, p.snapMins),
+        minutes: updated.allDay
+          ? ALL_DAY_SLOT
+          : slotWithinDay(updated.start, updated.start, p.snapMins),
         eventKey: session.key,
       };
       commit(next);
       speak(describeWhen(updated), day);
       show(next, {
-        endMinutes: Math.min(
-          MINUTES_PER_DAY,
-          updated.end.diff(startOfDay, "minutes").minutes,
-        ),
+        endMinutes: updated.allDay
+          ? 0
+          : Math.min(
+              MINUTES_PER_DAY,
+              updated.end.diff(startOfDay, "minutes").minutes,
+            ),
         direction: step.minutes > 0 ? 1 : -1,
       });
     },
@@ -651,6 +657,7 @@ export default function useGridKeyboard(params: Params) {
         snapMins: p.snapMins,
         dayCount: p.visibleDays.length,
         rtl: p.rtl,
+        allDayLane: p.allDayLane,
       });
       if (target) {
         navigate(ctx, target);
@@ -686,29 +693,34 @@ export default function useGridKeyboard(params: Params) {
     ],
   );
 
-  const { visibleDays, eventMap } = params;
+  const { visibleDays, eventMap, allDayLane } = params;
   useEffect(() => {
     const { store } = paramsRef.current;
     const focus = store.getFocus();
     if (!focus) return;
 
     const day = Math.min(focus.day, visibleDays.length - 1);
+    const minutes = allDayLane ? focus.minutes : Math.max(focus.minutes, 0);
     const key = visibleDays[day]?.date.toISODate();
     const keep =
       focus.eventKey &&
       key &&
       eventMap.get(key)?.some((ev) => eventKey(ev) === focus.eventKey);
-    if (day === focus.day && (keep || !focus.eventKey)) {
+    if (
+      day === focus.day &&
+      minutes === focus.minutes &&
+      (keep || !focus.eventKey)
+    ) {
       if (keep) syncDescendant(focus);
       return;
     }
 
     commit({
       day,
-      minutes: focus.minutes,
+      minutes,
       eventKey: keep ? focus.eventKey : null,
     });
-  }, [visibleDays, eventMap, commit, syncDescendant]);
+  }, [visibleDays, eventMap, allDayLane, commit, syncDescendant]);
 
   const restoreNow = useCallback(
     (opener: Element | null, event: CalendarEvent, day: number) => {
@@ -730,9 +742,11 @@ export default function useGridKeyboard(params: Params) {
       const minutes =
         current?.day === day
           ? current.minutes
-          : date
-            ? slotWithinDay(event.start, date, snapMins)
-            : 0;
+          : event.allDay
+            ? ALL_DAY_SLOT
+            : date
+              ? slotWithinDay(event.start, date, snapMins)
+              : 0;
       const next = { day, minutes, eventKey: eventKey(event) };
 
       commit(next);

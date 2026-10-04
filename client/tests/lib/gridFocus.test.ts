@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { DateTime } from "luxon";
 import {
+  ALL_DAY_SLOT,
   createGridFocusStore,
   eventDomId,
   eventsAtSlot,
@@ -372,5 +373,49 @@ describe("moveStepForKey", () => {
     ["a", {}],
   ])("ignores %s with %j", (name, mods) => {
     expect(key(name, mods)).toBeNull();
+  });
+});
+
+describe("all day lane", () => {
+  const lane = { ...opts, allDayLane: true };
+
+  it("enters the strip by moving up from the first slot", () => {
+    expect(moveFocus({ day: 0, minutes: 0 }, "ArrowUp", lane)?.minutes).toBe(
+      ALL_DAY_SLOT,
+    );
+  });
+
+  it("stays at the first slot without a lane", () => {
+    expect(moveFocus({ day: 0, minutes: 0 }, "ArrowUp", opts)?.minutes).toBe(0);
+  });
+
+  it("leaves the strip downwards and stays on ArrowUp", () => {
+    const from = { day: 2, minutes: ALL_DAY_SLOT };
+
+    expect(moveFocus(from, "ArrowDown", lane)?.minutes).toBe(0);
+    expect(moveFocus(from, "ArrowUp", lane)?.minutes).toBe(ALL_DAY_SLOT);
+    expect(moveFocus(from, "PageDown", lane)?.minutes).toBe(60);
+  });
+
+  it("keeps the strip when changing day", () => {
+    expect(
+      moveFocus({ day: 2, minutes: ALL_DAY_SLOT }, "ArrowRight", lane)?.minutes,
+    ).toBe(ALL_DAY_SLOT);
+  });
+
+  it("matches only all day events in the strip", () => {
+    const allDay = { ...ev("holiday", 0, 24), allDay: true };
+    const timed = ev("standup", 0, 1);
+
+    expect(
+      eventsAtSlot([allDay, timed], day, ALL_DAY_SLOT, 15).map((e) => e.id),
+    ).toEqual(["holiday"]);
+    expect(eventsAtSlot([allDay, timed], day, 0, 15).map((e) => e.id)).toEqual([
+      "standup",
+    ]);
+  });
+
+  it("describes the strip slot", () => {
+    expect(describeSlot(day, ALL_DAY_SLOT, false, [])).toMatch(/^All day, /);
   });
 });

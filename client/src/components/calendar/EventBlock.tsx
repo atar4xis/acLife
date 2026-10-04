@@ -41,6 +41,8 @@ const LONG_PRESS_MS = 450;
 // how far (px) a touch may move during the hold before it's treated as a scroll/tap instead
 const LONG_PRESS_TOLERANCE = 10;
 
+const ALL_DAY_PADDING_REM = 0.5;
+
 const SELECTED_SHADOW = "inset 0 0 0 1px var(--foreground)";
 
 export default memo(
@@ -49,6 +51,7 @@ export default memo(
     day,
     date,
     style,
+    titleSpan,
     editing,
     selection,
     focusStore,
@@ -156,6 +159,31 @@ export default memo(
 
     useEffect(() => clearPopOutTimer, [clearPopOutTimer]);
 
+    const rtl = i18n.dir() === "rtl";
+    const connectedShadow = useMemo(() => {
+      if (!event.allDay || event.start.hasSame(event.end, "day")) return;
+      return [
+        "inset 0 1px 0 0 rgba(0,0,0,0.35)",
+        "inset 0 -1px 0 0 rgba(0,0,0,0.35)",
+        startsToday && `inset ${rtl ? -1 : 1}px 0 0 0 rgba(0,0,0,0.35)`,
+        endsToday && `inset ${rtl ? 1 : -1}px 0 0 0 rgba(0,0,0,0.35)`,
+      ]
+        .filter(Boolean)
+        .join(",");
+    }, [event.allDay, event.start, event.end, startsToday, endsToday, rtl]);
+
+    const spanning = !!event.allDay && (titleSpan ?? 0) > 1;
+    const titleStyle = useMemo(() => {
+      if (!spanning) return undefined;
+      const rem = (titleSpan! - 1) * ALL_DAY_PADDING_REM;
+      return {
+        width: `calc(${titleSpan! * 100}% + ${rem}rem)`,
+        marginLeft: rtl
+          ? `calc(-${(titleSpan! - 1) * 100}% - ${rem}rem)`
+          : undefined,
+      };
+    }, [spanning, titleSpan, rtl]);
+
     const blockStyle = useMemo(
       () => ({
         top: style.top,
@@ -168,8 +196,9 @@ export default memo(
         height: popOut ? popOutHeight : style.height,
         width: style.width + "%",
         backgroundColor: eventColor,
-        boxShadow: selected ? SELECTED_SHADOW : undefined,
-        contain: popOut ? undefined : ("paint" as const),
+        boxShadow: selected ? SELECTED_SHADOW : connectedShadow,
+        contain: popOut || spanning ? undefined : ("paint" as const),
+        overflow: spanning ? ("visible" as const) : undefined,
       }),
       [
         style.top,
@@ -178,13 +207,16 @@ export default memo(
         style.width,
         eventColor,
         selected,
+        connectedShadow,
+        spanning,
         popOut,
         popOutHeight,
       ],
     );
 
     const eventRef = useRef<HTMLDivElement>(null);
-    const padding = style.height > lineHeight * 3 ? "p-1" : "p-[1px]"; // TODO: maybe make it smarter in the future
+    const padding =
+      event.allDay || style.height > lineHeight * 3 ? "p-1" : "p-[1px]"; // TODO: maybe make it smarter in the future
     const lineClamp = useMemo(
       () => Math.ceil((popOut ? popOutHeight : style.height) / lineHeight) - 2,
       [style.height, popOut, popOutHeight],
@@ -395,30 +427,39 @@ export default memo(
               onDoubleClick={() => setEditingEvent(event, day)}
               ref={eventRef}
             >
-              {!event._continued ? (
+              {!event._continued || titleSpan ? (
                 <>
                   <div
                     dir={i18n.dir()}
-                    className="flex items-start justify-between gap-1"
+                    className={cn(
+                      "flex items-start gap-1",
+                      spanning ? "pointer-events-none" : "justify-between",
+                    )}
+                    style={titleStyle}
                   >
                     <div
                       dir="auto"
                       className={cn(
                         "font-semibold",
+                        event.allDay && "min-w-0 truncate",
                         event.isTask && event.completed && "line-through",
                       )}
-                      style={{
-                        display: "-webkit-box",
-                        WebkitBoxOrient: "vertical",
-                        WebkitLineClamp: lineClamp,
-                        overflow: "hidden",
-                      }}
+                      style={
+                        event.allDay
+                          ? undefined
+                          : {
+                              display: "-webkit-box",
+                              WebkitBoxOrient: "vertical",
+                              WebkitLineClamp: lineClamp,
+                              overflow: "hidden",
+                            }
+                      }
                     >
                       {event.title}
                     </div>
                     {event.isTask && (
                       <Checkbox
-                        className="mt-0.5 shrink-0 border-current/50"
+                        className="pointer-events-auto mt-0.5 shrink-0 border-current/50"
                         aria-label={t("block.completed", {
                           title: event.title,
                         })}
@@ -429,26 +470,38 @@ export default memo(
                       />
                     )}
                   </div>
-                  <span
-                    dir={i18n.dir()}
-                    className={cn(
-                      "text-xs block",
-                      event.isTask && event.completed && "line-through",
-                    )}
-                  >
-                    {timeLabel}
-                  </span>
+                  {!event.allDay && (
+                    <span
+                      dir={i18n.dir()}
+                      className={cn(
+                        "text-xs block",
+                        event.isTask && event.completed && "line-through",
+                      )}
+                    >
+                      {timeLabel}
+                    </span>
+                  )}
                 </>
               ) : (
-                <div className="flex justify-end">
-                  <RedoDot size={16} />
-                </div>
+                !event.allDay && (
+                  <div className="flex justify-end">
+                    <RedoDot size={16} />
+                  </div>
+                )
               )}
 
               {/* handles for resizing */}
               {startsToday && (
                 <div
-                  className="hidden md:block absolute resize-handle top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-background/20"
+                  className={cn(
+                    "hidden md:block absolute resize-handle hover:bg-background/20",
+                    event.allDay
+                      ? cn(
+                          "inset-y-0 w-2 cursor-ew-resize",
+                          rtl ? "right-0" : "left-0",
+                        )
+                      : "top-0 left-0 right-0 h-2 cursor-ns-resize",
+                  )}
                   onPointerDown={(e) =>
                     onPointerDown(e, "resize_start", event, day)
                   }
@@ -456,7 +509,15 @@ export default memo(
               )}
               {endsToday && (
                 <div
-                  className="hidden md:block absolute resize-handle bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-background/20"
+                  className={cn(
+                    "hidden md:block absolute resize-handle hover:bg-background/20",
+                    event.allDay
+                      ? cn(
+                          "inset-y-0 w-2 cursor-ew-resize",
+                          rtl ? "left-0" : "right-0",
+                        )
+                      : "bottom-0 left-0 right-0 h-2 cursor-ns-resize",
+                  )}
                   onPointerDown={(e) =>
                     onPointerDown(e, "resize_end", event, day)
                   }
@@ -548,6 +609,7 @@ export default memo(
     return (
       prev.event === next.event &&
       prev.day === next.day &&
+      prev.titleSpan === next.titleSpan &&
       prev.editing === next.editing &&
       prev.selection === next.selection &&
       prev.restoreFocus === next.restoreFocus &&

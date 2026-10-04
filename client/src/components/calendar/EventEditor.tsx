@@ -179,6 +179,7 @@ export default function EventEditor({
   const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
   const [isTask, setIsTask] = useState(event.isTask ?? false);
   const [completed, setCompleted] = useState(event.completed ?? false);
+  const [allDay, setAllDay] = useState(event.allDay ?? false);
   const startTime = DateTime.fromJSDate(start || new Date());
   const isMobile = useIsMobile();
 
@@ -418,13 +419,26 @@ export default function EventEditor({
     newEvent.current.title = title;
     newEvent.current.description = description;
     newEvent.current.color = color;
-    newEvent.current.start = DateTime.fromJSDate(start || new Date());
-    newEvent.current.end = DateTime.fromJSDate(end || new Date());
+    const startDate = DateTime.fromJSDate(start || new Date());
+    const endDate = DateTime.fromJSDate(end || new Date());
+    newEvent.current.start = allDay ? startDate.startOf("day") : startDate;
+    newEvent.current.end = allDay ? endDate.endOf("day") : endDate;
+    newEvent.current.allDay = allDay || undefined;
     newEvent.current.repeat = repeat;
     newEvent.current.isTask = isTask;
     newEvent.current.completed = isTask ? completed : undefined;
     newEvent.current.timestamp = Date.now();
-  }, [title, description, color, start, end, repeat, isTask, completed]);
+  }, [
+    title,
+    description,
+    color,
+    start,
+    end,
+    allDay,
+    repeat,
+    isTask,
+    completed,
+  ]);
 
   const editor = (
     <div
@@ -579,11 +593,13 @@ export default function EventEditor({
             label={t("editor.start")}
             value={start}
             onChange={setStart}
+            dateOnly={allDay}
           />
           <DateTimePicker
             label={t("editor.end")}
             value={end}
             onChange={setEnd}
+            dateOnly={allDay}
           />
 
           <div className="flex gap-2">
@@ -625,6 +641,14 @@ export default function EventEditor({
                 <PencilIcon />
               </Button>
             )}
+          </div>
+          <div className="flex items-center gap-2 px-1 mb-1">
+            <Checkbox
+              id="allDay"
+              checked={allDay}
+              onCheckedChange={(c) => setAllDay(!!c)}
+            />
+            <Label htmlFor="allDay">{t("editor.allDay")}</Label>
           </div>
           {event._parent &&
             !settings.detachRecurring &&

@@ -1,4 +1,4 @@
-import { DateTime } from "luxon";
+import { DateTime, Duration } from "luxon";
 import { fmt, t } from "@/i18n";
 
 export const toPickerDate = (date: DateTime) =>
@@ -84,4 +84,23 @@ export const snapMinutes = (mins: number, snap: number) =>
 
 export const yToMinutes = (y: number, hourHeight: number) => {
   return (y / hourHeight) * 60;
+};
+
+const allDayBoundPattern = (days: number) => {
+  if (days > 365) return fmt("date");
+  if (days > 7) return fmt("dateShort");
+  return "ccc";
+};
+
+export const describeAllDayRange = (start: DateTime, end: DateTime) => {
+  const days = end.startOf("day").diff(start.startOf("day"), "days").days + 1;
+  if (days === 1) return "";
+
+  const pattern = allDayBoundPattern(days);
+  const length = end
+    .plus({ milliseconds: 1 })
+    .diff(start.startOf("day"), ["years", "months", "days"])
+    .toObject();
+  const units = Object.fromEntries(Object.entries(length).filter(([, n]) => n));
+  return `${start.toFormat(pattern)} - ${end.toFormat(pattern)} (${Duration.fromObject(units).toHuman()})`;
 };

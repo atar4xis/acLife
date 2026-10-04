@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "luxon";
 import {
+  describeAllDayRange,
   fromPickerDate,
   getDateRangeString,
   getWeekDays,
@@ -122,5 +123,40 @@ describe("picker dates", () => {
     const date = DateTime.fromISO("2026-12-31T23:59:00");
 
     expect(fromPickerDate(toPickerDate(date)).toISODate()).toBe("2026-12-31");
+  });
+});
+
+describe("describeAllDayRange", () => {
+  const range = (from: string, to: string) =>
+    describeAllDayRange(
+      DateTime.fromISO(from),
+      DateTime.fromISO(to).endOf("day"),
+    );
+
+  it("is empty for a single day", () => {
+    expect(range("2026-03-18", "2026-03-18")).toBe("");
+  });
+
+  it("uses weekday names up to a week", () => {
+    expect(range("2026-03-16", "2026-03-18")).toBe("Mon - Wed (3 days)");
+  });
+
+  it("uses short dates past a week", () => {
+    expect(range("2026-03-16", "2026-03-25")).toBe(
+      "Mon, Mar 16 - Wed, Mar 25 (10 days)",
+    );
+  });
+
+  it("uses full dates past a year and splits the length into units", () => {
+    expect(range("2026-03-16", "2027-04-17")).toBe(
+      "16 Mar 2026 - 17 Apr 2027 (1 year, 1 month, 2 days)",
+    );
+  });
+
+  it("switches format exactly after 7 and 365 days", () => {
+    expect(range("2026-03-16", "2026-03-22")).toContain("Mon - Sun");
+    expect(range("2026-03-16", "2026-03-23")).toContain("Mon, Mar 16");
+    expect(range("2026-03-16", "2027-03-15")).toContain("Mon, Mar 16");
+    expect(range("2026-03-16", "2027-03-16")).toContain("16 Mar 2026");
   });
 });
