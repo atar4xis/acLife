@@ -35,8 +35,9 @@ var (
 )
 
 func Connect() error {
+	// time_zone pins every connection to UTC: the driver reads and writes UTC wall times, so DB-side defaults like CURRENT_TIMESTAMP must agree
 	dsn := fmt.Sprintf(
-		"%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4",
+		"%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4&time_zone=%%27%%2B00%%3A00%%27",
 		dbUser,
 		dbPassword,
 		dbHost,
