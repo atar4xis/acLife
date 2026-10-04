@@ -30,6 +30,19 @@ go run main.go
 air
 ```
 
+## Test
+
+```bash
+go test ./...
+```
+
+Tests that touch the database need a MariaDB/MySQL server and skip without one.
+Set `TEST_DB_USER` (plus optional `TEST_DB_PASSWORD`, `TEST_DB_HOST`, `TEST_DB_PORT`), each test run creates and drops its own `aclife_test_x` database.
+
+```bash
+TEST_DB_USER=root TEST_DB_PASSWORD=secret go test ./...
+```
+
 ## Build
 
 ```bash
