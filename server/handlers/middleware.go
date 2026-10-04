@@ -18,11 +18,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var (
-	isBehindProxy = os.Getenv("IS_BEHIND_PROXY") != ""
-
-	subCache = sync.Map{} // map[string]subCacheEntry
-)
+var subCache = sync.Map{} // map[string]subCacheEntry
 
 type rateLimitEntry struct {
 	timestamps []time.Time
@@ -32,10 +28,6 @@ type rateLimitEntry struct {
 type subCacheEntry struct {
 	status    string
 	expiresAt time.Time
-}
-
-func init() {
-	go cleanupSubCache(constants.SubCacheTTL)
 }
 
 /* -------------------- Cleanup -------------------- */
@@ -328,7 +320,7 @@ func denySubscription(w http.ResponseWriter) {
 }
 
 func getClientIP(r *http.Request) string {
-	if isBehindProxy {
+	if os.Getenv("IS_BEHIND_PROXY") != "" {
 		ip := strings.TrimSpace(r.Header.Get("X-Real-IP"))
 		if ip != "" && net.ParseIP(ip) != nil {
 			return ip

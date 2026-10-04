@@ -16,7 +16,8 @@ import (
 	gomail "github.com/wneessen/go-mail"
 )
 
-func init() {
+// StartWorker launches the background email queue worker.
+func StartWorker() {
 	go processQueue()
 }
 
@@ -96,7 +97,7 @@ func sendQueuedMails() {
 		}
 		jobs = append(jobs, j)
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	now := time.Now()
 

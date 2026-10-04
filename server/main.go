@@ -11,16 +11,17 @@ import (
 	"acLife/constants"
 	"acLife/database"
 	"acLife/handlers"
+	"acLife/mail"
 	"acLife/routes"
 	"acLife/session"
 	"acLife/utils"
 
-	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
 	"github.com/rs/cors"
 )
 
 func main() {
+	constants.Load()
+
 	// Connect to the database
 	if err := database.Connect(); err != nil {
 		log.Fatalf("Database connection failed: %v", err)
@@ -71,42 +72,11 @@ func main() {
 		cookieDomain = "" // omit localhost or IPs
 	}
 
-	session.Store = sessions.NewCookieStore([]byte(sessionKey))
-	session.Store.Options = &sessions.Options{
-		Domain:   cookieDomain,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
-	}
-	session.Store.MaxAge(int(constants.AccessTokenExpiry.Seconds()))
+	session.Store = session.NewStore([]byte(sessionKey), cookieDomain)
 
-	// Setup API router
-	r := mux.NewRouter()
-
-	// We always want to close the request body
-	r.Use(handlers.BodyCloseMiddleware())
-
-	// Setup timeout
-	r.Use(handlers.TimeoutMiddleware(constants.HTTPTimeout))
-
-	// Routes consist of a path and a handler function
-	r.HandleFunc("/", handlers.Root).Methods("GET")
-	r.HandleFunc("/metadata", handlers.Metadata).Methods("GET")
-
-	// Register error handlers
-	r.NotFoundHandler = http.HandlerFunc(handlers.NotFound)
-	r.MethodNotAllowedHandler = http.HandlerFunc(handlers.MethodNotAllowed)
-
-	// Reject cross-origin requests (CSRF protection)
-	csrfRouter := r.NewRoute().Subrouter()
-	csrfRouter.Use(handlers.CSRFMiddleware())
-
-	// Register all routes (stripe webhook exempt from CSRF protection)
-	routes.Auth(csrfRouter)
-	routes.User(csrfRouter)
-	routes.Stripe(r)
-	routes.Calendar(csrfRouter)
+	// Start background workers
+	mail.StartWorker()
+	handlers.StartWorkers()
 
 	// Setup CORS
 	origins := utils.GetAllowedOrigins()
@@ -118,7 +88,8 @@ func main() {
 		AllowCredentials: true,
 	})
 
-	handler := c.Handler(r)
+	// Register all routes
+	handler := c.Handler(routes.New())
 
 	// Bind to port
 	fmt.Println("Running on port " + os.Getenv("PORT"))

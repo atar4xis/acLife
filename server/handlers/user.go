@@ -60,7 +60,7 @@ func fetchEnvelopes(ctx context.Context, owner string) ([]types.KeyEnvelope, err
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	envelopes := []types.KeyEnvelope{}
 	for rows.Next() {
@@ -553,7 +553,7 @@ func ListSessions(w http.ResponseWriter, r *http.Request) {
 		utils.SendInternalError(w)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	sessions := []types.Session{}
 	for rows.Next() {

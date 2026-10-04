@@ -13,6 +13,20 @@ import (
 
 var Store *sessions.CookieStore
 
+// NewStore creates the cookie store used for sessions.
+func NewStore(key []byte, domain string) *sessions.CookieStore {
+	store := sessions.NewCookieStore(key)
+	store.Options = &sessions.Options{
+		Domain:   domain,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+	}
+	store.MaxAge(int(constants.AccessTokenExpiry.Seconds()))
+	return store
+}
+
 // GetSession returns the session or creates a new one
 func GetSession(r *http.Request) (*sessions.Session, error) {
 	sess, err := Store.Get(r, constants.SessionName)

@@ -24,25 +24,17 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-var (
-	DB *sqlx.DB
-
-	dbUser     = os.Getenv("DB_USER")
-	dbPassword = os.Getenv("DB_PASSWORD")
-	dbHost     = os.Getenv("DB_HOST")
-	dbPort     = os.Getenv("DB_PORT")
-	dbName     = os.Getenv("DB_NAME")
-)
+var DB *sqlx.DB
 
 func Connect() error {
 	// time_zone pins every connection to UTC: the driver reads and writes UTC wall times, so DB-side defaults like CURRENT_TIMESTAMP must agree
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4&time_zone=%%27%%2B00%%3A00%%27",
-		dbUser,
-		dbPassword,
-		dbHost,
-		dbPort,
-		dbName,
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"),
 	)
 
 	db, err := sqlx.Open("mysql", dsn)
@@ -66,11 +58,11 @@ func Connect() error {
 func Setup() error {
 	migrationDSN := fmt.Sprintf(
 		"mysql://%s:%s@tcp(%s:%s)/%s",
-		url.QueryEscape(dbUser),
-		url.QueryEscape(dbPassword),
-		dbHost,
-		dbPort,
-		dbName,
+		url.QueryEscape(os.Getenv("DB_USER")),
+		url.QueryEscape(os.Getenv("DB_PASSWORD")),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"),
 	)
 
 	src, err := iofs.New(migrations, "migrations")

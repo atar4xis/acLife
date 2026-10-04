@@ -30,10 +30,12 @@ import (
 
 var srpSessionStore = sync.Map{} // map[string]types.SRPSession
 
-func init() {
+// StartWorkers launches background goroutines.
+func StartWorkers() {
 	go cleanupSRPSessions()
 	go cleanupAccountSessions()
 	go cleanupExpiredVerifications()
+	go cleanupSubCache(constants.SubCacheTTL)
 }
 
 /* -------------------- Cleanup -------------------- */
@@ -157,7 +159,7 @@ func collectEmails(ctx context.Context, query string, args ...any) ([]string, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var emails []string
 	for rows.Next() {

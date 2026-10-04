@@ -74,11 +74,17 @@ var AccessTokenExpiry time.Duration
 
 var Metadata types.ServerMetadata
 
-func init() {
+// Load reads .env (fatal if missing) and configures the package from the environment.
+func Load() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Failed to load .env: %v", err)
 	}
 
+	Configure()
+}
+
+// Configure derives AccessTokenExpiry and Metadata from the current environment.
+func Configure() {
 	AccessTokenExpiry = 3 * Day
 	if v := os.Getenv("ACCESS_TOKEN_EXPIRY_DAYS"); v != "" {
 		if days, err := strconv.Atoi(v); err == nil && days > 0 {
