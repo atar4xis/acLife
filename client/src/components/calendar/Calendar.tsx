@@ -1791,6 +1791,8 @@ export default memo(function AppCalendar({
           dayRects: getDayRects(),
           moved: false,
         };
+      } else {
+        save();
       }
     },
     [
@@ -1798,6 +1800,7 @@ export default memo(function AppCalendar({
       getGridHeaderOffset,
       settings.snapMinutes,
       addNewEvent,
+      save,
       visibleDays,
       onGlobalPointerMove,
       onGlobalPointerUp,
