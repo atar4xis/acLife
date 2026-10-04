@@ -67,7 +67,7 @@ export function MoveMenuItems({
   };
 
   const moveToFreeSlot = (direction: "forward" | "backward") => {
-    const slot = findFreeSlotForEvent(calendarEvents, event, direction);
+    const slot = findFreeSlotForEvent(calendarEvents, event, direction, batch);
     if (!slot) return toast.error(t("move.noFreeSlot"));
 
     const shift = slot.start.diff(event.start);

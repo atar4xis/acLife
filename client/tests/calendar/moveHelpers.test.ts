@@ -75,6 +75,27 @@ describe("moveHelpers", () => {
     );
   });
 
+  it("findFreeSlotForEvent finds a slot where every selected event fits", () => {
+    const day = FIXED_NOW.startOf("day");
+    const at = (id: string, from: number, to: number) =>
+      buildEvent({
+        id,
+        start: day.plus({ hours: from }),
+        end: day.plus({ hours: to }),
+      });
+    const a = at("a", 9, 10);
+    const b = at("b", 11, 12);
+    const blocker = at("blocker", 14, 15);
+
+    const slot = findFreeSlotForEvent(
+      [a, b, blocker],
+      a,
+      "forward",
+      [a, b],
+    );
+    expect(slot?.start.toISO()).toBe(day.plus({ hours: 13 }).toISO());
+  });
+
   it("findFreeSlotForEvent finds previous free slot backward skipping conflicts", () => {
     const target = buildEvent({
       id: "target2",

@@ -32,6 +32,7 @@ export function findFreeSlotForEvent(
   calendarEvents: CalendarEvent[],
   event: CalendarEvent,
   direction: "forward" | "backward",
+  group?: CalendarEvent[],
 ) {
-  return findFreeSlot(calendarEvents, event, direction);
+  return findFreeSlot(calendarEvents, event, direction, group);
 }

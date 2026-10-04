@@ -1,5 +1,5 @@
 import type { CalendarEvent } from "@/types/calendar/Event";
-import type { DateTime, Duration } from "luxon";
+import { DateTime, type Duration } from "luxon";
 import { makeOccurrence, resolveInstanceCompleted } from "./event";
 import { nominalOnDate, occurrences, slotKey } from "./occurrences";
 
@@ -54,7 +54,7 @@ function findOverlappingOccurrence(
   events: CalendarEvent[],
   rangeStart: DateTime,
   rangeEnd: DateTime,
-  excludeKey: string,
+  excludeKeys: Set<string>,
 ): Occurrence | null {
   for (const e of events) {
     if (!e.id) continue;
@@ -64,7 +64,7 @@ function findOverlappingOccurrence(
       : [{ ...e, _instanceId: e.id }];
 
     for (const occ of candidates) {
-      if (occ._instanceId === excludeKey) continue;
+      if (excludeKeys.has(occ._instanceId!)) continue;
       if (occ.allDay || (occ.isTask && occ.completed)) continue;
       if (occ.start < rangeEnd && occ.end > rangeStart) {
         return { start: occ.start, end: occ.end };
@@ -75,21 +75,20 @@ function findOverlappingOccurrence(
   return null;
 }
 
-/**
- * Searches forward or backward in time for the next slot, of the same
- * duration as `target`, that doesn't overlap any other event (or occurrence
- * of a repeating event).
- */
 export function findFreeSlot(
   allEvents: CalendarEvent[],
   target: CalendarEvent,
   direction: "forward" | "backward",
+  group: CalendarEvent[] = [target],
 ): { start: DateTime; end: DateTime } | null {
   const duration: Duration = target.end.diff(target.start);
-  const excludeKey = target._instanceId ?? target.id;
+  const excludeKeys = new Set(group.map((e) => e._instanceId ?? e.id!));
+  const movers = group.filter((e) => !e.allDay);
+  const spanStart = DateTime.min(...group.map((e) => e.start))!;
+  const spanEnd = DateTime.max(...group.map((e) => e.end))!;
 
-  let candidateStart =
-    direction === "forward" ? target.end : target.start.minus(duration);
+  let shift =
+    direction === "forward" ? spanEnd.diff(spanStart) : spanStart.diff(spanEnd);
 
   const limit =
     direction === "forward"
@@ -97,28 +96,36 @@ export function findFreeSlot(
       : target.start.minus({ days: SEARCH_HORIZON_DAYS });
 
   for (let i = 0; i < MAX_CANDIDATES; i++) {
+    const candidateStart = target.start.plus(shift);
     if (
       direction === "forward" ? candidateStart > limit : candidateStart < limit
     ) {
       return null;
     }
 
-    const candidateEnd = candidateStart.plus(duration);
-    const conflict = findOverlappingOccurrence(
-      allEvents,
-      candidateStart,
-      candidateEnd,
-      excludeKey,
-    );
+    let blocked = false;
+    for (const ev of movers) {
+      const start = ev.start.plus(shift);
+      const end = ev.end.plus(shift);
+      const conflict = findOverlappingOccurrence(
+        allEvents,
+        start,
+        end,
+        excludeKeys,
+      );
+      if (!conflict) continue;
 
-    if (!conflict) {
-      return { start: candidateStart, end: candidateEnd };
+      shift =
+        direction === "forward"
+          ? shift.plus(conflict.end.diff(start))
+          : shift.minus(end.diff(conflict.start));
+      blocked = true;
+      break;
     }
 
-    // skip straight past the conflicting occurrence instead of stepping
-    // minute-by-minute
-    candidateStart =
-      direction === "forward" ? conflict.end : conflict.start.minus(duration);
+    if (!blocked) {
+      return { start: candidateStart, end: candidateStart.plus(duration) };
+    }
   }
 
   return null;
