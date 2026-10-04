@@ -60,6 +60,10 @@ const (
 
 	MaxBucketBackfillPerSync = 800
 
+	// MySQL TIMESTAMP range + 1 day
+	MinEventTimestampMs = int64(Day / time.Millisecond)
+	MaxEventTimestampMs = 2147483647000 - MinEventTimestampMs
+
 	EmailVerificationTTL             = 1 * Day
 	EmailVerificationResendCooldown  = 60 * time.Second
 	EmailVerificationMaxSendsPerHour = 4

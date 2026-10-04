@@ -24,7 +24,6 @@ import (
 type upsertEvent struct {
 	types.CalendarEvent
 	Buckets [][]byte
-	IsNew   bool
 }
 
 // EventChange is one entry of a calendar/events/save request body.
@@ -105,13 +104,12 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 			deletedIDs = append(deletedIDs, c.ID) // collect IDs to delete
 
 		case "added", "updated":
-			decoded, err := base64.StdEncoding.DecodeString(c.Event.Data) // decode event payload
-			if err != nil {
-				utils.LogError("applyCalendarChanges", "InvalidBase64", fmt.Errorf("event %s invalid base64: %v", c.Event.ID, err))
-				continue
+			if !utils.IsUUID(c.Event.ID) || c.Event.UpdatedAt < constants.MinEventTimestampMs || c.Event.UpdatedAt > constants.MaxEventTimestampMs {
+				return errBadEventChanges
 			}
 
-			if len(decoded) > constants.MaxEventLen {
+			decoded, err := base64.StdEncoding.DecodeString(c.Event.Data) // decode event payload
+			if err != nil || len(decoded) > constants.MaxEventLen {
 				return errBadEventChanges
 			}
 
@@ -135,7 +133,6 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 					UpdatedAt: time.UnixMilli(c.Event.UpdatedAt), // convert ms to time.Time
 				},
 				Buckets: buckets,
-				IsNew:   c.Type == "added",
 			}
 
 			if idx, ok := upsertIndex[ev.ID]; ok {
@@ -144,6 +141,9 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 				upsertIndex[ev.ID] = len(upserts)
 				upserts = append(upserts, ev)
 			}
+
+		default:
+			return errBadEventChanges
 		}
 	}
 
@@ -198,26 +198,29 @@ func replaceEventBuckets(ctx context.Context, tx *sql.Tx, owner string, upserts 
 	ids = append(ids, owner)
 	placeholders := make([]string, 0, len(upserts))
 	for _, ev := range upserts {
-		if ev.IsNew {
-			continue
-		}
 		ids = append(ids, ev.ID)
 		placeholders = append(placeholders, "?")
 	}
 
-	if len(placeholders) > 0 {
-		if _, err := tx.ExecContext(ctx, `
-			DELETE ceb FROM calendar_event_buckets ceb
-			JOIN calendar_events ce ON ce.id = ceb.event_id
-			WHERE ce.owner = ? AND ceb.event_id IN (`+strings.Join(placeholders, ",")+`)
-		`, ids...); err != nil {
-			return err
-		}
+	if _, err := tx.ExecContext(ctx, `
+		DELETE ceb FROM calendar_event_buckets ceb
+		JOIN calendar_events ce ON ce.id = ceb.event_id
+		WHERE ce.owner = ? AND ceb.event_id IN (`+strings.Join(placeholders, ",")+`)
+	`, ids...); err != nil {
+		return err
+	}
+
+	owned, err := ownedEventIDs(ctx, tx, owner, upserts)
+	if err != nil {
+		return err
 	}
 
 	bucketValues := make([]string, 0)
 	bucketArgs := make([]any, 0)
 	for _, ev := range upserts {
+		if _, ok := owned[strings.ToLower(ev.ID)]; !ok {
+			continue
+		}
 		for _, bucketID := range ev.Buckets {
 			bucketValues = append(bucketValues, "(?, ?)")
 			bucketArgs = append(bucketArgs, ev.ID, bucketID)
@@ -228,11 +231,39 @@ func replaceEventBuckets(ctx context.Context, tx *sql.Tx, owner string, upserts 
 		return nil
 	}
 
-	_, err := tx.ExecContext(ctx, `
+	_, err = tx.ExecContext(ctx, `
 		INSERT IGNORE INTO calendar_event_buckets (event_id, bucket_id) VALUES `+strings.Join(bucketValues, ","),
 		bucketArgs...,
 	)
 	return err
+}
+
+// ownedEventIDs returns the lowercased ids of the given upserts that belong to owner.
+func ownedEventIDs(ctx context.Context, tx *sql.Tx, owner string, upserts []upsertEvent) (map[string]struct{}, error) {
+	args := make([]any, 0, len(upserts)+1)
+	args = append(args, owner)
+	for _, ev := range upserts {
+		args = append(args, ev.ID)
+	}
+
+	rows, err := tx.QueryContext(ctx,
+		`SELECT id FROM calendar_events WHERE owner = ? AND id IN (?`+strings.Repeat(",?", len(upserts)-1)+`)`,
+		args...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	owned := make(map[string]struct{}, len(upserts))
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		owned[strings.ToLower(id)] = struct{}{}
+	}
+	return owned, rows.Err()
 }
 
 // scanCalendarEvents reads all rows of (id, data, updated_at) and closes rows.

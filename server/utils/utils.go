@@ -104,6 +104,13 @@ func Assert(condition bool) {
 	}
 }
 
+var uuidPattern = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+// IsUUID reports whether s is a hyphenated uuid.
+func IsUUID(s string) bool {
+	return uuidPattern.MatchString(s)
+}
+
 func Base64ToUUID(b64 string) (string, error) {
 	bytes, err := base64.StdEncoding.DecodeString(b64)
 	if err != nil {
