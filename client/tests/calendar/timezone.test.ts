@@ -57,7 +57,7 @@ describe("getFriendlyName", () => {
   });
 
   it("calls out a couple of extra countries sharing the same zone, e.g. Amsterdam under Brussels", () => {
-    // Amsterdam has no IANA zone of its own; it's a deprecated alias of Europe/Brussels
+    // Amsterdam has no IANA zone of its own, it's a deprecated alias of Europe/Brussels
     expect(getFriendlyName("Europe/Brussels")).toBe(
       "Brussels, Belgium (also Luxembourg, Netherlands)",
     );

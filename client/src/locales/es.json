@@ -85,7 +85,7 @@
     "yes": "Activarlo",
     "no": "Mantenerlo desactivado",
     "cancel": "Recordármelo más tarde",
-    "description": "Activar el servicio push mejora la sincronización de datos entre dispositivos y permite usar las notificaciones push.",
+    "description": "Activar el servicio push permite usar las notificaciones push.",
     "unavailable": "El servicio push no está disponible.",
     "permissionDenied": "Se denegó el permiso para mostrar notificaciones.",
     "error": "Algo salió mal. Inténtalo de nuevo.",
@@ -501,7 +501,7 @@
       "disabling": "Desactivando el servicio push...",
       "disabled": "Servicio push desactivado.",
       "unsupported": "El servicio push no está disponible en este navegador.",
-      "resyncHelp": "Si el servicio push está activado, los cambios hechos en otros dispositivos se sincronizan al instante, sin importar este intervalo."
+      "resyncHelp": "Mientras haya conexión, los cambios hechos en otros dispositivos se sincronizan al instante, sin importar este intervalo."
     },
     "subscription": {
       "none": "Sin suscripción activa",

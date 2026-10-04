@@ -27,7 +27,7 @@ describe("useCalendarSettings", () => {
     expect(result.current.defaultEventName).toBe("new event");
     expect(result.current.defaultTaskName).toBe("new task");
     expect(result.current.defaultEventDuration).toBe(60);
-    expect(result.current.resyncIntervalMinutes).toBe(5);
+    expect(result.current.resyncIntervalMinutes).toBe(15);
   });
 
   it("loads persisted settings from localStorage", () => {
@@ -46,7 +46,23 @@ describe("useCalendarSettings", () => {
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
-    expect(result.current.resyncIntervalMinutes).toBe(5);
+    expect(result.current.resyncIntervalMinutes).toBe(15);
+  });
+
+  it("falls back to the default resync interval when stored value is no longer offered", () => {
+    seedSettings({ resyncIntervalMinutes: 10 });
+
+    const { result } = renderHook(() => useCalendarSettings(), { wrapper });
+
+    expect(result.current.resyncIntervalMinutes).toBe(15);
+  });
+
+  it("keeps a stored resync interval that is still offered", () => {
+    seedSettings({ resyncIntervalMinutes: 30 });
+
+    const { result } = renderHook(() => useCalendarSettings(), { wrapper });
+
+    expect(result.current.resyncIntervalMinutes).toBe(30);
   });
 
   it("recovers to defaults when stored JSON is malformed", () => {

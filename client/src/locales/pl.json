@@ -87,7 +87,7 @@
     "yes": "Włącz",
     "no": "Zostaw wyłączoną",
     "cancel": "Przypomnij później",
-    "description": "Włączenie usługi push przyspiesza synchronizację danych między urządzeniami i umożliwia korzystanie z powiadomień.",
+    "description": "Włączenie usługi push umożliwia korzystanie z powiadomień.",
     "unavailable": "Usługa push jest niedostępna.",
     "permissionDenied": "Odmówiono zgody na wysyłanie powiadomień.",
     "error": "Coś poszło nie tak. Spróbuj ponownie.",
@@ -515,7 +515,7 @@
       "disabling": "Wyłączanie usługi push...",
       "disabled": "Usługa push wyłączona.",
       "unsupported": "Usługa push jest niedostępna w tej przeglądarce.",
-      "resyncHelp": "Gdy usługa push jest włączona, zmiany wprowadzone na innych urządzeniach są synchronizowane od razu, niezależnie od tego interwału."
+      "resyncHelp": "Przy aktywnym połączeniu zmiany wprowadzone na innych urządzeniach są synchronizowane od razu, niezależnie od tego interwału."
     },
     "subscription": {
       "none": "Brak aktywnej subskrypcji",

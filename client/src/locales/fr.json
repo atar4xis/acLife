@@ -86,7 +86,7 @@
     "yes": "L'activer",
     "no": "Le laisser désactivé",
     "cancel": "Me le rappeler plus tard",
-    "description": "Activer le service push améliore la synchronisation des données entre vos appareils et permet aux notifications push de fonctionner.",
+    "description": "Activer le service push permet aux notifications push de fonctionner.",
     "unavailable": "Le service push n'est pas disponible.",
     "permissionDenied": "La demande d'autorisation de notification a été refusée.",
     "error": "Une erreur s'est produite. Veuillez réessayer.",
@@ -502,7 +502,7 @@
       "disabling": "Désactivation du service push...",
       "disabled": "Service push désactivé.",
       "unsupported": "Le service push n'est pas disponible dans ce navigateur.",
-      "resyncHelp": "Si le service push est activé, les modifications faites sur d'autres appareils sont synchronisées immédiatement, quel que soit cet intervalle."
+      "resyncHelp": "Tant que vous êtes connecté, les modifications faites sur d'autres appareils sont synchronisées immédiatement, quel que soit cet intervalle."
     },
     "subscription": {
       "none": "Aucun abonnement actif",

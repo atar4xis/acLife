@@ -134,8 +134,7 @@ import {
   withShiftedOverrides,
   skipSingleOccurrence,
 } from "@/lib/calendar/recurrence";
-import type { PushEvent } from "@/types/Push";
-import { CLIENT_ID } from "@/lib/clientId";
+import { onStream } from "@/lib/stream";
 import { useCalendarSearch } from "@/hooks/calendar/useCalendarSearch";
 import { EMPTY_ARRAY } from "@/lib/constants";
 import type { RejectedEvent, RepeatInterval } from "@/types/calendar/Event";
@@ -273,6 +272,7 @@ export default memo(function AppCalendar({
     setEditingEvent,
     selection,
     setOnEventEdit,
+    pendingChanges,
   } = useCalendarActions();
   const currentDate = useCurrentDate();
   const calendarEvents = useEventList();
@@ -290,7 +290,6 @@ export default memo(function AppCalendar({
   const [deleteRepeatDialogOpen, setDeleteRepeatDialogOpen] = useState(false);
   const [now, setNow] = useState<DateTime>(DateTime.now());
   const [renderTick, forceRender] = useState(0);
-  const changesMapRef = useRef<Map<string, EventChange[]>>(new Map());
   const pendingSaveRef = useRef<null | number>(null);
   const { user, masterKey, bucketKey } = useUser();
   const { weekStart: weekStartsOn } = useWeekStart();
@@ -469,7 +468,7 @@ export default memo(function AppCalendar({
       if (user?.type === "offline") return; // offline users save all events locally
 
       const key = change.event?.id ?? change.id!;
-      const prev = changesMapRef.current.get(key) ?? [];
+      const prev = pendingChanges.get(key) ?? [];
 
       if (change.event) change.event.timestamp = Date.now();
 
@@ -482,10 +481,12 @@ export default memo(function AppCalendar({
         next = [...prev, change];
       }
 
-      changesMapRef.current.set(key, next);
+      pendingChanges.set(key, next);
     },
-    [user?.type],
+    [user?.type, pendingChanges],
   );
+
+  useEffect(() => () => pendingChanges.clear(), [pendingChanges]);
 
   const resyncRef = useRef<() => void>(() => {});
 
@@ -493,7 +494,7 @@ export default memo(function AppCalendar({
   const onRejected = useCallback(
     (rejected: RejectedEvent[]) => {
       const byId = new Map(rejected.map((r) => [r.id, r]));
-      for (const id of byId.keys()) changesMapRef.current.delete(id);
+      for (const id of byId.keys()) pendingChanges.delete(id);
 
       const restore = (events: CalendarEvent[]) =>
         events.flatMap((e) => {
@@ -511,20 +512,26 @@ export default memo(function AppCalendar({
 
       if (rejected.some((r) => !r.previous && !r.wasAdded)) resyncRef.current();
     },
-    [dispatch, syncHistory],
+    [dispatch, syncHistory, pendingChanges],
   );
 
   const saveIfChanged = useCallback(() => {
-    if (changesMapRef.current.size > 0) {
-      saveEvents(
-        Array.from(changesMapRef.current.values()).flat(),
-        () => {
-          changesMapRef.current.clear(); // reset after save
-        },
-        onRejected,
-      );
-    }
-  }, [saveEvents, onRejected]);
+    const sent = new Map(pendingChanges);
+    if (sent.size === 0) return;
+
+    saveEvents(
+      Array.from(sent.values()).flat(),
+      () => {
+        // an entry that changed since the snapshot still has unsaved changes
+        for (const [key, changes] of sent) {
+          if (pendingChanges.get(key) === changes) {
+            pendingChanges.delete(key);
+          }
+        }
+      },
+      onRejected,
+    );
+  }, [saveEvents, onRejected, pendingChanges]);
 
   const save = useCallback(() => {
     if (pendingSaveRef.current !== null) clearTimeout(pendingSaveRef.current);
@@ -2171,18 +2178,11 @@ export default memo(function AppCalendar({
     resyncRef.current = resync;
   }, [resync]);
 
-  // resync calendar events periodically and on push message
+  // resync calendar events periodically and on stream event
   useEffect(() => {
     if (!user || !masterKey || !bucketKey || user.type === "offline") return;
 
-    const message = (ev: MessageEvent) => {
-      const data = ev.data as PushEvent;
-      if (data.type === "sync" && data.originClientId != CLIENT_ID) resync();
-    };
-
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.addEventListener("message", message);
-    }
+    const stopListening = onStream("sync", resync);
 
     const resyncInterval = setInterval(
       resync,
@@ -2190,10 +2190,7 @@ export default memo(function AppCalendar({
     );
     return () => {
       clearInterval(resyncInterval);
-
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.removeEventListener("message", message);
-      }
+      stopListening();
     };
   }, [resync, user, masterKey, bucketKey, settings.resyncIntervalMinutes]);
 

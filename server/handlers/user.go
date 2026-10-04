@@ -16,6 +16,7 @@ import (
 	"acLife/database"
 	"acLife/push"
 	"acLife/session"
+	"acLife/stream"
 	"acLife/types"
 	"acLife/utils"
 
@@ -192,6 +193,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 			"DELETE FROM account_sessions WHERE access_token = ?",
 			accessToken)
 	}
+	stream.CloseUser(user.UUID, "") // every session needs the new email verified
 	if err := session.DestroySession(w, r); err != nil {
 		utils.LogError("UpdateEmail", "session.DestroySession", err)
 	}
@@ -289,6 +291,8 @@ func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 		utils.SendInternalError(w)
 		return
 	}
+
+	stream.CloseUser(user.UUID, currentToken)
 
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
 		Success: true,
@@ -436,7 +440,7 @@ func SaveSettings(w http.ResponseWriter, r *http.Request) {
 
 	originClientID := r.URL.Query().Get("c")
 	if len(originClientID) == 6 {
-		go push.SendToUser(context.Background(), user.UUID, push.SettingsEvent(originClientID))
+		stream.Publish(user.UUID, stream.Settings(originClientID))
 	}
 
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
@@ -473,7 +477,7 @@ func MigrateEnvelope(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = tx.Rollback() }()
 
 	if len(req.Events) > 0 {
-		if err := applyCalendarChanges(ctx, tx, user.UUID, req.Events); err != nil {
+		if _, err := applyCalendarChanges(ctx, tx, user.UUID, req.Events); err != nil {
 			if errors.Is(err, errBadEventChanges) {
 				utils.SendBadRequest(w)
 				return
@@ -498,7 +502,7 @@ func MigrateEnvelope(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// other devices are still using the pre-migration key - tell them to resync
-	go push.SendToUser(context.Background(), user.UUID, push.SyncEvent(""))
+	stream.Publish(user.UUID, stream.Sync(""))
 
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
 		Success: true,
@@ -623,6 +627,8 @@ func RevokeSession(w http.ResponseWriter, r *http.Request) {
 		utils.SendInternalError(w)
 		return
 	}
+
+	stream.CloseSession(token)
 
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
 		Success: true,
@@ -757,7 +763,7 @@ func PushTest(w http.ResponseWriter, r *http.Request) {
 	case "notification":
 		push.SendToUser(r.Context(), user.UUID, push.NotificationEvent("Test Notification", "You are user: "+user.UUID))
 	case "sync":
-		push.SendToUser(r.Context(), user.UUID, push.SyncEvent(r.URL.Query().Get("origin")))
+		stream.Publish(user.UUID, stream.Sync(r.URL.Query().Get("origin")))
 	default:
 		utils.SendBadRequest(w)
 		return

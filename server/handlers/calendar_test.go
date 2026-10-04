@@ -769,3 +769,61 @@ func TestDeletingUserCascadesToEvents(t *testing.T) {
 		t.Fatal("buckets remain")
 	}
 }
+
+func TestSaveBatchFollowsListOrderForOneEvent(t *testing.T) {
+	testutil.RequireDB(t)
+	bucket := testutil.BucketID(1)
+
+	t.Run("created then deleted leaves nothing", func(t *testing.T) {
+		c := testutil.NewClient(t).As(testutil.NewUser(t))
+		id := testutil.NewUUID()
+
+		mustSave(t, c, added(ev(id, baseTS, bucket)), deleted(id))
+
+		if n := count(t, "SELECT COUNT(*) FROM calendar_events WHERE id = ?", id); n != 0 {
+			t.Fatal("event survived its own deletion")
+		}
+		if n := count(t, "SELECT COUNT(*) FROM calendar_event_buckets WHERE event_id = ?", id); n != 0 {
+			t.Fatal("buckets survived its own deletion")
+		}
+	})
+
+	t.Run("updated then deleted removes the stored event", func(t *testing.T) {
+		c := testutil.NewClient(t).As(testutil.NewUser(t))
+		id := testutil.NewUUID()
+		mustSave(t, c, added(ev(id, baseTS, bucket)))
+
+		mustSave(t, c, updated(ev(id, baseTS+1, bucket)), deleted(id))
+
+		if n := count(t, "SELECT COUNT(*) FROM calendar_events WHERE id = ?", id); n != 0 {
+			t.Fatal("event survived")
+		}
+	})
+
+	t.Run("deleted then created again keeps the new version", func(t *testing.T) {
+		c := testutil.NewClient(t).As(testutil.NewUser(t))
+		id := testutil.NewUUID()
+		mustSave(t, c, added(ev(id, baseTS, bucket)))
+
+		mustSave(t, c, deleted(id), added(ev(id, baseTS+5, bucket)))
+
+		var updatedAt time.Time
+		if err := database.DB.QueryRow("SELECT updated_at FROM calendar_events WHERE id = ?", id).Scan(&updatedAt); err != nil {
+			t.Fatal(err)
+		}
+		if updatedAt.UnixMilli() != baseTS+5 {
+			t.Fatalf("updated_at %d", updatedAt.UnixMilli())
+		}
+	})
+
+	t.Run("deleting one event does not affect another in the batch", func(t *testing.T) {
+		c := testutil.NewClient(t).As(testutil.NewUser(t))
+		a, b := testutil.NewUUID(), testutil.NewUUID()
+
+		mustSave(t, c, added(ev(a, baseTS, bucket)), added(ev(b, baseTS, bucket)), deleted(a))
+
+		if count(t, "SELECT COUNT(*) FROM calendar_events WHERE id = ?", a) != 0 || count(t, "SELECT COUNT(*) FROM calendar_events WHERE id = ?", b) != 1 {
+			t.Fatal("wrong events remain")
+		}
+	})
+}

@@ -1,13 +1,17 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"io"
 	"net/http"
 	"os"
 	"time"
 
+	"acLife/constants"
 	"acLife/database"
 	aclSession "acLife/session"
+	"acLife/stream"
 	"acLife/types"
 	"acLife/utils"
 
@@ -200,11 +204,31 @@ func StripeWebhook(w http.ResponseWriter, r *http.Request) {
 		subID, _ := obj["id"].(string)
 		status, _ := obj["status"].(string)
 
-		_, err := database.UpdateSubscriptionStatus(subID, status)
+		status, err := database.UpdateSubscriptionStatus(subID, status)
 		if err != nil {
 			utils.LogError("StripeWebhook", "UpdateSubscriptionStatus", err)
+		} else if status != "active" && status != "trialing" {
+			closeStreamsOfSubscription(r.Context(), subID)
 		}
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func closeStreamsOfSubscription(ctx context.Context, subID string) {
+	if !constants.Metadata.Registration.SubscriptionRequired {
+		return
+	}
+
+	var uuid string
+	if err := database.QueryRow(ctx,
+		"SELECT uuid FROM users WHERE stripe_subscription_id = ?", subID,
+	).Scan(&uuid); err != nil {
+		if err != sql.ErrNoRows {
+			utils.LogError("closeStreamsOfSubscription", "QueryRow", err)
+		}
+		return
+	}
+
+	stream.CloseUser(uuid, "")
 }

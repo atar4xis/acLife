@@ -25,6 +25,19 @@ export function calendarReducer(
       });
     case "delete":
       return state.filter((ev) => ev.id !== action.id);
+    case "merge": {
+      const incoming = new Map(action.events.map((ev) => [ev.id, ev]));
+      const known = new Set(state.map((ev) => ev.id));
+      return [
+        ...state
+          .filter((ev) => !action.deletedIds.includes(ev.id))
+          .map((ev) => {
+            const next = incoming.get(ev.id);
+            return next && ev.timestamp < next.timestamp ? next : ev;
+          }),
+        ...action.events.filter((ev) => !known.has(ev.id)),
+      ];
+    }
     default:
       return state;
   }

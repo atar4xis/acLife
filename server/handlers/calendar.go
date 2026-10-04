@@ -7,15 +7,17 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
 	"acLife/constants"
 	"acLife/database"
-	"acLife/push"
 	"acLife/session"
+	"acLife/stream"
 	"acLife/types"
 	"acLife/utils"
 )
@@ -24,6 +26,7 @@ import (
 type upsertEvent struct {
 	types.CalendarEvent
 	Buckets [][]byte
+	Change  stream.Change
 }
 
 // EventChange is one entry of a calendar/events/save request body.
@@ -62,7 +65,8 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = tx.Rollback() }() // rollback if commit never happens
 
-	if err := applyCalendarChanges(ctx, tx, user.UUID, changes); err != nil {
+	applied, err := applyCalendarChanges(ctx, tx, user.UUID, changes)
+	if err != nil {
 		if errors.Is(err, errBadEventChanges) {
 			utils.SendBadRequest(w)
 			return
@@ -73,16 +77,21 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := tx.Commit(); err != nil { // finalize transaction
+	// commit and publish together so other clients see changes in commit order
+	unlock := stream.SerializeCommits(user.UUID)
+	err = tx.Commit() // finalize transaction
+	if err == nil {
+		originClientID := r.URL.Query().Get("c")
+		if len(originClientID) != 6 {
+			originClientID = ""
+		}
+		stream.Publish(user.UUID, stream.CalendarChanged(originClientID, applied))
+	}
+	unlock()
+	if err != nil {
 		utils.LogError("SaveCalendarEvents", "Commit", err)
 		utils.SendInternalError(w)
 		return
-	}
-
-	// Notify other clients via push event
-	originClientID := r.URL.Query().Get("c")
-	if originClientID != "" && len(originClientID) == 6 {
-		go push.SendToUser(context.Background(), user.UUID, push.SyncEvent(originClientID))
 	}
 
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
@@ -91,37 +100,37 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 // applyCalendarChanges validates and applies a batch of event changes within tx, without committing.
-func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes []EventChange) error {
-	var deletedIDs []string
-	var upserts []upsertEvent
-
-	upsertIndex := make(map[string]int)
+// The last change listed for an event decides its fate. It returns the changes that were applied, one per event.
+func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes []EventChange) ([]stream.Change, error) {
+	deleted := make(map[string]struct{})
+	upsertsByID := make(map[string]upsertEvent)
 
 	// Process each change
 	for _, c := range changes {
 		switch c.Type {
 		case "deleted":
-			deletedIDs = append(deletedIDs, c.ID) // collect IDs to delete
+			delete(upsertsByID, c.ID)
+			deleted[c.ID] = struct{}{}
 
 		case "added", "updated":
 			if !utils.IsUUID(c.Event.ID) || c.Event.UpdatedAt < constants.MinEventTimestampMs || c.Event.UpdatedAt > constants.MaxEventTimestampMs {
-				return errBadEventChanges
+				return nil, errBadEventChanges
 			}
 
 			decoded, err := base64.StdEncoding.DecodeString(c.Event.Data) // decode event payload
 			if err != nil || len(decoded) > constants.MaxEventLen {
-				return errBadEventChanges
+				return nil, errBadEventChanges
 			}
 
 			if len(c.Event.Buckets) == 0 || len(c.Event.Buckets) > constants.MaxEventBuckets {
-				return errBadEventChanges
+				return nil, errBadEventChanges
 			}
 
 			buckets := make([][]byte, 0, len(c.Event.Buckets))
 			for _, b := range c.Event.Buckets {
 				bucketID, err := base64.StdEncoding.DecodeString(b)
 				if err != nil || len(bucketID) != constants.BucketIDLen {
-					return errBadEventChanges
+					return nil, errBadEventChanges
 				}
 				buckets = append(buckets, bucketID)
 			}
@@ -133,23 +142,25 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 					UpdatedAt: time.UnixMilli(c.Event.UpdatedAt), // convert ms to time.Time
 				},
 				Buckets: buckets,
+				Change:  stream.Change{Type: c.Type, ID: c.Event.ID, Data: c.Event.Data, UpdatedAt: c.Event.UpdatedAt},
 			}
 
-			if idx, ok := upsertIndex[ev.ID]; ok {
-				upserts[idx] = ev
-			} else {
-				upsertIndex[ev.ID] = len(upserts)
-				upserts = append(upserts, ev)
-			}
+			delete(deleted, ev.ID)
+			upsertsByID[ev.ID] = ev
 
 		default:
-			return errBadEventChanges
+			return nil, errBadEventChanges
 		}
+	}
+
+	deletedIDs := slices.Sorted(maps.Keys(deleted))
+	upserts := make([]upsertEvent, 0, len(upsertsByID))
+	for _, id := range slices.Sorted(maps.Keys(upsertsByID)) {
+		upserts = append(upserts, upsertsByID[id])
 	}
 
 	// Batch delete
 	if len(deletedIDs) > 0 {
-		sort.Strings(deletedIDs)
 		query := `DELETE FROM calendar_events WHERE owner = ? AND id IN (?` + strings.Repeat(",?", len(deletedIDs)-1) + `)`
 		args := make([]any, 0, len(deletedIDs)+1)
 		args = append(args, owner)
@@ -157,13 +168,12 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 			args = append(args, id)
 		}
 		if _, err := tx.ExecContext(ctx, query, args...); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// Batch upsert
 	if len(upserts) > 0 {
-		sort.Slice(upserts, func(i, j int) bool { return upserts[i].ID < upserts[j].ID })
 		valueStrings := make([]string, 0, len(upserts))
 		valueArgs := make([]any, 0, len(upserts)*4)
 
@@ -181,15 +191,23 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 		`
 
 		if _, err := tx.ExecContext(ctx, query, valueArgs...); err != nil {
-			return err
+			return nil, err
 		}
 
 		if err := replaceEventBuckets(ctx, tx, owner, upserts); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	applied := make([]stream.Change, 0, len(deletedIDs)+len(upserts))
+	for _, id := range deletedIDs {
+		applied = append(applied, stream.Change{Type: "deleted", ID: id})
+	}
+	for _, ev := range upserts {
+		applied = append(applied, ev.Change)
+	}
+
+	return applied, nil
 }
 
 // replaceEventBuckets replaces the calendar_event_buckets rows for the given upserts.
@@ -311,7 +329,7 @@ func scanEventMeta(rows *sql.Rows) ([]eventMeta, error) {
 	return out, nil
 }
 
-// bucketHash hashes the "uuid:updatedAtMillis" lines of a bucket; line order does not matter.
+// bucketHash hashes the "uuid:updatedAtMillis" lines of a bucket, line order does not matter.
 func bucketHash(lines []string) string {
 	sorted := append([]string(nil), lines...)
 	sort.Strings(sorted)

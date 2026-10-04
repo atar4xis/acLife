@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 const DRAG_MOVE_THRESHOLD = 6;
 
-// pointer-based list reordering that works for mouse and touch alike;
+// pointer-based list reordering that works for mouse and touch alike,
 // native HTML5 drag-and-drop (draggable/onDragStart) has no touch support.
 // reordering is done entirely in local state while dragging and only
 // reported via onCommit once the pointer is released, so a slow/expensive

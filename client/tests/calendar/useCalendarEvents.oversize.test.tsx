@@ -91,6 +91,15 @@ describe("saving an oversized event", () => {
     await act(async () => {
       await result.current.saveEvents([{ type: "updated", event: saved }], () => {});
     });
+    const { event } = server.posted[0][0] as unknown as {
+      event: { id: string; data: string; updatedAt: number };
+    };
+    await act(async () => {
+      await result.current.applyChanges(
+        [{ type: "updated", id: event.id, data: event.data, updatedAt: event.updatedAt }],
+        masterKey,
+      );
+    });
     server.posted = [];
 
     const onRejected = vi.fn();

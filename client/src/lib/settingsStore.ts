@@ -3,6 +3,7 @@ import { isValidTimezone } from "@/lib/calendar/timezone";
 import {
   defaultCalendarSettings,
   defaultStoreSettings,
+  RESYNC_INTERVAL_OPTIONS,
   type StoreKey,
   type StoreSettings,
 } from "@/lib/settingsDefaults";
@@ -123,7 +124,7 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
     defaultStoreSettings.lastBase,
   );
 
-  if (!parsed.resyncIntervalMinutes) {
+  if (!RESYNC_INTERVAL_OPTIONS.includes(parsed.resyncIntervalMinutes)) {
     parsed.resyncIntervalMinutes =
       defaultCalendarSettings.resyncIntervalMinutes;
   }

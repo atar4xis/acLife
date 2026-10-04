@@ -3,6 +3,7 @@ import { ChevronRight, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { usePushService } from "@/hooks/usePushService";
+import { RESYNC_INTERVAL_OPTIONS } from "@/lib/settingsDefaults";
 import { useSyncSettings } from "@/hooks/useSyncSettings";
 import {
   syncByDefault,
@@ -246,18 +247,15 @@ export default function SyncPage({
               setSetting("resyncIntervalMinutes", Number(value))
             }
           >
-            <SelectItem value="1">{t("move.minutes", { count: 1 })}</SelectItem>
-            <SelectItem value="3">{t("move.minutes", { count: 3 })}</SelectItem>
-            <SelectItem value="5">{t("move.minutes", { count: 5 })}</SelectItem>
-            <SelectItem value="10">
-              {t("move.minutes", { count: 10 })}
-            </SelectItem>
+            {RESYNC_INTERVAL_OPTIONS.map((minutes) => (
+              <SelectItem key={minutes} value={String(minutes)}>
+                {t("move.minutes", { count: minutes })}
+              </SelectItem>
+            ))}
           </SettingsSelect>
         </Field>
 
-        <FieldDescription>
-          {enabled && <>{t("settings.push.resyncHelp")}</>}
-        </FieldDescription>
+        <FieldDescription>{t("settings.push.resyncHelp")}</FieldDescription>
       </Section>
     </FieldGroup>
   );

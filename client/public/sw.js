@@ -1,4 +1,4 @@
-self.addEventListener("push", async (event) => {
+self.addEventListener("push", (event) => {
   const data = event.data?.json() || {};
 
   switch (data.type) {
@@ -7,18 +7,6 @@ self.addEventListener("push", async (event) => {
         body: data.body,
         icon: "/android-chrome-512x512.png",
       });
-      break;
-
-    case "sync":
-    case "settings":
-      const clients = await self.clients.matchAll({
-        type: "window",
-        includeUncontrolled: false,
-      });
-
-      for (const client of clients) {
-        client.postMessage(data);
-      }
       break;
 
     default:

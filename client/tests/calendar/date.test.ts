@@ -79,7 +79,7 @@ describe("getDateRangeString", () => {
   });
 
   it("spans two months when the week start straddles a month boundary", () => {
-    // 2026-04-01 is a Wednesday; a Sunday-start week begins 2026-03-29
+    // 2026-04-01 is a Wednesday, a Sunday-start week begins 2026-03-29
     const straddling = DateTime.fromISO("2026-04-01T00:00:00");
     expect(getDateRangeString("week", straddling, 7)).toBe(
       "Mar 2026 - Apr 2026",

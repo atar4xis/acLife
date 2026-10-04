@@ -5,6 +5,8 @@ import { getDeviceTimezone } from "@/lib/calendar/timezone";
 
 const deviceTimezone = getDeviceTimezone();
 
+export const RESYNC_INTERVAL_OPTIONS = [5, 15, 30];
+
 export const defaultCalendarSettings: CalendarSettings = {
   language: "system",
   defaultView: "week",
@@ -19,7 +21,7 @@ export const defaultCalendarSettings: CalendarSettings = {
   defaultEventName: "new event",
   defaultTaskName: "new task",
   defaultEventDuration: 60,
-  resyncIntervalMinutes: 5,
+  resyncIntervalMinutes: 15,
   agendaEnabled: true,
   agendaRangeDays: 3,
   miniCalendarEnabled: true,

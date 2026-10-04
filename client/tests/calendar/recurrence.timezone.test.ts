@@ -26,7 +26,7 @@ describe("repeat except weekdays in a non-UTC zone", () => {
     const week = Array.from({ length: 7 }, (_, i) =>
       at("2026-03-16T00:00").plus({ days: i }),
     );
-    // Mon, Tue, Sat, Sun excluded; the 18th (Wed) is the series start
+    // Mon, Tue, Sat, Sun excluded, the 18th (Wed) is the series start
     const map = getEventMap([buildParent([1, 2, 6, 7])], week, [], []);
     const days = [...map.entries()]
       .filter(([, evs]) => evs.length > 0)

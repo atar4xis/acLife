@@ -1,6 +1,6 @@
 import { calendarReducer } from "@/reducers/calendarReducer";
 import type { CalendarAction } from "@/types/calendar/Action";
-import type { CalendarEvent } from "@/types/calendar/Event";
+import type { CalendarEvent, EventChange } from "@/types/calendar/Event";
 import type { WithChildren } from "@/types/Props";
 import {
   createSelectionStore,
@@ -32,6 +32,7 @@ type CalendarActions = {
   getCurrentDate: () => DateTime;
   setEditingEvent: (event: CalendarEvent | null, day?: number | null) => void;
   selection: SelectionStore;
+  pendingChanges: Map<string, EventChange[]>;
   onEventEdit: EventEditHandler;
   setOnEventEdit: (handler: EventEditHandler) => void;
 };
@@ -49,6 +50,7 @@ export function CalendarProvider({ children }: WithChildren) {
     day: null,
   });
   const [selection] = useState(createSelectionStore);
+  const [pendingChanges] = useState(() => new Map<string, EventChange[]>());
 
   const currentDateRef = useRef(currentDate);
   const getCurrentDate = useCallback(() => currentDateRef.current, []);
@@ -87,6 +89,7 @@ export function CalendarProvider({ children }: WithChildren) {
       getCurrentDate,
       setEditingEvent,
       selection,
+      pendingChanges,
       onEventEdit,
       setOnEventEdit,
     }),
@@ -95,6 +98,7 @@ export function CalendarProvider({ children }: WithChildren) {
       getCurrentDate,
       setEditingEvent,
       selection,
+      pendingChanges,
       onEventEdit,
       setOnEventEdit,
     ],

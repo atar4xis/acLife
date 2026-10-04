@@ -22,6 +22,7 @@ import (
 	"acLife/database"
 	"acLife/mail"
 	"acLife/session"
+	"acLife/stream"
 	"acLife/types"
 	"acLife/utils"
 
@@ -801,6 +802,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		_, _ = database.Exec(r.Context(),
 			"DELETE FROM account_sessions WHERE access_token = ?",
 			accessToken)
+		stream.CloseSession(accessToken)
 	}
 
 	// Destroy the session

@@ -12,6 +12,7 @@ import (
 	"acLife/constants"
 	"acLife/database"
 	"acLife/session"
+	"acLife/stream"
 	"acLife/types"
 	"acLife/utils"
 
@@ -164,6 +165,7 @@ func AuthMiddleware() mux.MiddlewareFunc {
 					_, _ = database.Exec(r.Context(),
 						"DELETE FROM account_sessions WHERE access_token = ?",
 						accessToken)
+					stream.CloseSession(accessToken)
 				}
 				_ = session.DestroySession(w, r)
 

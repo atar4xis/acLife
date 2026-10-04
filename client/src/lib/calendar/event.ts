@@ -354,7 +354,7 @@ function getBaseEventMap(events: CalendarEvent[], dates: DateTime[]) {
   for (const e of events) {
     if (!e.id) continue;
 
-    // events clear of the visible days have nothing to place; repeats still expand
+    // events clear of the visible days have nothing to place, repeats still expand
     const outsideWindow =
       e.end.toMillis() < windowStart || e.start.toMillis() > windowEnd;
     if (outsideWindow && !e.repeat) continue;

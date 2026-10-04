@@ -88,7 +88,7 @@
     "yes": "Enable it",
     "no": "Keep it off",
     "cancel": "Remind me later",
-    "description": "Enabling the push service improves data sync between devices and allows push notifications to work.",
+    "description": "Enabling the push service allows push notifications to work.",
     "unavailable": "Push service is not available.",
     "permissionDenied": "Notification permission request denied.",
     "error": "Something went wrong. Please try again.",
@@ -504,7 +504,7 @@
       "disabling": "Disabling push service...",
       "disabled": "Push service disabled.",
       "unsupported": "Push service is not available in this browser.",
-      "resyncHelp": "When the push service is enabled, changes made on other devices sync immediately, regardless of this interval."
+      "resyncHelp": "While connected, changes made on other devices sync immediately, regardless of this interval."
     },
     "subscription": {
       "none": "No active subscription",

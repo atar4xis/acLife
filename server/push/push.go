@@ -97,17 +97,3 @@ func NotificationEvent(title string, body string) types.PushEvent {
 		Body:  body,
 	}
 }
-
-func SyncEvent(originClientID string) types.PushEvent {
-	return types.PushEvent{
-		Type:           "sync",
-		OriginClientID: originClientID,
-	}
-}
-
-func SettingsEvent(originClientID string) types.PushEvent {
-	return types.PushEvent{
-		Type:           "settings",
-		OriginClientID: originClientID,
-	}
-}

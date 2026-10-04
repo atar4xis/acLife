@@ -81,7 +81,7 @@ const periodCandidates = (
   return [anchor.plus({ [unit]: step })];
 };
 
-// from only skips ahead; it never changes which occurrences exist
+// from only skips ahead, it never changes which occurrences exist
 export function* occurrences(
   anchor: DateTime,
   repeat: RepeatInterval,

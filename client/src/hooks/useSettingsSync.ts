@@ -18,9 +18,9 @@ import {
 } from "@/lib/settingsSync";
 import { arrayBufferToBase64, uint8ArrayFromBase64 } from "@/lib/utils";
 import { CLIENT_ID } from "@/lib/clientId";
+import { isOwnMessage, onStream } from "@/lib/stream";
 import { isSubscriptionMissing } from "@/lib/subscription";
 import type { APIResponse } from "@/types/API";
-import type { PushEvent } from "@/types/Push";
 import { t } from "@/i18n";
 
 interface RemoteSettings {
@@ -172,7 +172,7 @@ export function useSettingsSync() {
     !!serverMeta &&
     !isSubscriptionMissing(user, serverMeta);
 
-  // initial sync, periodic resync, and on push message
+  // initial sync, periodic resync, and on stream event
   useEffect(() => {
     if (!active) return;
 
@@ -182,22 +182,14 @@ export function useSettingsSync() {
       () => void sync(),
       resyncIntervalMinutes * 60000,
     );
-    const message = (ev: MessageEvent) => {
-      const data = ev.data as PushEvent;
-      if (data.type === "settings" && data.originClientId != CLIENT_ID) {
-        void sync();
-      }
-    };
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.addEventListener("message", message);
-    }
+    const stopListening = onStream("settings", (event) => {
+      if (!isOwnMessage(event)) void sync();
+    });
 
     return () => {
       cancelEpoch.current++;
       clearInterval(interval);
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.removeEventListener("message", message);
-      }
+      stopListening();
     };
   }, [active, sync, resyncIntervalMinutes]);
 

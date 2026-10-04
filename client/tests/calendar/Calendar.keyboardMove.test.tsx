@@ -27,7 +27,7 @@ const day = FIXED_NOW.startOf("day");
 
 type User = ReturnType<typeof userEvent.setup>;
 
-// Planning runs 9:00-10:00; one hour up from the 10:30 start lands on it
+// Planning runs 9:00-10:00, one hour up from the 10:30 start lands on it
 const focusPlanning = async (user: User) => {
   await screen.findByText("Planning");
   focusGrid();
@@ -794,7 +794,7 @@ describe("keyboard move: recurring events", () => {
   const openRecurring = async (user: User) => {
     await screen.findAllByText("Daily standup");
     focusGrid();
-    // 8:00 standup; two hours up from the start slot
+    // 8:00 standup, two hours up from the start slot
     await user.keyboard("{PageUp}{PageUp}{Enter}m{PageDown}{ArrowDown}{Enter}");
     return screen.findByText(/update recurring event/i);
   };
@@ -1032,7 +1032,7 @@ describe("keyboard move: keys and edge cases", () => {
       const scrollTo = setUpScroll(0);
       await user.keyboard("{PageDown}");
 
-      // 11:00 is at 660px; the 48px header covers the bottom of the viewport
+      // 11:00 is at 660px, the 48px header covers the bottom of the viewport
       expect(scrollTo).toHaveBeenLastCalledWith(
         expect.objectContaining({ top: 660 - (600 - 48) }),
       );

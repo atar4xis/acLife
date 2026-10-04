@@ -37,7 +37,7 @@ const isWordStart = (text: string, token: string) =>
   text.includes(` ${token}`) ||
   text.includes(`, ${token}`);
 
-// lower is better; label matches outrank description and search text matches
+// lower is better, label matches outrank description and search text matches
 function scoreOption(
   option: SearchableSelectOption,
   tokens: string[],

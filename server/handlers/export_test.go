@@ -10,3 +10,5 @@ func ClearSubCache() {
 		return true
 	})
 }
+
+func SetAfterSubscribe(f func()) { afterSubscribe = f }

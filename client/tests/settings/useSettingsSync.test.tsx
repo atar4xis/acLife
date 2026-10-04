@@ -8,6 +8,8 @@ import {
 } from "@/context/SettingsStoreContext";
 import { SETTINGS_STORAGE_KEY } from "@/lib/settingsStore";
 import { arrayBufferToBase64 } from "@/lib/utils";
+import { CLIENT_ID } from "@/lib/clientId";
+import { emitStream } from "@/lib/stream";
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
@@ -179,6 +181,53 @@ describe("useSettingsSync", () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(store.getSnapshot().defaultView).not.toBe("day");
+  });
+
+  describe("settings stream events", () => {
+    const loaded = async () => {
+      get.mockResolvedValue({
+        success: true,
+        data: { version: 1, data: blob({}) },
+      });
+      const hook = setup();
+      await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+      return hook;
+    };
+
+    it("syncs when another client saved settings", async () => {
+      await loaded();
+
+      emitStream({ type: "settings", originClientId: "other1" });
+
+      await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+    });
+
+    it("syncs after a pull without an origin", async () => {
+      await loaded();
+
+      emitStream({ type: "settings" });
+
+      await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+    });
+
+    it("ignores settings saved by this client", async () => {
+      await loaded();
+
+      emitStream({ type: "settings", originClientId: CLIENT_ID });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(get).toHaveBeenCalledTimes(1);
+    });
+
+    it("stops listening once unmounted", async () => {
+      const { unmount } = await loaded();
+      unmount();
+
+      emitStream({ type: "settings", originClientId: "other1" });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(get).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("reports an error when an upload fails without a conflict", async () => {

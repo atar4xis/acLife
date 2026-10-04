@@ -640,7 +640,7 @@ describe("Event editor focus: details", () => {
     await user.keyboard("{Escape}");
     await expectBackOnEvent();
 
-    // 9:30 sits 570px down; a 100px viewport minus the 48px header ends at 52px
+    // 9:30 sits 570px down, a 100px viewport minus the 48px header ends at 52px
     expect(scrollTo).toHaveBeenCalledWith({ top: 523, behavior: "smooth" });
   });
 });

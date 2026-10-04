@@ -396,7 +396,7 @@ export const dragEvent = async ({
 const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
 
 // registers the fake timers, DOM measurement, and crypto mocks the calendar
-// grid needs; call once at the top of each test file that renders it
+// grid needs, call once at the top of each test file that renders it
 export const setupCalendarTests = () => {
   beforeEach(() => {
     Settings.now = () => FIXED_NOW.toMillis();

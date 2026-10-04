@@ -3,6 +3,7 @@ package testutil
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
@@ -31,7 +32,7 @@ const Origin = "http://localhost:5173"
 var dbReady bool
 
 // Main configures the environment, creates a throwaway database, runs the tests and drops the database.
-// The database is only created when TEST_DB_USER is set; tests that need it skip otherwise.
+// The database is only created when TEST_DB_USER is set, tests that need it skip otherwise.
 func Main(m *testing.M) int {
 	for _, k := range []string{"STRIPE_API_KEY", "STRIPE_WEBHOOK_SECRET", "IS_BEHIND_PROXY", "ENV", "EMAIL_DOMAIN_BLACKLIST", "EMAIL_DOMAIN_WHITELIST", "DISABLE_REGISTRATION"} {
 		_ = os.Unsetenv(k)
@@ -271,7 +272,7 @@ func (c *Client) As(u User) *Client {
 	return c.WithCookie(NewSession(c.t, u, time.Now().Add(time.Hour)))
 }
 
-// Do sends a request with the allowed Origin; body is JSON-encoded unless it is a []byte or nil.
+// Do sends a request with the allowed Origin, body is JSON-encoded unless it is a []byte or nil.
 func (c *Client) Do(method, path string, body any, mods ...func(*http.Request)) (*http.Response, []byte) {
 	c.t.Helper()
 
@@ -311,6 +312,26 @@ func (c *Client) Do(method, path string, body any, mods ...func(*http.Request)) 
 		c.t.Fatalf("read body: %v", err)
 	}
 	return resp, raw
+}
+
+// Open sends a GET with the allowed Origin and returns the response without reading its body.
+func (c *Client) Open(ctx context.Context, path string) *http.Response {
+	c.t.Helper()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", c.URL+path, nil)
+	if err != nil {
+		c.t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Origin", Origin)
+	if c.cookie != nil {
+		req.AddCookie(c.cookie)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.t.Fatalf("GET %s: %v", path, err)
+	}
+	return resp
 }
 
 // Call sends a request and decodes the standard JSON reply.

@@ -2,10 +2,12 @@
 package utils
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -92,6 +94,10 @@ func ValidateEmail(email string) bool {
 
 // LogError logs an error in a particular format.
 func LogError(function, action string, err error) {
+	// a cancelled request context means the client left, which is not a server error
+	if errors.Is(err, context.Canceled) {
+		return
+	}
 	log.Printf("[ERROR] in %s @ %s: %v", function, action, err)
 }
 

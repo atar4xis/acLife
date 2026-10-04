@@ -9,11 +9,13 @@ import { useCalendarActions } from "@/context/CalendarContext";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { Spinner } from "./ui/spinner";
 import { useCalendarEvents } from "@/hooks/calendar/useCalendarEvents";
+import { emitStream, isOwnMessage, onStream } from "@/lib/stream";
 import { useApi } from "@/context/ApiContext";
 import UnlockDialog from "./login/UnlockDialog";
 import SubscriptionDialog from "./subscription/SubscriptionDialog";
 import { toast } from "sonner";
 import PushService from "./PushService";
+import StreamService from "./StreamService";
 import AutoLockService from "./AutoLockService";
 import SettingsDialog from "./settings/SettingsDialog";
 import TimezoneChangeDialog from "./calendar/TimezoneChangeDialog";
@@ -38,14 +40,21 @@ export default function AppShell() {
     undefined,
   );
   const { masterKey, bucketKey, user } = useUser();
-  const { setCurrentDate, getCurrentDate } = useCalendarActions();
+  const { dispatch, pendingChanges, setCurrentDate, getCurrentDate } =
+    useCalendarActions();
   const { defaultTimezone } = useCalendarSettings((s) => ({
     defaultTimezone: s.defaultTimezone,
   }));
   const { serverMeta } = useApi();
   const storage = useStorage();
-  const { saving, loadEvents, saveEvents, syncEvents, syncBuckets } =
-    useCalendarEvents(user, masterKey, bucketKey);
+  const {
+    saving,
+    loadEvents,
+    saveEvents,
+    syncEvents,
+    syncBuckets,
+    applyChanges,
+  } = useCalendarEvents(user, masterKey, bucketKey);
 
   const subscriptionMissing = isSubscriptionMissing(user, serverMeta);
 
@@ -82,6 +91,44 @@ export default function AppShell() {
 
     // eslint-disable-next-line
   }, [user, masterKey, bucketKey, subscriptionMissing]);
+
+  // cache every save and show those from other devices, pull everything if that fails
+  useEffect(() => {
+    if (!masterKey || user?.type !== "online") return;
+
+    let current = true;
+    const stopListening = onStream("calendar", (event) => {
+      applyChanges(event.changes ?? [], masterKey)
+        .then((events) => {
+          if (!current || isOwnMessage(event)) return;
+
+          const changes = event.changes ?? [];
+          const deletedIds = changes
+            .filter((c) => c.type === "deleted")
+            .map((c) => c.id);
+          const upsertedIds = new Set(
+            changes.filter((c) => c.type !== "deleted").map((c) => c.id),
+          );
+          dispatch({
+            type: "merge",
+            events: events.filter(
+              (ev) =>
+                upsertedIds.has(ev.id) &&
+                pendingChanges.get(ev.id)?.at(-1)?.type !== "deleted",
+            ),
+            deletedIds,
+          });
+        })
+        .catch(() => {
+          if (current) emitStream({ type: "sync" });
+        });
+    });
+
+    return () => {
+      current = false;
+      stopListening();
+    };
+  }, [masterKey, user?.type, applyChanges, dispatch, pendingChanges]);
 
   // re-zone the visible date so day/week boundaries follow the new default
   useEffect(() => {
@@ -144,6 +191,7 @@ export default function AppShell() {
         <Spinner className="fixed bottom-5 end-5 z-30 size-8 in-[[data-has-undo-buttons]]:end-32" />
       )}
       <PushService />
+      <StreamService />
       <AutoLockService />
       <TimezoneChangeDialog />
       {calEvents !== null && (

@@ -19,7 +19,7 @@ export interface CalendarSettingsContextValue extends CalendarSettings {
 
 const identitySelector = (value: CalendarSettingsContextValue) => value;
 
-// re-renders only when the selected slice changes; omit selector for the full object
+// re-renders only when the selected slice changes, omit selector for the full object
 export function useCalendarSettings<T = CalendarSettingsContextValue>(
   selector: (value: CalendarSettingsContextValue) => T = identitySelector as (
     value: CalendarSettingsContextValue,

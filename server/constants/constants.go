@@ -21,6 +21,11 @@ const (
 
 	HTTPTimeout = 10 * time.Second
 
+	StreamHeartbeat       = 25 * time.Second
+	StreamBuffer          = 16
+	MaxStreamsPerUser     = 30
+	MaxStreamPayloadBytes = 64 << 10
+
 	SRPSessionTTL     = 5 * time.Minute
 	SubCacheTTL       = 5 * time.Minute
 	RateLimitCacheTTL = 2 * time.Minute
