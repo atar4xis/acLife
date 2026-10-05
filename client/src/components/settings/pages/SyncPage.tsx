@@ -110,7 +110,7 @@ export default function SyncPage({
   sectionRefs: SectionRefs;
 }) {
   const { t } = useTranslation();
-  const { resyncIntervalMinutes, setSetting } = useCalendarSettings((s) => ({
+  const settings = useCalendarSettings((s) => ({
     resyncIntervalMinutes: s.resyncIntervalMinutes,
     setSetting: s.setSetting,
   }));
@@ -242,9 +242,9 @@ export default function SyncPage({
           <SettingsLabel settingKey="resyncIntervalMinutes" />
           <SettingsSelect
             labelledBy={settingLabelId("resyncIntervalMinutes")}
-            value={String(resyncIntervalMinutes)}
+            value={String(settings.resyncIntervalMinutes)}
             onValueChange={(value) =>
-              setSetting("resyncIntervalMinutes", Number(value))
+              settings.setSetting("resyncIntervalMinutes", Number(value))
             }
           >
             {RESYNC_INTERVAL_OPTIONS.map((minutes) => (

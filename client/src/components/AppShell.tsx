@@ -26,12 +26,13 @@ import { t as translate } from "@/i18n";
 
 export default function AppShell() {
   useSettingsSync();
-  const { defaultView } = useCalendarSettings((s) => ({
+  const settings = useCalendarSettings((s) => ({
     defaultView: s.defaultView,
+    defaultTimezone: s.defaultTimezone,
   }));
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<ViewMode>(
-    window.innerWidth < 768 ? "day" : defaultView,
+    window.innerWidth < 768 ? "day" : settings.defaultView,
   );
   const [calEvents, setCalEvents] = useState<CalendarEvent[] | null>(null);
   const [offline, setOffline] = useState(false);
@@ -42,9 +43,6 @@ export default function AppShell() {
   const { masterKey, bucketKey, user } = useUser();
   const { dispatch, pendingChanges, setCurrentDate, getCurrentDate } =
     useCalendarActions();
-  const { defaultTimezone } = useCalendarSettings((s) => ({
-    defaultTimezone: s.defaultTimezone,
-  }));
   const { serverMeta } = useApi();
   const storage = useStorage();
   const {
@@ -132,10 +130,10 @@ export default function AppShell() {
 
   // re-zone the visible date so day/week boundaries follow the new default
   useEffect(() => {
-    setCurrentDate((date) => date.setZone(defaultTimezone));
+    setCurrentDate((date) => date.setZone(settings.defaultTimezone));
 
     // eslint-disable-next-line
-  }, [defaultTimezone]);
+  }, [settings.defaultTimezone]);
 
   // wipe decrypted events from memory as soon as the data locks
   useEffect(() => {

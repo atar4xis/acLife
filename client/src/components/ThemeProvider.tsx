@@ -68,15 +68,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const store = useSettingsStore();
-  const {
-    theme,
-    colors,
-    fontFamily,
-    fontSize,
-    customCss,
-    presets,
-    activePresetId,
-  } = useSettingsSelector(({ settings }) => ({
+  const settings = useSettingsSelector(({ settings }) => ({
     theme: settings.theme,
     colors: settings.colors,
     fontFamily: settings.fontFamily,
@@ -92,7 +84,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     root.classList.remove("light", "dark");
 
     let base: "light" | "dark";
-    if (theme === "custom") {
+    if (settings.theme === "custom") {
       // custom keeps whatever base was active before switching to it
       base = store.getSnapshot().lastBase;
     } else {
@@ -100,7 +92,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         .matches
         ? "dark"
         : "light";
-      base = theme === "light" || theme === "dark" ? theme : systemTheme;
+      base =
+        settings.theme === "light" || settings.theme === "dark"
+          ? settings.theme
+          : systemTheme;
       store.setSetting("lastBase", base);
     }
 
@@ -108,35 +103,36 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     setResolvedBase(base);
 
     for (const key of THEME_COLOR_VARS) {
-      const value = theme === "custom" ? colors[key] : undefined;
+      const value =
+        settings.theme === "custom" ? settings.colors[key] : undefined;
       if (value) {
         root.style.setProperty(`--${key}`, value);
       } else {
         root.style.removeProperty(`--${key}`);
       }
     }
-  }, [theme, colors, store]);
+  }, [settings.theme, settings.colors, store]);
 
   useEffect(() => {
-    document.body.style.fontFamily = fontFamily || "";
-  }, [fontFamily]);
+    document.body.style.fontFamily = settings.fontFamily || "";
+  }, [settings.fontFamily]);
 
   useEffect(() => {
-    document.documentElement.style.fontSize = `${fontSize}px`;
-  }, [fontSize]);
+    document.documentElement.style.fontSize = `${settings.fontSize}px`;
+  }, [settings.fontSize]);
 
   useEffect(() => {
     const style = document.createElement("style");
-    style.textContent = customCss;
+    style.textContent = settings.customCss;
     document.head.append(style);
     return () => style.remove();
-  }, [customCss]);
+  }, [settings.customCss]);
 
   const writePresets = (next: ThemePreset[]) =>
     store.setSetting("presets", next);
 
   const value: ThemeProviderState = {
-    theme,
+    theme: settings.theme,
     setTheme: (next) => {
       store.setSettings({
         theme: next,
@@ -146,10 +142,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       });
     },
     resolvedBase,
-    colors,
+    colors: settings.colors,
     setColor: (variable, colorValue) => {
       store.setSettings({
-        colors: { ...colors, [variable]: colorValue },
+        colors: { ...settings.colors, [variable]: colorValue },
         theme: "custom",
         activePresetId: null,
       });
@@ -157,29 +153,29 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     resetColors: () => {
       store.setSettings({ colors: {}, activePresetId: null });
     },
-    fontFamily,
+    fontFamily: settings.fontFamily,
     setFontFamily: (next) => {
       store.setSettings({ fontFamily: next, activePresetId: null });
     },
-    fontSize,
+    fontSize: settings.fontSize,
     setFontSize: (next) => {
       store.setSettings({ fontSize: next, activePresetId: null });
     },
-    customCss,
+    customCss: settings.customCss,
     setCustomCss: (next) => {
       store.setSettings({ customCss: next });
     },
-    presets,
-    activePresetId,
+    presets: settings.presets,
+    activePresetId: settings.activePresetId,
     savePreset: (name) => {
       const basePalette = resolvedBase === "dark" ? DARK_COLORS : LIGHT_COLORS;
       const preset: ThemePreset = {
         id: crypto.randomUUID(),
         name,
         base: resolvedBase,
-        colors: { ...basePalette, ...colors },
-        fontFamily,
-        fontSize,
+        colors: { ...basePalette, ...settings.colors },
+        fontFamily: settings.fontFamily,
+        fontSize: settings.fontSize,
       };
       if (!fitsPresetLimit(preset)) return "too-large";
 

@@ -15,18 +15,17 @@ import {
 
 export default function TimezoneChangeDialog() {
   const { t } = useTranslation();
-  const { timezones, lastSeenDeviceTimezone, setSetting } = useCalendarSettings(
-    (s) => ({
-      timezones: s.timezones,
-      lastSeenDeviceTimezone: s.lastSeenDeviceTimezone,
-      setSetting: s.setSetting,
-    }),
-  );
+  const settings = useCalendarSettings((s) => ({
+    timezones: s.timezones,
+    lastSeenDeviceTimezone: s.lastSeenDeviceTimezone,
+    setSetting: s.setSetting,
+  }));
   const [detectedTimezone, setDetectedTimezone] = useState<string | null>(null);
 
   useEffect(() => {
     const current = getDeviceTimezone();
-    if (current !== lastSeenDeviceTimezone) setDetectedTimezone(current);
+    if (current !== settings.lastSeenDeviceTimezone)
+      setDetectedTimezone(current);
 
     // only check once, on mount
     // eslint-disable-next-line
@@ -34,16 +33,16 @@ export default function TimezoneChangeDialog() {
 
   const dismiss = () => {
     if (detectedTimezone)
-      setSetting("lastSeenDeviceTimezone", detectedTimezone);
+      settings.setSetting("lastSeenDeviceTimezone", detectedTimezone);
     setDetectedTimezone(null);
   };
 
   const applyTimezone = () => {
     if (!detectedTimezone) return;
-    setSetting("defaultTimezone", detectedTimezone);
-    setSetting("timezones", [
+    settings.setSetting("defaultTimezone", detectedTimezone);
+    settings.setSetting("timezones", [
       detectedTimezone,
-      ...timezones.filter((tz) => tz !== detectedTimezone),
+      ...settings.timezones.filter((tz) => tz !== detectedTimezone),
     ]);
     toast.success(
       t("timezone.setTo", { name: getFriendlyName(detectedTimezone) }),

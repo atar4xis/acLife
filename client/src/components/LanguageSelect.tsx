@@ -12,13 +12,16 @@ import {
 
 export default function LanguageSelect() {
   const { t } = useTranslation();
-  const { language, setSetting } = useCalendarSettings((s) => ({
+  const settings = useCalendarSettings((s) => ({
     language: s.language,
     setSetting: s.setSetting,
   }));
 
   return (
-    <Select value={language} onValueChange={(v) => setSetting("language", v)}>
+    <Select
+      value={settings.language}
+      onValueChange={(v) => settings.setSetting("language", v)}
+    >
       <SelectTrigger
         size="sm"
         className="mx-auto w-auto gap-2"

@@ -18,14 +18,14 @@ export interface SettingBinding<K extends SettingKey> {
 }
 
 function useCalendarSetting<K extends SettingKey>(key: K) {
-  const { value, setSetting } = useCalendarSettings((s) => ({
+  const settings = useCalendarSettings((s) => ({
     value: s[key as keyof typeof s],
     setSetting: s.setSetting,
   }));
 
   return {
-    value,
-    set: (next: unknown) => setSetting(key as never, next as never),
+    value: settings.value,
+    set: (next: unknown) => settings.setSetting(key as never, next as never),
   };
 }
 

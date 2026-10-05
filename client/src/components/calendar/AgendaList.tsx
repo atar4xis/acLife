@@ -13,15 +13,18 @@ import { useTranslation } from "react-i18next";
 export default memo(function AgendaList() {
   const { t, i18n } = useTranslation();
   const calendarEvents = useEventList();
-  const { agendaRangeDays, defaultTimezone } = useCalendarSettings((s) => ({
+  const settings = useCalendarSettings((s) => ({
     agendaRangeDays: s.agendaRangeDays,
     defaultTimezone: s.defaultTimezone,
   }));
-  const [now, setNow] = useState(() => DateTime.now().setZone(defaultTimezone));
+  const [now, setNow] = useState(() =>
+    DateTime.now().setZone(settings.defaultTimezone),
+  );
   const visibleDays = useMemo(
-    () => getRelativeDays(now.setLocale(i18n.language), agendaRangeDays),
+    () =>
+      getRelativeDays(now.setLocale(i18n.language), settings.agendaRangeDays),
     // eslint-disable-next-line
-    [now, agendaRangeDays, t, i18n.language],
+    [now, settings.agendaRangeDays, t, i18n.language],
   );
 
   const eventMap = useMemo(
@@ -58,13 +61,13 @@ export default memo(function AgendaList() {
   }, [eventMap]);
 
   useEffect(() => {
-    setNow((prev) => prev.setZone(defaultTimezone));
+    setNow((prev) => prev.setZone(settings.defaultTimezone));
     const interval = setInterval(
-      () => setNow(DateTime.now().setZone(defaultTimezone)),
+      () => setNow(DateTime.now().setZone(settings.defaultTimezone)),
       60000,
     );
     return () => clearInterval(interval);
-  }, [defaultTimezone]);
+  }, [settings.defaultTimezone]);
 
   return visibleDays.map((d) => {
     const key = d.date.toISODate()!;
