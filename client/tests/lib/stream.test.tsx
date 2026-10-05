@@ -242,6 +242,80 @@ describe("event stream", () => {
     expect(FakeEventSource.instances).toHaveLength(1);
   });
 
+  describe("heartbeat", () => {
+    const open = () => {
+      render(<StreamService />);
+      const first = FakeEventSource.instances[0];
+      act(() => first.onopen?.());
+      return first;
+    };
+
+    it("replaces a connection that goes silent", () => {
+      const first = open();
+
+      act(() => {
+        vi.advanceTimersByTime(59999);
+      });
+      expect(FakeEventSource.instances).toHaveLength(1);
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(first.closed).toBe(true);
+      expect(FakeEventSource.instances).toHaveLength(2);
+    });
+
+    it("pulls everything once the replacement opens", () => {
+      open();
+      const onSync = vi.fn();
+      onStream("sync", onSync);
+
+      act(() => {
+        vi.advanceTimersByTime(60000);
+      });
+      act(() => FakeEventSource.instances[1].onopen?.());
+
+      expect(onSync).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(["ping", "sync"])("%s keeps the connection", (type) => {
+      const first = open();
+      act(() => {
+        vi.advanceTimersByTime(40000);
+      });
+
+      act(() => first.send(type, { type }, 1));
+      act(() => {
+        vi.advanceTimersByTime(40000);
+      });
+
+      expect(FakeEventSource.instances).toHaveLength(1);
+    });
+
+    it("stays quiet while the browser reconnects", () => {
+      const first = open();
+      act(() => first.onerror?.());
+
+      act(() => {
+        vi.advanceTimersByTime(120000);
+      });
+
+      expect(FakeEventSource.instances).toHaveLength(1);
+    });
+
+    it("stops checking after unmount", () => {
+      const { unmount } = render(<StreamService />);
+      act(() => FakeEventSource.instances[0].onopen?.());
+      unmount();
+
+      act(() => {
+        vi.advanceTimersByTime(120000);
+      });
+
+      expect(FakeEventSource.instances).toHaveLength(1);
+    });
+  });
+
   describe("sequence numbers", () => {
     const listen = () => {
       const onSync = vi.fn();

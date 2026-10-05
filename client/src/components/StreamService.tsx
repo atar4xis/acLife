@@ -7,6 +7,7 @@ import { joinUrl } from "@/lib/utils";
 
 const MESSAGE_TYPES = ["sync", "settings", "calendar"] as const;
 const RETRY_MS = 30000;
+const TIMEOUT_MS = 60000;
 
 type WireMessage = StreamMessage & { seq: number };
 
@@ -21,11 +22,20 @@ export default function StreamService() {
 
     let source: EventSource;
     let retry: ReturnType<typeof setTimeout>;
+    let heartbeat: ReturnType<typeof setTimeout>;
     let lastSeq = 0;
 
     const pullEverything = () => {
       emitStream({ type: "sync" });
       emitStream({ type: "settings" });
+    };
+
+    const armHeartbeat = () => {
+      clearTimeout(heartbeat);
+      heartbeat = setTimeout(() => {
+        source.close();
+        connect();
+      }, TIMEOUT_MS);
     };
 
     const connect = () => {
@@ -34,14 +44,20 @@ export default function StreamService() {
       });
 
       // changes made before the connection existed were never signalled
-      source.onopen = pullEverything;
+      source.onopen = () => {
+        armHeartbeat();
+        pullEverything();
+      };
 
       // the browser only retries by itself while the connection is not refused
       source.onerror = () => {
+        clearTimeout(heartbeat);
         if (source.readyState === EventSource.CLOSED) {
           retry = setTimeout(connect, RETRY_MS);
         }
       };
+
+      source.addEventListener("ping", armHeartbeat);
 
       source.addEventListener("hello", (ev) => {
         lastSeq = (JSON.parse((ev as MessageEvent<string>).data) as WireMessage)
@@ -53,6 +69,7 @@ export default function StreamService() {
           const event = JSON.parse(
             (ev as MessageEvent<string>).data,
           ) as WireMessage;
+          armHeartbeat();
           const missed = event.seq !== lastSeq + 1;
           lastSeq = event.seq;
 
@@ -66,6 +83,7 @@ export default function StreamService() {
 
     return () => {
       clearTimeout(retry);
+      clearTimeout(heartbeat);
       source.close();
     };
   }, [active, url]);

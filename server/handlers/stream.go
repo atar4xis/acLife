@@ -83,7 +83,7 @@ func Stream(w http.ResponseWriter, r *http.Request) {
 			}
 			err = writeMessage(w, ev)
 		case <-heartbeat.C:
-			_, err = fmt.Fprint(w, ":p\n\n")
+			_, err = fmt.Fprint(w, "event: ping\ndata: {}\n\n")
 		}
 
 		if err != nil || rc.Flush() != nil {

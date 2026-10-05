@@ -21,7 +21,7 @@ const (
 
 	HTTPTimeout = 10 * time.Second
 
-	StreamHeartbeat       = 25 * time.Second
+	StreamHeartbeat       = 20 * time.Second
 	StreamBuffer          = 16
 	MaxStreamsPerUser     = 30
 	MaxStreamPayloadBytes = 64 << 10
