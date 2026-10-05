@@ -144,18 +144,26 @@ describe("calendar context slices", () => {
 
   it("calls the latest registered edit handler through one stable function", () => {
     const { actions } = setup();
-    const { onEventEdit, setOnEventEdit } = actions();
+    const { eventHandlers, setEventHandlers } = actions();
     const first = vi.fn();
     const second = vi.fn();
+    const handlers = (edit: typeof first) => ({
+      edit,
+      move: vi.fn(),
+      remove: vi.fn(),
+      duplicate: vi.fn(),
+      detach: vi.fn(),
+      reset: vi.fn(),
+    });
 
-    setOnEventEdit(first);
-    onEventEdit(event("a"), event("b"));
-    setOnEventEdit(second);
-    onEventEdit(event("a"), event("c"));
+    setEventHandlers(handlers(first));
+    eventHandlers.edit(event("a"), event("b"));
+    setEventHandlers(handlers(second));
+    eventHandlers.edit(event("a"), event("c"));
 
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(actions().onEventEdit).toBe(onEventEdit);
+    expect(actions().eventHandlers).toBe(eventHandlers);
   });
 
   it("throws outside a provider", () => {

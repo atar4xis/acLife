@@ -271,7 +271,7 @@ export default memo(function AppCalendar({
     dispatch,
     setEditingEvent,
     selection,
-    setOnEventEdit,
+    setEventHandlers,
     pendingChanges,
   } = useCalendarActions();
   const currentDate = useCurrentDate();
@@ -1433,11 +1433,6 @@ export default memo(function AppCalendar({
     ],
   );
 
-  // expose onEventEdit via context so other components can use it
-  useEffect(() => {
-    setOnEventEdit(onEventEdit);
-  }, [onEventEdit, setOnEventEdit]);
-
   const onEventMove = useCallback(
     (originalEvent: CalendarEvent, event: CalendarEvent) => {
       // nothing changed, so there's nothing to save
@@ -1609,6 +1604,26 @@ export default memo(function AppCalendar({
       pushHistory,
     ],
   );
+
+  // expose the handlers via context so other components can use them
+  useEffect(() => {
+    setEventHandlers({
+      edit: onEventEdit,
+      move: onEventMove,
+      remove: onEventDelete,
+      duplicate: onEventDuplicate,
+      detach: onEventDetach,
+      reset: onEventReset,
+    });
+  }, [
+    onEventEdit,
+    onEventMove,
+    onEventDelete,
+    onEventDuplicate,
+    onEventDetach,
+    onEventReset,
+    setEventHandlers,
+  ]);
 
   const copySelection = useCallback(() => {
     if (selectedEventsRef.current.size === 0) return;

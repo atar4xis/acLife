@@ -7,26 +7,12 @@ import EventEditor from "./EventEditor";
 import {
   ContextMenu,
   ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuLabel,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "../ui/context-menu";
-import {
-  Clipboard,
-  CopyIcon,
-  PencilLine,
-  RedoDot,
-  RotateCcw,
-  Trash2,
-  Unlink,
-} from "lucide-react";
+import { RedoDot } from "lucide-react";
 import useTapInteraction from "@/hooks/useTapInteraction";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MoveMenuItems } from "./MoveMenuItems";
+import { EventMenuItems } from "./EventMenuItems";
 import { Checkbox } from "../ui/checkbox";
 import { describeEvent } from "@/lib/calendar/a11y";
 import { timeFormat } from "@/lib/calendar/date";
@@ -226,10 +212,6 @@ export default memo(
         `${event.start.toFormat(startTimeFormat)} - ${event.end.toFormat(endTimeFormat)}`,
       [event.start, event.end, startTimeFormat, endTimeFormat],
     );
-
-    const copyID = useCallback(() => {
-      navigator.clipboard.writeText(event._parent || event.id);
-    }, [event.id, event._parent]);
 
     const { handlers: tapHandlers } = useTapInteraction({
       onTap: () => setTimeout(() => setEditingEvent(event, day), 50),
@@ -531,53 +513,15 @@ export default memo(
               if (editing) e.preventDefault();
             }}
           >
-            {/* context menu items */}
-            <ContextMenuLabel>{event.title}</ContextMenuLabel>
-
-            <ContextMenuItem onClick={() => setEditingEvent(event, day)}>
-              <PencilLine />
-              {t("block.edit")}
-            </ContextMenuItem>
-
-            <ContextMenuItem onClick={copyID}>
-              <Clipboard />
-              {event._parent ? t("block.copyParentId") : t("block.copyId")}
-            </ContextMenuItem>
-
-            <ContextMenuItem onClick={duplicate}>
-              <CopyIcon />
-              {t("block.duplicate")}
-            </ContextMenuItem>
-
-            {event._parent && (
-              <ContextMenuItem onClick={detach}>
-                <Unlink />
-                {t("block.detach")}
-              </ContextMenuItem>
-            )}
-
-            {event._resettable && (
-              <ContextMenuItem onClick={reset}>
-                <RotateCcw />
-                {t("block.reset")}
-              </ContextMenuItem>
-            )}
-
-            <MoveMenuItems
+            <EventMenuItems
               event={event}
+              onEdit={() => setEditingEvent(event, day)}
               onMove={onEventMove}
-              menu={{
-                Sub: ContextMenuSub,
-                SubTrigger: ContextMenuSubTrigger,
-                SubContent: ContextMenuSubContent,
-                Item: ContextMenuItem,
-                Separator: ContextMenuSeparator,
-              }}
+              onDelete={onEventDelete}
+              onDuplicate={onDuplicate}
+              onDetach={onDetach}
+              onReset={onReset}
             />
-
-            <ContextMenuItem onClick={handleDelete}>
-              <Trash2 /> {t("common.delete")}
-            </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
 

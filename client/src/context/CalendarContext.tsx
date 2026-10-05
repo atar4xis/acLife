@@ -21,10 +21,23 @@ import {
 
 type EditingState = { event: CalendarEvent | null; day: number | null };
 
-type EventEditHandler = (
-  originalEvent: CalendarEvent,
-  event: CalendarEvent,
-) => void;
+type EventHandlers = {
+  edit: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
+  move: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
+  remove: (event: CalendarEvent) => void;
+  duplicate: (event: CalendarEvent) => void;
+  detach: (event: CalendarEvent) => void;
+  reset: (event: CalendarEvent) => void;
+};
+
+const HANDLER_KEYS = [
+  "edit",
+  "move",
+  "remove",
+  "duplicate",
+  "detach",
+  "reset",
+] as const;
 
 type CalendarActions = {
   dispatch: Dispatch<CalendarAction>;
@@ -33,8 +46,8 @@ type CalendarActions = {
   setEditingEvent: (event: CalendarEvent | null, day?: number | null) => void;
   selection: SelectionStore;
   pendingChanges: Map<string, EventChange[]>;
-  onEventEdit: EventEditHandler;
-  setOnEventEdit: (handler: EventEditHandler) => void;
+  eventHandlers: EventHandlers;
+  setEventHandlers: (handlers: EventHandlers) => void;
 };
 
 const ActionsContext = createContext<CalendarActions | null>(null);
@@ -61,14 +74,23 @@ export function CalendarProvider({ children }: WithChildren) {
     setCurrentDateState(next);
   }, []);
 
-  // a ref keeps onEventEdit stable while the calendar re-registers its handler
-  const onEventEditRef = useRef<EventEditHandler>(() => {});
-  const onEventEdit = useCallback<EventEditHandler>(
-    (originalEvent, event) => onEventEditRef.current(originalEvent, event),
+  // a ref keeps the handlers stable while the calendar re-registers them
+  const handlersRef = useRef<EventHandlers | null>(null);
+  const eventHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        HANDLER_KEYS.map((key) => [
+          key,
+          (...args: unknown[]) =>
+            (handlersRef.current?.[key] as (...a: unknown[]) => void)?.(
+              ...args,
+            ),
+        ]),
+      ) as EventHandlers,
     [],
   );
-  const setOnEventEdit = useCallback((handler: EventEditHandler) => {
-    onEventEditRef.current = handler;
+  const setEventHandlers = useCallback((handlers: EventHandlers) => {
+    handlersRef.current = handlers;
   }, []);
 
   const setEditingEvent = useCallback(
@@ -90,8 +112,8 @@ export function CalendarProvider({ children }: WithChildren) {
       setEditingEvent,
       selection,
       pendingChanges,
-      onEventEdit,
-      setOnEventEdit,
+      eventHandlers,
+      setEventHandlers,
     }),
     [
       setCurrentDate,
@@ -99,8 +121,8 @@ export function CalendarProvider({ children }: WithChildren) {
       setEditingEvent,
       selection,
       pendingChanges,
-      onEventEdit,
-      setOnEventEdit,
+      eventHandlers,
+      setEventHandlers,
     ],
   );
 
