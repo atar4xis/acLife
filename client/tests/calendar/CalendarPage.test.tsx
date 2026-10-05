@@ -92,12 +92,35 @@ describe("CalendarPage", () => {
     const user = userEvent.setup();
     renderCalendarPage();
 
-    const [viewTrigger] = screen.getAllByRole("combobox");
-    await user.click(viewTrigger);
+    await user.click(screen.getByRole("combobox", { name: "Default view" }));
     const options = await screen.findAllByText("Day");
     await user.click(options[options.length - 1]);
 
     expect(await screen.findByText("Day")).toBeInTheDocument();
+  });
+
+  it("changes what a click and a double click do", async () => {
+    const user = userEvent.setup();
+    renderCalendarPage();
+
+    const click = screen.getByRole("combobox", {
+      name: "When an event is clicked",
+    });
+    const doubleClick = screen.getByRole("combobox", {
+      name: "When an event is double-clicked",
+    });
+    expect(click).toHaveTextContent("View event details");
+    expect(doubleClick).toHaveTextContent("Edit event");
+
+    await user.click(click);
+    await user.click(await screen.findByRole("option", { name: "Do nothing" }));
+    await user.click(doubleClick);
+    await user.click(
+      await screen.findByRole("option", { name: "View event details" }),
+    );
+
+    expect(click).toHaveTextContent("Do nothing");
+    expect(doubleClick).toHaveTextContent("View event details");
   });
 
   it("shows the default event and task names in the chosen language until customized", async () => {

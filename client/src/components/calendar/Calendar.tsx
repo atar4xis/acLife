@@ -26,7 +26,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 
-import type { CalendarProps } from "@/types/Props";
+import type { CalendarProps } from "@/types/calendar/Props";
 import type {
   CalendarEvent,
   EventChange,
@@ -39,6 +39,7 @@ import {
   useCalendarActions,
   useCurrentDate,
   useEditing,
+  useViewing,
   useEventList,
 } from "@/context/CalendarContext";
 import {
@@ -104,6 +105,7 @@ import { getTimezoneHourLabel } from "@/lib/calendar/timezone";
 import { useWeekStart } from "@/hooks/useWeekStart";
 import {
   eventKey,
+  stateTargets,
   getDayEventStyles,
   getEventMap,
   getEventPixelPosition,
@@ -270,6 +272,7 @@ export default memo(function AppCalendar({
     setCurrentDate,
     dispatch,
     setEditingEvent,
+    setViewingEvent,
     selection,
     setEventHandlers,
     pendingChanges,
@@ -277,6 +280,7 @@ export default memo(function AppCalendar({
   const currentDate = useCurrentDate();
   const calendarEvents = useEventList();
   const { event: editingEvent, day: editingEventDay } = useEditing();
+  const viewing = useViewing();
   const {
     toggle: toggleSelection,
     select: selectEvents,
@@ -2394,6 +2398,15 @@ export default memo(function AppCalendar({
     editing,
   ]);
 
+  const openEvent = (event: CalendarEvent, day: number) => {
+    if (stateTargets(viewing, event, day)) {
+      setViewingEvent(null);
+      setEditingEvent(event, day);
+    } else {
+      setViewingEvent(event, day);
+    }
+  };
+
   const {
     gridProps: gridKeyboardProps,
     restoreFocus,
@@ -2417,7 +2430,7 @@ export default memo(function AppCalendar({
     selectEvents,
     toggleSelection,
     createEventAt: createEventAtSlot,
-    openEvent: setEditingEvent,
+    openEvent,
     deleteEvent: onEventDelete,
     beginMove: beginKeyboardMove,
     stepMove: stepKeyboardMove,
@@ -2460,19 +2473,27 @@ export default memo(function AppCalendar({
   // fallback day index for editingEvent when no explicit day was given (e.g. agenda click)
   const editingEventFirstDayIndex = useMemo(() => {
     if (!editingEvent) return null;
-    const editingKey = editingEvent._instanceId ?? editingEvent.id;
+    const editingKey = eventKey(editingEvent);
 
     for (let i = 0; i < visibleDays.length; i++) {
       const key = visibleDays[i].date.toISODate();
       const events = key ? eventMap.get(key) : undefined;
 
-      if (events?.some((e) => (e._instanceId ?? e.id) === editingKey)) {
+      if (events?.some((e) => eventKey(e) === editingKey)) {
         return i;
       }
     }
 
     return null;
   }, [editingEvent, visibleDays, eventMap]);
+
+  const editingAt = useMemo(
+    () => ({
+      event: editingEvent,
+      day: editingEventDay ?? editingEventFirstDayIndex,
+    }),
+    [editingEvent, editingEventDay, editingEventFirstDayIndex],
+  );
 
   // for swipe gesture on mobile
   const swipeDelta = useMemo(() => {
@@ -2568,13 +2589,8 @@ export default memo(function AppCalendar({
         date={date}
         style={style}
         titleSpan={titleSpan}
-        editing={
-          (editingEvent?._instanceId ?? editingEvent?.id) ===
-            (event._instanceId ?? event.id) &&
-          (editingEventDay == null
-            ? editingEventFirstDayIndex === dayIndex
-            : editingEventDay === dayIndex)
-        }
+        editing={stateTargets(editingAt, event, dayIndex)}
+        viewing={stateTargets(viewing, event, dayIndex)}
         selection={selection}
         focusStore={focusStore}
         restoreFocus={restoreFocus}
@@ -2586,12 +2602,12 @@ export default memo(function AppCalendar({
         onDetach={onEventDetach}
         onReset={onEventReset}
         setEditingEvent={setEditingEvent}
+        setViewingEvent={setViewingEvent}
       />
     ),
     [
-      editingEvent,
-      editingEventDay,
-      editingEventFirstDayIndex,
+      editingAt,
+      viewing,
       selection,
       focusStore,
       restoreFocus,
@@ -2603,6 +2619,7 @@ export default memo(function AppCalendar({
       onEventDetach,
       onEventReset,
       setEditingEvent,
+      setViewingEvent,
     ],
   );
 
@@ -2916,8 +2933,7 @@ export default memo(function AppCalendar({
                           event,
                           dayIndex,
                           d.date,
-                          styles[event._instanceId ?? event.id] ??
-                            styles[event.id],
+                          styles[eventKey(event)] ?? styles[event.id],
                         ),
                       )}
                     </div>
@@ -3095,7 +3111,7 @@ export default memo(function AppCalendar({
             ) : (
               <ul className="max-h-80 overflow-auto">
                 {searchResults.map((ev) => (
-                  <li key={ev._instanceId ?? ev.id}>
+                  <li key={eventKey(ev)}>
                     <button
                       type="button"
                       className="hover:bg-accent flex w-full items-stretch gap-2 rounded-sm p-2 text-start text-sm"

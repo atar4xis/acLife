@@ -53,6 +53,32 @@
       "fifth": "पाँचवें"
     }
   },
+  "repeatText": {
+    "every": {
+      "day": "हर दिन",
+      "week": "हर सप्ताह",
+      "month": "हर महीने",
+      "year": "हर साल"
+    },
+    "everyN": {
+      "day_other": "हर {{count}} दिन",
+      "week_other": "हर {{count}} सप्ताह",
+      "month_other": "हर {{count}} महीने",
+      "year_other": "हर {{count}} साल"
+    },
+    "on": "{{list}} को",
+    "onDays": "{{days}} तारीख को",
+    "dayOrdinal_ordinal_one": "{{count}}",
+    "dayOrdinal_ordinal_two": "{{count}}",
+    "dayOrdinal_ordinal_few": "{{count}}",
+    "dayOrdinal_ordinal_many": "{{count}}",
+    "dayOrdinal_ordinal_other": "{{count}}",
+    "monthDays": "{{days}} {{month}}",
+    "except": "{{days}} को छोड़कर",
+    "until": "{{date}} तक",
+    "times_one": "{{count}} बार",
+    "times_other": "{{count}} बार"
+  },
   "common": {
     "undo": "पूर्ववत करें",
     "redo": "फिर से करें",
@@ -327,6 +353,8 @@
       "calendar-default-timezone": "डिफ़ॉल्ट समय क्षेत्र",
       "calendar-timezones-list": "समय क्षेत्र",
       "calendar-detach-recurring": "संपादन पर इवेंट को दोहराव की श्रृंखला से अलग करें",
+      "calendar-click-action": "किसी इवेंट पर क्लिक करने पर",
+      "calendar-double-click-action": "किसी इवेंट पर डबल-क्लिक करने पर",
       "calendar-default-view": "डिफ़ॉल्ट व्यू",
       "calendar-snap-minutes": "स्नैप अंतराल (मिनट)",
       "calendar-line-opacity": "रेखा की अपारदर्शिता",
@@ -444,6 +472,9 @@
     "days_other": "{{count}} दिन",
     "calendar": {
       "languageSystem": "सिस्टम डिफ़ॉल्ट",
+      "actionNone": "कुछ न करें",
+      "actionEdit": "इवेंट संपादित करें",
+      "actionDetails": "इवेंट का विवरण देखें",
       "currently": "अभी {{day}} है",
       "tzSearch": "खोजने के लिए शहर या देश लिखें...",
       "additionalTz": "अतिरिक्त समय क्षेत्र",
@@ -620,6 +651,10 @@
     "completed": "पूर्ण",
     "delete": "इवेंट हटाएँ",
     "duplicate": "इवेंट की प्रतिलिपि बनाएँ"
+  },
+  "details": {
+    "title": "इवेंट का विवरण",
+    "taskTitle": "कार्य का विवरण"
   },
   "repeatDialog": {
     "every": "हर",

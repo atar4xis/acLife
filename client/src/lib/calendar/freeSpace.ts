@@ -1,6 +1,6 @@
 import type { CalendarEvent } from "@/types/calendar/Event";
 import { DateTime, type Duration } from "luxon";
-import { makeOccurrence, resolveInstanceCompleted } from "./event";
+import { eventKey, makeOccurrence, resolveInstanceCompleted } from "./event";
 import { nominalOnDate, occurrences, slotKey } from "./occurrences";
 
 const SEARCH_HORIZON_DAYS = 365;
@@ -82,7 +82,7 @@ export function findFreeSlot(
   group: CalendarEvent[] = [target],
 ): { start: DateTime; end: DateTime } | null {
   const duration: Duration = target.end.diff(target.start);
-  const excludeKeys = new Set(group.map((e) => e._instanceId ?? e.id!));
+  const excludeKeys = new Set(group.map(eventKey));
   const movers = group.filter((e) => !e.allDay);
   const spanStart = DateTime.min(...group.map((e) => e.start))!;
   const spanEnd = DateTime.max(...group.map((e) => e.end))!;

@@ -6,6 +6,7 @@ export type WeekStartsOn = "inherit" | Weekday;
 
 export type DayHeaderPosition = "top" | "bottom";
 export type TimeLabelPosition = "auto" | "left" | "right";
+export type EventClickAction = "none" | "edit" | "details";
 
 export interface CalendarSettings {
   language: string;
@@ -33,6 +34,8 @@ export interface CalendarSettings {
   eventColorPresets: string[];
   addColorsAutomatically: boolean;
   detachRecurringOnEdit: boolean;
+  eventClickAction: EventClickAction;
+  eventDoubleClickAction: EventClickAction;
   eventEditorOpacity: number;
   eventEditorBlur: number;
   eventEditorRadius: number;

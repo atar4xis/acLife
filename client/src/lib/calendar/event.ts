@@ -12,6 +12,15 @@ import {
 
 export const eventKey = (event: CalendarEvent) => event._instanceId ?? event.id;
 
+export const stateTargets = (
+  state: { event: CalendarEvent | null; day: number | null },
+  event: CalendarEvent,
+  day: number,
+) =>
+  !!state.event &&
+  eventKey(state.event) === eventKey(event) &&
+  state.day === day;
+
 export const MAX_EVENT_DURATION_MINUTES = 4 * 7 * 24 * 60; // 4 weeks
 
 export function getEventPixelPosition(
@@ -131,7 +140,7 @@ export const getDayEventStyles = (
   const styles: Record<string, EventStyle> = {};
   for (const ev of positioned) {
     const width = 100 / ev.maxCols;
-    styles[ev._instanceId ?? ev.id] = {
+    styles[eventKey(ev)] = {
       top: ev.top,
       height: ev.height,
       width,
@@ -413,13 +422,12 @@ export function getEventMap(
 
   for (const [key, dayEvents] of base) {
     const hasExcluded =
-      excludeSet.size > 0 &&
-      dayEvents.some((e) => excludeSet.has(e._instanceId ?? e.id));
+      excludeSet.size > 0 && dayEvents.some((e) => excludeSet.has(eventKey(e)));
 
     map.set(
       key,
       hasExcluded
-        ? dayEvents.filter((e) => !excludeSet.has(e._instanceId ?? e.id))
+        ? dayEvents.filter((e) => !excludeSet.has(eventKey(e)))
         : dayEvents,
     );
   }

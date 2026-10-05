@@ -26,7 +26,7 @@ const days = (from: string, count: number) =>
   Array.from({ length: count }, (_, i) => at(from).plus({ days: i }));
 
 const ids = (map: Map<string, CalendarEvent[]>, date: string) =>
-  (map.get(date) ?? []).map((e) => e._instanceId ?? e.id);
+  (map.get(date) ?? []).map(eventKey);
 
 const WINDOW = () => days("2026-03-18", 3);
 

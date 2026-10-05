@@ -546,7 +546,7 @@ describe("all day strip keyboard expand", () => {
     await user.keyboard("{Home}{ArrowUp}{Enter}{Tab}{Tab}{Tab}{Tab}{Tab}");
     expect(spoken()).toContain("A6");
 
-    await user.keyboard("{Enter}");
+    await user.keyboard("{Enter}{Enter}");
     expect(
       await screen.findByRole("heading", { name: /edit event/i }),
     ).toBeInTheDocument();

@@ -26,6 +26,8 @@ export const syncByDefault = {
   eventColorPresets: true,
   addColorsAutomatically: true,
   detachRecurringOnEdit: true,
+  eventClickAction: true,
+  eventDoubleClickAction: true,
   eventEditorOpacity: true,
   eventEditorBlur: true,
   eventEditorRadius: true,
@@ -182,6 +184,8 @@ export const syncGroups: { id: string; label: string; keys: SyncableKey[] }[] =
         "miniCalendarAdaptiveNumbers",
         "miniCalendarDropdowns",
         "detachRecurringOnEdit",
+        "eventClickAction",
+        "eventDoubleClickAction",
       ],
     },
     {

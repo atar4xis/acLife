@@ -149,6 +149,14 @@ export const settingsCategories: SettingsCategory[] = [
             id: "calendar-detach-recurring",
             settingKey: "detachRecurringOnEdit",
           },
+          {
+            id: "calendar-click-action",
+            settingKey: "eventClickAction",
+          },
+          {
+            id: "calendar-double-click-action",
+            settingKey: "eventDoubleClickAction",
+          },
         ],
       },
       {

@@ -1,9 +1,14 @@
 import { cn, isColorDark, shallowEqual } from "@/lib/utils";
 import { eventKey } from "@/lib/calendar/event";
-import { EVENT_COLOR_FALLBACK } from "@/context/CalendarSettingsContext";
-import type { EventBlockProps } from "@/types/Props";
+import {
+  EVENT_COLOR_FALLBACK,
+  useCalendarSettings,
+} from "@/context/CalendarSettingsContext";
+import type { EventClickAction } from "@/types/calendar/Settings";
+import type { EventBlockProps } from "@/types/calendar/Props";
 import { useRef, memo, useMemo, useCallback, useEffect, useState } from "react";
 import EventEditor from "./EventEditor";
+import EventDetails from "./EventDetails";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -27,6 +32,8 @@ const LONG_PRESS_MS = 450;
 // how far (px) a touch may move during the hold before it's treated as a scroll/tap instead
 const LONG_PRESS_TOLERANCE = 10;
 
+const DOUBLE_CLICK_MS = 250;
+
 const ALL_DAY_PADDING_REM = 0.5;
 
 const SELECTED_SHADOW = "inset 0 0 0 1px var(--foreground)";
@@ -39,6 +46,7 @@ export default memo(
     style,
     titleSpan,
     editing,
+    viewing,
     selection,
     focusStore,
     restoreFocus,
@@ -50,6 +58,7 @@ export default memo(
     onDetach,
     onReset,
     setEditingEvent,
+    setViewingEvent,
   }: EventBlockProps) {
     const { t, i18n } = useTranslation();
     const isMobile = useIsMobile();
@@ -90,6 +99,8 @@ export default memo(
 
     const popOutTimerRef = useRef<number | null>(null);
     const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+    const mouseDownRef = useRef(false);
+    const clickTimerRef = useRef<number>(undefined);
 
     const clearPopOutTimer = useCallback(() => {
       if (popOutTimerRef.current !== null) {
@@ -127,7 +138,9 @@ export default memo(
           Math.abs(e.clientY - start.y) > DRAG_MOVE_THRESHOLD
         ) {
           dragStartRef.current = null;
+          mouseDownRef.current = false;
           collapsePopOut();
+          setViewingEvent(null);
         }
       };
       const handlePointerUp = () => {
@@ -141,9 +154,10 @@ export default memo(
         window.removeEventListener("pointerup", handlePointerUp);
         window.removeEventListener("pointercancel", handlePointerUp);
       };
-    }, [collapsePopOut]);
+    }, [collapsePopOut, setViewingEvent]);
 
     useEffect(() => clearPopOutTimer, [clearPopOutTimer]);
+    useEffect(() => () => window.clearTimeout(clickTimerRef.current), []);
 
     const rtl = i18n.dir() === "rtl";
     const connectedShadow = useMemo(() => {
@@ -200,7 +214,7 @@ export default memo(
       ],
     );
 
-    const eventRef = useRef<HTMLDivElement>(null);
+    const blockRef = useRef<HTMLDivElement>(null);
     const padding =
       event.allDay || style.height > lineHeight * 3 ? "p-1" : "p-[1px]"; // TODO: maybe make it smarter in the future
     const lineClamp = useMemo(
@@ -213,9 +227,34 @@ export default memo(
       [event.start, event.end, startTimeFormat, endTimeFormat],
     );
 
+    const settings = useCalendarSettings((s) => ({
+      click: s.eventClickAction,
+      doubleClick: s.eventDoubleClickAction,
+    }));
+
+    const runAction = (action: EventClickAction) => {
+      if (action === "details") {
+        setViewingEvent(event, day);
+      } else if (action === "edit") {
+        setViewingEvent(null);
+        setEditingEvent(event, day);
+      }
+    };
+
     const { handlers: tapHandlers } = useTapInteraction({
-      onTap: () => setTimeout(() => setEditingEvent(event, day), 50),
+      onTap: () => setTimeout(() => runAction(settings.click), 50),
     });
+
+    const handleClick = (e: React.MouseEvent) => {
+      const pressed = mouseDownRef.current;
+      mouseDownRef.current = false;
+      if (!pressed || e.ctrlKey) return;
+      window.clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = window.setTimeout(
+        () => runAction(settings.click),
+        settings.doubleClick === "none" ? 0 : DOUBLE_CLICK_MS,
+      );
+    };
 
     const handleDelete = useCallback(() => {
       onEventDelete(event);
@@ -276,6 +315,7 @@ export default memo(
           state.activated = true;
           setIsHeld(true);
           collapsePopOut();
+          setViewingEvent(null);
           navigator.vibrate?.(15);
           onPointerDown(e, "move", event, day);
         }, LONG_PRESS_MS);
@@ -288,7 +328,7 @@ export default memo(
           activated: false,
         };
       },
-      [tapHandlers, onPointerDown, event, day, collapsePopOut],
+      [tapHandlers, onPointerDown, event, day, collapsePopOut, setViewingEvent],
     );
 
     const handleTouchPointerMove = useCallback(
@@ -359,6 +399,7 @@ export default memo(
           <ContextMenuTrigger onPointerDown={preventTouch} disabled={isMobile}>
             {/* visible event block */}
             {/* not focusable on purpose, keyboard focus belongs to the grid */}
+            {/* eslint-disable-next-line */}
             <div
               className={cn(
                 "pointer-events-auto event-block absolute left-0 right-0 z-10 text-xs cursor-pointer select-none overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)]",
@@ -383,17 +424,20 @@ export default memo(
                 (e: React.PointerEvent) => {
                   if ((e.target as HTMLElement).closest(".resize-handle")) {
                     collapsePopOut();
+                    setViewingEvent(null);
                     return;
                   }
                   if (e.pointerType === "touch") {
                     handleTouchPointerDown(e);
                   } else {
                     dragStartRef.current = { x: e.clientX, y: e.clientY };
+                    mouseDownRef.current = true;
                     onPointerDown(e, "move", event, day);
                   }
                 },
                 [
                   collapsePopOut,
+                  setViewingEvent,
                   handleTouchPointerDown,
                   day,
                   event,
@@ -406,8 +450,12 @@ export default memo(
               onContextMenu={(e) => {
                 if (isMobile) e.preventDefault();
               }}
-              onDoubleClick={() => setEditingEvent(event, day)}
-              ref={eventRef}
+              onClick={handleClick}
+              onDoubleClick={() => {
+                window.clearTimeout(clickTimerRef.current);
+                runAction(settings.doubleClick);
+              }}
+              ref={blockRef}
             >
               {!event._continued || titleSpan ? (
                 <>
@@ -525,11 +573,25 @@ export default memo(
           </ContextMenuContent>
         </ContextMenu>
 
+        {viewing && !editing ? (
+          <EventDetails
+            event={event}
+            blockRef={blockRef}
+            timeLabel={timeLabel}
+            onToggleCompleted={toggleCompleted}
+            onEdit={() => {
+              setViewingEvent(null);
+              setEditingEvent(event, day);
+            }}
+            onCancel={() => setViewingEvent(null)}
+          />
+        ) : null}
+
         {editing ? (
           <EventEditor
             event={event}
             day={day}
-            eventRef={eventRef}
+            blockRef={blockRef}
             restoreFocus={restoreFocus}
             onSave={(originalEvent, newEvent) => {
               onEventEdit(originalEvent, newEvent);
@@ -555,6 +617,7 @@ export default memo(
       prev.day === next.day &&
       prev.titleSpan === next.titleSpan &&
       prev.editing === next.editing &&
+      prev.viewing === next.viewing &&
       prev.selection === next.selection &&
       prev.restoreFocus === next.restoreFocus &&
       prev.onPointerDown === next.onPointerDown &&
@@ -565,6 +628,7 @@ export default memo(
       prev.onDetach === next.onDetach &&
       prev.onReset === next.onReset &&
       prev.setEditingEvent === next.setEditingEvent &&
+      prev.setViewingEvent === next.setViewingEvent &&
       shallowEqual(prev.style, next.style)
     );
   },

@@ -51,6 +51,38 @@
       "fifth": "5."
     }
   },
+  "repeatText": {
+    "every": {
+      "day": "Codziennie",
+      "week": "Co tydzień",
+      "month": "Co miesiąc",
+      "year": "Co rok"
+    },
+    "everyN": {
+      "day_few": "Co {{count}} dni",
+      "week_few": "Co {{count}} tygodnie",
+      "month_few": "Co {{count}} miesiące",
+      "year_few": "Co {{count}} lata",
+      "day_many": "Co {{count}} dni",
+      "week_many": "Co {{count}} tygodni",
+      "month_many": "Co {{count}} miesięcy",
+      "year_many": "Co {{count}} lat",
+      "day_other": "Co {{count}} dnia",
+      "week_other": "Co {{count}} tygodnia",
+      "month_other": "Co {{count}} miesiąca",
+      "year_other": "Co {{count}} roku"
+    },
+    "on": "w dni: {{list}},",
+    "onDays": "{{days}} dnia miesiąca",
+    "dayOrdinal_ordinal_other": "{{count}}.",
+    "monthDays": "{{days}} {{month}}",
+    "except": "z wyjątkiem dni: {{days}},",
+    "until": "do {{date}}",
+    "times_one": "{{count}} raz",
+    "times_few": "{{count}} razy",
+    "times_many": "{{count}} razy",
+    "times_other": "{{count}} razy"
+  },
   "common": {
     "undo": "Cofnij",
     "redo": "Ponów",
@@ -329,6 +361,8 @@
       "calendar-default-timezone": "Domyślna strefa czasowa",
       "calendar-timezones-list": "Strefy czasowe",
       "calendar-detach-recurring": "Odłączaj edytowane wystąpienia od serii",
+      "calendar-click-action": "Po kliknięciu wydarzenia",
+      "calendar-double-click-action": "Po dwukrotnym kliknięciu wydarzenia",
       "calendar-default-view": "Widok domyślny",
       "calendar-snap-minutes": "Interwał przyciągania w minutach",
       "calendar-line-opacity": "Krycie linii",
@@ -450,6 +484,9 @@
     "days_other": "{{count}} dnia",
     "calendar": {
       "languageSystem": "Domyślny język systemowy",
+      "actionNone": "Nie rób nic",
+      "actionEdit": "Edytuj wydarzenie",
+      "actionDetails": "Pokaż szczegóły wydarzenia",
       "currently": "Obecnie: {{day}}",
       "tzSearch": "Wpisz miasto lub kraj, aby wyszukać...",
       "additionalTz": "Dodatkowe strefy czasowe",
@@ -632,6 +669,10 @@
     "completed": "Ukończone",
     "delete": "Usuń wydarzenie",
     "duplicate": "Duplikuj wydarzenie"
+  },
+  "details": {
+    "title": "Szczegóły wydarzenia",
+    "taskTitle": "Szczegóły zadania"
   },
   "repeatDialog": {
     "every": "Powtarzaj co",

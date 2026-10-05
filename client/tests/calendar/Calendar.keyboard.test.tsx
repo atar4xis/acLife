@@ -542,7 +542,7 @@ describe("Calendar grid keyboard: jumping between events", () => {
     const { user } = renderCalendar({ events: overlapping() });
     await screen.findByText("Planning");
     focusGrid();
-    await user.keyboard("{Control>}{ArrowUp}{/Control}{Enter}");
+    await user.keyboard("{Control>}{ArrowUp}{/Control}{Enter}{Enter}");
 
     expect(screen.getByRole("dialog", { name: "Edit event" })).toBeVisible();
     expect(screen.getByDisplayValue("Overlap")).toBeInTheDocument();
@@ -832,7 +832,7 @@ describe("Calendar grid keyboard: events", () => {
     const { user } = renderCalendar({ events: overlapping() });
     await screen.findByText("Planning");
     focusGrid();
-    await user.keyboard("{PageUp}{Enter}{Enter}");
+    await user.keyboard("{PageUp}{Enter}{Enter}{Enter}");
 
     expect(
       await screen.findByRole("heading", { name: /edit event/i }),
@@ -1282,7 +1282,7 @@ describe("Calendar grid keyboard: more coverage", () => {
     });
     await screen.findByText("Thursday thing");
     focusGrid();
-    await user.keyboard("{ArrowRight}{Enter}{Enter}");
+    await user.keyboard("{ArrowRight}{Enter}{Enter}{Enter}");
 
     expect(
       await screen.findByRole("heading", { name: /edit event/i }),

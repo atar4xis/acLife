@@ -1,15 +1,16 @@
-import type { CalendarEvent, RepeatInterval } from "@/types/calendar/Event";
-import type { EventBlockProps } from "@/types/Props";
+import type { CalendarEvent } from "@/types/calendar/Event";
+import type { EventBlockProps } from "@/types/calendar/Props";
 import { MAX_EVENT_DURATION_MINUTES } from "@/lib/calendar/event";
 import { moveToFirstOccurrence } from "@/lib/calendar/recurrence";
 import {
   monthlyOptions,
+  parseRepeatValue,
+  presetRepeat,
   repeatChanged,
-  repeatKey,
-  withUnitDefaults,
 } from "@/lib/calendar/repeatOptions";
 import { lastInputModality } from "@/lib/inputModality";
 import useFocusTrap from "@/hooks/useFocusTrap";
+import useAnchoredPosition from "@/hooks/useAnchoredPosition";
 import {
   useCallback,
   useEffect,
@@ -34,7 +35,6 @@ import { clamp, cn } from "@/lib/utils";
 import { DateTimePicker } from "./DateTimePicker";
 import { DateTime } from "luxon";
 import { toast } from "sonner";
-import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Clipboard,
   CopyIcon,
@@ -71,57 +71,10 @@ import { useTranslation } from "react-i18next";
 
 /* ------------------------------------------------- */
 
-// TODO: make these configurable
-const presetRepeat: Record<string, RepeatInterval> = {
-  daily: {
-    interval: 1,
-    unit: "day",
-  },
-  weekly: {
-    interval: 1,
-    unit: "week",
-  },
-  workdays: {
-    interval: 1,
-    unit: "day",
-    except: [6, 7],
-  },
-  "monthly-date": {
-    interval: 1,
-    unit: "month",
-    monthly: "date",
-  },
-  "monthly-nth": {
-    interval: 1,
-    unit: "month",
-    monthly: "nth",
-  },
-  "monthly-last": {
-    interval: 1,
-    unit: "month",
-    monthly: "last",
-  },
-  yearly: {
-    interval: 1,
-    unit: "year",
-  },
-};
-
-const parseRepeatValue = (value: RepeatInterval) => {
-  const key = repeatKey(withUnitDefaults(value));
-  return (
-    Object.entries(presetRepeat).find(
-      ([, preset]) => repeatKey(preset) === key,
-    )?.[0] ?? "custom"
-  );
-};
-
-/* ------------------------------------------------- */
-
 export default function EventEditor({
   event,
   day,
-  eventRef,
+  blockRef,
   restoreFocus,
   onSave,
   onMove,
@@ -132,7 +85,7 @@ export default function EventEditor({
   onReset,
   preview,
 }: Partial<EventBlockProps> & {
-  eventRef?: RefObject<HTMLDivElement | null>;
+  blockRef?: RefObject<HTMLDivElement | null>;
   preview?: { opacity: number; blur: number; radius: number };
   onSave: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   onMove: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
@@ -156,8 +109,7 @@ export default function EventEditor({
   );
   const [opener] = useState(() => document.activeElement);
   const skipFocusRestore = useRef(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const dragged = useRef(false);
+  const { pos, startDrag, isMobile } = useAnchoredPosition(editorRef, blockRef);
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
   const settings = useCalendarSettings((s) => ({
@@ -181,7 +133,6 @@ export default function EventEditor({
   const [completed, setCompleted] = useState(event.completed ?? false);
   const [allDay, setAllDay] = useState(event.allDay ?? false);
   const startTime = DateTime.fromJSDate(start || new Date());
-  const isMobile = useIsMobile();
 
   const newEvent = useRef<CalendarEvent>({
     ...originalEvent.current,
@@ -295,43 +246,6 @@ export default function EventEditor({
       setRepeat(value in presetRepeat ? { ...presetRepeat[value] } : undefined);
     }
   };
-
-  useLayoutEffect(() => {
-    const editor = editorRef.current;
-    const anchor = eventRef?.current;
-
-    if (!editor || !anchor) return;
-
-    const updatePosition = () => {
-      const rect = anchor.getBoundingClientRect();
-      const myRect = editor.getBoundingClientRect();
-
-      const top = isMobile ? 0 : rect.top - myRect.height * 0.15;
-      const left = isMobile
-        ? window.innerWidth / 2 - myRect.width / 2
-        : rect.left + rect.width / 2 - myRect.width / 2;
-
-      if (dragged.current) {
-        setPos((p) => ({
-          top: clamp(p.top, 0, window.innerHeight - myRect.height),
-          left: clamp(p.left, 0, window.innerWidth - myRect.width),
-        }));
-        return;
-      }
-
-      setPos({
-        top: clamp(top, 0, window.innerHeight - myRect.height),
-        left: clamp(left, 0, window.innerWidth - myRect.width),
-      });
-    };
-
-    updatePosition();
-
-    const ro = new ResizeObserver(updatePosition);
-    ro.observe(editor);
-
-    return () => ro.disconnect();
-  }, [isMobile, eventRef]);
 
   useEffect(() => {
     if (!openedByKeyboard) return;
@@ -468,34 +382,7 @@ export default function EventEditor({
           "flex justify-between mb-5 items-center",
           !preview && !isMobile && "cursor-grab active:cursor-grabbing",
         )}
-        onPointerDown={(e) => {
-          const editor = editorRef.current;
-          if (
-            preview ||
-            isMobile ||
-            e.button !== 0 ||
-            !editor ||
-            (e.target as Element).closest("button")
-          )
-            return;
-
-          const { width, height } = editor.getBoundingClientRect();
-          const dx = e.clientX - pos.left;
-          const dy = e.clientY - pos.top;
-          const onMove = (m: PointerEvent) => {
-            dragged.current = true;
-            setPos({
-              top: clamp(m.clientY - dy, 0, window.innerHeight - height),
-              left: clamp(m.clientX - dx, 0, window.innerWidth - width),
-            });
-          };
-          const onUp = () => {
-            window.removeEventListener("pointermove", onMove);
-            window.removeEventListener("pointerup", onUp);
-          };
-          window.addEventListener("pointermove", onMove);
-          window.addEventListener("pointerup", onUp);
-        }}
+        onPointerDown={preview ? undefined : startDrag}
       >
         <h3 id={titleId} className="text-xl font-semibold select-none">
           {t("editor.title")}

@@ -210,7 +210,7 @@ describe("attached recurring instances", () => {
 
     await screen.findByText("Daily standup");
     focusGrid();
-    await user.keyboard("{Control>}{ArrowUp}{/Control}{Enter}");
+    await user.keyboard("{Control>}{ArrowUp}{/Control}{Enter}{Enter}");
     expect(await screen.findByRole("dialog", { name: "Edit event" })).toBeVisible();
     const [startDate, endDate] = screen.getAllByRole("button", {
       name: "18 Mar 2026",

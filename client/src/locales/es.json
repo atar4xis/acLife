@@ -49,6 +49,28 @@
       "fifth": "quinto"
     }
   },
+  "repeatText": {
+    "every": {
+      "day": "Cada día",
+      "week": "Cada semana",
+      "month": "Cada mes",
+      "year": "Cada año"
+    },
+    "everyN": {
+      "day_other": "Cada {{count}} días",
+      "week_other": "Cada {{count}} semanas",
+      "month_other": "Cada {{count}} meses",
+      "year_other": "Cada {{count}} años"
+    },
+    "on": "los {{list}}",
+    "onDays": "los días {{days}}",
+    "dayOrdinal_ordinal_other": "{{count}}",
+    "monthDays": "{{days}} de {{month}}",
+    "except": "excepto {{days}}",
+    "until": "hasta el {{date}}",
+    "times_one": "durante {{count}} repetición",
+    "times_other": "durante {{count}} repeticiones"
+  },
   "common": {
     "undo": "Deshacer",
     "redo": "Rehacer",
@@ -323,6 +345,8 @@
       "calendar-default-timezone": "Zona horaria predeterminada",
       "calendar-timezones-list": "Zonas horarias",
       "calendar-detach-recurring": "Separar de la serie los eventos que se editen",
+      "calendar-click-action": "Al hacer clic en un evento",
+      "calendar-double-click-action": "Al hacer doble clic en un evento",
       "calendar-default-view": "Vista predeterminada",
       "calendar-snap-minutes": "Intervalo de ajuste en minutos",
       "calendar-line-opacity": "Opacidad de las líneas",
@@ -440,6 +464,9 @@
     "days_other": "{{count}} días",
     "calendar": {
       "languageSystem": "Predeterminado del sistema",
+      "actionNone": "No hacer nada",
+      "actionEdit": "Editar evento",
+      "actionDetails": "Ver detalles del evento",
       "currently": "Actualmente {{day}}",
       "tzSearch": "Escribe una ciudad o un país para buscar...",
       "additionalTz": "Zonas horarias adicionales",
@@ -616,6 +643,10 @@
     "completed": "Completada",
     "delete": "Eliminar evento",
     "duplicate": "Duplicar evento"
+  },
+  "details": {
+    "title": "Detalles del evento",
+    "taskTitle": "Detalles de la tarea"
   },
   "repeatDialog": {
     "every": "Repetir cada",

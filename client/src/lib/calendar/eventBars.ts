@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 import type { CalendarEvent, EventDragRef } from "@/types/calendar/Event";
+import { eventKey } from "@/lib/calendar/event";
 
 export type BarSlots = (CalendarEvent | undefined)[];
 
@@ -23,7 +24,7 @@ export const numberPadding = (rows: number) =>
     (BARS_AREA * (rows * BAR_HEIGHT + (rows - 1) * BAR_GAP)) / 100 +
     NUMBER_GAP;
 
-export const barKey = (e?: CalendarEvent) => e && (e._instanceId ?? e.id);
+export const barKey = (e?: CalendarEvent) => e && eventKey(e);
 
 const isMultiDay = (e: CalendarEvent) => !e.start.hasSame(e.end, "day");
 

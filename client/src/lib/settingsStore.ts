@@ -110,6 +110,13 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
     ["auto", "left", "right"],
     defaultCalendarSettings.timeLabelPosition,
   );
+  for (const key of ["eventClickAction", "eventDoubleClickAction"] as const) {
+    parsed[key] = oneOf(
+      parsed[key],
+      ["none", "edit", "details"],
+      defaultCalendarSettings[key],
+    );
+  }
   if (parsed.language !== "system" && !isLanguage(parsed.language)) {
     parsed.language = defaultCalendarSettings.language;
   }

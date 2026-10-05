@@ -7,7 +7,7 @@ import type {
   RepeatInterval,
 } from "@/types/calendar/Event";
 import type { CalendarAction } from "@/types/calendar/Action";
-import { makeOccurrence } from "@/lib/calendar/event";
+import { eventKey, makeOccurrence } from "@/lib/calendar/event";
 import {
   nominalOnDate,
   occurrences,
@@ -378,7 +378,7 @@ export function nearbyOccurrences(
   const all = new Map(
     [...generated, ...overrideOccurrences(event)]
       .filter(accept)
-      .map((e) => [e._instanceId ?? e.id, e]),
+      .map((e) => [eventKey(e), e]),
   );
   return closestToNow([...all.values()], now, perSide);
 }

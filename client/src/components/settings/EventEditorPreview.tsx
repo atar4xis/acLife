@@ -62,6 +62,7 @@ export default memo(function EventEditorPreview({
                 date={previewEvent.start}
                 style={PREVIEW_BLOCK_STYLE}
                 editing={false}
+                viewing={false}
                 selection={selection}
                 focusStore={focusStore}
                 restoreFocus={noop}
@@ -73,6 +74,7 @@ export default memo(function EventEditorPreview({
                 onDetach={noop}
                 onReset={noop}
                 setEditingEvent={noop}
+                setViewingEvent={noop}
               />
             )}
           </div>

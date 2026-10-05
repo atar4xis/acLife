@@ -31,6 +31,8 @@ export const defaultCalendarSettings: CalendarSettings = {
   miniCalendarAdaptiveNumbers: false,
   miniCalendarDropdowns: false,
   detachRecurringOnEdit: false,
+  eventClickAction: "details",
+  eventDoubleClickAction: "edit",
   eventColorPresets: [
     "#2563eb",
     "#8125ea",

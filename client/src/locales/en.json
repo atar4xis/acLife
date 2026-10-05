@@ -52,6 +52,31 @@
       "fifth": "fifth"
     }
   },
+  "repeatText": {
+    "every": {
+      "day": "Every day",
+      "week": "Every week",
+      "month": "Every month",
+      "year": "Every year"
+    },
+    "everyN": {
+      "day_other": "Every {{count}} days",
+      "week_other": "Every {{count}} weeks",
+      "month_other": "Every {{count}} months",
+      "year_other": "Every {{count}} years"
+    },
+    "on": "on {{list}}",
+    "onDays": "on the {{days}}",
+    "dayOrdinal_ordinal_one": "{{count}}st",
+    "dayOrdinal_ordinal_two": "{{count}}nd",
+    "dayOrdinal_ordinal_few": "{{count}}rd",
+    "dayOrdinal_ordinal_other": "{{count}}th",
+    "monthDays": "{{month}} {{days}}",
+    "except": "except {{days}}",
+    "until": "until {{date}}",
+    "times_one": "for {{count}} occurrence",
+    "times_other": "for {{count}} occurrences"
+  },
   "common": {
     "undo": "Undo",
     "redo": "Redo",
@@ -326,6 +351,8 @@
       "calendar-default-timezone": "Default time zone",
       "calendar-timezones-list": "Time zones",
       "calendar-detach-recurring": "Detach edited occurrences from the series",
+      "calendar-click-action": "When an event is clicked",
+      "calendar-double-click-action": "When an event is double-clicked",
       "calendar-default-view": "Default view",
       "calendar-snap-minutes": "Snap interval (minutes)",
       "calendar-line-opacity": "Line opacity",
@@ -443,6 +470,9 @@
     "days_other": "{{count}} days",
     "calendar": {
       "languageSystem": "System default",
+      "actionNone": "Do nothing",
+      "actionEdit": "Edit event",
+      "actionDetails": "View event details",
       "currently": "Currently {{day}}",
       "tzSearch": "Type a city or country to search...",
       "additionalTz": "Additional time zones",
@@ -619,6 +649,10 @@
     "completed": "Completed",
     "delete": "Delete event",
     "duplicate": "Duplicate event"
+  },
+  "details": {
+    "title": "Event details",
+    "taskTitle": "Task details"
   },
   "repeatDialog": {
     "every": "Repeat every",

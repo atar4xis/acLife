@@ -53,6 +53,43 @@
       "fifth": "الخامس"
     }
   },
+  "repeatText": {
+    "every": {
+      "day": "كل يوم",
+      "week": "كل أسبوع",
+      "month": "كل شهر",
+      "year": "كل سنة"
+    },
+    "everyN": {
+      "day_two": "كل يومين",
+      "week_two": "كل أسبوعين",
+      "month_two": "كل شهرين",
+      "year_two": "كل سنتين",
+      "day_few": "كل {{count}} أيام",
+      "week_few": "كل {{count}} أسابيع",
+      "month_few": "كل {{count}} أشهر",
+      "year_few": "كل {{count}} سنوات",
+      "day_many": "كل {{count}} يومًا",
+      "week_many": "كل {{count}} أسبوعًا",
+      "month_many": "كل {{count}} شهرًا",
+      "year_many": "كل {{count}} سنة",
+      "day_other": "كل {{count}} يوم",
+      "week_other": "كل {{count}} أسبوع",
+      "month_other": "كل {{count}} شهر",
+      "year_other": "كل {{count}} سنة"
+    },
+    "on": "{{list}}",
+    "onDays": "في الأيام {{days}} من الشهر",
+    "dayOrdinal_ordinal_other": "{{count}}",
+    "monthDays": "{{days}} {{month}}",
+    "except": "باستثناء {{days}}",
+    "until": "حتى {{date}}",
+    "times_one": "لمرة {{count}}",
+    "times_two": "لمرتين",
+    "times_few": "لـ {{count}} مرات",
+    "times_many": "لـ {{count}} مرة",
+    "times_other": "لـ {{count}} مرة"
+  },
   "common": {
     "undo": "تراجع",
     "redo": "إعادة",
@@ -335,6 +372,8 @@
       "calendar-default-timezone": "المنطقة الزمنية الافتراضية",
       "calendar-timezones-list": "المناطق الزمنية",
       "calendar-detach-recurring": "فصل الحدث عن سلسلة التكرار عند تعديله",
+      "calendar-click-action": "عند النقر على الحدث",
+      "calendar-double-click-action": "عند النقر المزدوج على الحدث",
       "calendar-default-view": "العرض الافتراضي",
       "calendar-snap-minutes": "فاصل المحاذاة بالدقائق",
       "calendar-line-opacity": "عتامة الخطوط",
@@ -460,6 +499,9 @@
     "days_other": "{{count}} يوم",
     "calendar": {
       "languageSystem": "افتراضي النظام",
+      "actionNone": "عدم فعل أي شيء",
+      "actionEdit": "تعديل الحدث",
+      "actionDetails": "عرض تفاصيل الحدث",
       "currently": "حاليًا {{day}}",
       "tzSearch": "اكتب اسم مدينة أو دولة للبحث...",
       "additionalTz": "مناطق زمنية إضافية",
@@ -647,6 +689,10 @@
     "completed": "مكتملة",
     "delete": "حذف الحدث",
     "duplicate": "إنشاء نسخة من الحدث"
+  },
+  "details": {
+    "title": "تفاصيل الحدث",
+    "taskTitle": "تفاصيل المهمة"
   },
   "repeatDialog": {
     "every": "التكرار كل",

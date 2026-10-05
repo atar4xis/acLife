@@ -50,6 +50,29 @@
       "fifth": "cinquième"
     }
   },
+  "repeatText": {
+    "every": {
+      "day": "Tous les jours",
+      "week": "Toutes les semaines",
+      "month": "Tous les mois",
+      "year": "Tous les ans"
+    },
+    "everyN": {
+      "day_other": "Tous les {{count}} jours",
+      "week_other": "Toutes les {{count}} semaines",
+      "month_other": "Tous les {{count}} mois",
+      "year_other": "Tous les {{count}} ans"
+    },
+    "on": "le {{list}}",
+    "onDays": "le {{days}}",
+    "dayOrdinal_ordinal_one": "{{count}}er",
+    "dayOrdinal_ordinal_other": "{{count}}",
+    "monthDays": "{{days}} {{month}}",
+    "except": "sauf {{days}}",
+    "until": "jusqu'au {{date}}",
+    "times_one": "pour {{count}} occurrence",
+    "times_other": "pour {{count}} occurrences"
+  },
   "common": {
     "undo": "Annuler",
     "redo": "Rétablir",
@@ -324,6 +347,8 @@
       "calendar-default-timezone": "Fuseau horaire par défaut",
       "calendar-timezones-list": "Fuseaux horaires",
       "calendar-detach-recurring": "Détacher les occurrences modifiées de la série",
+      "calendar-click-action": "Au clic sur un événement",
+      "calendar-double-click-action": "Au double-clic sur un événement",
       "calendar-default-view": "Vue par défaut",
       "calendar-snap-minutes": "Intervalle d'alignement (minutes)",
       "calendar-line-opacity": "Opacité des lignes",
@@ -441,6 +466,9 @@
     "days_other": "{{count}} jours",
     "calendar": {
       "languageSystem": "Langue par défaut du système",
+      "actionNone": "Ne rien faire",
+      "actionEdit": "Modifier l'événement",
+      "actionDetails": "Afficher les détails de l'événement",
       "currently": "Actuellement : {{day}}",
       "tzSearch": "Saisissez une ville ou un pays pour rechercher...",
       "additionalTz": "Fuseaux horaires supplémentaires",
@@ -617,6 +645,10 @@
     "completed": "Terminée",
     "delete": "Supprimer l'événement",
     "duplicate": "Dupliquer l'événement"
+  },
+  "details": {
+    "title": "Détails de l'événement",
+    "taskTitle": "Détails de la tâche"
   },
   "repeatDialog": {
     "every": "Répéter à intervalles de",

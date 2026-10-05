@@ -19,7 +19,7 @@ import {
   type SetStateAction,
 } from "react";
 
-type EditingState = { event: CalendarEvent | null; day: number | null };
+type BlockTarget = { event: CalendarEvent | null; day: number | null };
 
 type EventHandlers = {
   edit: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
@@ -44,6 +44,7 @@ type CalendarActions = {
   setCurrentDate: Dispatch<SetStateAction<DateTime>>;
   getCurrentDate: () => DateTime;
   setEditingEvent: (event: CalendarEvent | null, day?: number | null) => void;
+  setViewingEvent: (event: CalendarEvent | null, day?: number | null) => void;
   selection: SelectionStore;
   pendingChanges: Map<string, EventChange[]>;
   eventHandlers: EventHandlers;
@@ -53,12 +54,22 @@ type CalendarActions = {
 const ActionsContext = createContext<CalendarActions | null>(null);
 const DateContext = createContext<DateTime | null>(null);
 const EventsContext = createContext<CalendarEvent[] | null>(null);
-const EditingContext = createContext<EditingState | null>(null);
+const EditingContext = createContext<BlockTarget | null>(null);
+const ViewingContext = createContext<BlockTarget | null>(null);
+
+const retarget =
+  (event: CalendarEvent | null, day: number | null = null) =>
+  (prev: BlockTarget) =>
+    prev.event === event && prev.day === day ? prev : { event, day };
 
 export function CalendarProvider({ children }: WithChildren) {
   const [currentDate, setCurrentDateState] = useState(DateTime.now());
   const [calendarEvents, dispatch] = useReducer(calendarReducer, []);
-  const [editing, setEditing] = useState<EditingState>({
+  const [editing, setEditing] = useState<BlockTarget>({
+    event: null,
+    day: null,
+  });
+  const [viewing, setViewing] = useState<BlockTarget>({
     event: null,
     day: null,
   });
@@ -94,13 +105,13 @@ export function CalendarProvider({ children }: WithChildren) {
   }, []);
 
   const setEditingEvent = useCallback(
-    (event: CalendarEvent | null, day?: number | null) => {
-      setEditing((prev) =>
-        prev.event === event && prev.day === (day ?? null)
-          ? prev
-          : { event, day: day ?? null },
-      );
-    },
+    (event: CalendarEvent | null, day?: number | null) =>
+      setEditing(retarget(event, day)),
+    [],
+  );
+  const setViewingEvent = useCallback(
+    (event: CalendarEvent | null, day?: number | null) =>
+      setViewing(retarget(event, day)),
     [],
   );
 
@@ -110,6 +121,7 @@ export function CalendarProvider({ children }: WithChildren) {
       setCurrentDate,
       getCurrentDate,
       setEditingEvent,
+      setViewingEvent,
       selection,
       pendingChanges,
       eventHandlers,
@@ -119,6 +131,7 @@ export function CalendarProvider({ children }: WithChildren) {
       setCurrentDate,
       getCurrentDate,
       setEditingEvent,
+      setViewingEvent,
       selection,
       pendingChanges,
       eventHandlers,
@@ -131,7 +144,9 @@ export function CalendarProvider({ children }: WithChildren) {
       <DateContext.Provider value={currentDate}>
         <EventsContext.Provider value={calendarEvents}>
           <EditingContext.Provider value={editing}>
-            {children}
+            <ViewingContext.Provider value={viewing}>
+              {children}
+            </ViewingContext.Provider>
           </EditingContext.Provider>
         </EventsContext.Provider>
       </DateContext.Provider>
@@ -163,4 +178,9 @@ export function useEventList() {
 // eslint-disable-next-line
 export function useEditing() {
   return useRequired(useContext(EditingContext), "useEditing");
+}
+
+// eslint-disable-next-line
+export function useViewing() {
+  return useRequired(useContext(ViewingContext), "useViewing");
 }

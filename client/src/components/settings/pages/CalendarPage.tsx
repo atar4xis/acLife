@@ -277,6 +277,8 @@ export default function CalendarPage({
     miniCalendarAdaptiveNumbers,
     miniCalendarDropdowns,
     detachRecurringOnEdit,
+    eventClickAction,
+    eventDoubleClickAction,
     addColorsAutomatically,
     eventEditorOpacity,
     eventEditorBlur,
@@ -316,6 +318,34 @@ export default function CalendarPage({
             }
           />
         </Field>
+
+        {(
+          [
+            ["eventClickAction", eventClickAction],
+            ["eventDoubleClickAction", eventDoubleClickAction],
+          ] as const
+        ).map(([key, value]) => (
+          <Field key={key} orientation="responsive">
+            <SettingsLabel settingKey={key} />
+            <SettingsSelect
+              labelledBy={settingLabelId(key)}
+              value={value}
+              onValueChange={(action) =>
+                setSetting(key, action as typeof value)
+              }
+            >
+              <SelectItem value="none">
+                {t("settings.calendar.actionNone")}
+              </SelectItem>
+              <SelectItem value="edit">
+                {t("settings.calendar.actionEdit")}
+              </SelectItem>
+              <SelectItem value="details">
+                {t("settings.calendar.actionDetails")}
+              </SelectItem>
+            </SettingsSelect>
+          </Field>
+        ))}
       </Section>
 
       <Separator />

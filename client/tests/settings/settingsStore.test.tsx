@@ -181,6 +181,8 @@ describe("settings store", () => {
     seedSettings({
       dayHeaderPosition: "left",
       timeLabelPosition: "top",
+      eventClickAction: "open",
+      eventDoubleClickAction: 3,
       fontSize: "abc",
       presets: "nope",
       timezones: ["Not/AZone"],
@@ -190,6 +192,8 @@ describe("settings store", () => {
 
     expect(settings.dayHeaderPosition).toBe("top");
     expect(settings.timeLabelPosition).toBe("auto");
+    expect(settings.eventClickAction).toBe("details");
+    expect(settings.eventDoubleClickAction).toBe("edit");
     expect(settings.fontSize).toBe(16);
     expect(settings.presets).toEqual([]);
     expect(settings.timezones).toEqual(defaultStoreSettings.timezones);
@@ -387,6 +391,8 @@ describe("sync rules", () => {
         "miniCalendarAdaptiveNumbers",
         "miniCalendarDropdowns",
         "detachRecurringOnEdit",
+        "eventClickAction",
+        "eventDoubleClickAction",
         "snapMinutes",
         "theme",
         "timeFormat",

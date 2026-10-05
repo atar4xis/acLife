@@ -4,7 +4,7 @@ import type {
   CalendarEvent,
   OccurrenceOverride,
 } from "@/types/calendar/Event";
-import { makeOccurrence } from "@/lib/calendar/event";
+import { eventKey, makeOccurrence } from "@/lib/calendar/event";
 import {
   detachSingleOccurrence,
   endSeriesBefore,
@@ -351,7 +351,7 @@ describe("nearbyOccurrences with overrides", () => {
     end: at("2026-01-10T10:00"),
     repeat: { interval: 1, unit: "day", overrides },
   });
-  const ids = (e: CalendarEvent[]) => e.map((o) => o._instanceId ?? o.id);
+  const ids = (e: CalendarEvent[]) => e.map(eventKey);
 
   it("caps results to perSide on each side of now", () => {
     const overrides = Object.fromEntries(

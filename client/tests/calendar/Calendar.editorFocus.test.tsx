@@ -38,7 +38,7 @@ const editor = () => screen.getByRole("dialog", { name: "Edit event" });
 const openFromKeyboard = async (user: ReturnType<typeof userEvent.setup>) => {
   await screen.findByText("Planning");
   focusGrid();
-  await user.keyboard("{PageUp}{Enter}{Enter}");
+  await user.keyboard("{PageUp}{Enter}{Enter}{Enter}");
   await screen.findByRole("dialog", { name: "Edit event" });
 };
 
@@ -169,7 +169,7 @@ describe("Event editor focus: opened from the keyboard", () => {
     act(() => grid().blur());
     await user.keyboard("{Enter}");
     focusGrid();
-    await user.keyboard("{Enter}");
+    await user.keyboard("{Enter}{Enter}");
     await screen.findByRole("dialog", { name: "Edit event" });
     await user.click(screen.getByRole("button", { name: "Close" }));
     await expectBackOnEvent();
@@ -498,7 +498,7 @@ describe("Recurring dialog focus", () => {
     });
     await screen.findByText("Daily standup");
     focusGrid();
-    await user.keyboard("{PageUp}{PageUp}{Enter}{Enter}");
+    await user.keyboard("{PageUp}{PageUp}{Enter}{Enter}{Enter}");
     await screen.findByRole("dialog", { name: "Edit event" });
     await user.click(screen.getByRole("button", { name: "Delete event" }));
     await user.click(await screen.findByRole("button", { name: "Delete" }));
@@ -512,7 +512,7 @@ describe("Recurring dialog focus", () => {
 describe("Event editor focus: details", () => {
   const openSync = () => {
     focusGrid();
-    for (const key of ["PageUp", "Enter", "Enter"])
+    for (const key of ["PageUp", "Enter", "Enter", "Enter"])
       fireEvent.keyDown(grid(), { key });
   };
 
