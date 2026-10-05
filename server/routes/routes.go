@@ -22,6 +22,7 @@ func New() *mux.Router {
 
 	// Setup timeout
 	tr := r.NewRoute().Subrouter()
+	tr.Use(handlers.DeadlineMiddleware(constants.RequestDeadline))
 	tr.Use(handlers.TimeoutMiddleware(constants.HTTPTimeout))
 
 	// Routes consist of a path and a handler function

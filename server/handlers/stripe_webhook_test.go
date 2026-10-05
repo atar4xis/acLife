@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -120,6 +121,30 @@ func TestStripeWebhookRejectsTamperedPayload(t *testing.T) {
 	})
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("got %d", resp.StatusCode)
+	}
+	if got := subscriptionStatus(t, user.UUID); got != "active" {
+		t.Fatalf("status changed to %q", got)
+	}
+}
+
+func TestStripeWebhookRejectsOversizedBody(t *testing.T) {
+	testutil.RequireDB(t)
+	t.Setenv("STRIPE_WEBHOOK_SECRET", webhookSecret)
+	c := testutil.NewClient(t)
+	user := testutil.NewUser(t, testutil.Subscribed("active"))
+
+	withPadding := func(size int) string {
+		return fmt.Sprintf(`{"id":"evt_1","object":"event","type":"customer.subscription.deleted","data":{"object":{"id":%q,"status":"canceled","pad":%q}}}`,
+			user.SubscriptionID, strings.Repeat("a", size))
+	}
+
+	if status := signedWebhook(t, c, withPadding(60<<10)); status != http.StatusOK {
+		t.Fatalf("body under the limit: got %d", status)
+	}
+
+	user = testutil.NewUser(t, testutil.Subscribed("active"))
+	if status := signedWebhook(t, c, withPadding(70<<10)); status != http.StatusBadRequest {
+		t.Fatalf("body over the limit: got %d", status)
 	}
 	if got := subscriptionStatus(t, user.UUID); got != "active" {
 		t.Fatalf("status changed to %q", got)

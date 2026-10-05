@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -109,7 +110,25 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := session.New(&stripe.CheckoutSessionParams{
+	p, err := getPrice(req.PriceID, nil)
+	if err != nil {
+		var stripeErr *stripe.Error
+		if errors.As(err, &stripeErr) && stripeErr.HTTPStatusCode == http.StatusNotFound {
+			utils.SendBadRequest(w)
+			return
+		}
+
+		utils.LogError("CreateCheckoutSession", "price.Get", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if !p.Active || p.Product == nil || p.Product.ID != os.Getenv("STRIPE_PRODUCT_ID") {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	sess, err := createCheckout(&stripe.CheckoutSessionParams{
 		Mode: stripe.String(string(stripe.CheckoutSessionModeSubscription)),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
@@ -136,7 +155,11 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-var updateSubscriptionStatus = database.UpdateSubscriptionStatus
+var (
+	updateSubscriptionStatus = database.UpdateSubscriptionStatus
+	getPrice                 = price.Get
+	createCheckout           = session.New
+)
 
 // StripeWebhook is used by the Stripe webhook to receive events.
 func StripeWebhook(w http.ResponseWriter, r *http.Request) {

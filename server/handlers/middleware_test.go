@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -280,6 +281,19 @@ func TestRateLimit(t *testing.T) {
 		}
 	})
 
+	t.Run("groups IPv6 clients by /64 prefix behind a proxy", func(t *testing.T) {
+		t.Setenv("IS_BEHIND_PROXY", "1")
+		client := testutil.NewClient(t).As(testutil.NewUser(t))
+		exhaust(client, realIP("2001:db8:1:2::1"))
+
+		if status := hit(client, realIP("2001:db8:1:2:ffff:ffff:ffff:ffff")); status != http.StatusTooManyRequests {
+			t.Fatalf("same /64: got %d", status)
+		}
+		if status := hit(client, realIP("2001:db8:1:3::1")); status != http.StatusOK {
+			t.Fatalf("other /64: got %d", status)
+		}
+	})
+
 	t.Run("ignores X-Real-IP without a proxy", func(t *testing.T) {
 		client := testutil.NewClient(t).As(testutil.NewUser(t))
 		exhaust(client, realIP("203.0.113.1"))
@@ -351,4 +365,91 @@ func TestProtectedRoutesRequireLogin(t *testing.T) {
 			}
 		})
 	}
+}
+
+func rawRequest(t *testing.T, srv *httptest.Server, request string) net.Conn {
+	t.Helper()
+
+	conn, err := net.Dial("tcp", srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+
+	if _, err := conn.Write([]byte(request)); err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
+func TestDeadlineMiddleware(t *testing.T) {
+	const deadline = 300 * time.Millisecond
+
+	newServer := func(h http.HandlerFunc) *httptest.Server {
+		srv := httptest.NewServer(handlers.DeadlineMiddleware(deadline)(h))
+		t.Cleanup(srv.Close)
+		return srv
+	}
+	await := func(t *testing.T, errs <-chan error) error {
+		t.Helper()
+
+		select {
+		case err := <-errs:
+			return err
+		case <-time.After(5 * time.Second):
+			t.Fatal("handler still blocked long after the deadline")
+			return nil
+		}
+	}
+
+	t.Run("stops a request body that arrives too slowly", func(t *testing.T) {
+		errs := make(chan error, 1)
+		srv := newServer(func(w http.ResponseWriter, r *http.Request) {
+			_, err := io.ReadAll(r.Body)
+			errs <- err
+		})
+
+		rawRequest(t, srv, "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 100\r\n\r\na")
+
+		if err := await(t, errs); err == nil {
+			t.Fatal("body read finished without error")
+		}
+	})
+
+	t.Run("stops a response that is not being read", func(t *testing.T) {
+		errs := make(chan error, 1)
+		srv := newServer(func(w http.ResponseWriter, r *http.Request) {
+			chunk := make([]byte, 1<<20)
+			for range 256 {
+				if _, err := w.Write(chunk); err != nil {
+					errs <- err
+					return
+				}
+			}
+			errs <- nil
+		})
+
+		rawRequest(t, srv, "GET / HTTP/1.1\r\nHost: x\r\n\r\n")
+
+		if err := await(t, errs); err == nil {
+			t.Fatal("response was written in full to a client that never read")
+		}
+	})
+
+	t.Run("lets a prompt request through", func(t *testing.T) {
+		srv := newServer(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			_, _ = w.Write(body)
+		})
+
+		resp, err := http.Post(srv.URL, "text/plain", strings.NewReader("hello"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if body, _ := io.ReadAll(resp.Body); string(body) != "hello" {
+			t.Fatalf("got %q", body)
+		}
+	})
 }

@@ -250,17 +250,35 @@ func denySubscription(w http.ResponseWriter) {
 	})
 }
 
+// getClientIP returns the client address used as rate limit key, IPv6 addresses are reduced to their /64 prefix.
 func getClientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+
 	if os.Getenv("IS_BEHIND_PROXY") != "" {
-		ip := strings.TrimSpace(r.Header.Get("X-Real-IP"))
-		if ip != "" && net.ParseIP(ip) != nil {
-			return ip
+		if ip := strings.TrimSpace(r.Header.Get("X-Real-IP")); net.ParseIP(ip) != nil {
+			host = ip
 		}
 	}
 
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
+	ip := net.ParseIP(host)
+	if ip == nil || ip.To4() != nil {
+		return host
 	}
-	return host
+	return ip.Mask(net.CIDRMask(64, 128)).String()
+}
+
+// DeadlineMiddleware bounds how long the connection may spend reading the request and writing the response, so slow clients cannot hold it open.
+func DeadlineMiddleware(d time.Duration) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rc := http.NewResponseController(w)
+			deadline := time.Now().Add(d)
+			_ = rc.SetReadDeadline(deadline)
+			_ = rc.SetWriteDeadline(deadline)
+			next.ServeHTTP(w, r)
+		})
+	}
 }

@@ -93,5 +93,11 @@ func main() {
 
 	// Bind to port
 	fmt.Println("Running on port " + os.Getenv("PORT"))
-	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), handler))
+	srv := &http.Server{
+		Addr:              ":" + os.Getenv("PORT"),
+		Handler:           handler,
+		ReadHeaderTimeout: constants.ReadHeaderTimeout,
+		IdleTimeout:       constants.IdleTimeout,
+	}
+	log.Fatal(srv.ListenAndServe())
 }

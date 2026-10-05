@@ -19,7 +19,10 @@ const (
 
 	SessionName = "acl_session"
 
-	HTTPTimeout = 10 * time.Second
+	HTTPTimeout       = 10 * time.Second
+	ReadHeaderTimeout = 10 * time.Second
+	IdleTimeout       = 2 * time.Minute
+	RequestDeadline   = 20 * time.Second
 
 	StreamHeartbeat       = 20 * time.Second
 	StreamBuffer          = 16
