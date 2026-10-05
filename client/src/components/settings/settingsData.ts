@@ -27,6 +27,7 @@ export const settingsCategories: SettingsCategory[] = [
         items: [
           { id: "theme-mode", settingKey: "theme" },
           { id: "custom-theme" },
+          { id: "custom-css", settingKey: "customCss" },
           { id: "presets-list", settingKey: "presets" },
         ],
       },

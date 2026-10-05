@@ -29,6 +29,8 @@ type ThemeProviderState = {
   setFontFamily: (fontFamily: string) => void;
   fontSize: number;
   setFontSize: (fontSize: number) => void;
+  customCss: string;
+  setCustomCss: (customCss: string) => void;
   presets: ThemePreset[];
   activePresetId: string | null;
   savePreset: (name: string) => PresetResult;
@@ -50,6 +52,8 @@ const initialState: ThemeProviderState = {
   setFontFamily: () => null,
   fontSize: defaultThemeSettings.fontSize,
   setFontSize: () => null,
+  customCss: defaultThemeSettings.customCss,
+  setCustomCss: () => null,
   presets: [],
   activePresetId: null,
   savePreset: () => "ok",
@@ -64,15 +68,23 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const store = useSettingsStore();
-  const { theme, colors, fontFamily, fontSize, presets, activePresetId } =
-    useSettingsSelector(({ settings }) => ({
-      theme: settings.theme,
-      colors: settings.colors,
-      fontFamily: settings.fontFamily,
-      fontSize: settings.fontSize,
-      presets: settings.presets,
-      activePresetId: settings.activePresetId,
-    }));
+  const {
+    theme,
+    colors,
+    fontFamily,
+    fontSize,
+    customCss,
+    presets,
+    activePresetId,
+  } = useSettingsSelector(({ settings }) => ({
+    theme: settings.theme,
+    colors: settings.colors,
+    fontFamily: settings.fontFamily,
+    fontSize: settings.fontSize,
+    customCss: settings.customCss,
+    presets: settings.presets,
+    activePresetId: settings.activePresetId,
+  }));
   const [resolvedBase, setResolvedBase] = useState<"light" | "dark">("light");
 
   useEffect(() => {
@@ -113,6 +125,13 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     document.documentElement.style.fontSize = `${fontSize}px`;
   }, [fontSize]);
 
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = customCss;
+    document.head.append(style);
+    return () => style.remove();
+  }, [customCss]);
+
   const writePresets = (next: ThemePreset[]) =>
     store.setSetting("presets", next);
 
@@ -145,6 +164,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     fontSize,
     setFontSize: (next) => {
       store.setSettings({ fontSize: next, activePresetId: null });
+    },
+    customCss,
+    setCustomCss: (next) => {
+      store.setSettings({ customCss: next });
     },
     presets,
     activePresetId,

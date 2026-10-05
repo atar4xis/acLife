@@ -51,6 +51,7 @@ import SyncToggle from "../SyncToggle";
 import SettingsSelect from "../SettingsSelect";
 import SettingsSlider from "../SettingsSlider";
 import { useTranslation } from "react-i18next";
+import CustomCssDialog from "../CustomCssDialog";
 
 const THEME_OPTIONS: Theme[] = ["light", "dark", "system", "custom"];
 
@@ -585,6 +586,27 @@ const ThemeModeField = memo(function ThemeModeField() {
   );
 });
 
+const CustomCssField = memo(function CustomCssField() {
+  const { t } = useTranslation();
+  const { customCss, setCustomCss } = useTheme();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Field orientation="responsive">
+      <SettingsLabel settingKey="customCss" />
+      <Button variant="outline" onClick={() => setOpen(true)}>
+        {t("block.edit")}
+      </Button>
+      <CustomCssDialog
+        open={open}
+        onOpenChange={setOpen}
+        value={customCss}
+        onApply={setCustomCss}
+      />
+    </Field>
+  );
+});
+
 const FontFamilyField = memo(function FontFamilyField() {
   const { t } = useTranslation();
   const { fontFamily, setFontFamily } = useTheme();
@@ -721,6 +743,7 @@ export default function AppearancePage({
       >
         <ThemeModeField />
         <CustomThemeField />
+        <CustomCssField />
       </Section>
 
       <Separator />

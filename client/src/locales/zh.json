@@ -302,6 +302,7 @@
     "items": {
       "theme-mode": "主题模式",
       "custom-theme": "自定义主题",
+      "custom-css": "自定义 CSS",
       "presets-list": "用户主题",
       "font-family": "字体系列",
       "font-size": "字号",

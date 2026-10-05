@@ -302,6 +302,7 @@
     "items": {
       "theme-mode": "テーマモード",
       "custom-theme": "カスタムテーマ",
+      "custom-css": "カスタムCSS",
       "presets-list": "ユーザーテーマ",
       "font-family": "フォントファミリー",
       "font-size": "フォントサイズ",

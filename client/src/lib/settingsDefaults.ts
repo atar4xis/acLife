@@ -55,10 +55,12 @@ export const defaultThemeSettings: {
   theme: Theme;
   fontFamily: string;
   fontSize: number;
+  customCss: string;
 } = {
   theme: "system",
   fontFamily: "",
   fontSize: 16,
+  customCss: "",
 };
 
 export const defaultSecuritySettings: {

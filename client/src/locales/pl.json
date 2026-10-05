@@ -311,6 +311,7 @@
     "items": {
       "theme-mode": "Tryb motywu",
       "custom-theme": "Motyw własny",
+      "custom-css": "Własny CSS",
       "presets-list": "Motywy użytkownika",
       "font-family": "Rodzina czcionek",
       "font-size": "Rozmiar czcionki",

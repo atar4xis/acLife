@@ -132,3 +132,25 @@
 .calendar-grid-scroll::-webkit-scrollbar {
   display: none;
 }
+
+.css-editor .token.comment {
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+.css-editor .token.selector,
+.css-editor .token.important {
+  color: var(--primary);
+  font-weight: 600;
+}
+.css-editor .token.property {
+  color: var(--foreground);
+}
+.css-editor .token.string,
+.css-editor .token.url,
+.css-editor .token.function {
+  color: color-mix(in oklch, var(--primary) 60%, var(--foreground));
+}
+.css-editor .token.atrule,
+.css-editor .token.punctuation {
+  color: var(--ring);
+}

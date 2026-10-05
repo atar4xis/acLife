@@ -34,6 +34,7 @@ export const syncByDefault = {
   colors: false,
   fontFamily: false,
   fontSize: false,
+  customCss: false,
   timezones: false,
   defaultTimezone: false,
 } as const satisfies Partial<Record<StoreKey, boolean>>;
@@ -149,7 +150,14 @@ export const syncGroups: { id: string; label: string; keys: SyncableKey[] }[] =
     {
       id: "appearance",
       label: "settings.categories.appearance",
-      keys: ["theme", "colors", "fontFamily", "fontSize", "presets"],
+      keys: [
+        "theme",
+        "colors",
+        "fontFamily",
+        "fontSize",
+        "customCss",
+        "presets",
+      ],
     },
     {
       id: "calendar",

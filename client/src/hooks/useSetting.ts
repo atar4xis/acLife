@@ -35,6 +35,7 @@ function useThemeSetting(key: keyof typeof defaultThemeSettings) {
     theme: theme.setTheme,
     fontFamily: theme.setFontFamily,
     fontSize: theme.setFontSize,
+    customCss: theme.setCustomCss,
   } as Record<string, (value: never) => void>;
 
   return { value: theme[key], set: setters[key] };

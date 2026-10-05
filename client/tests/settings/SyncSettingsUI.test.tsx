@@ -221,6 +221,7 @@ describe("SyncPage settings sync section", () => {
       colors: true,
       fontFamily: true,
       fontSize: true,
+      customCss: true,
     });
   });
 

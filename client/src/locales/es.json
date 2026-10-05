@@ -305,6 +305,7 @@
     "items": {
       "theme-mode": "Modo del tema",
       "custom-theme": "Tema personalizado",
+      "custom-css": "CSS personalizado",
       "presets-list": "Temas del usuario",
       "font-family": "Familia de fuente",
       "font-size": "Tamaño de fuente",

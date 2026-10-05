@@ -317,6 +317,7 @@
     "items": {
       "theme-mode": "وضع السمة",
       "custom-theme": "سمة مخصصة",
+      "custom-css": "CSS مخصص",
       "presets-list": "سمات المستخدم",
       "font-family": "عائلة الخط",
       "font-size": "حجم الخط",

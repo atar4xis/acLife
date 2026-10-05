@@ -216,7 +216,7 @@ describe("settings store", () => {
     ["defaultView is unknown", { defaultView: "month" }],
     ["weekStartsOn is out of range", { weekStartsOn: 9 }],
     ["numbers are not finite", { snapMinutes: null, fontSize: "big" }],
-    ["strings are numbers", { defaultEventName: 5, fontFamily: [] }],
+    ["strings are numbers", { defaultEventName: 5, fontFamily: [], customCss: 5 }],
     ["booleans are strings", { agendaEnabled: "yes" }],
   ])("falls back to the defaults when %s", (_name, values) => {
     seedSettings(values);
@@ -362,6 +362,7 @@ describe("sync rules", () => {
         "agendaEnabled",
         "agendaRangeDays",
         "colors",
+        "customCss",
         "dateFormat",
         "dateTimeFormat",
         "dayHeaderPosition",

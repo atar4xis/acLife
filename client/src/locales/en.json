@@ -308,6 +308,7 @@
     "items": {
       "theme-mode": "Theme mode",
       "custom-theme": "Custom theme",
+      "custom-css": "Custom CSS",
       "presets-list": "User themes",
       "font-family": "Font family",
       "font-size": "Font size",
