@@ -19,16 +19,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var subCache = sync.Map{} // map[string]subCacheEntry
-
 type rateLimitEntry struct {
 	timestamps []time.Time
 	mu         sync.Mutex
-}
-
-type subCacheEntry struct {
-	status    string
-	expiresAt time.Time
 }
 
 /* -------------------- Cleanup -------------------- */
@@ -57,22 +50,6 @@ func cleanupRateLimits(store *sync.Map, ttl time.Duration) {
 
 			if empty {
 				store.Delete(key)
-			}
-			return true
-		})
-	}
-}
-
-func cleanupSubCache(interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		now := time.Now()
-		subCache.Range(func(key, value any) bool {
-			entry := value.(subCacheEntry)
-			if now.After(entry.expiresAt) {
-				subCache.Delete(key)
 			}
 			return true
 		})
@@ -199,34 +176,8 @@ func SubscriptionMiddleware() mux.MiddlewareFunc {
 			user := session.GetLoggedInUser(r)
 			utils.Assert(user != nil) // should be ensured by AuthMiddleware
 
-			if user.StripeSubscriptionID == nil || *user.StripeSubscriptionID == "" {
-				denySubscription(w)
-				return
-			}
-
-			subID := *user.StripeSubscriptionID
-
-			status, ok := getSubStatus(subID)
-			if !ok {
-				newStatus, err := database.UpdateSubscriptionStatus(subID)
-				if err != nil {
-					utils.LogError("SubscriptionMiddleware", "UpdateSubscriptionStatus", err)
-					utils.SendInternalError(w)
-					return
-				}
-
-				user.SubscriptionStatus = &newStatus
-
-				if *user.SubscriptionStatus == "" {
-					denySubscription(w)
-					return
-				}
-
-				status = *user.SubscriptionStatus
-				setSubStatus(subID, status)
-			}
-
-			if status != "active" && status != "trialing" {
+			if user.SubscriptionStatus == nil ||
+				(*user.SubscriptionStatus != "active" && *user.SubscriptionStatus != "trialing") {
 				denySubscription(w)
 				return
 			}
@@ -290,28 +241,6 @@ func CSRFMiddleware() mux.MiddlewareFunc {
 }
 
 /* -------------------- Helpers -------------------- */
-
-func getSubStatus(subID string) (string, bool) {
-	val, ok := subCache.Load(subID)
-	if !ok {
-		return "", false
-	}
-
-	entry := val.(subCacheEntry)
-	if time.Now().After(entry.expiresAt) {
-		subCache.Delete(subID)
-		return "", false
-	}
-
-	return entry.status, true
-}
-
-func setSubStatus(subID, status string) {
-	subCache.Store(subID, subCacheEntry{
-		status:    status,
-		expiresAt: time.Now().Add(constants.SubCacheTTL),
-	})
-}
 
 func denySubscription(w http.ResponseWriter) {
 	utils.SendJSON(w, http.StatusPaymentRequired, types.Reply[any]{

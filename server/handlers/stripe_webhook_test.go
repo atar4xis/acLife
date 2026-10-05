@@ -4,12 +4,14 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
 	"acLife/database"
+	"acLife/handlers"
 	"acLife/internal/testutil"
 )
 
@@ -156,4 +158,49 @@ func TestStripeWebhookCheckoutCompletedRequiresUserSubscriptionAndCustomer(t *te
 			}
 		})
 	}
+}
+
+func TestStripeWebhookCheckoutCompleted(t *testing.T) {
+	testutil.RequireDB(t)
+	t.Setenv("STRIPE_WEBHOOK_SECRET", webhookSecret)
+	t.Cleanup(func() { handlers.SetSubscriptionUpdater(database.UpdateSubscriptionStatus) })
+
+	payload := func(user testutil.User, subID string) string {
+		object := fmt.Sprintf(`{"metadata":{"aclUserId":%q},"subscription":%q,"customer":"cus_new"}`, user.UUID, subID)
+		return `{"id":"evt_1","object":"event","type":"checkout.session.completed","data":{"object":` + object + `}}`
+	}
+
+	t.Run("stores ids and status", func(t *testing.T) {
+		user := testutil.NewUser(t)
+		handlers.SetSubscriptionUpdater(func(subID string, _ ...string) (string, error) {
+			if subID != "sub_ok" {
+				t.Errorf("fetched %q", subID)
+			}
+			_, err := database.Exec(t.Context(), "UPDATE users SET subscription_status = 'active' WHERE stripe_subscription_id = ?", subID)
+			return "active", err
+		})
+
+		if status := signedWebhook(t, testutil.NewClient(t), payload(user, "sub_ok")); status != http.StatusOK {
+			t.Fatalf("got %d", status)
+		}
+		var customer, sub string
+		if err := database.DB.QueryRow("SELECT stripe_customer_id, stripe_subscription_id FROM users WHERE uuid = ?", user.UUID).Scan(&customer, &sub); err != nil {
+			t.Fatal(err)
+		}
+		if customer != "cus_new" || sub != "sub_ok" {
+			t.Fatalf("got %q %q", customer, sub)
+		}
+		if got := subscriptionStatus(t, user.UUID); got != "active" {
+			t.Fatalf("status %q", got)
+		}
+	})
+
+	t.Run("fetch failure returns 500 so stripe retries", func(t *testing.T) {
+		user := testutil.NewUser(t)
+		handlers.SetSubscriptionUpdater(func(string, ...string) (string, error) { return "", errors.New("stripe down") })
+
+		if status := signedWebhook(t, testutil.NewClient(t), payload(user, "sub_fail")); status != http.StatusInternalServerError {
+			t.Fatalf("got %d", status)
+		}
+	})
 }

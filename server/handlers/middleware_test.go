@@ -191,7 +191,6 @@ func TestSubscriptionGate(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				c := testutil.NewClient(t)
 				user := testutil.NewUser(t, testutil.Subscribed(tc.status))
-				handlers.SetSubStatus(user.SubscriptionID, tc.status)
 
 				status, reply := testutil.Call[any](c.As(user), "GET", "/user/settings", nil)
 				if status != tc.want {

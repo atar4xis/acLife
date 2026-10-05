@@ -327,7 +327,6 @@ func TestStreamRequiresSubscriptionWhenEnabled(t *testing.T) {
 
 	t.Run("canceled", func(t *testing.T) {
 		user := testutil.NewUser(t, testutil.Subscribed("canceled"))
-		handlers.SetSubStatus(user.SubscriptionID, "canceled")
 
 		resp := testutil.NewClient(t).As(user).Open(context.Background(), "/stream")
 		defer func() { _ = resp.Body.Close() }()
@@ -339,7 +338,6 @@ func TestStreamRequiresSubscriptionWhenEnabled(t *testing.T) {
 
 	t.Run("active", func(t *testing.T) {
 		user := testutil.NewUser(t, testutil.Subscribed("active"))
-		handlers.SetSubStatus(user.SubscriptionID, "active")
 
 		openStream(t, testutil.NewClient(t).As(user))
 	})
@@ -424,8 +422,6 @@ func TestStreamClosesWhenSubscriptionLapses(t *testing.T) {
 
 	user := testutil.NewUser(t, testutil.Subscribed("active"))
 	bystander := testutil.NewUser(t, testutil.Subscribed("active"))
-	handlers.SetSubStatus(user.SubscriptionID, "active")
-	handlers.SetSubStatus(bystander.SubscriptionID, "active")
 	srv := testutil.NewClient(t)
 	mine, _ := openStream(t, srv.As(user))
 	theirs, _ := openStream(t, srv.As(bystander))
@@ -606,7 +602,6 @@ func TestStreamRevalidatesOnceRegistered(t *testing.T) {
 	t.Run("subscription lapsed", func(t *testing.T) {
 		requireSubscription(t)
 		user := testutil.NewUser(t, testutil.Subscribed("active"))
-		handlers.SetSubStatus(user.SubscriptionID, "active")
 		c := testutil.NewClient(t).As(user)
 		raceWith(t, "UPDATE users SET subscription_status = 'canceled' WHERE uuid = ?", user.UUID)
 
@@ -618,7 +613,6 @@ func TestStreamRevalidatesOnceRegistered(t *testing.T) {
 	t.Run("unchanged account still connects", func(t *testing.T) {
 		requireSubscription(t)
 		user := testutil.NewUser(t, testutil.Subscribed("trialing"))
-		handlers.SetSubStatus(user.SubscriptionID, "trialing")
 		handlers.SetAfterSubscribe(func() {})
 		t.Cleanup(func() { handlers.SetAfterSubscribe(nil) })
 

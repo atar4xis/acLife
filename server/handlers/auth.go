@@ -36,7 +36,6 @@ func StartWorkers() {
 	go cleanupSRPSessions()
 	go cleanupAccountSessions()
 	go cleanupExpiredVerifications()
-	go cleanupSubCache(constants.SubCacheTTL)
 }
 
 /* -------------------- Cleanup -------------------- */

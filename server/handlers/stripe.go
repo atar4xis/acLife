@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	"acLife/constants"
 	"acLife/database"
@@ -137,6 +136,8 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+var updateSubscriptionStatus = database.UpdateSubscriptionStatus
+
 // StripeWebhook is used by the Stripe webhook to receive events.
 func StripeWebhook(w http.ResponseWriter, r *http.Request) {
 	payload, err := io.ReadAll(r.Body)
@@ -194,10 +195,10 @@ func StripeWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Schedule a status update
-		time.AfterFunc(5*time.Second, func() {
-			_, _ = database.UpdateSubscriptionStatus(subID)
-		})
+		if _, err := updateSubscriptionStatus(subID); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	case "customer.subscription.updated":
 		fallthrough
 	case "customer.subscription.deleted":

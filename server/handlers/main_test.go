@@ -6,7 +6,6 @@ import (
 
 	"acLife/constants"
 	"acLife/database"
-	"acLife/handlers"
 	"acLife/internal/testutil"
 	"acLife/types"
 )
@@ -39,6 +38,4 @@ func requireSubscription(t *testing.T) {
 	t.Helper()
 
 	withRegistration(t, func(r *types.Registration) { r.SubscriptionRequired = true })
-	handlers.ClearSubCache()
-	t.Cleanup(handlers.ClearSubCache)
 }
