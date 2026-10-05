@@ -41,7 +41,9 @@ export function EventMenuItems({
 
   return (
     <>
-      <ContextMenuLabel>{event.title}</ContextMenuLabel>
+      <ContextMenuLabel className="max-w-64 truncate">
+        {event.title}
+      </ContextMenuLabel>
 
       <ContextMenuItem onClick={onEdit}>
         <PencilLine />
