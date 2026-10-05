@@ -42,12 +42,14 @@ export default memo(function AgendaList() {
     const now = Date.now();
     const result = new Map<string, CalendarEvent[]>();
 
+    const firstDate = visibleDays[0]?.date.toISODate();
+
     for (const [date, events] of eventMap) {
       const upcoming = events
         .filter(
           (e) =>
             e.end.toMillis() > now &&
-            !e._continued &&
+            (!e._continued || date === firstDate) &&
             !(e.isTask && e.completed),
         )
         .toSorted((a, b) => a.start.toMillis() - b.start.toMillis());
@@ -58,7 +60,7 @@ export default memo(function AgendaList() {
     }
 
     return result;
-  }, [eventMap]);
+  }, [eventMap, visibleDays]);
 
   useEffect(() => {
     setNow((prev) => prev.setZone(settings.defaultTimezone));
