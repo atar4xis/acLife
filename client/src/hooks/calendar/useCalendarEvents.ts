@@ -1,5 +1,6 @@
 import { useApi } from "@/context/ApiContext";
 import { useStorage } from "@/context/StorageContext";
+import { deleteDescriptionSizes } from "@/lib/calendar/descriptionSize";
 import {
   decryptOfflineEvents,
   decryptEvents,
@@ -188,6 +189,7 @@ export const useCalendarEvents = (
       for (const id of deleted) {
         cachedMap.delete(id);
       }
+      deleteDescriptionSizes(deleted);
 
       // decrypt updated and added event data
       try {

@@ -6,6 +6,7 @@ import {
   createSelectionStore,
   type SelectionStore,
 } from "@/lib/calendar/selection";
+import { deleteDescriptionSizes } from "@/lib/calendar/descriptionSize";
 import { DateTime } from "luxon";
 import {
   createContext,
@@ -64,7 +65,12 @@ const retarget =
 
 export function CalendarProvider({ children }: WithChildren) {
   const [currentDate, setCurrentDateState] = useState(DateTime.now());
-  const [calendarEvents, dispatch] = useReducer(calendarReducer, []);
+  const [calendarEvents, dispatchRaw] = useReducer(calendarReducer, []);
+  const dispatch = useCallback((action: CalendarAction) => {
+    if (action.type === "delete") deleteDescriptionSizes([action.id]);
+    if (action.type === "merge") deleteDescriptionSizes(action.deletedIds);
+    dispatchRaw(action);
+  }, []);
   const [editing, setEditing] = useState<BlockTarget>({
     event: null,
     day: null,
@@ -128,6 +134,7 @@ export function CalendarProvider({ children }: WithChildren) {
       setEventHandlers,
     }),
     [
+      dispatch,
       setCurrentDate,
       getCurrentDate,
       setEditingEvent,

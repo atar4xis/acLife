@@ -31,7 +31,13 @@ import {
   EVENT_COLOR_FALLBACK,
   useCalendarSettings,
 } from "@/context/CalendarSettingsContext";
-import { clamp, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import {
+  DEFAULT_DESCRIPTION_SIZE,
+  getDescriptionSize,
+  saveDescriptionSize,
+  type DescriptionSize,
+} from "@/lib/calendar/descriptionSize";
 import { DateTimePicker } from "./DateTimePicker";
 import { DateTime } from "luxon";
 import { toast } from "sonner";
@@ -68,6 +74,11 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { useTranslation } from "react-i18next";
+
+const readSize = (el: HTMLElement): DescriptionSize => ({
+  width: el.offsetWidth,
+  height: el.offsetHeight,
+});
 
 /* ------------------------------------------------- */
 
@@ -112,6 +123,9 @@ export default function EventEditor({
   const { pos, startDrag, isMobile } = useAnchoredPosition(editorRef, blockRef);
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
+  const sizeKey = event._parent || event.id;
+  const [savedSize, setSavedSize] = useState(() => getDescriptionSize(sizeKey));
+  const pressedSize = useRef<DescriptionSize>(null);
   const settings = useCalendarSettings((s) => ({
     colorPresets: s.eventColorPresets,
     opacity: s.eventEditorOpacity,
@@ -552,17 +566,25 @@ export default function EventEditor({
           <Textarea
             placeholder={originalEvent.current.description}
             value={description}
-            cols={originalEvent.current.description ? 50 : undefined}
-            rows={
-              originalEvent.current.description
-                ? clamp(
-                    originalEvent.current.description.split("\n").length,
-                    4,
-                    16,
-                  )
-                : undefined
+            style={
+              isMobile
+                ? undefined
+                : { ...DEFAULT_DESCRIPTION_SIZE, ...savedSize }
             }
-            className="resize-none md:resize min-w-80 h-30 md:h-auto max-h-50"
+            className="field-sizing-fixed resize-none md:resize h-30 md:min-w-80"
+            onPointerDown={(e) => {
+              pressedSize.current = readSize(e.currentTarget);
+            }}
+            onPointerUp={(e) => {
+              const size = readSize(e.currentTarget);
+              if (
+                size.width === pressedSize.current?.width &&
+                size.height === pressedSize.current.height
+              )
+                return;
+              setSavedSize(size);
+              saveDescriptionSize(sizeKey, size);
+            }}
             onChange={(e) => setDescription(e.target.value)}
           />
         </Field>
