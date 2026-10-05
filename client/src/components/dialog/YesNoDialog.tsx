@@ -40,7 +40,9 @@ export default function YesNoDialog({
   const { t } = useTranslation();
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent>
+      <AlertDialogContent
+        {...(!description && { "aria-describedby": undefined })}
+      >
         <AlertDialogTitle>{title}</AlertDialogTitle>
         {description && (
           <AlertDialogDescription>{children}</AlertDialogDescription>

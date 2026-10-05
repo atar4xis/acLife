@@ -215,10 +215,9 @@ function ChangePasswordDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{t("settings.security.changePassword")}</DialogTitle>
-          <DialogDescription></DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field>

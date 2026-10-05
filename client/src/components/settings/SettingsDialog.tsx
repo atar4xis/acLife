@@ -6,12 +6,7 @@ import {
   type ComponentType,
 } from "react";
 import { Menu } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -205,6 +200,7 @@ export default function SettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        aria-describedby={undefined}
         onInteractOutside={isMobile ? (e) => e.preventDefault() : undefined}
         className="flex h-[min(840px,85vh)] w-[min(1280px,95vw)] max-w-none flex-col gap-0 p-0 sm:max-w-none"
       >
@@ -255,6 +251,7 @@ export default function SettingsDialog({
           <Sheet open={navOpen} onOpenChange={setNavOpen}>
             <SheetContent
               side="left"
+              aria-describedby={undefined}
               className="w-72 p-0"
               showCloseButton={false}
             >
@@ -264,7 +261,6 @@ export default function SettingsDialog({
           </Sheet>
         )}
       </DialogContent>
-      <DialogDescription></DialogDescription>
     </Dialog>
   );
 }
