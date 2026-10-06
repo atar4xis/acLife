@@ -1,6 +1,6 @@
 module acLife
 
-go 1.25.5
+go 1.26.0
 
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
@@ -12,18 +12,18 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/stripe/stripe-go/v84 v84.1.0
 	github.com/wneessen/go-mail v0.8.1
-	golang.org/x/crypto v0.54.0
+	golang.org/x/crypto v0.57.0
 	mz.attahri.com/code/srp/v3 v3.0.1
 )
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 )
 
 require (
-	filippo.io/edwards25519 v1.1.0 // indirect
+	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/joho/godotenv v1.5.1
 )

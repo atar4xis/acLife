@@ -41,6 +41,10 @@ jobs:
         working-directory: client
         run: pnpm install --frozen-lockfile
 
+      - name: Audit client dependencies
+        working-directory: client
+        run: pnpm audit --prod --audit-level=high
+
       - name: Run client lint
         working-directory: client
         run: pnpm run lint
@@ -70,3 +74,16 @@ jobs:
       - name: Build server
         working-directory: server
         run: go build ./...
+
+      - name: Scan server dependencies for known vulnerabilities
+        working-directory: server
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Scan desktop shell dependencies for known vulnerabilities
+        working-directory: client/src-tauri
+        run: cargo audit

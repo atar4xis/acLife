@@ -64,7 +64,7 @@ const retarget =
     prev.event === event && prev.day === day ? prev : { event, day };
 
 export function CalendarProvider({ children }: WithChildren) {
-  const [currentDate, setCurrentDateState] = useState(DateTime.now());
+  const [currentDate, setCurrentDateState] = useState<DateTime>(DateTime.now());
   const [calendarEvents, dispatchRaw] = useReducer(calendarReducer, []);
   const dispatch = useCallback((action: CalendarAction) => {
     if (action.type === "delete") deleteDescriptionSizes([action.id]);
