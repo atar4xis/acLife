@@ -301,7 +301,8 @@
       "calendar": "Calendario",
       "subscription": "Suscripción",
       "security": "Cuenta y seguridad",
-      "sync": "Sincronización"
+      "sync": "Sincronización",
+      "application": "Aplicación"
     },
     "sections": {
       "theme": "Tema",
@@ -323,7 +324,9 @@
       "agenda": "Vista de agenda",
       "settings-sync": "Ajustes",
       "push-service": "Servicio push",
-      "resync": "Resincronización"
+      "resync": "Resincronización",
+      "updates": "Actualizaciones",
+      "about": "Acerca de"
     },
     "items": {
       "theme-mode": "Modo del tema",
@@ -375,7 +378,15 @@
       "subscription-invoices": "Facturas",
       "security-sessions": "Sesiones",
       "sync-settings-enabled": "Sincronizar entre dispositivos",
-      "sync-push-status": "Activado"
+      "sync-push-status": "Activado",
+      "updates-version": "Versión actual",
+      "updates-check": "Buscar actualizaciones",
+      "updates-auto-check": "Buscar actualizaciones automáticamente",
+      "updates-auto-install": "Instalar actualizaciones automáticamente",
+      "updates-channel": "Canal de actualización",
+      "updates-changelog": "Registro de cambios",
+      "about-version": "Versión",
+      "about-website": "URL del cliente"
     },
     "colors": {
       "background": "Fondo",
@@ -550,6 +561,29 @@
       "manageHelp": "Cambia de plan, actualiza los datos de pago o cancela tu suscripción a través de Stripe.",
       "viewInvoices": "Ver facturas",
       "invoicesHelp": "Consulta y descarga tus facturas anteriores en el portal de facturación de Stripe."
+    },
+    "updates": {
+      "check": "Comprobar ahora",
+      "channelStable": "Estable",
+      "channelBeta": "Beta",
+      "install": "Instalar",
+      "download": "Descargar",
+      "restart": "Reiniciar",
+      "noChanges": "No hay notas de la versión.",
+      "installFailed": "No se pudo instalar la actualización.",
+      "status": {
+        "idle": "Sin comprobar",
+        "checking": "Comprobando…",
+        "upToDate": "Actualizado",
+        "available": "Actualización disponible ({{version}})",
+        "downloading": "Descargando",
+        "ready": "Reinicia para actualizar",
+        "error": "Error al buscar actualizaciones"
+      },
+      "lastChecked": "Última comprobación: {{date}}"
+    },
+    "about": {
+      "repository": "Repositorio de GitHub"
     }
   },
   "subscription": {

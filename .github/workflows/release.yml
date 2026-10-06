@@ -60,9 +60,36 @@ jobs:
         working-directory: client
         run: pnpm install --frozen-lockfile
 
+      - name: Check tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: client
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match client/package.json version $version"
+            exit 1
+          fi
+
       - name: Build Tauri app
         working-directory: client
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: pnpm exec tauri build
+
+      - name: Generate updater manifest
+        working-directory: client/src-tauri
+        run: |
+          set -euo pipefail
+
+          appimage=$(ls target/release/bundle/appimage/*.AppImage)
+          jq -n \
+            --arg version "$(node -p "require('../package.json').version")" \
+            --arg signature "$(cat "$appimage.sig")" \
+            --arg url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$(basename "$appimage")" \
+            '{version: $version, pub_date: (now | todate), platforms: {"linux-x86_64": {signature: $signature, url: $url}}}' \
+            > latest.json
 
       - name: Import release signing key
         env:
@@ -192,6 +219,7 @@ jobs:
             client/src-tauri/target/release/bundle/appimage/*.AppImage.asc
             client/src-tauri/SHA256SUMS
             client/src-tauri/SHA256SUMS.asc
+            client/src-tauri/latest.json
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -200,6 +228,7 @@ jobs:
         with:
           name: acLife ${{ github.ref_name }}
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             client/src-tauri/target/release/aclife-desktop
             client/src-tauri/target/release/aclife-desktop.asc
@@ -211,3 +240,4 @@ jobs:
             client/src-tauri/target/release/bundle/appimage/*.AppImage.asc
             client/src-tauri/SHA256SUMS
             client/src-tauri/SHA256SUMS.asc
+            client/src-tauri/latest.json

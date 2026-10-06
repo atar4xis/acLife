@@ -19,6 +19,7 @@ import {
   buildSearchIndex,
   type SearchHit,
 } from "./settingsData";
+import ApplicationPage from "./pages/ApplicationPage";
 import AppearancePage from "./pages/AppearancePage";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import SecurityPage from "./pages/SecurityPage";
@@ -29,6 +30,7 @@ import type { SectionRefs } from "./SettingsSection";
 import { useTranslation } from "react-i18next";
 
 const PAGES: Record<string, ComponentType<{ sectionRefs: SectionRefs }>> = {
+  application: ApplicationPage,
   appearance: AppearancePage,
   subscription: SubscriptionPage,
   security: SecurityPage,

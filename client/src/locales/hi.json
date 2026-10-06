@@ -309,7 +309,8 @@
       "calendar": "कैलेंडर",
       "subscription": "सदस्यता",
       "security": "खाता और सुरक्षा",
-      "sync": "सिंक"
+      "sync": "सिंक",
+      "application": "एप्लिकेशन"
     },
     "sections": {
       "theme": "थीम",
@@ -331,7 +332,9 @@
       "agenda": "एजेंडा व्यू",
       "settings-sync": "सेटिंग्स",
       "push-service": "पुश सेवा",
-      "resync": "पुनः सिंक"
+      "resync": "पुनः सिंक",
+      "updates": "अपडेट",
+      "about": "ऐप के बारे में"
     },
     "items": {
       "theme-mode": "थीम मोड",
@@ -383,7 +386,15 @@
       "subscription-invoices": "चालान",
       "security-sessions": "सत्र",
       "sync-settings-enabled": "डिवाइसों में सिंक करें",
-      "sync-push-status": "चालू"
+      "sync-push-status": "चालू",
+      "updates-version": "वर्तमान संस्करण",
+      "updates-check": "अपडेट जाँचें",
+      "updates-auto-check": "अपडेट अपने आप जाँचें",
+      "updates-auto-install": "अपडेट अपने आप इंस्टॉल करें",
+      "updates-channel": "अपडेट चैनल",
+      "updates-changelog": "बदलावों की सूची",
+      "about-version": "संस्करण",
+      "about-website": "क्लाइंट URL"
     },
     "colors": {
       "background": "पृष्ठभूमि",
@@ -558,6 +569,29 @@
       "manageHelp": "Stripe के ज़रिए योजना बदलें, भुगतान विवरण अपडेट करें या अपनी सदस्यता रद्द करें।",
       "viewInvoices": "चालान देखें",
       "invoicesHelp": "Stripe बिलिंग पोर्टल के ज़रिए पिछले चालान देखें और डाउनलोड करें।"
+    },
+    "updates": {
+      "check": "अभी जाँचें",
+      "channelStable": "स्थिर",
+      "channelBeta": "बीटा",
+      "install": "इंस्टॉल करें",
+      "download": "डाउनलोड करें",
+      "restart": "पुनः आरंभ करें",
+      "noChanges": "कोई रिलीज़ नोट उपलब्ध नहीं है।",
+      "installFailed": "अपडेट इंस्टॉल करने में विफल।",
+      "status": {
+        "idle": "जाँचा नहीं गया",
+        "checking": "जाँच हो रही है…",
+        "upToDate": "अद्यतित",
+        "available": "अपडेट उपलब्ध है ({{version}})",
+        "downloading": "डाउनलोड हो रहा है",
+        "ready": "अपडेट के लिए पुनः आरंभ करें",
+        "error": "अपडेट की जाँच विफल रही"
+      },
+      "lastChecked": "अंतिम जाँच: {{date}}"
+    },
+    "about": {
+      "repository": "GitHub रिपॉज़िटरी"
     }
   },
   "subscription": {

@@ -297,7 +297,8 @@
       "calendar": "カレンダー",
       "subscription": "サブスクリプション",
       "security": "アカウントとセキュリティ",
-      "sync": "同期"
+      "sync": "同期",
+      "application": "アプリ"
     },
     "sections": {
       "theme": "テーマ",
@@ -319,7 +320,9 @@
       "agenda": "アジェンダ表示",
       "settings-sync": "設定",
       "push-service": "プッシュサービス",
-      "resync": "再同期"
+      "resync": "再同期",
+      "updates": "アップデート",
+      "about": "このアプリについて"
     },
     "items": {
       "theme-mode": "テーマモード",
@@ -371,7 +374,15 @@
       "subscription-invoices": "請求書",
       "security-sessions": "セッション",
       "sync-settings-enabled": "デバイス間で同期",
-      "sync-push-status": "有効"
+      "sync-push-status": "有効",
+      "updates-version": "現在のバージョン",
+      "updates-check": "アップデートを確認",
+      "updates-auto-check": "アップデートを自動的に確認",
+      "updates-auto-install": "アップデートを自動的にインストール",
+      "updates-channel": "アップデートチャンネル",
+      "updates-changelog": "変更履歴",
+      "about-version": "バージョン",
+      "about-website": "クライアントURL"
     },
     "colors": {
       "background": "背景",
@@ -542,6 +553,29 @@
       "manageHelp": "Stripeでプランの変更、支払い情報の更新、サブスクリプションの解約ができます。",
       "viewInvoices": "請求書を表示",
       "invoicesHelp": "Stripeの請求ポータルで過去の請求書を表示・ダウンロードできます。"
+    },
+    "updates": {
+      "check": "今すぐ確認",
+      "channelStable": "安定版",
+      "channelBeta": "ベータ版",
+      "install": "インストール",
+      "download": "ダウンロード",
+      "restart": "再起動",
+      "noChanges": "リリースノートはありません。",
+      "installFailed": "アップデートのインストールに失敗しました。",
+      "status": {
+        "idle": "未確認",
+        "checking": "確認中…",
+        "upToDate": "最新です",
+        "available": "アップデートがあります ({{version}})",
+        "downloading": "ダウンロード中",
+        "ready": "再起動してアップデート",
+        "error": "アップデートの確認に失敗しました"
+      },
+      "lastChecked": "最終確認: {{date}}"
+    },
+    "about": {
+      "repository": "GitHubリポジトリ"
     }
   },
   "subscription": {

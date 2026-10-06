@@ -328,7 +328,8 @@
       "calendar": "التقويم",
       "subscription": "الاشتراك",
       "security": "الحساب والأمان",
-      "sync": "المزامنة"
+      "sync": "المزامنة",
+      "application": "التطبيق"
     },
     "sections": {
       "theme": "السمة",
@@ -350,7 +351,9 @@
       "agenda": "عرض جدول الأعمال",
       "settings-sync": "الإعدادات",
       "push-service": "خدمة الإشعارات الفورية",
-      "resync": "إعادة المزامنة"
+      "resync": "إعادة المزامنة",
+      "updates": "التحديثات",
+      "about": "حول التطبيق"
     },
     "items": {
       "theme-mode": "وضع السمة",
@@ -402,7 +405,15 @@
       "subscription-invoices": "الفواتير",
       "security-sessions": "الجلسات",
       "sync-settings-enabled": "المزامنة بين الأجهزة",
-      "sync-push-status": "مفعّل"
+      "sync-push-status": "مفعّل",
+      "updates-version": "الإصدار الحالي",
+      "updates-check": "التحقق من التحديثات",
+      "updates-auto-check": "التحقق من التحديثات تلقائيًا",
+      "updates-auto-install": "تثبيت التحديثات تلقائيًا",
+      "updates-channel": "قناة التحديث",
+      "updates-changelog": "سجل التغييرات",
+      "about-version": "الإصدار",
+      "about-website": "عنوان URL للعميل"
     },
     "colors": {
       "background": "الخلفية",
@@ -593,6 +604,29 @@
       "manageHelp": "غيّر الخطة أو حدّث بيانات الدفع أو ألغِ اشتراكك عبر Stripe.",
       "viewInvoices": "عرض الفواتير",
       "invoicesHelp": "اعرض الفواتير السابقة ونزّلها عبر بوابة الفوترة في Stripe."
+    },
+    "updates": {
+      "check": "تحقق الآن",
+      "channelStable": "مستقر",
+      "channelBeta": "تجريبي",
+      "install": "تثبيت",
+      "download": "تنزيل",
+      "restart": "إعادة التشغيل",
+      "noChanges": "لا توجد ملاحظات إصدار.",
+      "installFailed": "فشل تثبيت التحديث.",
+      "status": {
+        "idle": "لم يتم التحقق",
+        "checking": "جارٍ التحقق…",
+        "upToDate": "محدّث",
+        "available": "يتوفر تحديث ({{version}})",
+        "downloading": "جارٍ التنزيل",
+        "ready": "أعد التشغيل للتحديث",
+        "error": "فشل التحقق من التحديثات"
+      },
+      "lastChecked": "آخر تحقق: {{date}}"
+    },
+    "about": {
+      "repository": "مستودع GitHub"
     }
   },
   "subscription": {

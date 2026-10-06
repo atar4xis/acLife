@@ -303,7 +303,8 @@
       "calendar": "Calendrier",
       "subscription": "Abonnement",
       "security": "Compte et sécurité",
-      "sync": "Synchronisation"
+      "sync": "Synchronisation",
+      "application": "Application"
     },
     "sections": {
       "theme": "Thème",
@@ -325,7 +326,9 @@
       "agenda": "Vue agenda",
       "settings-sync": "Paramètres",
       "push-service": "Service push",
-      "resync": "Resynchronisation"
+      "resync": "Resynchronisation",
+      "updates": "Mises à jour",
+      "about": "À propos"
     },
     "items": {
       "theme-mode": "Mode du thème",
@@ -377,7 +380,15 @@
       "subscription-invoices": "Factures",
       "security-sessions": "Sessions",
       "sync-settings-enabled": "Synchroniser entre les appareils",
-      "sync-push-status": "Activé"
+      "sync-push-status": "Activé",
+      "updates-version": "Version actuelle",
+      "updates-check": "Rechercher des mises à jour",
+      "updates-auto-check": "Rechercher automatiquement les mises à jour",
+      "updates-auto-install": "Installer automatiquement les mises à jour",
+      "updates-channel": "Canal de mise à jour",
+      "updates-changelog": "Journal des modifications",
+      "about-version": "Version",
+      "about-website": "URL du client"
     },
     "colors": {
       "background": "Arrière-plan",
@@ -552,6 +563,29 @@
       "manageHelp": "Changez de formule, mettez à jour vos informations de paiement ou résiliez votre abonnement via Stripe.",
       "viewInvoices": "Voir les factures",
       "invoicesHelp": "Consultez et téléchargez vos factures passées via le portail de facturation Stripe."
+    },
+    "updates": {
+      "check": "Vérifier maintenant",
+      "channelStable": "Stable",
+      "channelBeta": "Bêta",
+      "install": "Installer",
+      "download": "Télécharger",
+      "restart": "Redémarrer",
+      "noChanges": "Aucune note de version disponible.",
+      "installFailed": "Échec de l'installation de la mise à jour.",
+      "status": {
+        "idle": "Non vérifié",
+        "checking": "Vérification…",
+        "upToDate": "À jour",
+        "available": "Mise à jour disponible ({{version}})",
+        "downloading": "Téléchargement",
+        "ready": "Redémarrez pour mettre à jour",
+        "error": "Échec de la vérification des mises à jour"
+      },
+      "lastChecked": "Dernière vérification : {{date}}"
+    },
+    "about": {
+      "repository": "Dépôt GitHub"
     }
   },
   "subscription": {

@@ -20,6 +20,26 @@ export interface SettingsCategory {
 
 export const settingsCategories: SettingsCategory[] = [
   {
+    id: "application",
+    sections: [
+      {
+        id: "updates",
+        items: [
+          { id: "updates-version" },
+          { id: "updates-auto-check", settingKey: "autoCheckUpdates" },
+          { id: "updates-auto-install", settingKey: "autoInstallUpdates" },
+          { id: "updates-check" },
+          { id: "updates-channel", settingKey: "updateChannel" },
+          { id: "updates-changelog" },
+        ],
+      },
+      {
+        id: "about",
+        items: [{ id: "about-version" }, { id: "about-website" }],
+      },
+    ],
+  },
+  {
     id: "appearance",
     sections: [
       {

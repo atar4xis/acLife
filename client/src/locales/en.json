@@ -307,7 +307,8 @@
       "calendar": "Calendar",
       "subscription": "Subscription",
       "security": "Account and security",
-      "sync": "Sync"
+      "sync": "Sync",
+      "application": "Application"
     },
     "sections": {
       "theme": "Theme",
@@ -329,7 +330,9 @@
       "agenda": "Agenda view",
       "settings-sync": "Settings",
       "push-service": "Push service",
-      "resync": "Resync"
+      "resync": "Resync",
+      "updates": "Updates",
+      "about": "About"
     },
     "items": {
       "theme-mode": "Theme mode",
@@ -381,7 +384,15 @@
       "subscription-invoices": "Invoices",
       "security-sessions": "Sessions",
       "sync-settings-enabled": "Sync across devices",
-      "sync-push-status": "Enabled"
+      "sync-push-status": "Enabled",
+      "updates-version": "Current version",
+      "updates-check": "Check for updates",
+      "updates-auto-check": "Automatically check for updates",
+      "updates-auto-install": "Automatically install updates",
+      "updates-channel": "Update channel",
+      "updates-changelog": "Changelog",
+      "about-version": "Version",
+      "about-website": "Client URL"
     },
     "colors": {
       "background": "Background",
@@ -556,6 +567,29 @@
       "manageHelp": "Change plan, update payment details, or cancel your subscription via Stripe.",
       "viewInvoices": "View invoices",
       "invoicesHelp": "View and download past invoices via the Stripe billing portal."
+    },
+    "updates": {
+      "check": "Check now",
+      "channelStable": "Stable",
+      "channelBeta": "Beta",
+      "install": "Install",
+      "download": "Download",
+      "restart": "Restart",
+      "noChanges": "No release notes available.",
+      "installFailed": "Failed to install the update.",
+      "status": {
+        "idle": "Not checked",
+        "checking": "Checking…",
+        "upToDate": "Up to date",
+        "available": "Update available ({{version}})",
+        "downloading": "Downloading",
+        "ready": "Restart to update",
+        "error": "Update check failed"
+      },
+      "lastChecked": "Last checked: {{date}}"
+    },
+    "about": {
+      "repository": "GitHub repository"
     }
   },
   "subscription": {

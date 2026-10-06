@@ -13,6 +13,7 @@ import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
 import { Direction } from "radix-ui";
 import { useTranslation } from "react-i18next";
+import { UpdaterProvider } from "./context/UpdaterContext";
 import LanguageSync from "@/components/LanguageSync";
 
 function AuthWrapper({ children }: WithChildren) {
@@ -60,22 +61,24 @@ export default function App() {
     <Direction.Provider dir={i18n.dir()}>
       <SettingsStoreProvider>
         <LanguageSync />
-        <ThemeProvider>
-          <ApiProvider>
-            <StorageProvider>
-              <UserProvider>
-                <CalendarProvider>
-                  <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
-                    <Toaster position="bottom-center" />
-                    <AuthWrapper>
-                      <AppShell />
-                    </AuthWrapper>
-                  </SidebarProvider>
-                </CalendarProvider>
-              </UserProvider>
-            </StorageProvider>
-          </ApiProvider>
-        </ThemeProvider>
+        <UpdaterProvider>
+          <ThemeProvider>
+            <ApiProvider>
+              <StorageProvider>
+                <UserProvider>
+                  <CalendarProvider>
+                    <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
+                      <Toaster position="bottom-center" />
+                      <AuthWrapper>
+                        <AppShell />
+                      </AuthWrapper>
+                    </SidebarProvider>
+                  </CalendarProvider>
+                </UserProvider>
+              </StorageProvider>
+            </ApiProvider>
+          </ThemeProvider>
+        </UpdaterProvider>
       </SettingsStoreProvider>
     </Direction.Provider>
   );

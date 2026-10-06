@@ -297,7 +297,8 @@
       "calendar": "日历",
       "subscription": "订阅",
       "security": "账户与安全",
-      "sync": "同步"
+      "sync": "同步",
+      "application": "应用"
     },
     "sections": {
       "theme": "主题",
@@ -319,7 +320,9 @@
       "agenda": "日程列表视图",
       "settings-sync": "设置",
       "push-service": "推送服务",
-      "resync": "重新同步"
+      "resync": "重新同步",
+      "updates": "更新",
+      "about": "关于"
     },
     "items": {
       "theme-mode": "主题模式",
@@ -371,7 +374,15 @@
       "subscription-invoices": "发票",
       "security-sessions": "会话",
       "sync-settings-enabled": "跨设备同步",
-      "sync-push-status": "启用"
+      "sync-push-status": "启用",
+      "updates-version": "当前版本",
+      "updates-check": "检查更新",
+      "updates-auto-check": "自动检查更新",
+      "updates-auto-install": "自动安装更新",
+      "updates-channel": "更新通道",
+      "updates-changelog": "更新日志",
+      "about-version": "版本",
+      "about-website": "客户端网址"
     },
     "colors": {
       "background": "背景",
@@ -542,6 +553,29 @@
       "manageHelp": "通过 Stripe 更改套餐、更新付款信息或取消订阅。",
       "viewInvoices": "查看发票",
       "invoicesHelp": "通过 Stripe 账单门户查看和下载历史发票。"
+    },
+    "updates": {
+      "check": "立即检查",
+      "channelStable": "稳定版",
+      "channelBeta": "测试版",
+      "install": "安装",
+      "download": "下载",
+      "restart": "重启",
+      "noChanges": "暂无发行说明。",
+      "installFailed": "安装更新失败。",
+      "status": {
+        "idle": "未检查",
+        "checking": "正在检查…",
+        "upToDate": "已是最新",
+        "available": "有可用更新 ({{version}})",
+        "downloading": "正在下载",
+        "ready": "重启以更新",
+        "error": "检查更新失败"
+      },
+      "lastChecked": "上次检查：{{date}}"
+    },
+    "about": {
+      "repository": "GitHub 仓库"
     }
   },
   "subscription": {

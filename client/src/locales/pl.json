@@ -317,7 +317,8 @@
       "calendar": "Kalendarz",
       "subscription": "Subskrypcja",
       "security": "Konto i bezpieczeństwo",
-      "sync": "Synchronizacja"
+      "sync": "Synchronizacja",
+      "application": "Aplikacja"
     },
     "sections": {
       "theme": "Motyw",
@@ -339,7 +340,9 @@
       "agenda": "Widok agendy",
       "settings-sync": "Ustawienia",
       "push-service": "Usługa push",
-      "resync": "Ponowna synchronizacja"
+      "resync": "Ponowna synchronizacja",
+      "updates": "Aktualizacje",
+      "about": "O aplikacji"
     },
     "items": {
       "theme-mode": "Tryb motywu",
@@ -391,7 +394,15 @@
       "subscription-invoices": "Faktury",
       "security-sessions": "Sesje",
       "sync-settings-enabled": "Synchronizuj między urządzeniami",
-      "sync-push-status": "Włączona"
+      "sync-push-status": "Włączona",
+      "updates-version": "Aktualna wersja",
+      "updates-check": "Sprawdź aktualizacje",
+      "updates-auto-check": "Automatycznie sprawdzaj aktualizacje",
+      "updates-auto-install": "Automatycznie instaluj aktualizacje",
+      "updates-channel": "Kanał aktualizacji",
+      "updates-changelog": "Lista zmian",
+      "about-version": "Wersja",
+      "about-website": "Adres URL klienta"
     },
     "colors": {
       "background": "Tło",
@@ -574,6 +585,29 @@
       "manageHelp": "Zmień plan, zaktualizuj dane płatności lub anuluj subskrypcję przez Stripe.",
       "viewInvoices": "Zobacz faktury",
       "invoicesHelp": "Przeglądaj i pobieraj wcześniejsze faktury w portalu płatności Stripe."
+    },
+    "updates": {
+      "check": "Sprawdź teraz",
+      "channelStable": "Stabilny",
+      "channelBeta": "Beta",
+      "install": "Zainstaluj",
+      "download": "Pobierz",
+      "restart": "Uruchom ponownie",
+      "noChanges": "Brak informacji o wydaniu.",
+      "installFailed": "Nie udało się zainstalować aktualizacji.",
+      "status": {
+        "idle": "Nie sprawdzono",
+        "checking": "Sprawdzanie…",
+        "upToDate": "Najnowsza wersja",
+        "available": "Dostępna aktualizacja ({{version}})",
+        "downloading": "Pobieranie",
+        "ready": "Uruchom ponownie, aby zaktualizować",
+        "error": "Nie udało się sprawdzić aktualizacji"
+      },
+      "lastChecked": "Ostatnie sprawdzenie: {{date}}"
+    },
+    "about": {
+      "repository": "Repozytorium GitHub"
     }
   },
   "subscription": {

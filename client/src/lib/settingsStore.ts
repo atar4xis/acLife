@@ -117,6 +117,11 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
       defaultCalendarSettings[key],
     );
   }
+  parsed.updateChannel = oneOf(
+    parsed.updateChannel,
+    ["stable", "beta"],
+    defaultCalendarSettings.updateChannel,
+  );
   if (parsed.language !== "system" && !isLanguage(parsed.language)) {
     parsed.language = defaultCalendarSettings.language;
   }
