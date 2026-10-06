@@ -48,7 +48,7 @@ export const defaultCalendarSettings: CalendarSettings = {
   followCurrentTime: true,
   autoCheckUpdates: false,
   autoInstallUpdates: false,
-  updateChannel: "stable",
+  updateChannel: __APP_VERSION__.includes("-") ? "beta" : "stable",
   eventEditorOpacity: 80,
   eventEditorBlur: 10,
   eventEditorRadius: 10,
