@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -222,12 +224,35 @@ jobs:
             client/src-tauri/latest.json
           if-no-files-found: error
 
+      - name: Generate release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            previous=$(git describe --tags --abbrev=0 --match 'v*' "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          else
+            previous=$(git describe --tags --abbrev=0 --match 'v*' --exclude '*-*' "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          fi
+
+          if [ -z "$previous" ]; then
+            echo "Initial release" > "$RUNNER_TEMP/notes.md"
+            exit 0
+          fi
+
+          {
+            git log --pretty='- %s' "$previous..$GITHUB_REF_NAME"
+            echo
+            echo "**Full changelog**: https://github.com/${{ github.repository }}/compare/$previous...$GITHUB_REF_NAME"
+          } > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           name: acLife ${{ github.ref_name }}
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/notes.md
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             client/src-tauri/target/release/aclife-desktop
