@@ -175,31 +175,33 @@ export default function ApplicationPage({
 
         <div className="flex flex-col gap-3">
           <FieldTitle>{settingLabel("updates-changelog")}</FieldTitle>
-          {updater.changelog.length === 0 && (
-            <FieldDescription>
-              {t("settings.updates.noChanges")}
-            </FieldDescription>
-          )}
-          {updater.changelog.map(({ release, commits }) => (
-            <div key={release.tag} className="flex flex-col gap-1">
-              <a
-                href={release.url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm font-medium hover:underline"
-              >
-                {release.version}
-                <span className="ms-2 font-normal text-muted-foreground">
-                  {format(DateTime.fromISO(release.date), "date")}
-                </span>
-              </a>
-              <ul className="list-disc ps-5 text-sm text-muted-foreground">
-                {commits.map((message, i) => (
-                  <li key={i}>{message}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div className="flex max-h-64 flex-col gap-3 overflow-y-auto rounded-lg border p-3">
+            {updater.changelog.length === 0 && (
+              <FieldDescription>
+                {t("settings.updates.noChanges")}
+              </FieldDescription>
+            )}
+            {updater.changelog.map(({ release, commits }) => (
+              <div key={release.tag} className="flex flex-col gap-1">
+                <a
+                  href={release.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium hover:underline"
+                >
+                  {release.version}
+                  <span className="ms-2 font-normal text-muted-foreground">
+                    {format(DateTime.fromISO(release.date), "date")}
+                  </span>
+                </a>
+                <ul className="list-disc ps-5 text-sm text-muted-foreground">
+                  {commits.map((message, i) => (
+                    <li key={i}>{message}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
       </Section>
 
