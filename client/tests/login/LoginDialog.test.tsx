@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
@@ -9,6 +9,8 @@ const apiMock = vi.hoisted(() => ({
   setUrl: vi.fn(),
   post: vi.fn(),
   serverMeta: null as ServerMetadata | null,
+  pendingVerificationEmail: null as string | null,
+  setPendingVerificationEmail: vi.fn(),
 }));
 
 const userMock = vi.hoisted(() => ({
@@ -18,6 +20,7 @@ const userMock = vi.hoisted(() => ({
 }));
 
 const storageMock = vi.hoisted(() => ({
+  missing: false,
   get: vi.fn(),
   set: vi.fn(),
 }));
@@ -26,6 +29,7 @@ const cryptMock = vi.hoisted(() => ({
   generateMasterKeyEnvelope: vi.fn(),
   generateSRPTriplet: vi.fn(),
   randomBytes: vi.fn(),
+  deriveMasterKey: vi.fn(),
   SRP_CheckM2: vi.fn(),
 }));
 
@@ -52,7 +56,8 @@ vi.mock("../../src/context/ApiContext.tsx", () => ({
     setServerMeta: vi.fn(),
     pendingLogout: false,
     setPendingLogout: vi.fn(),
-    setPendingVerificationEmail: vi.fn(),
+    pendingVerificationEmail: apiMock.pendingVerificationEmail,
+    setPendingVerificationEmail: apiMock.setPendingVerificationEmail,
   }),
 }));
 
@@ -61,7 +66,7 @@ vi.mock("../../src/context/UserContext.tsx", () => ({
 }));
 
 vi.mock("../../src/context/StorageContext.tsx", () => ({
-  useStorage: () => storageMock,
+  useStorage: () => (storageMock.missing ? null : storageMock),
 }));
 
 vi.mock("../../src/lib/crypt.ts", async () => {
@@ -74,6 +79,7 @@ vi.mock("../../src/lib/crypt.ts", async () => {
     generateMasterKeyEnvelope: cryptMock.generateMasterKeyEnvelope,
     generateSRPTriplet: cryptMock.generateSRPTriplet,
     randomBytes: cryptMock.randomBytes,
+    deriveMasterKey: cryptMock.deriveMasterKey,
     SRP_CheckM2: cryptMock.SRP_CheckM2,
   };
 });
@@ -127,11 +133,14 @@ beforeEach(() => {
   apiMock.serverMeta = null;
   apiMock.setUrl.mockReset();
   apiMock.post.mockReset();
+  apiMock.pendingVerificationEmail = null;
+  apiMock.setPendingVerificationEmail.mockReset();
 
   userMock.setUser.mockReset();
   userMock.setMasterKey.mockReset();
   userMock.checkLogin.mockReset().mockResolvedValue(undefined);
 
+  storageMock.missing = false;
   storageMock.get.mockReset().mockReturnValue("");
   storageMock.set.mockReset();
 
@@ -155,6 +164,7 @@ beforeEach(() => {
   cryptMock.generateSRPTriplet.mockReset().mockResolvedValue({
     toUint8Array: () => Uint8Array.from([1, 2, 3]),
   });
+  cryptMock.deriveMasterKey.mockReset();
   cryptMock.randomBytes.mockReset().mockReturnValue(Uint8Array.from([1, 2, 3, 4]));
   cryptMock.SRP_CheckM2.mockReset().mockReturnValue(true);
 
@@ -485,6 +495,14 @@ describe("LoginDialog email first registration", () => {
     await user.click(screen.getByRole("button", { name: /continue/i }));
 
     expect(await screen.findByText(/verification required/i)).toBeInTheDocument();
+    expect(screen.getByText("new@example.com")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Resend email (60s)" }),
+    ).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: /back to login/i }));
+    expect(screen.queryByText(/verification required/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+    expect(apiMock.setPendingVerificationEmail).toHaveBeenCalledWith(null);
     expect(apiMock.post).toHaveBeenCalledWith("auth/register/start", {
       email: "new@example.com",
       powToken,
@@ -543,6 +561,7 @@ describe("LoginDialog email first registration", () => {
     const email = await screen.findByLabelText(/email address/i);
     expect(email).toHaveValue("new@example.com");
     expect(email).toHaveAttribute("readonly");
+    expect(screen.getByText("Create an account")).toBeInTheDocument();
     expect(window.location.hash).toBe("");
 
     await user.type(screen.getByLabelText(/^password$/i), "StrongPassword123!");
@@ -701,6 +720,55 @@ describe("LoginDialog email first registration", () => {
     expect(screen.getByLabelText(/^password$/i)).toHaveValue("");
   });
 
+  it("keeps the query string when it clears a link", async () => {
+    apiMock.serverMeta = verifiedMeta;
+    window.history.replaceState({}, "", `/?keep=1${linkHash()}`);
+
+    renderLoginDialog();
+
+    expect(await screen.findByLabelText(/confirm password/i)).toBeInTheDocument();
+    expect(window.location.search).toBe("?keep=1");
+    expect(window.location.hash).toBe("");
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("replaces the verification screen when a link arrives", async () => {
+    apiMock.serverMeta = verifiedMeta;
+    apiMock.pendingVerificationEmail = "pending@example.com";
+
+    renderLoginDialog();
+    expect(await screen.findByText(/verification required/i)).toBeInTheDocument();
+
+    window.location.hash = linkHash();
+
+    expect(await screen.findByLabelText(/confirm password/i)).toBeInTheDocument();
+    expect(screen.queryByText(/verification required/i)).not.toBeInTheDocument();
+    expect(apiMock.setPendingVerificationEmail).toHaveBeenCalledWith(null);
+  });
+
+  it("does not revive a dropped link when the server switches back", async () => {
+    apiMock.serverMeta = verifiedMeta;
+    window.location.hash = linkHash();
+    const ui = () => (
+      <SettingsStoreProvider>
+        <LoginDialog />
+      </SettingsStoreProvider>
+    );
+
+    const view = renderLoginDialog();
+    expect(await screen.findByLabelText(/confirm password/i)).toBeInTheDocument();
+
+    apiMock.url = "https://other.example/api/";
+    view.rerender(ui());
+    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
+    expect(screen.queryByLabelText(/confirm password/i)).not.toBeInTheDocument();
+
+    apiMock.url = "https://mock.example/api/";
+    view.rerender(ui());
+    expect(screen.queryByLabelText(/confirm password/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/email address/i)).not.toHaveAttribute("readonly");
+  });
+
   it("leaves hashes without a token alone", () => {
     apiMock.serverMeta = verifiedMeta;
     window.location.hash = "#other=1";
@@ -719,5 +787,189 @@ describe("LoginDialog email first registration", () => {
     await openRegistrationForm(user);
 
     expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
+  });
+});
+
+describe("LoginDialog server switcher", () => {
+  const openSwitcher = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByText("..."));
+    return screen.findByLabelText("Server URL");
+  };
+
+  it("starts from the saved server and can be cancelled", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("serverURL", "https://old.example/api/");
+
+    renderLoginDialog();
+    const input = await openSwitcher(user);
+
+    expect(input).toHaveValue("https://old.example/api/");
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(screen.queryByText("Change server")).not.toBeInTheDocument();
+    expect(screen.getByText("Log in to your account")).toBeInTheDocument();
+  });
+
+  it("locks the form while testing and forgets a result once edited", async () => {
+    const user = userEvent.setup();
+    let finish!: (value: unknown) => void;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise((resolve) => (finish = resolve))),
+    );
+
+    renderLoginDialog();
+    const input = await openSwitcher(user);
+    const test = input.parentElement!.querySelector("button")!;
+
+    await user.clear(input);
+    expect(test).toBeDisabled();
+
+    await user.type(input, "next.example/api");
+    expect(test).toBeEnabled();
+    await user.click(test);
+    expect(input).toBeDisabled();
+    expect(test).toBeDisabled();
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
+
+    finish({
+      ok: true,
+      json: async () => ({ success: true, data: defaultServerMeta }),
+    });
+    expect(await screen.findByText(/connection successful/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeEnabled();
+
+    await user.type(input, "x");
+    expect(screen.queryByText(/connection successful/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
+  });
+});
+
+describe("LoginDialog verification screens", () => {
+  it("shows the pending verification email with resend ready and goes back", async () => {
+    apiMock.serverMeta = defaultServerMeta;
+    apiMock.pendingVerificationEmail = "pending@example.com";
+    const user = userEvent.setup();
+
+    renderLoginDialog();
+
+    expect(await screen.findByText(/verification required/i)).toBeInTheDocument();
+    expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resend email" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: /back to login/i }));
+
+    expect(apiMock.setPendingVerificationEmail).toHaveBeenCalledWith(null);
+    expect(screen.queryByText(/verification required/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+  });
+
+  describe("email confirmation link", () => {
+    afterEach(() => window.history.replaceState({}, "", "/"));
+
+    it("asks to confirm, keeps other query params, and posts the token", async () => {
+      apiMock.serverMeta = defaultServerMeta;
+      apiMock.post.mockResolvedValue({ success: true });
+      window.history.replaceState({}, "", "/?verify_token=abc&keep=1");
+      const user = userEvent.setup();
+
+      renderLoginDialog();
+
+      expect(screen.getByText(/click the button below to verify/i)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/email address/i)).not.toBeInTheDocument();
+      expect(window.location.search).toBe("?keep=1");
+
+      await user.click(screen.getByRole("button", { name: "Verify email" }));
+
+      expect(apiMock.post).toHaveBeenCalledWith("auth/verify-email", { token: "abc" });
+      expect(await screen.findByLabelText(/email address/i)).toBeInTheDocument();
+      expect(screen.queryByText(/click the button below to verify/i)).not.toBeInTheDocument();
+    });
+
+    it("drops the prompt on cancel and leaves the url bare", async () => {
+      apiMock.serverMeta = defaultServerMeta;
+      window.history.replaceState({}, "", "/?verify_token=abc");
+      const user = userEvent.setup();
+
+      renderLoginDialog();
+      expect(window.location.search).toBe("");
+
+      await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+      expect(apiMock.post).not.toHaveBeenCalled();
+      expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+    });
+
+    it("shows no prompt without a token", () => {
+      apiMock.serverMeta = defaultServerMeta;
+      window.history.replaceState({}, "", "/?other=1");
+
+      renderLoginDialog();
+
+      expect(screen.queryByText(/click the button below to verify/i)).not.toBeInTheDocument();
+      expect(window.location.search).toBe("?other=1");
+    });
+  });
+});
+
+describe("LoginDialog offline mode", () => {
+  const importableKey = () => btoa(String.fromCharCode(...new Uint8Array(32).fill(7)));
+
+  it("creates and stores a new offline key from the fallback button", async () => {
+    const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, [
+      "encrypt",
+      "decrypt",
+    ]);
+    cryptMock.deriveMasterKey.mockResolvedValue({ masterKey: key });
+    renderLoginDialog();
+
+    const defaultAllowed = fireEvent.click(
+      screen.getByRole("button", { name: /use in offline mode/i }),
+    );
+
+    await waitFor(() => expect(userMock.setMasterKey).toHaveBeenCalledWith(key));
+    expect(defaultAllowed).toBe(false);
+    expect(storageMock.get).toHaveBeenCalledWith("offlineMasterKey");
+    expect(storageMock.set).toHaveBeenCalledWith(
+      "offlineMasterKey",
+      expect.stringMatching(/^[A-Za-z0-9+/]{43}=$/),
+    );
+    expect(userMock.setUser).toHaveBeenCalledWith({ type: "offline" });
+  });
+
+  it("reuses the stored offline key from the login form", async () => {
+    apiMock.serverMeta = defaultServerMeta;
+    storageMock.get.mockReturnValue(importableKey());
+    const user = userEvent.setup();
+    renderLoginDialog();
+
+    await user.click(screen.getByRole("button", { name: /offline mode/i }));
+
+    await waitFor(() => expect(userMock.setUser).toHaveBeenCalledWith({ type: "offline" }));
+    expect(userMock.setMasterKey).toHaveBeenCalledWith(expect.objectContaining({ type: "secret" }));
+    expect(storageMock.get).toHaveBeenCalledWith("offlineMasterKey");
+    expect(cryptMock.deriveMasterKey).not.toHaveBeenCalled();
+    expect(storageMock.set).not.toHaveBeenCalled();
+  });
+
+  it("does nothing without storage", () => {
+    storageMock.missing = true;
+    renderLoginDialog();
+
+    const defaultAllowed = fireEvent.click(
+      screen.getByRole("button", { name: /use in offline mode/i }),
+    );
+
+    expect(defaultAllowed).toBe(true);
+    expect(userMock.setUser).not.toHaveBeenCalled();
+  });
+});
+
+describe("LoginDialog language", () => {
+  it("offers a language picker", () => {
+    renderLoginDialog();
+
+    expect(screen.getByRole("combobox", { name: /language/i })).toBeInTheDocument();
   });
 });
