@@ -117,6 +117,7 @@
   },
   "agenda": {
     "inProgress": "en cours",
+    "overdue": "En retard",
     "startsIn": "dans {{duration}}"
   },
   "picker": {
@@ -375,6 +376,8 @@
       "mini-calendar-dropdowns": "Listes déroulantes du mois et de l'année",
       "calendar-agenda-enabled": "Activée",
       "calendar-agenda-range": "Période",
+      "calendar-agenda-show-overdue": "Afficher les tâches en retard",
+      "calendar-agenda-overdue-days": "Conserver les tâches en retard pendant",
       "sync-resync-interval": "Intervalle de resynchronisation",
       "calendar-language": "Langue",
       "subscription-invoices": "Factures",

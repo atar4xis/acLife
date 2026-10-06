@@ -123,6 +123,7 @@
   },
   "agenda": {
     "inProgress": "जारी है",
+    "overdue": "अतिदेय",
     "startsIn": "{{duration}} बाद"
   },
   "picker": {
@@ -381,6 +382,8 @@
       "mini-calendar-dropdowns": "महीने और वर्ष के ड्रॉपडाउन",
       "calendar-agenda-enabled": "चालू",
       "calendar-agenda-range": "दायरा",
+      "calendar-agenda-show-overdue": "अतिदेय कार्य दिखाएँ",
+      "calendar-agenda-overdue-days": "अतिदेय कार्यों को इतने समय तक रखें",
       "sync-resync-interval": "पुनः सिंक का अंतराल",
       "calendar-language": "भाषा",
       "subscription-invoices": "चालान",

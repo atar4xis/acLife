@@ -178,8 +178,37 @@ describe("CalendarPage", () => {
     await renderLoadedCalendarPage();
 
     const switches = screen.getAllByRole("switch");
-    expect(switches[switches.length - 1]).toBeChecked();
-    expect(screen.getByText("3 days")).toBeInTheDocument();
+    expect(switches[switches.length - 2]).toBeChecked();
+    expect(screen.getAllByText("3 days")).toHaveLength(2);
+  });
+
+  it("shows the overdue slider only while show overdue tasks is on", async () => {
+    const user = userEvent.setup();
+    await renderLoadedCalendarPage();
+
+    const switches = screen.getAllByRole("switch");
+    const overdueSwitch = switches[switches.length - 1];
+    expect(overdueSwitch).toBeChecked();
+    const sliderCount = screen.getAllByRole("slider").length;
+
+    await user.click(overdueSwitch);
+
+    expect(screen.getAllByRole("slider")).toHaveLength(sliderCount - 1);
+    expect(readSettings().showOverdueTasks).toBe(false);
+  });
+
+  it("clamps the overdue days slider between 1 and 28 days", async () => {
+    const user = userEvent.setup();
+    await renderLoadedCalendarPage();
+
+    const sliders = screen.getAllByRole("slider");
+    sliders[sliders.length - 1].focus();
+    for (let i = 0; i < 30; i++) {
+      await user.keyboard("[ArrowRight]");
+    }
+
+    expect(screen.getByText("28 days")).toBeInTheDocument();
+    expect(readSettings().overdueDays).toBe(28);
   });
 
   it("toggles the agenda enabled switch off", async () => {
@@ -187,7 +216,7 @@ describe("CalendarPage", () => {
     await renderLoadedCalendarPage();
 
     const switches = screen.getAllByRole("switch");
-    const agendaSwitch = switches[switches.length - 1];
+    const agendaSwitch = switches[switches.length - 2];
     await user.click(agendaSwitch);
 
     expect(agendaSwitch).not.toBeChecked();
@@ -201,7 +230,7 @@ describe("CalendarPage", () => {
     await renderLoadedCalendarPage();
 
     const sliders = screen.getAllByRole("slider");
-    sliders[sliders.length - 1].focus();
+    sliders[sliders.length - 2].focus();
     await user.keyboard("[ArrowRight]");
 
     expect(screen.getByText("4 days")).toBeInTheDocument();
@@ -215,7 +244,7 @@ describe("CalendarPage", () => {
     await renderLoadedCalendarPage();
 
     const sliders = screen.getAllByRole("slider");
-    const rangeSlider = sliders[sliders.length - 1];
+    const rangeSlider = sliders[sliders.length - 2];
     rangeSlider.focus();
 
     for (let i = 0; i < 20; i++) {

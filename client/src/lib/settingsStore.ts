@@ -143,6 +143,13 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
   if (!parsed.agendaRangeDays) {
     parsed.agendaRangeDays = defaultCalendarSettings.agendaRangeDays;
   }
+  parsed.overdueDays = Math.min(
+    28,
+    Math.max(
+      1,
+      Math.round(parsed.overdueDays) || defaultCalendarSettings.overdueDays,
+    ),
+  );
   if (!parsed.fontSize) parsed.fontSize = defaultStoreSettings.fontSize;
   parsed.customCss = parsed.customCss.slice(0, MAX_CUSTOM_CSS_LENGTH);
 

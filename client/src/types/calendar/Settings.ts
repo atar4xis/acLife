@@ -26,6 +26,8 @@ export interface CalendarSettings {
   resyncIntervalMinutes: number;
   agendaEnabled: boolean;
   agendaRangeDays: number;
+  showOverdueTasks: boolean;
+  overdueDays: number;
   miniCalendarEnabled: boolean;
   miniCalendarEventBars: boolean;
   miniCalendarWeekNumbers: boolean;

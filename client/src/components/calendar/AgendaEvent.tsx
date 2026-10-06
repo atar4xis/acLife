@@ -5,8 +5,13 @@ import type { CalendarEvent } from "@/types/calendar/Event";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSidebar } from "../ui/sidebar";
 import { Checkbox } from "../ui/checkbox";
-import { timeFormat } from "@/lib/calendar/date";
+import {
+  DURATION_UNITS,
+  humanizeDuration,
+  timeFormat,
+} from "@/lib/calendar/date";
 import { useTranslation } from "react-i18next";
+import { DateTime } from "luxon";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -16,8 +21,9 @@ import { EventMenuItems } from "./EventMenuItems";
 
 type AgendaEventProps = {
   event: CalendarEvent;
+  overdue?: boolean;
 };
-export default function AgendaEvent({ event }: AgendaEventProps) {
+export default function AgendaEvent({ event, overdue }: AgendaEventProps) {
   const { t } = useTranslation();
   const { setEditingEvent, setCurrentDate, eventHandlers } =
     useCalendarActions();
@@ -35,26 +41,29 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
   }, [event.start, event.end, event.color, t]);
 
   const startsInText = useMemo(() => {
+    if (overdue) return "";
     if (event.start.toMillis() < now) return t("agenda.inProgress");
     if (event.start.toMillis() - now > 86_400_000) return ""; // 24 hours
 
-    const diff = event.start
-      .diffNow()
-      .shiftTo("days", "hours", "minutes", "seconds");
-
-    const unit =
-      diff.days >= 1
-        ? "days"
-        : diff.hours >= 1
-          ? "hours"
-          : diff.minutes >= 1
-            ? "minutes"
-            : "seconds";
+    const diff = event.start.diffNow(DURATION_UNITS);
 
     return t("agenda.startsIn", {
-      duration: diff.shiftTo(unit).mapUnits(Math.ceil).toHuman(),
+      duration: humanizeDuration(diff, Math.ceil),
     });
-  }, [event.start, now, t]);
+  }, [overdue, event.start, now, t]);
+
+  const timeText = useMemo(() => {
+    if (overdue) {
+      const diff = DateTime.fromMillis(now).diff(event.end, DURATION_UNITS);
+      return humanizeDuration(diff, Math.floor);
+    }
+    if (event.allDay) return t("editor.allDay");
+    return (
+      event.start.toFormat(startTimeFormat) +
+      " - " +
+      event.end.toFormat(endTimeFormat)
+    );
+  }, [overdue, now, event, startTimeFormat, endTimeFormat, t]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -77,7 +86,7 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
     setOpenMobile(false); // close sidebar
   };
 
-  if (event.end.toMillis() <= now) return;
+  if (!overdue && event.end.toMillis() <= now) return;
 
   return (
     <ContextMenu>
@@ -122,12 +131,13 @@ export default function AgendaEvent({ event }: AgendaEventProps) {
             </button>
           </div>
           {!event._continued && (
-            <div className="text-xs font-normal truncate text-foreground/50">
-              {event.allDay
-                ? t("editor.allDay")
-                : event.start.toFormat(startTimeFormat) +
-                  " - " +
-                  event.end.toFormat(endTimeFormat)}
+            <div
+              className={cn(
+                "text-xs font-normal truncate",
+                overdue ? "text-destructive/50" : "text-foreground/50",
+              )}
+            >
+              {timeText}
             </div>
           )}
         </div>

@@ -127,6 +127,7 @@
   },
   "agenda": {
     "inProgress": "w trakcie",
+    "overdue": "Zaległe",
     "startsIn": "za {{duration}}"
   },
   "picker": {
@@ -389,6 +390,8 @@
       "mini-calendar-dropdowns": "Listy rozwijane miesiąca i roku",
       "calendar-agenda-enabled": "Włączony",
       "calendar-agenda-range": "Zakres",
+      "calendar-agenda-show-overdue": "Pokaż zaległe zadania",
+      "calendar-agenda-overdue-days": "Pokazuj zaległe zadania przez",
       "sync-resync-interval": "Interwał ponownej synchronizacji",
       "calendar-language": "Język",
       "subscription-invoices": "Faktury",

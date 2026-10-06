@@ -115,6 +115,7 @@
   },
   "agenda": {
     "inProgress": "en curso",
+    "overdue": "Vencidas",
     "startsIn": "en {{duration}}"
   },
   "picker": {
@@ -373,6 +374,8 @@
       "mini-calendar-dropdowns": "Desplegables de mes y año",
       "calendar-agenda-enabled": "Activada",
       "calendar-agenda-range": "Intervalo",
+      "calendar-agenda-show-overdue": "Mostrar tareas vencidas",
+      "calendar-agenda-overdue-days": "Mantener las tareas vencidas durante",
       "sync-resync-interval": "Intervalo de resincronización",
       "calendar-language": "Idioma",
       "subscription-invoices": "Facturas",

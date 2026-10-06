@@ -113,6 +113,7 @@
   },
   "agenda": {
     "inProgress": "进行中",
+    "overdue": "已逾期",
     "startsIn": "{{duration}}后"
   },
   "picker": {
@@ -369,6 +370,8 @@
       "mini-calendar-dropdowns": "月份和年份下拉菜单",
       "calendar-agenda-enabled": "启用",
       "calendar-agenda-range": "范围",
+      "calendar-agenda-show-overdue": "显示逾期任务",
+      "calendar-agenda-overdue-days": "逾期任务保留时间",
       "sync-resync-interval": "重新同步间隔",
       "calendar-language": "语言",
       "subscription-invoices": "发票",

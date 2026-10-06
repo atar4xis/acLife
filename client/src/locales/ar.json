@@ -134,6 +134,7 @@
   },
   "agenda": {
     "inProgress": "قيد التنفيذ",
+    "overdue": "متأخرة",
     "startsIn": "خلال {{duration}}"
   },
   "picker": {
@@ -400,6 +401,8 @@
       "mini-calendar-dropdowns": "قوائم منسدلة للشهر والسنة",
       "calendar-agenda-enabled": "مفعّل",
       "calendar-agenda-range": "النطاق",
+      "calendar-agenda-show-overdue": "إظهار المهام المتأخرة",
+      "calendar-agenda-overdue-days": "إبقاء المهام المتأخرة لمدة",
       "sync-resync-interval": "فاصل إعادة المزامنة",
       "calendar-language": "اللغة",
       "subscription-invoices": "الفواتير",

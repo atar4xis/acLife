@@ -121,6 +121,7 @@
   },
   "agenda": {
     "inProgress": "in progress",
+    "overdue": "Overdue",
     "startsIn": "in {{duration}}"
   },
   "picker": {
@@ -379,6 +380,8 @@
       "mini-calendar-dropdowns": "Month and year dropdowns",
       "calendar-agenda-enabled": "Enabled",
       "calendar-agenda-range": "Range",
+      "calendar-agenda-show-overdue": "Show overdue tasks",
+      "calendar-agenda-overdue-days": "Keep overdue tasks for",
       "sync-resync-interval": "Resync interval",
       "calendar-language": "Language",
       "subscription-invoices": "Invoices",

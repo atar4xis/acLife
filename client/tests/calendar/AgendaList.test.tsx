@@ -86,6 +86,104 @@ describe("AgendaList", () => {
     localStorage.clear();
   });
 
+  describe("overdue tasks", () => {
+    const task = (id: string, hoursAgo: number, extra = {}) =>
+      buildEvent({
+        id,
+        title: id,
+        isTask: true,
+        start: FIXED_NOW.minus({ hours: hoursAgo + 1 }),
+        end: FIXED_NOW.minus({ hours: hoursAgo }),
+        ...extra,
+      });
+
+    it("lists overdue tasks under Overdue with the time overdue", () => {
+      renderAgendaList([
+        task("two-hours", 2),
+        task("two-days", 49),
+        task("done", 3, { completed: true }),
+        buildEvent({
+          id: "plain",
+          title: "plain",
+          start: FIXED_NOW.minus({ hours: 3 }),
+          end: FIXED_NOW.minus({ hours: 2 }),
+        }),
+      ]);
+
+      expect(screen.getByText("Overdue · 2")).toBeInTheDocument();
+      expect(screen.getByText("2 hours")).toBeInTheDocument();
+      expect(screen.getByText("2 days")).toBeInTheDocument();
+      expect(screen.queryByText("done")).not.toBeInTheDocument();
+      expect(screen.queryByText("plain")).not.toBeInTheDocument();
+      expect(screen.queryByText("in progress")).not.toBeInTheDocument();
+    });
+
+    it("shows exactly one unit in the largest whole unit", () => {
+      renderAgendaList([task("one-hour", 1)]);
+
+      expect(screen.getByText("1 hour")).toBeInTheDocument();
+    });
+
+    it("drops tasks overdue for longer than overdueDays", () => {
+      renderAgendaList([task("old", 24 * 4)]);
+
+      expect(screen.queryByText("old")).not.toBeInTheDocument();
+    });
+
+    it("keeps them longer when overdueDays is increased", () => {
+      seedSettings({ overdueDays: 7 });
+      renderAgendaList([task("old", 24 * 4)]);
+
+      expect(screen.getByText("old")).toBeInTheDocument();
+      expect(screen.getByText("4 days")).toBeInTheDocument();
+    });
+
+    it("includes tasks that end exactly now but not ones at the cutoff", () => {
+      renderAgendaList([task("ends-now", 0), task("at-cutoff", 72)]);
+
+      expect(screen.getByText("Overdue · 1")).toBeInTheDocument();
+      expect(screen.getByText("ends-now")).toBeInTheDocument();
+      expect(screen.queryByText("at-cutoff")).not.toBeInTheDocument();
+    });
+
+    it("ignores tasks that have not ended yet", () => {
+      renderAgendaList([task("upcoming", -2)]);
+
+      expect(screen.queryByText(/Overdue/)).not.toBeInTheDocument();
+      expect(screen.getByText("upcoming")).toBeInTheDocument();
+    });
+
+    it("sorts overdue tasks by end time, oldest first", () => {
+      renderAgendaList([task("a", 5), task("b", 30), task("c", 2)]);
+
+      const titles = screen.getAllByText(/^[abc]$/).map((e) => e.textContent);
+      expect(titles).toEqual(["b", "a", "c"]);
+    });
+
+    it("lists a multi-day task once", () => {
+      renderAgendaList([
+        buildEvent({
+          id: "long",
+          title: "long",
+          isTask: true,
+          start: FIXED_NOW.minus({ days: 2 }),
+          end: FIXED_NOW.minus({ hours: 2 }),
+        }),
+      ]);
+
+      expect(screen.getByText("Overdue · 1")).toBeInTheDocument();
+      expect(screen.getAllByText("long")).toHaveLength(1);
+    });
+
+    it("hides them when showOverdueTasks is off", () => {
+      seedSettings({ showOverdueTasks: false });
+      renderAgendaList([task("two-hours", 2)]);
+
+      expect(screen.queryByText(/Overdue/)).not.toBeInTheDocument();
+      expect(screen.queryByText("two-hours")).not.toBeInTheDocument();
+    });
+  });
+
   it("only shows events within the default 3 day range", () => {
     const withinRange = buildEvent({
       id: "within",

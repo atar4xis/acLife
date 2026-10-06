@@ -199,6 +199,18 @@ describe("settings store", () => {
     expect(settings.timezones).toEqual(defaultStoreSettings.timezones);
   });
 
+  it.each([
+    [0, 3],
+    [-5, 1],
+    [99, 28],
+    [2.6, 3],
+    ["abc", 3],
+  ])("clamps a stored overdueDays of %s to %s", (stored, expected) => {
+    seedSettings({ overdueDays: stored });
+
+    expect(createSettingsStore().getSnapshot().overdueDays).toBe(expected);
+  });
+
   it("keeps a stored language only if a locale file exists for it", () => {
     seedSettings({ language: "es" });
     expect(createSettingsStore().getSnapshot().language).toBe("es");
@@ -384,7 +396,9 @@ describe("sync rules", () => {
         "fontSize",
         "language",
         "lineOpacity",
+        "overdueDays",
         "presets",
+        "showOverdueTasks",
         "miniCalendarEnabled",
         "miniCalendarEventBars",
         "miniCalendarWeekNumbers",

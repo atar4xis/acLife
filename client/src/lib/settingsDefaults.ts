@@ -24,6 +24,8 @@ export const defaultCalendarSettings: CalendarSettings = {
   resyncIntervalMinutes: 15,
   agendaEnabled: true,
   agendaRangeDays: 3,
+  showOverdueTasks: true,
+  overdueDays: 3,
   miniCalendarEnabled: true,
   miniCalendarEventBars: false,
   miniCalendarWeekNumbers: false,

@@ -290,6 +290,14 @@ export const settingsCategories: SettingsCategory[] = [
             id: "calendar-agenda-range",
             settingKey: "agendaRangeDays",
           },
+          {
+            id: "calendar-agenda-show-overdue",
+            settingKey: "showOverdueTasks",
+          },
+          {
+            id: "calendar-agenda-overdue-days",
+            settingKey: "overdueDays",
+          },
         ],
       },
     ],

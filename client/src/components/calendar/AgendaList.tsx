@@ -3,7 +3,7 @@ import { SidebarGroup, SidebarGroupLabel } from "../ui/sidebar";
 import { useEventList } from "@/context/CalendarContext";
 import { getRelativeDays } from "@/lib/calendar/date";
 import { DateTime } from "luxon";
-import { getEventMap } from "@/lib/calendar/event";
+import { eventKey, getEventMap } from "@/lib/calendar/event";
 import { EMPTY_ARRAY } from "@/lib/constants";
 import AgendaEvent from "./AgendaEvent";
 import type { CalendarEvent } from "@/types/calendar/Event";
@@ -15,6 +15,8 @@ export default memo(function AgendaList() {
   const calendarEvents = useEventList();
   const settings = useCalendarSettings((s) => ({
     agendaRangeDays: s.agendaRangeDays,
+    showOverdueTasks: s.showOverdueTasks,
+    overdueDays: s.overdueDays,
     defaultTimezone: s.defaultTimezone,
   }));
   const [now, setNow] = useState(() =>
@@ -62,6 +64,33 @@ export default memo(function AgendaList() {
     return result;
   }, [eventMap, visibleDays]);
 
+  const overdueTasks = useMemo(() => {
+    if (!settings.showOverdueTasks) return EMPTY_ARRAY;
+    const today = now.startOf("day");
+    const days = Array.from({ length: settings.overdueDays + 1 }, (_, i) =>
+      today.minus({ days: settings.overdueDays - i }),
+    );
+    const nowMillis = now.toMillis();
+    const cutoff = now.minus({ days: settings.overdueDays }).toMillis();
+    const tasks = new Map<string, CalendarEvent>();
+    for (const events of getEventMap(
+      calendarEvents,
+      days,
+      EMPTY_ARRAY,
+      EMPTY_ARRAY,
+    ).values()) {
+      for (const e of events) {
+        const end = e.end.toMillis();
+        if (e.isTask && !e.completed && end <= nowMillis && end > cutoff) {
+          tasks.set(eventKey(e), e);
+        }
+      }
+    }
+    return [...tasks.values()].toSorted(
+      (a, b) => a.end.toMillis() - b.end.toMillis(),
+    );
+  }, [calendarEvents, now, settings.showOverdueTasks, settings.overdueDays]);
+
   useEffect(() => {
     setNow((prev) => prev.setZone(settings.defaultTimezone));
     const interval = setInterval(
@@ -71,24 +100,40 @@ export default memo(function AgendaList() {
     return () => clearInterval(interval);
   }, [settings.defaultTimezone]);
 
-  return visibleDays.map((d) => {
-    const key = d.date.toISODate()!;
-    const events = sortedEventMap.get(key);
+  return (
+    <>
+      {overdueTasks.length > 0 && (
+        <SidebarGroup>
+          <SidebarGroupLabel className="mb-1 bg-destructive/5 text-destructive">
+            {t("agenda.overdue")} · {overdueTasks.length}
+          </SidebarGroupLabel>
+          {overdueTasks.map((event) => (
+            <AgendaEvent key={eventKey(event)} event={event} overdue />
+          ))}
+        </SidebarGroup>
+      )}
+      {visibleDays.map((d) => {
+        const key = d.date.toISODate()!;
+        const events = sortedEventMap.get(key);
 
-    if (!events) return null;
+        if (!events) return null;
 
-    return (
-      <SidebarGroup key={key}>
-        <SidebarGroupLabel>
-          {d.label} · {events.length}
-        </SidebarGroupLabel>
-        {events.map((event) => (
-          <AgendaEvent
-            key={(event._parent || event.id) + "_" + event.start.toISODate()}
-            event={event}
-          />
-        ))}
-      </SidebarGroup>
-    );
-  });
+        return (
+          <SidebarGroup key={key}>
+            <SidebarGroupLabel>
+              {d.label} · {events.length}
+            </SidebarGroupLabel>
+            {events.map((event) => (
+              <AgendaEvent
+                key={
+                  (event._parent || event.id) + "_" + event.start.toISODate()
+                }
+                event={event}
+              />
+            ))}
+          </SidebarGroup>
+        );
+      })}
+    </>
+  );
 });

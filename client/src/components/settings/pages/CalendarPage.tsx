@@ -270,6 +270,7 @@ export default function CalendarPage({
     dayHeaderPosition,
     timeLabelPosition,
     agendaEnabled,
+    showOverdueTasks,
     miniCalendarEnabled,
     miniCalendarEventBars,
     miniCalendarWeekNumbers,
@@ -610,6 +611,28 @@ export default function CalendarPage({
             format={(v) => t("settings.days", { count: v })}
             disabled={!agendaEnabled}
           />
+
+          <Field orientation="responsive" className="mt-2">
+            <SettingsLabel settingKey="showOverdueTasks" />
+            <Switch
+              aria-labelledby={settingLabelId("showOverdueTasks")}
+              checked={showOverdueTasks}
+              disabled={!agendaEnabled}
+              onCheckedChange={(checked) =>
+                setSetting("showOverdueTasks", checked)
+              }
+            />
+          </Field>
+
+          {showOverdueTasks && (
+            <SettingsSlider
+              settingKey="overdueDays"
+              min={1}
+              max={28}
+              format={(v) => t("settings.days", { count: v })}
+              disabled={!agendaEnabled}
+            />
+          )}
         </DeferredContent>
       </Section>
     </FieldGroup>

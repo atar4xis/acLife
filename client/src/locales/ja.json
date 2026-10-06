@@ -113,6 +113,7 @@
   },
   "agenda": {
     "inProgress": "進行中",
+    "overdue": "期限切れ",
     "startsIn": "{{duration}}後"
   },
   "picker": {
@@ -369,6 +370,8 @@
       "mini-calendar-dropdowns": "月と年のドロップダウン",
       "calendar-agenda-enabled": "有効",
       "calendar-agenda-range": "範囲",
+      "calendar-agenda-show-overdue": "期限切れのタスクを表示",
+      "calendar-agenda-overdue-days": "期限切れのタスクを残す期間",
       "sync-resync-interval": "再同期の間隔",
       "calendar-language": "言語",
       "subscription-invoices": "請求書",

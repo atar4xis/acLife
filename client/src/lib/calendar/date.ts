@@ -104,3 +104,18 @@ export const describeAllDayRange = (start: DateTime, end: DateTime) => {
   const units = Object.fromEntries(Object.entries(length).filter(([, n]) => n));
   return `${start.toFormat(pattern)} - ${end.toFormat(pattern)} (${Duration.fromObject(units).toHuman()})`;
 };
+
+export const DURATION_UNITS: ("days" | "hours" | "minutes" | "seconds")[] = [
+  "days",
+  "hours",
+  "minutes",
+  "seconds",
+];
+
+export function humanizeDuration(
+  diff: Duration,
+  round: (value: number) => number,
+) {
+  const unit = DURATION_UNITS.find((u) => diff[u] >= 1) ?? "seconds";
+  return diff.shiftTo(unit).mapUnits(round).toHuman();
+}
