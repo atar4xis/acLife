@@ -10,11 +10,8 @@ import {
 } from "@/lib/calendar/crypt";
 import {
   computeBucketHash,
-  computeBucketId, // TODO: temporary migration, remove before v1
   computeEventBuckets,
   computeSyncRangeBuckets,
-  eventBucketLabels, // TODO: temporary migration, remove before v1
-  RECURRING_BUCKET_LABEL, // TODO: temporary migration, remove before v1
 } from "@/lib/calendar/buckets";
 import { base64ByteLength, uuidToBase64 } from "@/lib/utils";
 import type {
@@ -182,7 +179,7 @@ export const useCalendarEvents = (
       }
 
       // the server tells us which events were updated, added, and deleted
-      const { updated, added, deleted, needsBucketBackfill } = res.data;
+      const { updated, added, deleted } = res.data;
 
       // remove deleted events from cache
       const cachedMap = new Map(cachedEvents.map((ev) => [ev.id, ev]));
@@ -211,46 +208,18 @@ export const useCalendarEvents = (
           await encryptOfflineEvents(finalEvents, masterKey),
         );
 
-        const backfillIds = new Set(needsBucketBackfill ?? []);
+        // a mismatch with nothing to pull means the server copy is stale, so re-save ours
         const nothingToApply =
           !updated.length && !added.length && !deleted.length;
-        if (nothingToApply) {
-          for (const b of mismatched) {
-            for (const ev of byBucket.get(b) ?? []) backfillIds.add(ev.id);
-          }
-        }
-
-        // TODO: temporary migration, remove before v1
-        const recurringBucket = await computeBucketId(
-          bucketKey,
-          RECURRING_BUCKET_LABEL,
-        );
-        if (mismatched.includes(recurringBucket)) {
-          for (const ev of cachedMap.values()) {
-            if (
-              ev.repeat &&
-              !eventBucketLabels(ev).includes(RECURRING_BUCKET_LABEL)
-            ) {
-              backfillIds.add(ev.id);
-            }
-          }
-        }
-
-        if (backfillIds.size > 0) {
-          const toBackfill = [...backfillIds]
-            .map((id) => cachedMap.get(id))
-            .filter((ev): ev is CalendarEvent => ev !== undefined);
-
-          if (toBackfill.length > 0) {
-            encryptEvents(toBackfill, masterKey, bucketKey)
-              .then((encrypted) =>
-                post(
-                  "calendar/events/save",
-                  encrypted.map((event) => ({ type: "updated", event })),
-                ),
-              )
-              .catch(() => {});
-          }
+        if (nothingToApply && eventsToSync.size > 0) {
+          encryptEvents([...eventsToSync], masterKey, bucketKey)
+            .then((encrypted) =>
+              post(
+                "calendar/events/save",
+                encrypted.map((event) => ({ type: "updated", event })),
+              ),
+            )
+            .catch(() => {});
         }
 
         return finalEvents;

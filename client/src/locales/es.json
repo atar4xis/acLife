@@ -248,8 +248,7 @@
     "invalidPin": "PIN no válido.",
     "invalidPassword": "Contraseña no válida.",
     "usePassword": "Usar contraseña",
-    "usePin": "Usar PIN",
-    "upgraded": "La seguridad de tu cuenta se ha mejorado."
+    "usePin": "Usar PIN"
   },
   "settings": {
     "preview": {
@@ -588,9 +587,7 @@
     "saveFailed": "No se pudieron guardar los eventos del calendario.",
     "saveFailedWith": "No se pudieron guardar los eventos del calendario: {{message}}",
     "tooLarge": "\"{{title}}\" es demasiado grande para guardarse, así que se deshizo el cambio.",
-    "tooLargeMany_other": "{{count}} eventos son demasiado grandes para guardarse, así que se deshicieron sus cambios.",
-    "migrationFetchFailed": "No se pudieron obtener los eventos del calendario para la migración.",
-    "migrationFailed": "No se pudo migrar el sobre de claves."
+    "tooLargeMany_other": "{{count}} eventos son demasiado grandes para guardarse, así que se deshicieron sus cambios."
   },
   "keyboard": {
     "moveCancelled": "Movimiento cancelado",

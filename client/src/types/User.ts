@@ -8,8 +8,6 @@ type OnlineUser = {
   type: "online";
   uuid: string;
   email: string;
-  salt: string | null;
-  challenge: string | null;
   envelopes: KeyEnvelope[];
   subscription_status: string | null;
 };

@@ -254,8 +254,7 @@
     "invalidPin": "Invalid PIN.",
     "invalidPassword": "Invalid password.",
     "usePassword": "Use password instead",
-    "usePin": "Use PIN instead",
-    "upgraded": "Your account security has been upgraded."
+    "usePin": "Use PIN instead"
   },
   "settings": {
     "preview": {
@@ -594,9 +593,7 @@
     "saveFailed": "Failed to save calendar events.",
     "saveFailedWith": "Failed to save calendar events: {{message}}",
     "tooLarge": "\"{{title}}\" is too large to save, so the change was undone.",
-    "tooLargeMany_other": "{{count}} events are too large to save, so their changes were undone.",
-    "migrationFetchFailed": "Failed to fetch calendar events for migration.",
-    "migrationFailed": "Failed to migrate key envelope."
+    "tooLargeMany_other": "{{count}} events are too large to save, so their changes were undone."
   },
   "keyboard": {
     "moveCancelled": "Move canceled",

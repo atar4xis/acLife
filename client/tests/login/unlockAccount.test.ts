@@ -25,11 +25,8 @@ class FakeArgonWorker {
 const { generateMasterKeyEnvelope } = await import("../../src/lib/crypt.ts");
 const { unlockAccount } = await import("../../src/lib/unlockAccount.ts");
 
-const post = vi.fn();
-
 beforeEach(() => {
   vi.stubGlobal("Worker", FakeArgonWorker);
-  post.mockReset();
 }, 30000);
 
 describe("unlockAccount", () => {
@@ -38,15 +35,9 @@ describe("unlockAccount", () => {
       "envelope-pass",
       true,
     );
-    const user = { envelopes: [envelope], salt: null, challenge: null };
+    const user = { envelopes: [envelope] };
 
-    const keys = await unlockAccount(
-      "envelope-pass",
-      user,
-      post,
-      undefined,
-      true,
-    );
+    const keys = await unlockAccount("envelope-pass", user, true);
 
     expect(await crypto.subtle.exportKey("raw", keys.masterKey)).toEqual(
       await crypto.subtle.exportKey("raw", masterKey),
@@ -55,17 +46,21 @@ describe("unlockAccount", () => {
 
   it("returns non-extractable keys unless asked otherwise", async () => {
     const { envelope } = await generateMasterKeyEnvelope("envelope-pass");
-    const user = { envelopes: [envelope], salt: null, challenge: null };
+    const user = { envelopes: [envelope] };
 
-    const keys = await unlockAccount("envelope-pass", user, post);
+    const keys = await unlockAccount("envelope-pass", user);
 
     expect(keys.masterKey.extractable).toBe(false);
   }, 30000);
 
   it("rejects a wrong password", async () => {
     const { envelope } = await generateMasterKeyEnvelope("envelope-pass");
-    const user = { envelopes: [envelope], salt: null, challenge: null };
+    const user = { envelopes: [envelope] };
 
-    await expect(unlockAccount("nope", user, post)).rejects.toThrow();
+    await expect(unlockAccount("nope", user)).rejects.toThrow();
   }, 30000);
+
+  it("rejects an account without a master envelope", async () => {
+    await expect(unlockAccount("any", { envelopes: [] })).rejects.toThrow();
+  });
 });

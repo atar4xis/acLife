@@ -58,8 +58,6 @@ export function UserProvider({ children }: WithChildren) {
           const { masterKey, bucketKey } = await unlockAccount(
             password,
             newUser,
-            post,
-            storage,
             exportable,
           );
           setMasterKey(masterKey);

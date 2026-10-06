@@ -29,8 +29,10 @@ const (
 	MaxStreamsPerUser     = 30
 	MaxStreamPayloadBytes = 64 << 10
 
-	SRPSessionTTL     = 5 * time.Minute
-	RateLimitCacheTTL = 2 * time.Minute
+	SRPSessionTTL      = 5 * time.Minute
+	MaxLoginFailures   = 10
+	LoginFailureWindow = 15 * time.Minute
+	RateLimitCacheTTL  = 2 * time.Minute
 
 	DBMaxOpenConns    = 50
 	DBMaxIdleConns    = 10
@@ -43,14 +45,13 @@ const (
 	EmailQueueStaleThreshold = 1 * time.Minute
 	EmailQueueMaxAttempts    = 5
 
-	MaxEmailLen     = 260
-	MaxSaltLen      = 16
-	MaxVerifierLen  = 520
-	MaxChallengeLen = 64
-	MaxEventLen     = 10000
-	MaxUserEvents   = 50000
-	MaxPowTokenLen  = 512
-	MaxPowNonceLen  = 32
+	MaxEmailLen    = 260
+	MaxSaltLen     = 16
+	MaxVerifierLen = 520
+	MaxEventLen    = 10000
+	MaxUserEvents  = 50000
+	MaxPowTokenLen = 512
+	MaxPowNonceLen = 32
 
 	MaxEnvelopeSaltLen = 64
 	MaxEnvelopeDataLen = 256
@@ -65,8 +66,6 @@ const (
 	MaxSyncBuckets  = 100 // caps the number of buckets requested in a single sync
 
 	MaxSettingsBytes = 128 << 10 // caps the encrypted settings blob
-
-	MaxBucketBackfillPerSync = 800
 
 	// MySQL TIMESTAMP range + 1 day
 	MinEventTimestampMs = int64(Day / time.Millisecond)

@@ -71,7 +71,7 @@ func (c *eventChanges) UnmarshalJSON(data []byte) error {
 
 var (
 	errBadEventChanges = errors.New("invalid event changes")
-	errEventLimit = errors.New("event limit reached")
+	errEventLimit      = errors.New("event limit reached")
 )
 
 // replyEventChangesError answers a failed applyCalendarChanges.
@@ -366,32 +366,6 @@ func scanCalendarEvents(rows *sql.Rows) ([]types.CalendarEvent, error) {
 	return events, nil
 }
 
-type eventMeta struct {
-	ID        string
-	UpdatedAt time.Time
-	IsLegacy  bool
-}
-
-func scanEventMeta(rows *sql.Rows) ([]eventMeta, error) {
-	defer func() { _ = rows.Close() }()
-
-	var out []eventMeta
-	for rows.Next() {
-		var m eventMeta
-		var legacy int
-		if err := rows.Scan(&m.ID, &m.UpdatedAt, &legacy); err != nil {
-			return nil, err
-		}
-		m.IsLegacy = legacy != 0
-		out = append(out, m)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return out, nil
-}
-
 // bucketHash hashes the "uuid:updatedAtMillis" lines of a bucket, line order does not matter.
 func bucketHash(lines []string) string {
 	sorted := append([]string(nil), lines...)
@@ -454,24 +428,9 @@ func syncHashes(w http.ResponseWriter, r *http.Request, owner string, hashes map
 		return
 	}
 
-	// legacy events only reach the client through the full diff, which also backfills them
-	var hasLegacy bool
-	if err := database.QueryRow(r.Context(), `
-		SELECT EXISTS (
-			SELECT 1 FROM calendar_events ce
-			WHERE ce.owner = ? AND NOT EXISTS (
-				SELECT 1 FROM calendar_event_buckets ceb WHERE ceb.event_id = ce.id
-			)
-		)
-	`, owner).Scan(&hasLegacy); err != nil {
-		utils.LogError("syncHashes", "LegacyQuery", err)
-		utils.SendInternalError(w)
-		return
-	}
-
 	mismatched := make([]string, 0, len(hashes))
 	for b, want := range hashes {
-		if hasLegacy || bucketHash(lines[b]) != want {
+		if bucketHash(lines[b]) != want {
 			mismatched = append(mismatched, b)
 		}
 	}
@@ -520,92 +479,42 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		utils.LogError("SyncCalendarEvents", "InvalidUUID", fmt.Errorf("%d invalid event ids", invalidIDs))
 	}
 
-	var dbEvents []types.CalendarEvent
-	needsBackfill := make([]string, 0)
+	if len(req.Buckets) == 0 || len(req.Buckets) > constants.MaxSyncBuckets {
+		utils.SendBadRequest(w)
+		return
+	}
 
-	if req.Buckets == nil {
-		// full sync if no buckets are specified
-		rows, err := database.Query(r.Context(), `
-			SELECT id, data, updated_at
-			FROM calendar_events
-			WHERE owner = ?
-		`, user.UUID)
-		if err != nil {
-			utils.LogError("SyncCalendarEvents", "Query", err)
-			utils.SendInternalError(w)
-			return
-		}
-
-		dbEvents, err = scanCalendarEvents(rows)
-		if err != nil {
-			utils.LogError("SyncCalendarEvents", "Scan", err)
-			utils.SendInternalError(w)
-			return
-		}
-	} else {
-		if len(req.Buckets) == 0 || len(req.Buckets) > constants.MaxSyncBuckets {
+	args := make([]any, 0, len(req.Buckets)+1)
+	args = append(args, user.UUID)
+	placeholders := make([]string, 0, len(req.Buckets))
+	for _, b := range req.Buckets {
+		bucketID, err := base64.StdEncoding.DecodeString(b)
+		if err != nil || len(bucketID) != constants.BucketIDLen {
 			utils.SendBadRequest(w)
 			return
 		}
+		args = append(args, bucketID)
+		placeholders = append(placeholders, "?")
+	}
 
-		args := make([]any, 0, len(req.Buckets)+1)
-		args = append(args, user.UUID)
-		placeholders := make([]string, 0, len(req.Buckets))
-		for _, b := range req.Buckets {
-			bucketID, err := base64.StdEncoding.DecodeString(b)
-			if err != nil || len(bucketID) != constants.BucketIDLen {
-				utils.SendBadRequest(w)
-				return
-			}
-			args = append(args, bucketID)
-			placeholders = append(placeholders, "?")
-		}
+	// events whose buckets fall in the requested range
+	rows, err := database.Query(r.Context(), `
+		SELECT DISTINCT ce.id, ce.data, ce.updated_at
+		FROM calendar_events ce
+		JOIN calendar_event_buckets ceb ON ceb.event_id = ce.id
+		WHERE ce.owner = ? AND ceb.bucket_id IN (`+strings.Join(placeholders, ",")+`)
+	`, args...)
+	if err != nil {
+		utils.LogError("SyncCalendarEvents", "RangeQuery", err)
+		utils.SendInternalError(w)
+		return
+	}
 
-		// events whose buckets fall in the requested range
-		rangeRows, err := database.Query(r.Context(), `
-			SELECT DISTINCT ce.id, ce.data, ce.updated_at
-			FROM calendar_events ce
-			JOIN calendar_event_buckets ceb ON ceb.event_id = ce.id
-			WHERE ce.owner = ? AND ceb.bucket_id IN (`+strings.Join(placeholders, ",")+`)
-		`, args...)
-		if err != nil {
-			utils.LogError("SyncCalendarEvents", "RangeQuery", err)
-			utils.SendInternalError(w)
-			return
-		}
-
-		rangeEvents, err := scanCalendarEvents(rangeRows)
-		if err != nil {
-			utils.LogError("SyncCalendarEvents", "RangeScan", err)
-			utils.SendInternalError(w)
-			return
-		}
-		dbEvents = append(dbEvents, rangeEvents...)
-
-		legacyRows, err := database.Query(r.Context(), `
-			SELECT ce.id, ce.data, ce.updated_at
-			FROM calendar_events ce
-			WHERE ce.owner = ? AND NOT EXISTS (
-				SELECT 1 FROM calendar_event_buckets ceb WHERE ceb.event_id = ce.id
-			)
-			LIMIT ?
-		`, user.UUID, constants.MaxBucketBackfillPerSync)
-		if err != nil {
-			utils.LogError("SyncCalendarEvents", "LegacyQuery", err)
-			utils.SendInternalError(w)
-			return
-		}
-
-		legacyEvents, err := scanCalendarEvents(legacyRows)
-		if err != nil {
-			utils.LogError("SyncCalendarEvents", "LegacyScan", err)
-			utils.SendInternalError(w)
-			return
-		}
-		for _, ev := range legacyEvents {
-			needsBackfill = append(needsBackfill, ev.ID)
-		}
-		dbEvents = append(dbEvents, legacyEvents...)
+	dbEvents, err := scanCalendarEvents(rows)
+	if err != nil {
+		utils.LogError("SyncCalendarEvents", "RangeScan", err)
+		utils.SendInternalError(w)
+		return
 	}
 
 	seenIDs := make(map[string]struct{})
@@ -642,10 +551,9 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSON(w, http.StatusOK, types.Reply[types.EventSyncResponse]{
 		Success: true,
 		Data: types.EventSyncResponse{
-			Updated:             updatedEvents,
-			Deleted:             deletedIDs,
-			Added:               addedEvents,
-			NeedsBucketBackfill: needsBackfill,
+			Updated: updatedEvents,
+			Deleted: deletedIDs,
+			Added:   addedEvents,
 		},
 	})
 }

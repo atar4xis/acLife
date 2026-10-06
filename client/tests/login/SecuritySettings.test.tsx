@@ -237,8 +237,6 @@ describe("enabling stay-unlocked", () => {
     expect(unlockMock.unlockAccount).toHaveBeenCalledWith(
       "my-password",
       onlineUser,
-      apiMock.post,
-      undefined,
       true,
     );
     expect(store.set).toHaveBeenCalledWith("unlockKeys", exported);

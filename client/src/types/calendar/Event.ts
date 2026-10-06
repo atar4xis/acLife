@@ -118,10 +118,9 @@ export type CachedEvent = {
   updatedAt: number;
 };
 
-// when buckets is omitted, the server performs a full sync
 export type EventSyncRequest = {
   events: { id: string; ts: number }[];
-  buckets?: string[];
+  buckets: string[];
 };
 
 export type EventHashRequest = {
@@ -136,7 +135,6 @@ export type EventSyncResponse = {
   updated: EncryptedEvent[];
   deleted: string[];
   added: EncryptedEvent[];
-  needsBucketBackfill: string[]; // ids of returned events with no bucket rows yet
 };
 
 export type EventChange = {

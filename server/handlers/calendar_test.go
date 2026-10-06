@@ -83,7 +83,7 @@ func lineFor(id string, ts int64) string {
 	return fmt.Sprintf("%s:%d", id, ts)
 }
 
-func insertLegacyEvents(t *testing.T, owner string, ids ...string) {
+func insertEvents(t *testing.T, owner string, ids ...string) {
 	t.Helper()
 
 	values := make([]string, 0, len(ids))
@@ -435,18 +435,11 @@ func TestSyncNeverReturnsOtherUsersEvents(t *testing.T) {
 	bucket := testutil.BucketID(1)
 
 	mustSave(t, srv.As(owner), added(ev(id, baseTS, bucket)))
-	insertLegacyEvents(t, owner.UUID, testutil.NewUUID())
-
-	t.Run("full sync", func(t *testing.T) {
-		got := syncDiff(t, srv.As(other), types.EventSyncRequest{})
-		if len(got.Added)+len(got.Updated)+len(got.NeedsBucketBackfill) != 0 {
-			t.Fatalf("leaked %+v", got)
-		}
-	})
+	insertEvents(t, owner.UUID, testutil.NewUUID())
 
 	t.Run("bucket sync", func(t *testing.T) {
 		got := syncDiff(t, srv.As(other), types.EventSyncRequest{Buckets: []string{bucket}})
-		if len(got.Added)+len(got.Updated)+len(got.NeedsBucketBackfill) != 0 {
+		if len(got.Added)+len(got.Updated) != 0 {
 			t.Fatalf("leaked %+v", got)
 		}
 	})
@@ -459,7 +452,7 @@ func TestSyncNeverReturnsOtherUsersEvents(t *testing.T) {
 	})
 
 	t.Run("does not report other users events as deleted", func(t *testing.T) {
-		got := syncDiff(t, srv.As(owner), types.EventSyncRequest{Events: []types.CachedEvent{cached(id, baseTS)}})
+		got := syncDiff(t, srv.As(owner), types.EventSyncRequest{Events: []types.CachedEvent{cached(id, baseTS)}, Buckets: []string{bucket}})
 		if len(got.Deleted) != 0 {
 			t.Fatalf("got %+v", got)
 		}
@@ -478,11 +471,14 @@ func TestSyncDiffFull(t *testing.T) {
 		added(ev(fresh, baseTS, bucket)),
 	)
 
-	got := syncDiff(t, c, types.EventSyncRequest{Events: []types.CachedEvent{
-		cached(unchanged, baseTS),
-		cached(stale, baseTS),
-		cached(gone, baseTS),
-	}})
+	got := syncDiff(t, c, types.EventSyncRequest{
+		Events: []types.CachedEvent{
+			cached(unchanged, baseTS),
+			cached(stale, baseTS),
+			cached(gone, baseTS),
+		},
+		Buckets: []string{bucket},
+	})
 
 	if ids := eventIDs(got.Added); !slices.Equal(ids, []string{fresh}) {
 		t.Fatalf("added %v", ids)
@@ -508,7 +504,7 @@ func TestSyncDiffDoesNotReturnEventsOlderOnServerAsUpdated(t *testing.T) {
 
 	mustSave(t, c, added(ev(id, baseTS, testutil.BucketID(1))))
 
-	got := syncDiff(t, c, types.EventSyncRequest{Events: []types.CachedEvent{cached(id, baseTS+100)}})
+	got := syncDiff(t, c, types.EventSyncRequest{Events: []types.CachedEvent{cached(id, baseTS+100)}, Buckets: []string{testutil.BucketID(1)}})
 	if len(got.Updated)+len(got.Added)+len(got.Deleted) != 0 {
 		t.Fatalf("got %+v", got)
 	}
@@ -552,48 +548,6 @@ func TestSyncDiffReportsCachedEventsOutsideBucketsAsDeleted(t *testing.T) {
 	}
 }
 
-func TestSyncDiffBackfillsLegacyEvents(t *testing.T) {
-	testutil.RequireDB(t)
-	user := testutil.NewUser(t)
-	c := testutil.NewClient(t).As(user)
-	legacy, bucketed := testutil.NewUUID(), testutil.NewUUID()
-
-	insertLegacyEvents(t, user.UUID, legacy)
-	mustSave(t, c, added(ev(bucketed, baseTS, testutil.BucketID(1))))
-
-	got := syncDiff(t, c, types.EventSyncRequest{Buckets: []string{testutil.BucketID(9)}})
-	if !slices.Equal(got.NeedsBucketBackfill, []string{legacy}) {
-		t.Fatalf("needsBucketBackfill %v", got.NeedsBucketBackfill)
-	}
-	if ids := eventIDs(got.Added); !slices.Equal(ids, []string{legacy}) {
-		t.Fatalf("added %v", ids)
-	}
-
-	mustSave(t, c, updated(ev(legacy, baseTS, testutil.BucketID(9))))
-
-	got = syncDiff(t, c, types.EventSyncRequest{Buckets: []string{testutil.BucketID(9)}})
-	if len(got.NeedsBucketBackfill) != 0 {
-		t.Fatalf("still needs backfill: %v", got.NeedsBucketBackfill)
-	}
-}
-
-func TestSyncDiffCapsBackfillPerSync(t *testing.T) {
-	testutil.RequireDB(t)
-	user := testutil.NewUser(t)
-	c := testutil.NewClient(t).As(user)
-
-	ids := make([]string, constants.MaxBucketBackfillPerSync+1)
-	for i := range ids {
-		ids[i] = testutil.NewUUID()
-	}
-	insertLegacyEvents(t, user.UUID, ids...)
-
-	got := syncDiff(t, c, types.EventSyncRequest{Buckets: []string{testutil.BucketID(1)}})
-	if len(got.NeedsBucketBackfill) != constants.MaxBucketBackfillPerSync {
-		t.Fatalf("got %d", len(got.NeedsBucketBackfill))
-	}
-}
-
 func TestSyncDiffRejectsInvalidBuckets(t *testing.T) {
 	testutil.RequireDB(t)
 
@@ -603,6 +557,7 @@ func TestSyncDiffRejectsInvalidBuckets(t *testing.T) {
 	}
 
 	cases := map[string][]string{
+		"missing":      nil,
 		"empty list":   {},
 		"too many":     tooMany,
 		"not base64":   {"!!!"},
@@ -692,26 +647,6 @@ func TestSyncHashes(t *testing.T) {
 			t.Fatalf("got %v", mismatched)
 		}
 	})
-}
-
-func TestSyncHashesMarkEveryBucketMismatchedWhenALegacyEventExists(t *testing.T) {
-	testutil.RequireDB(t)
-	user := testutil.NewUser(t)
-	c := testutil.NewClient(t).As(user)
-	id := testutil.NewUUID()
-	b1, b2 := testutil.BucketID(1), testutil.BucketID(2)
-
-	mustSave(t, c, added(ev(id, baseTS, b1)))
-	insertLegacyEvents(t, user.UUID, testutil.NewUUID())
-
-	_, mismatched := syncHashes(c, map[string]string{
-		b1: handlers.BucketHash([]string{lineFor(id, baseTS)}),
-		b2: handlers.BucketHash(nil),
-	})
-	slices.Sort(mismatched)
-	if !slices.Equal(mismatched, []string{b1, b2}) {
-		t.Fatalf("got %v", mismatched)
-	}
 }
 
 func TestSyncHashesRejectsInvalidRequests(t *testing.T) {

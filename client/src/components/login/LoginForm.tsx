@@ -19,7 +19,7 @@ import {
   MAX_PASSWORD_LENGTH,
   solveProofOfWork,
 } from "@/lib/crypt";
-import { srpLogin, upgradeSrpKdf } from "@/lib/srpLogin";
+import { srpLogin } from "@/lib/srpLogin";
 import { useStorage } from "@/context/StorageContext";
 import { validatePassword } from "@/lib/validators";
 import { useApi } from "@/context/ApiContext";
@@ -151,10 +151,7 @@ export function LoginForm({
         return;
       }
 
-      const user = await checkLogin(password);
-      if (login.legacy && user?.type === "online") {
-        await upgradeSrpKdf(post, user, password, login.salt);
-      }
+      await checkLogin(password);
     } finally {
       setLoading(false);
     }

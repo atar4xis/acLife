@@ -31,8 +31,6 @@ import { UserProvider, useUser } from "../../src/context/UserContext.tsx";
 const onlineUser = {
   uuid: "u1",
   email: "user@example.com",
-  salt: null,
-  challenge: null,
   envelopes: [],
   subscription_status: null,
 };
@@ -88,8 +86,6 @@ describe("UserProvider.checkLogin", () => {
     expect(unlockMock.unlockAccount).toHaveBeenCalledWith(
       "pw",
       expect.objectContaining({ uuid: "u1" }),
-      apiMock.post,
-      storageMock,
       false,
     );
     expect(ctx.masterKey).toBe(masterKey);
@@ -109,7 +105,7 @@ describe("UserProvider.checkLogin", () => {
 
       await act(() => ctx.checkLogin("pw"));
 
-      expect(unlockMock.unlockAccount.mock.calls[0][4]).toBe(exportable);
+      expect(unlockMock.unlockAccount.mock.calls[0][2]).toBe(exportable);
     },
   );
 

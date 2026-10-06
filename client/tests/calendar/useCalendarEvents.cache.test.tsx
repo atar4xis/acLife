@@ -67,7 +67,7 @@ server.post = async (endpoint, body) => {
   const added = [...server.rows.values()].filter((r) => !known.has(r.id));
   return {
     success: true,
-    data: { added, updated: [], deleted: [], needsBucketBackfill: [] },
+    data: { added, updated: [], deleted: [] },
   };
 };
 

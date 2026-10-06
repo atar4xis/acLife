@@ -455,11 +455,6 @@ func tripletFor(t *testing.T, username string, salt, verifier []byte) []byte {
 	return triplet
 }
 
-func currentTriplet(t *testing.T, u testutil.User) []byte {
-	t.Helper()
-	return tripletFor(t, u.Email, bytes.Repeat([]byte{1}, 16), bytes.Repeat([]byte{2}, 32))
-}
-
 func TestStreamClosesWhenCredentialsChange(t *testing.T) {
 	testutil.RequireDB(t)
 
@@ -470,11 +465,10 @@ func TestStreamClosesWhenCredentialsChange(t *testing.T) {
 		changingStream, _ := openStream(t, changing)
 		otherStream, _ := openStream(t, other)
 
-		status, reply := testutil.Call[any](changing, "POST", "/user/password", map[string]any{
-			"current_triplet": currentTriplet(t, user),
-			"triplet":         tripletFor(t, user.Email, bytes.Repeat([]byte{3}, 16), bytes.Repeat([]byte{4}, 32)),
-			"envelopes":       []types.KeyEnvelope{{Type: "master", Version: 1, Salt: []byte{1}, Data: []byte{1}, KDFParams: "{}"}},
-		})
+		body := testutil.Reauth(t, changing, user, testutil.Password)
+		body["triplet"] = tripletFor(t, user.Email, bytes.Repeat([]byte{3}, 16), bytes.Repeat([]byte{4}, 32))
+		body["envelopes"] = []types.KeyEnvelope{{Type: "master", Version: 1, Salt: []byte{1}, Data: []byte{1}, KDFParams: "{}"}}
+		status, reply := testutil.Call[any](changing, "POST", "/user/password", body)
 		if status != http.StatusOK {
 			t.Fatalf("change password: %d %+v", status, reply)
 		}
@@ -494,10 +488,9 @@ func TestStreamClosesWhenCredentialsChange(t *testing.T) {
 		conn, _ := openStream(t, c)
 		otherStream, _ := openStream(t, other)
 
-		status, reply := testutil.Call[any](c, "POST", "/user/email", map[string]any{
-			"current_triplet": currentTriplet(t, user),
-			"triplet":         tripletFor(t, "changed-"+user.Email, bytes.Repeat([]byte{3}, 16), bytes.Repeat([]byte{4}, 32)),
-		})
+		body := testutil.Reauth(t, c, user, testutil.Password)
+		body["triplet"] = tripletFor(t, "changed-"+user.Email, bytes.Repeat([]byte{3}, 16), bytes.Repeat([]byte{4}, 32))
+		status, reply := testutil.Call[any](c, "POST", "/user/email", body)
 		if status != http.StatusForbidden {
 			t.Fatalf("change email: %d %+v", status, reply)
 		}

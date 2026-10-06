@@ -4,7 +4,6 @@ import {
   unwrapKeyPairWithPin,
 } from "@/lib/crypt";
 import { unlockAccount } from "@/lib/unlockAccount";
-import { useApi } from "@/context/ApiContext";
 import { useStorage } from "@/context/StorageContext";
 import { Card, CardContent } from "../ui/card";
 import {
@@ -23,7 +22,6 @@ import { useTranslation } from "react-i18next";
 
 export default function UnlockDialog() {
   const { user, setMasterKey, setBucketKey, logout } = useUser();
-  const { post } = useApi();
   const storage = useStorage();
   const { t } = useTranslation();
   const [error, setError] = useState(false);
@@ -105,8 +103,6 @@ export default function UnlockDialog() {
       const { masterKey, bucketKey } = await unlockAccount(
         password,
         user,
-        post,
-        storage,
         exportable,
       );
       setError(false);

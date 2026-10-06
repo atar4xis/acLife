@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
 	"errors"
@@ -45,8 +44,6 @@ func UserInfo(w http.ResponseWriter, r *http.Request) {
 			UUID:               user.UUID,
 			Email:              user.Email,
 			SubscriptionStatus: user.SubscriptionStatus,
-			Salt:               user.Salt,
-			Challenge:          user.Challenge,
 			Envelopes:          envelopes,
 		},
 	})
@@ -75,14 +72,6 @@ func fetchEnvelopes(ctx context.Context, owner string) ([]types.KeyEnvelope, err
 	return envelopes, rows.Err()
 }
 
-// verifyCurrentPassword reports whether currentTriplet proves knowledge of user's current password.
-func verifyCurrentPassword(user *types.User, currentTriplet srp.Triplet) bool {
-	return len(currentTriplet.Verifier()) != 0 &&
-		len(currentTriplet.Verifier()) == len(user.Verifier) &&
-		subtle.ConstantTimeCompare(currentTriplet.Salt(), user.SrpSalt) == 1 &&
-		subtle.ConstantTimeCompare(currentTriplet.Verifier(), user.Verifier) == 1
-}
-
 // upsertEnvelopesTx inserts or updates key envelopes for owner within tx.
 func upsertEnvelopesTx(ctx context.Context, tx *sql.Tx, owner string, envelopes []types.KeyEnvelope) error {
 	for _, e := range envelopes {
@@ -105,8 +94,8 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 	utils.Assert(user != nil) // ensured by AuthMiddleware
 
 	var req struct {
-		CurrentTriplet []byte `json:"current_triplet"`
-		Triplet        []byte `json:"triplet"`
+		reauthProof
+		Triplet []byte `json:"triplet"`
 	}
 	if err := utils.ParseJSON(r.Body, &req); err != nil {
 		utils.SendBadRequest(w)
@@ -127,13 +116,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var currentTriplet srp.Triplet = req.CurrentTriplet
-	if !verifyCurrentPassword(user, currentTriplet) {
-		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
-			Success: false,
-			Message: "Current password is incorrect.",
-			Code:    "current_password_incorrect",
-		})
+	if !requirePassword(w, user, req.reauthProof) {
 		return
 	}
 
@@ -241,9 +224,9 @@ func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	utils.Assert(user != nil) // ensured by AuthMiddleware
 
 	var req struct {
-		CurrentTriplet []byte              `json:"current_triplet"`
-		Triplet        []byte              `json:"triplet"`
-		Envelopes      []types.KeyEnvelope `json:"envelopes"`
+		reauthProof
+		Triplet   []byte              `json:"triplet"`
+		Envelopes []types.KeyEnvelope `json:"envelopes"`
 	}
 	if err := utils.ParseJSON(r.Body, &req); err != nil {
 		utils.SendBadRequest(w)
@@ -262,18 +245,12 @@ func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !validateEnvelopes(req.Envelopes, true) {
+	if !validateEnvelopes(req.Envelopes) {
 		utils.SendBadRequest(w)
 		return
 	}
 
-	var currentTriplet srp.Triplet = req.CurrentTriplet
-	if !verifyCurrentPassword(user, currentTriplet) {
-		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
-			Success: false,
-			Message: "Current password is incorrect.",
-			Code:    "current_password_incorrect",
-		})
+	if !requirePassword(w, user, req.reauthProof) {
 		return
 	}
 
@@ -319,50 +296,6 @@ func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stream.CloseUser(user.UUID, currentToken)
-
-	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
-		Success: true,
-	})
-}
-
-// SaveEnvelopes stores or updates the caller's key envelopes without touching SRP credentials.
-func SaveEnvelopes(w http.ResponseWriter, r *http.Request) {
-	user := session.GetLoggedInUser(r)
-	utils.Assert(user != nil) // ensured by AuthMiddleware
-
-	var req struct {
-		Envelopes []types.KeyEnvelope `json:"envelopes"`
-	}
-	if err := utils.ParseJSON(r.Body, &req); err != nil {
-		utils.SendBadRequest(w)
-		return
-	}
-
-	if !validateEnvelopes(req.Envelopes, false) {
-		utils.SendBadRequest(w)
-		return
-	}
-
-	ctx := r.Context()
-	tx, err := database.DB.BeginTx(ctx, nil)
-	if err != nil {
-		utils.LogError("SaveEnvelopes", "BeginTx", err)
-		utils.SendInternalError(w)
-		return
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if err := upsertEnvelopesTx(ctx, tx, user.UUID, req.Envelopes); err != nil {
-		utils.LogError("SaveEnvelopes", "upsertEnvelopesTx", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		utils.LogError("SaveEnvelopes", "tx.Commit", err)
-		utils.SendInternalError(w)
-		return
-	}
 
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
 		Success: true,
@@ -467,93 +400,6 @@ func SaveSettings(w http.ResponseWriter, r *http.Request) {
 	originClientID := r.URL.Query().Get("c")
 	if len(originClientID) == 6 {
 		stream.Publish(user.UUID, stream.Settings(originClientID))
-	}
-
-	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
-		Success: true,
-	})
-}
-
-// MigrateEnvelope atomically saves re-encrypted calendar events with the envelope that decrypts them.
-func MigrateEnvelope(w http.ResponseWriter, r *http.Request) {
-	user := session.GetLoggedInUser(r)
-	utils.Assert(user != nil) // ensured by AuthMiddleware
-
-	var req struct {
-		Envelopes []types.KeyEnvelope `json:"envelopes"`
-		Events    eventChanges        `json:"events"`
-	}
-	if err := utils.ParseJSON(r.Body, &req); err != nil {
-		utils.SendBadRequest(w)
-		return
-	}
-
-	if !validateEnvelopes(req.Envelopes, true) {
-		utils.SendBadRequest(w)
-		return
-	}
-
-	ctx := r.Context()
-	tx, err := database.DB.BeginTx(ctx, nil)
-	if err != nil {
-		utils.LogError("MigrateEnvelope", "BeginTx", err)
-		utils.SendInternalError(w)
-		return
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if len(req.Events) > 0 {
-		if _, err := applyCalendarChanges(ctx, tx, user.UUID, req.Events); err != nil {
-			replyEventChangesError(w, "MigrateEnvelope", err)
-			return
-		}
-	}
-
-	if err := upsertEnvelopesTx(ctx, tx, user.UUID, req.Envelopes); err != nil {
-		utils.LogError("MigrateEnvelope", "upsertEnvelopesTx", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		utils.LogError("MigrateEnvelope", "tx.Commit", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	// other devices are still using the pre-migration key - tell them to resync
-	stream.Publish(user.UUID, stream.Sync(""))
-
-	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
-		Success: true,
-	})
-}
-
-// UpdateChallenge overwrites the caller's encrypted unlock-check blob.
-func UpdateChallenge(w http.ResponseWriter, r *http.Request) {
-	user := session.GetLoggedInUser(r)
-	utils.Assert(user != nil) // ensured by AuthMiddleware
-
-	var req struct {
-		Challenge string `json:"challenge"`
-	}
-	if err := utils.ParseJSON(r.Body, &req); err != nil {
-		utils.SendBadRequest(w)
-		return
-	}
-
-	if len(req.Challenge) == 0 || len(req.Challenge) > constants.MaxChallengeLen {
-		utils.SendBadRequest(w)
-		return
-	}
-
-	if _, err := database.Exec(r.Context(),
-		"UPDATE users SET challenge = ? WHERE uuid = ?",
-		req.Challenge, user.UUID,
-	); err != nil {
-		utils.LogError("UpdateChallenge", "database.Exec", err)
-		utils.SendInternalError(w)
-		return
 	}
 
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{

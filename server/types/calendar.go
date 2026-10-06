@@ -29,10 +29,9 @@ type EventHashResponse struct {
 
 // EventSyncResponse is the structure of the response to an event sync request.
 type EventSyncResponse struct {
-	Updated             []EncryptedEvent `json:"updated"`
-	Deleted             []string         `json:"deleted"`
-	Added               []EncryptedEvent `json:"added"`
-	NeedsBucketBackfill []string         `json:"needsBucketBackfill"`
+	Updated []EncryptedEvent `json:"updated"`
+	Deleted []string         `json:"deleted"`
+	Added   []EncryptedEvent `json:"added"`
 }
 
 type EncryptedEvent struct {

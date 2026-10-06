@@ -46,10 +46,9 @@ func confirmEmail(c *testutil.Client, token string) int {
 func changeEmail(t *testing.T, c *testutil.Client, user testutil.User, newEmail string) (int, types.Reply[types.EmailUnverifiedData]) {
 	t.Helper()
 
-	return testutil.Call[types.EmailUnverifiedData](c, "POST", "/user/email", map[string]any{
-		"current_triplet": tripletBytes(t, user.Email, 1, 2, 16, 32),
-		"triplet":         tripletBytes(t, newEmail, 3, 4, 16, 32),
-	})
+	body := testutil.Reauth(t, c, user, testutil.Password)
+	body["triplet"] = tripletBytes(t, newEmail, 3, 4, 16, 32)
+	return testutil.Call[types.EmailUnverifiedData](c, "POST", "/user/email", body)
 }
 
 func isVerified(t *testing.T, uuid string) bool {

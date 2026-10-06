@@ -264,8 +264,7 @@
     "invalidPin": "Nieprawidłowy PIN.",
     "invalidPassword": "Nieprawidłowe hasło.",
     "usePassword": "Użyj hasła",
-    "usePin": "Użyj kodu PIN",
-    "upgraded": "Zabezpieczenia Twojego konta zostały ulepszone."
+    "usePin": "Użyj kodu PIN"
   },
   "settings": {
     "preview": {
@@ -614,9 +613,7 @@
     "tooLarge": "„{{title}}” jest zbyt duże, aby je zapisać, więc zmiana została cofnięta.",
     "tooLargeMany_few": "{{count}} wydarzenia są zbyt duże, aby je zapisać, więc ich zmiany zostały cofnięte.",
     "tooLargeMany_many": "{{count}} wydarzeń jest zbyt dużych, aby je zapisać, więc ich zmiany zostały cofnięte.",
-    "tooLargeMany_other": "{{count}} wydarzenia są zbyt duże, aby je zapisać, więc ich zmiany zostały cofnięte.",
-    "migrationFetchFailed": "Nie udało się pobrać wydarzeń kalendarza do migracji.",
-    "migrationFailed": "Nie udało się przeprowadzić migracji koperty klucza."
+    "tooLargeMany_other": "{{count}} wydarzenia są zbyt duże, aby je zapisać, więc ich zmiany zostały cofnięte."
   },
   "keyboard": {
     "moveCancelled": "Anulowano przenoszenie",

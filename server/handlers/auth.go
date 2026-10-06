@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"crypto"
 	"crypto/hmac"
 	"crypto/sha256"
 	"database/sql"
@@ -53,6 +52,7 @@ func cleanupSRPSessions() {
 			}
 			return true
 		})
+		pruneLoginFailures(now)
 	}
 }
 
@@ -371,7 +371,7 @@ func RegisterChallenge(w http.ResponseWriter, r *http.Request) {
 }
 
 // validateEnvelopes checks that envelopes are valid key envelopes
-func validateEnvelopes(envelopes []types.KeyEnvelope, requireOneMaster bool) bool {
+func validateEnvelopes(envelopes []types.KeyEnvelope) bool {
 	if len(envelopes) == 0 || len(envelopes) > constants.MaxEnvelopeCount {
 		return false
 	}
@@ -394,7 +394,7 @@ func validateEnvelopes(envelopes []types.KeyEnvelope, requireOneMaster bool) boo
 		}
 	}
 
-	return !requireOneMaster || seenType["master"]
+	return true
 }
 
 // Register handles creating new accounts.
@@ -443,7 +443,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !validateEnvelopes(req.Envelopes, true) {
+	if !validateEnvelopes(req.Envelopes) {
 		utils.SendBadRequest(w)
 		return
 	}
@@ -592,12 +592,11 @@ func LoginStart(w http.ResponseWriter, r *http.Request) {
 
 	// Start of SRP flow - get salt and verifier
 	var salt, verifier []byte
-
-	user := &types.User{}
+	var userUUID string
 	err := database.QueryRow(r.Context(),
-		"SELECT id, srp_salt, verifier FROM users WHERE email = ?",
+		"SELECT uuid, srp_salt, verifier FROM users WHERE email = ?",
 		req.Email,
-	).Scan(&user.ID, &salt, &verifier)
+	).Scan(&userUUID, &salt, &verifier)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			utils.LogError("LoginStart", "QueryRow(verifier)", err)
@@ -611,56 +610,7 @@ func LoginStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create SRP server (parameters must match client)
-	server, err := srp.NewServer(&srp.Params{
-		Name:  "DH16–SHA256–Argon2",
-		Group: srp.RFC5054Group4096,
-		Hash:  crypto.SHA256,
-		KDF:   utils.KDFArgon2,
-	}, req.Email, salt, verifier)
-	if err != nil {
-		utils.LogError("LoginStart", "srp.NewServer", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	// Set client public ephemeral A
-	if err := server.SetA(req.A); err != nil {
-		utils.LogError("LoginStart", "server.SetA", err)
-		utils.SendBadRequest(w)
-		return
-	}
-
-	// Generate a random session ID and store in session cookie
-	sessionID := utils.RandomToken(32)
-	if err := session.Set(w, r, "srp_session_id", sessionID); err != nil {
-		utils.LogError("LoginStart", "session.Set", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	// Store SRP server instance in memory for step 2 verification
-	srpSessionStore.Store(sessionID, types.SRPSession{
-		Server:    server,
-		CreatedAt: time.Now(),
-		Email:     req.Email,
-	})
-
-	// Respond with salt and server public ephemeral B
-	type SRPData struct {
-		Salt      []byte `json:"salt"`
-		B         []byte `json:"B"`
-		SessionID string `json:"session_id"`
-	}
-
-	utils.SendJSON(w, http.StatusOK, types.Reply[SRPData]{
-		Success: true,
-		Data: SRPData{
-			Salt:      salt,
-			B:         server.B(),
-			SessionID: sessionID,
-		},
-	})
+	startSRP(w, "LoginStart", types.SRPSession{Email: req.Email, UserUUID: userUUID}, salt, verifier, req.A)
 }
 
 // LoginVerify is the second step of the SRP login procedure.
@@ -682,7 +632,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the previously saved SRP server using the session ID
-	value, ok := srpSessionStore.Load(req.SessionID)
+	sess, ok := takeSRPSession(req.SessionID, false)
 	if !ok {
 		utils.SendJSON(w, http.StatusUnauthorized, types.Reply[any]{
 			Success: false,
@@ -691,9 +641,6 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
-	sess := value.(types.SRPSession) // safe to assert now
-	server := sess.Server            // get SRP server from the session
 
 	// Make sure the same email is provided
 	if sess.Email != req.Email {
@@ -706,13 +653,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify client proof
-	okVerify, err := server.CheckM1(req.M1)
-	if err != nil || !okVerify {
-		utils.SendJSON(w, http.StatusUnauthorized, types.Reply[any]{
-			Success: false,
-			Message: "Invalid credentials.",
-			Code:    "invalid_credentials",
-		})
+	if !checkProof(w, sess, req.M1, http.StatusUnauthorized, "Invalid credentials.", "invalid_credentials") {
 		return
 	}
 
@@ -729,8 +670,6 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 
 	// Deny login if the account's email hasn't been verified yet
 	if constants.Metadata.Registration.Email.VerificationRequired && !emailVerified {
-		srpSessionStore.Delete(req.SessionID)
-
 		utils.SendJSON(w, http.StatusForbidden, types.Reply[types.EmailUnverifiedData]{
 			Success: false,
 			Message: "Email verification required.",
@@ -744,7 +683,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Compute server proof M2
-	M2, err := server.ComputeM2()
+	M2, err := sess.Server.ComputeM2()
 	if err != nil {
 		utils.LogError("LoginVerify", "server.ComputeM2", err)
 		utils.SendInternalError(w)
@@ -772,9 +711,6 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 		utils.SendInternalError(w)
 		return
 	}
-
-	// Remove SRP session after successful login
-	srpSessionStore.Delete(req.SessionID)
 
 	// Send M2 back
 	type M2Data struct {
@@ -1113,6 +1049,10 @@ func ConfirmEmailVerification(w http.ResponseWriter, r *http.Request) {
 		utils.LogError("ConfirmEmailVerification", "database.Exec(update)", err)
 		utils.SendInternalError(w)
 		return
+	}
+
+	if _, err := database.Exec(r.Context(), "DELETE FROM email_verification_tokens WHERE owner = ?", uuid); err != nil {
+		utils.LogError("ConfirmEmailVerification", "database.Exec(delete token)", err)
 	}
 
 	if err := mail.CancelQueuedMails(r.Context(), database.DB, email); err != nil {

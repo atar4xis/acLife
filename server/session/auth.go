@@ -59,7 +59,7 @@ func GetLoggedInUser(r *http.Request, refetch ...bool) *types.User {
 		r.Context(),
 		`
 			SELECT
-				id, uuid, email, salt, srp_salt, verifier, challenge,
+				id, uuid, email, srp_salt, verifier,
 				stripe_customer_id, stripe_subscription_id, subscription_status, email_verified
 			FROM users
 			WHERE uuid = ?`,
@@ -68,10 +68,8 @@ func GetLoggedInUser(r *http.Request, refetch ...bool) *types.User {
 		&user.ID,
 		&user.UUID,
 		&user.Email,
-		&user.Salt,
 		&user.SrpSalt,
 		&user.Verifier,
-		&user.Challenge,
 		&user.StripeCustomerID,
 		&user.StripeSubscriptionID,
 		&user.SubscriptionStatus,

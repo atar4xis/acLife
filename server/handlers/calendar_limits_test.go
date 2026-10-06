@@ -2,7 +2,6 @@ package handlers_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
@@ -11,7 +10,6 @@ import (
 
 	"acLife/constants"
 	"acLife/internal/testutil"
-	"acLife/types"
 )
 
 func fillEvents(t *testing.T, owner string, n int) {
@@ -23,7 +21,7 @@ func fillEvents(t *testing.T, owner string, n int) {
 		for i := range ids {
 			ids[i] = testutil.NewUUID()
 		}
-		insertLegacyEvents(t, owner, ids...)
+		insertEvents(t, owner, ids...)
 	}
 }
 
@@ -64,29 +62,6 @@ func TestSaveRejectsDeleteOfAnInvalidID(t *testing.T) {
 	}
 	if count(t, "SELECT COUNT(*) FROM calendar_events WHERE id = ?", keep) != 1 {
 		t.Fatal("batch partly applied")
-	}
-}
-
-func TestMigrateEnvelopeCapsTheNumberOfChanges(t *testing.T) {
-	testutil.RequireDB(t)
-	user := testutil.NewUser(t)
-	c := testutil.NewClient(t).As(user)
-	envelopes := []types.KeyEnvelope{{Type: "master", Version: 1, Salt: bytes.Repeat([]byte{1}, 16), Data: bytes.Repeat([]byte{2}, 32), KDFParams: "{}"}}
-	envelopesJSON, err := json.Marshal(envelopes)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	body := []byte(`{"envelopes":` + string(envelopesJSON) + `,"events":` + string(deletesBody(constants.MaxUserEvents+1)) + `}`)
-	if resp, _ := c.Do("POST", "/calendar/events/migrate-envelope", body); resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("got %d", resp.StatusCode)
-	}
-	if count(t, "SELECT COUNT(*) FROM key_envelopes WHERE owner = ?", user.UUID) != 0 {
-		t.Fatal("envelope stored")
-	}
-
-	if status, _ := testutil.Call[any](c, "POST", "/calendar/events/migrate-envelope", map[string]any{"envelopes": envelopes, "events": []any{}}); status != http.StatusOK {
-		t.Fatalf("valid migration: got %d", status)
 	}
 }
 
@@ -132,11 +107,9 @@ func TestConcurrentSavesCannotExceedTheEventLimit(t *testing.T) {
 	statuses := make([]int, writers)
 	var wg sync.WaitGroup
 	for i := range writers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			statuses[i] = save(c, added(ev(testutil.NewUUID(), baseTS, testutil.BucketID(1))))
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -152,15 +125,16 @@ func TestSyncCapsTheRequest(t *testing.T) {
 	entries := func(n int) string {
 		return strings.TrimSuffix(strings.Repeat(`{"id":"`+id+`","ts":1790000000000},`, n), ",")
 	}
+	buckets := `,"buckets":["` + testutil.BucketID(1) + `"]`
 
 	t.Run("accepts a full cache", func(t *testing.T) {
-		body := []byte(`{"events":[` + entries(constants.MaxUserEvents) + `]}`)
+		body := []byte(`{"events":[` + entries(constants.MaxUserEvents) + `]` + buckets + `}`)
 		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusOK {
 			t.Fatalf("got %d", resp.StatusCode)
 		}
 	})
 	t.Run("rejects more events than a user may own", func(t *testing.T) {
-		body := []byte(`{"events":[` + entries(constants.MaxUserEvents+1) + `]}`)
+		body := []byte(`{"events":[` + entries(constants.MaxUserEvents+1) + `]` + buckets + `}`)
 		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusBadRequest {
 			t.Fatalf("got %d", resp.StatusCode)
 		}
@@ -183,7 +157,7 @@ func TestSyncLogsInvalidIDsOnce(t *testing.T) {
 	t.Cleanup(func() { log.SetOutput(original) })
 
 	entries := strings.TrimSuffix(strings.Repeat(`{"id":"bad\nforged line","ts":1},`, 500), ",")
-	if resp, _ := c.Do("POST", "/calendar/events/sync", []byte(`{"events":[`+entries+`]}`)); resp.StatusCode != http.StatusOK {
+	if resp, _ := c.Do("POST", "/calendar/events/sync", []byte(`{"events":[`+entries+`],"buckets":["`+testutil.BucketID(1)+`"]}`)); resp.StatusCode != http.StatusOK {
 		t.Fatalf("got %d", resp.StatusCode)
 	}
 

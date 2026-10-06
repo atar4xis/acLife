@@ -244,8 +244,7 @@
     "invalidPin": "PIN 无效。",
     "invalidPassword": "密码无效。",
     "usePassword": "改用密码",
-    "usePin": "改用 PIN",
-    "upgraded": "您的账户安全性已升级。"
+    "usePin": "改用 PIN"
   },
   "settings": {
     "preview": {
@@ -580,9 +579,7 @@
     "saveFailed": "保存日历日程失败。",
     "saveFailedWith": "保存日历日程失败：{{message}}",
     "tooLarge": "“{{title}}”过大，无法保存，更改已撤销。",
-    "tooLargeMany_other": "{{count}}个日程过大，无法保存，其更改已撤销。",
-    "migrationFetchFailed": "获取用于迁移的日历日程失败。",
-    "migrationFailed": "迁移密钥信封失败。"
+    "tooLargeMany_other": "{{count}}个日程过大，无法保存，其更改已撤销。"
   },
   "keyboard": {
     "moveCancelled": "已取消移动",

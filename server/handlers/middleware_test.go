@@ -337,10 +337,9 @@ func TestProtectedRoutesRequireLogin(t *testing.T) {
 
 	routes := []struct{ method, path string }{
 		{"GET", "/user"},
-		{"POST", "/user/challenge"},
+		{"POST", "/user/reauth/start"},
 		{"POST", "/user/email"},
 		{"POST", "/user/password"},
-		{"POST", "/user/envelopes"},
 		{"GET", "/user/sessions"},
 		{"DELETE", "/user/sessions/x"},
 		{"POST", "/user/push/subscribe"},
@@ -350,7 +349,6 @@ func TestProtectedRoutesRequireLogin(t *testing.T) {
 		{"POST", "/user/settings"},
 		{"POST", "/calendar/events/save"},
 		{"POST", "/calendar/events/sync"},
-		{"POST", "/calendar/events/migrate-envelope"},
 		{"GET", "/stripe/pricing"},
 		{"POST", "/stripe/checkout"},
 		{"GET", "/stripe/manage"},

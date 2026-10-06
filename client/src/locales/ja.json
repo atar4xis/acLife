@@ -244,8 +244,7 @@
     "invalidPin": "PINが正しくありません。",
     "invalidPassword": "パスワードが正しくありません。",
     "usePassword": "パスワードを使う",
-    "usePin": "PINを使う",
-    "upgraded": "アカウントのセキュリティを強化しました。"
+    "usePin": "PINを使う"
   },
   "settings": {
     "preview": {
@@ -580,9 +579,7 @@
     "saveFailed": "カレンダーの予定を保存できませんでした。",
     "saveFailedWith": "カレンダーの予定を保存できませんでした: {{message}}",
     "tooLarge": "「{{title}}」は大きすぎて保存できないため、変更を元に戻しました。",
-    "tooLargeMany_other": "{{count}}件の予定が大きすぎて保存できないため、変更を元に戻しました。",
-    "migrationFetchFailed": "移行のためにカレンダーの予定を取得できませんでした。",
-    "migrationFailed": "キーエンベロープを移行できませんでした。"
+    "tooLargeMany_other": "{{count}}件の予定が大きすぎて保存できないため、変更を元に戻しました。"
   },
   "keyboard": {
     "moveCancelled": "移動をキャンセルしました",

@@ -21,10 +21,8 @@ type User struct {
 	ID                   int     `db:"id"`
 	UUID                 string  `db:"uuid"`
 	Email                string  `db:"email"`
-	Salt                 []byte  `db:"salt"`     // main salt used for master kdf
 	SrpSalt              []byte  `db:"srp_salt"` // secondary salt used exclusively for srp flow
 	Verifier             []byte  `db:"verifier"`
-	Challenge            []byte  `db:"challenge"`
 	StripeCustomerID     *string `db:"stripe_customer_id"`
 	StripeSubscriptionID *string `db:"stripe_subscription_id"`
 	SubscriptionStatus   *string `db:"subscription_status"`
@@ -52,9 +50,6 @@ type PublicUser struct {
 	Email              string  `json:"email"`
 	SubscriptionStatus *string `json:"subscription_status"`
 	// SrpSalt is exposed during SRP flow only, so it is not here
-	// Salt and Challenge are legacy: populated for accounts that predate key envelopes.
-	Salt      []byte        `json:"salt"`
-	Challenge []byte        `json:"challenge"`
 	Envelopes []KeyEnvelope `json:"envelopes"`
 }
 
@@ -66,11 +61,13 @@ type Session struct {
 	Current   bool      `json:"current"`
 }
 
-// SRPSession holds the SRP server and a timestamp.
+// SRPSession holds the SRP server and a timestamp. Reauth sessions prove the password of an already logged-in user.
 type SRPSession struct {
 	Server    *srp.Server
 	CreatedAt time.Time
 	Email     string
+	UserUUID  string
+	Reauth    bool
 }
 
 // EncryptedSettings is the user's encrypted settings blob.

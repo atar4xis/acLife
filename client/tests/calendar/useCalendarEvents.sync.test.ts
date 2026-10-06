@@ -99,7 +99,7 @@ describe("syncBuckets", () => {
       })
       .mockResolvedValueOnce({
         success: true,
-        data: { added: [], updated: [], deleted: [], needsBucketBackfill: [] },
+        data: { added: [], updated: [], deleted: [] },
       });
 
     await result.current.syncBuckets([bucket, other], masterKey, bucketKey);
@@ -117,7 +117,7 @@ describe("syncBuckets", () => {
       .mockResolvedValueOnce({ success: true, data: { mismatched: [bucket] } })
       .mockResolvedValueOnce({
         success: true,
-        data: { added: [], updated: [], deleted: [], needsBucketBackfill: [] },
+        data: { added: [], updated: [], deleted: [] },
       })
       .mockResolvedValue({ success: true });
 
@@ -140,8 +140,7 @@ describe("syncBuckets", () => {
         data: {
           added: [],
           updated: [],
-          deleted: ["AAAAAAAAAAAAAAAAAAAAAA=="],
-          needsBucketBackfill: [],
+          deleted: ["AAAAAAAAAAAAAAAAAAAAAA=="]
         },
       })
       .mockResolvedValue({ success: true });

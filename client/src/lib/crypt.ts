@@ -16,32 +16,6 @@ const srpHash = async (...inputs: Uint8Array[]) => {
   return new Uint8Array(await crypto.subtle.digest("SHA-256", data));
 };
 
-// temporary migration: verifiers created before the Argon2id kdf, see lib/srpLogin.ts
-export const LEGACY_SRP_PARAMS: Params = {
-  name: "DH16-SHA256-CustomKDF",
-  group: RFC5054Group4096,
-  hash: srpHash,
-  kdf: async (username: string, password: string, salt: Uint8Array) => {
-    const enc = new TextEncoder();
-    const inner = await crypto.subtle.digest(
-      "SHA-256",
-      new Uint8Array(
-        concatUint8Array(
-          enc.encode(username),
-          enc.encode(":"),
-          enc.encode(password),
-        ),
-      ),
-    );
-    return new Uint8Array(
-      await crypto.subtle.digest(
-        "SHA-256",
-        new Uint8Array(concatUint8Array(salt, new Uint8Array(inner))),
-      ),
-    );
-  },
-};
-
 const SRP_KDF_LABEL = new TextEncoder().encode("acLife-srp-v2");
 
 export const SRP_PARAMS: Params = {
@@ -61,10 +35,6 @@ export const SRP_PARAMS: Params = {
       },
     ),
 };
-
-export const UNLOCK_CHECK_BYTES = new Uint8Array([
-  117, 110, 108, 111, 99, 107, 45, 99, 104, 101, 99, 107, 45, 111, 107, 33,
-]);
 
 // matches argon2-browser's ArgonType enum
 export const ArgonType = {
@@ -178,14 +148,13 @@ export const deriveMasterKey = async (
   password: string,
   salt: Uint8Array,
   exportable: boolean = false,
-  type: number = ArgonType.Argon2id,
 ): Promise<DerivedKeys> => {
   const hash = await argon2Hash(password, salt, {
     time: 3,
     mem: 65536,
     hashLen: 32,
     parallelism: 1,
-    type,
+    type: ArgonType.Argon2id,
   });
 
   const [masterKey, bucketKey] = await Promise.all([
@@ -309,42 +278,6 @@ export const unwrapMasterKeyEnvelope = async (
   ]);
 
   return { masterKey, bucketKey };
-};
-
-export type UnlockResult = {
-  masterKey: CryptoKey;
-  bucketKey: CryptoKey;
-  needsMigration: boolean;
-};
-
-export const unlockMasterKey = async (
-  password: string,
-  salt: Uint8Array,
-  encryptedChallenge: Uint8Array,
-  exportable: boolean = false,
-): Promise<UnlockResult> => {
-  for (const type of [ArgonType.Argon2id, ArgonType.Argon2d]) {
-    try {
-      const { masterKey, bucketKey } = await deriveMasterKey(
-        password,
-        salt,
-        exportable,
-        type,
-      );
-      const challenge = await decrypt(encryptedChallenge, masterKey);
-      if (timingSafeEqual(challenge, UNLOCK_CHECK_BYTES)) {
-        return {
-          masterKey,
-          bucketKey,
-          needsMigration: type !== ArgonType.Argon2id,
-        };
-      }
-    } catch {
-      // try next algorithm
-    }
-  }
-
-  throw new Error(t("unlock.invalidPassword"));
 };
 
 export const exportKeyPair = async (

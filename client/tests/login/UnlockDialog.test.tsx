@@ -84,8 +84,6 @@ describe("UnlockDialog password unlock", () => {
     expect(unlockMock.unlockAccount).toHaveBeenCalledWith(
       "secret",
       onlineUser,
-      apiMock.post,
-      storageMock,
       false,
     );
     expect(screen.queryByText("Invalid password.")).not.toBeInTheDocument();
@@ -113,7 +111,7 @@ describe("UnlockDialog password unlock", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     await waitFor(() => expect(unlockMock.unlockAccount).toHaveBeenCalled());
-    expect(unlockMock.unlockAccount.mock.calls[0][4]).toBe(true);
+    expect(unlockMock.unlockAccount.mock.calls[0][2]).toBe(true);
   });
 
   it("lets the user log out instead", async () => {
@@ -249,7 +247,7 @@ describe("UnlockDialog PIN", () => {
     await waitFor(() =>
       expect(userMock.setMasterKey).toHaveBeenCalledWith(masterKey),
     );
-    expect(unlockMock.unlockAccount.mock.calls[0][4]).toBe(true);
+    expect(unlockMock.unlockAccount.mock.calls[0][2]).toBe(true);
   });
 
   it("offers the PIN option for the password method once PIN keys exist", async () => {

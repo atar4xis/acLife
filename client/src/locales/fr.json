@@ -250,8 +250,7 @@
     "invalidPin": "PIN invalide.",
     "invalidPassword": "Mot de passe invalide.",
     "usePassword": "Utiliser le mot de passe",
-    "usePin": "Utiliser le PIN",
-    "upgraded": "La sécurité de votre compte a été renforcée."
+    "usePin": "Utiliser le PIN"
   },
   "settings": {
     "preview": {
@@ -590,9 +589,7 @@
     "saveFailed": "Impossible d'enregistrer les événements du calendrier.",
     "saveFailedWith": "Impossible d'enregistrer les événements du calendrier : {{message}}",
     "tooLarge": "« {{title}} » est trop volumineux pour être enregistré, la modification a donc été annulée.",
-    "tooLargeMany_other": "{{count}} événements sont trop volumineux pour être enregistrés, leurs modifications ont donc été annulées.",
-    "migrationFetchFailed": "Impossible de récupérer les événements du calendrier pour la migration.",
-    "migrationFailed": "Impossible de migrer l'enveloppe de clés."
+    "tooLargeMany_other": "{{count}} événements sont trop volumineux pour être enregistrés, leurs modifications ont donc été annulées."
   },
   "keyboard": {
     "moveCancelled": "Déplacement annulé",

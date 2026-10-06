@@ -198,7 +198,7 @@ func NewUser(t *testing.T, opts ...UserOption) User {
 	if _, err := database.DB.Exec(
 		`INSERT INTO users (uuid, email, srp_salt, verifier, stripe_subscription_id, subscription_status, email_verified)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		u.UUID, u.Email, bytes.Repeat([]byte{1}, 16), bytes.Repeat([]byte{2}, 32), subID, subStatus, !cfg.unverified,
+		u.UUID, u.Email, srpSalt, verifierFor(t, u.Email), subID, subStatus, !cfg.unverified,
 	); err != nil {
 		t.Fatalf("insert user: %v", err)
 	}

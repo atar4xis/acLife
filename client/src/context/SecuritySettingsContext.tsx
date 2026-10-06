@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useUser } from "@/context/UserContext";
 import { useStorage } from "@/context/StorageContext";
-import { useApi } from "@/context/ApiContext";
 import { exportKeyPair, wrapKeyPairWithPin } from "@/lib/crypt";
 import { unlockAccount } from "@/lib/unlockAccount";
 import type { WithChildren } from "@/types/Props";
@@ -26,7 +25,6 @@ const SecuritySettingsContext = createContext<
 
 export function SecuritySettingsProvider({ children }: WithChildren) {
   const { user, masterKey, bucketKey } = useUser();
-  const { post } = useApi();
   const storage = useStorage();
 
   const unlockMethod = storage.get("unlockMethod");
@@ -51,8 +49,6 @@ export function SecuritySettingsProvider({ children }: WithChildren) {
         const exportableKeys = await unlockAccount(
           opts.currentPassword,
           user,
-          post,
-          undefined,
           true,
         );
         const exported = await exportKeyPair(

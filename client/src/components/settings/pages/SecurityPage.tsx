@@ -15,9 +15,9 @@ import {
   rewrapMasterKeyEnvelope,
 } from "@/lib/crypt";
 import { unlockAccount } from "@/lib/unlockAccount";
-import { postWithCurrentTriplet } from "@/lib/srpLogin";
+import { postWithPassword } from "@/lib/srpLogin";
 import { validatePassword } from "@/lib/validators";
-import { bytesToBase64, uint8ArrayFromBase64 } from "@/lib/utils";
+import { bytesToBase64 } from "@/lib/utils";
 import type { AutoLockOption, UnlockMethod } from "@/types/Storage";
 import { Button } from "@/components/ui/button";
 import {
@@ -297,28 +297,16 @@ function AccountSection({
 
   if (!user || user.type !== "online") return null;
 
-  const fetchCurrentSalt = async (): Promise<Uint8Array> => {
-    const saltRes = await post<string>("auth/login/start", {
-      email: user.email,
-    });
-    if (!saltRes.success || !saltRes.data) {
-      throw new Error(saltRes.message || t("settings.security.verifyFailed"));
-    }
-    return uint8ArrayFromBase64(saltRes.data);
-  };
-
   const handleEmailChange = async (
     newEmail: string,
     currentPassword: string,
   ) => {
-    const currentSalt = await fetchCurrentSalt();
-
     const triplet = await generateSRPTriplet(newEmail, currentPassword);
 
-    const res = await postWithCurrentTriplet<{
+    const res = await postWithPassword<{
       email: string;
       requiresVerification: boolean;
-    }>(post, user.email, currentPassword, currentSalt, "user/email", {
+    }>(post, user.email, currentPassword, "user/email", {
       triplet: bytesToBase64(triplet.toUint8Array()),
     });
 
@@ -345,11 +333,9 @@ function AccountSection({
       throw new Error(t("settings.security.mustDecrypt"));
     }
 
-    const currentSalt = await fetchCurrentSalt();
-
     // re-derive an exportable copy of the master key
     const [{ masterKey: verifiedMasterKey }, triplet] = await Promise.all([
-      unlockAccount(currentPassword, user, post, undefined, true),
+      unlockAccount(currentPassword, user, true),
       generateSRPTriplet(user.email, newPassword),
     ]);
 
@@ -358,11 +344,10 @@ function AccountSection({
       verifiedMasterKey,
     );
 
-    const res = await postWithCurrentTriplet<never>(
+    const res = await postWithPassword<never>(
       post,
       user.email,
       currentPassword,
-      currentSalt,
       "user/password",
       {
         triplet: bytesToBase64(triplet.toUint8Array()),
