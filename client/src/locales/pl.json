@@ -765,6 +765,7 @@
     "cannot_end_current_session": "Nie można zakończyć bieżącej sesji.",
     "bad_request": "Nieprawidłowe żądanie.",
     "internal_error": "Wystąpił nieoczekiwany błąd.",
+    "event_limit_reached": "Osiągnięto limit wydarzeń.",
     "too_many_attempts_seconds_one": "Zbyt wiele prób. Spróbuj ponownie za {{count}} sekundę.",
     "too_many_attempts_seconds_few": "Zbyt wiele prób. Spróbuj ponownie za {{count}} sekundy.",
     "too_many_attempts_seconds_many": "Zbyt wiele prób. Spróbuj ponownie za {{count}} sekund.",

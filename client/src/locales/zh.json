@@ -710,6 +710,7 @@
     "cannot_end_current_session": "无法终止当前会话。",
     "bad_request": "请求有误。",
     "internal_error": "发生意外错误。",
+    "event_limit_reached": "已达到日程数量上限。",
     "too_many_attempts_seconds_other": "尝试次数过多，请在{{count}}秒后重试。",
     "too_many_attempts_minutes_other": "尝试次数过多，请在{{count}}分钟后重试。"
   }

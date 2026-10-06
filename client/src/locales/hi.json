@@ -733,6 +733,7 @@
     "cannot_end_current_session": "वर्तमान सत्र समाप्त नहीं किया जा सकता।",
     "bad_request": "अमान्य अनुरोध।",
     "internal_error": "एक अप्रत्याशित त्रुटि हुई।",
+    "event_limit_reached": "इवेंट सीमा पूरी हो गई है।",
     "too_many_attempts_seconds_one": "बहुत अधिक प्रयास। {{count}} सेकंड बाद पुनः प्रयास करें।",
     "too_many_attempts_seconds_other": "बहुत अधिक प्रयास। {{count}} सेकंड बाद पुनः प्रयास करें।",
     "too_many_attempts_minutes_one": "बहुत अधिक प्रयास। {{count}} मिनट बाद पुनः प्रयास करें।",

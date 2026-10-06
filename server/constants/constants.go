@@ -48,6 +48,7 @@ const (
 	MaxVerifierLen  = 520
 	MaxChallengeLen = 64
 	MaxEventLen     = 10000
+	MaxUserEvents   = 50000
 	MaxPowTokenLen  = 512
 	MaxPowNonceLen  = 32
 

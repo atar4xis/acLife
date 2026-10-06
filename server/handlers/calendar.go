@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -36,14 +38,64 @@ type EventChange struct {
 	Event types.EncryptedEvent `json:"event"`
 }
 
-// errBadEventChanges signals that a batch of changes failed validation (caller should respond 400).
-var errBadEventChanges = errors.New("invalid event changes")
+// eventChanges decodes at most constants.MaxUserEvents changes, so a huge array of tiny entries is rejected instead of expanded in memory.
+type eventChanges []EventChange
+
+func (c *eventChanges) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		return nil
+	}
+
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('[') {
+		return errBadEventChanges
+	}
+
+	changes := eventChanges{}
+	for dec.More() {
+		if len(changes) == constants.MaxUserEvents {
+			return errBadEventChanges
+		}
+
+		var change EventChange
+		if err := dec.Decode(&change); err != nil {
+			return err
+		}
+		changes = append(changes, change)
+	}
+
+	*c = changes
+	return nil
+}
+
+var (
+	errBadEventChanges = errors.New("invalid event changes")
+	errEventLimit = errors.New("event limit reached")
+)
+
+// replyEventChangesError answers a failed applyCalendarChanges.
+func replyEventChangesError(w http.ResponseWriter, function string, err error) {
+	switch {
+	case errors.Is(err, errBadEventChanges):
+		utils.SendBadRequest(w)
+	case errors.Is(err, errEventLimit):
+		utils.SendJSON(w, http.StatusRequestEntityTooLarge, types.Reply[any]{
+			Success: false,
+			Message: "Event limit reached.",
+			Code:    "event_limit_reached",
+		})
+	default:
+		utils.LogError(function, "applyCalendarChanges", err)
+		utils.SendInternalError(w)
+	}
+}
 
 func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	user := session.GetLoggedInUser(r)
 	utils.Assert(user != nil) // ensured by AuthMiddleware
 
-	var changes []EventChange
+	var changes eventChanges
 	if err := utils.ParseJSON(r.Body, &changes); err != nil {
 		utils.SendBadRequest(w)
 		return
@@ -67,13 +119,7 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 
 	applied, err := applyCalendarChanges(ctx, tx, user.UUID, changes)
 	if err != nil {
-		if errors.Is(err, errBadEventChanges) {
-			utils.SendBadRequest(w)
-			return
-		}
-
-		utils.LogError("SaveCalendarEvents", "applyCalendarChanges", err)
-		utils.SendInternalError(w)
+		replyEventChangesError(w, "SaveCalendarEvents", err)
 		return
 	}
 
@@ -109,6 +155,10 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 	for _, c := range changes {
 		switch c.Type {
 		case "deleted":
+			if !utils.IsUUID(c.ID) {
+				return nil, errBadEventChanges
+			}
+
 			delete(upsertsByID, c.ID)
 			deleted[c.ID] = struct{}{}
 
@@ -174,6 +224,11 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 
 	// Batch upsert
 	if len(upserts) > 0 {
+		// serializes this owner's saves, so concurrent batches cannot each pass the limit check
+		if _, err := tx.ExecContext(ctx, "SELECT 1 FROM users WHERE uuid = ? FOR UPDATE", owner); err != nil {
+			return nil, err
+		}
+
 		valueStrings := make([]string, 0, len(upserts))
 		valueArgs := make([]any, 0, len(upserts)*4)
 
@@ -196,6 +251,14 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 
 		if err := replaceEventBuckets(ctx, tx, owner, upserts); err != nil {
 			return nil, err
+		}
+
+		var stored int
+		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM calendar_events WHERE owner = ?", owner).Scan(&stored); err != nil {
+			return nil, err
+		}
+		if stored > constants.MaxUserEvents {
+			return nil, errEventLimit
 		}
 	}
 
@@ -435,18 +498,26 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cached := req.Events
+	if len(cached) > constants.MaxUserEvents {
+		utils.SendBadRequest(w)
+		return
+	}
 
 	// Build map of (eventId: timestamp)
 	idToMillis := make(map[string]int64, len(cached))
+	invalidIDs := 0
 	for i, c := range cached {
 		uuid, err := utils.Base64ToUUID(c.ID)
 		if err != nil {
-			utils.LogError("SyncCalendarEvents", "InvalidUUID", fmt.Errorf("event %s invalid UUID: %v", c.ID, err))
+			invalidIDs++
 			continue
 		}
 
 		cached[i].ID = uuid
 		idToMillis[uuid] = c.Timestamp
+	}
+	if invalidIDs > 0 {
+		utils.LogError("SyncCalendarEvents", "InvalidUUID", fmt.Errorf("%d invalid event ids", invalidIDs))
 	}
 
 	var dbEvents []types.CalendarEvent

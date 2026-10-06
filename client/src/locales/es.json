@@ -725,6 +725,7 @@
     "cannot_end_current_session": "No se puede finalizar la sesión actual.",
     "bad_request": "Solicitud no válida.",
     "internal_error": "Se produjo un error inesperado.",
+    "event_limit_reached": "Se alcanzó el límite de eventos.",
     "too_many_attempts_seconds_one": "Demasiados intentos. Inténtalo de nuevo en {{count}} segundo.",
     "too_many_attempts_seconds_other": "Demasiados intentos. Inténtalo de nuevo en {{count}} segundos.",
     "too_many_attempts_minutes_one": "Demasiados intentos. Inténtalo de nuevo en {{count}} minuto.",

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"net/http"
 	"time"
 
 	"acLife/handlers"
@@ -18,6 +19,6 @@ func Calendar(r *mux.Router) {
 	sr.Use(handlers.MaxBodySizeMiddleware(64 << 20))      // 64 MB
 
 	sr.HandleFunc("/events/save", handlers.SaveCalendarEvents).Methods("POST")
-	sr.HandleFunc("/events/sync", handlers.SyncCalendarEvents).Methods("POST")
+	sr.Handle("/events/sync", handlers.MaxBodySizeMiddleware(4<<20)(http.HandlerFunc(handlers.SyncCalendarEvents))).Methods("POST") // 4 MB, fits MaxUserEvents cached events
 	sr.HandleFunc("/events/migrate-envelope", handlers.MigrateEnvelope).Methods("POST")
 }

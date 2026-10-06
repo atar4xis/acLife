@@ -731,6 +731,7 @@
     "cannot_end_current_session": "Cannot terminate the current session.",
     "bad_request": "Bad request.",
     "internal_error": "An unexpected error occurred.",
+    "event_limit_reached": "Event limit reached.",
     "too_many_attempts_seconds_one": "Too many attempts. Try again in {{count}} second.",
     "too_many_attempts_seconds_other": "Too many attempts. Try again in {{count}} seconds.",
     "too_many_attempts_minutes_one": "Too many attempts. Try again in {{count}} minute.",

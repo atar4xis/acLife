@@ -213,13 +213,10 @@ func createAndQueueVerificationToken(ctx context.Context, email, lang string) er
 	expires := now.Add(constants.EmailVerificationTTL)
 
 	if _, err := database.Exec(ctx, `
-		INSERT INTO email_verification_tokens (owner, token, expires_at, last_sent_at, send_window_start, send_count)
-		VALUES (?, ?, ?, ?, ?, 1)`,
-		uuid, token, expires, now, now,
+		INSERT INTO email_verification_tokens (owner, email, token, expires_at, last_sent_at, send_window_start, send_count)
+		VALUES (?, ?, ?, ?, ?, ?, 1)`,
+		uuid, email, token, expires, now, now,
 	); err != nil {
-		if database.IsDuplicateEntry(err) {
-			return nil
-		}
 		return err
 	}
 
@@ -239,9 +236,9 @@ func queueVerificationTokenTx(ctx context.Context, tx *sql.Tx, uuid, email, lang
 	expires := now.Add(constants.EmailVerificationTTL)
 
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO email_verification_tokens (owner, token, expires_at, last_sent_at, send_window_start, send_count)
-		VALUES (?, ?, ?, ?, ?, 1)`,
-		uuid, token, expires, now, now,
+		INSERT INTO email_verification_tokens (owner, email, token, expires_at, last_sent_at, send_window_start, send_count)
+		VALUES (?, ?, ?, ?, ?, ?, 1)`,
+		uuid, email, token, expires, now, now,
 	); err != nil {
 		return err
 	}
@@ -1127,13 +1124,13 @@ func ConfirmEmailVerification(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// lookupVerificationToken resolves a verification token to its owner, their email, and its expiry.
+// lookupVerificationToken resolves a verification token to its owner, their email, and its expiry, a token only counts while it was issued for the owner's current email.
 func lookupVerificationToken(ctx context.Context, token string) (uuid, email string, expiresAt time.Time, err error) {
 	err = database.QueryRow(ctx,
 		`SELECT t.owner, u.email, t.expires_at
 		FROM email_verification_tokens t
 		JOIN users u ON u.uuid = t.owner
-		WHERE t.token = ?`,
+		WHERE t.token = ? AND t.email = u.email`,
 		token,
 	).Scan(&uuid, &email, &expiresAt)
 	return uuid, email, expiresAt, err

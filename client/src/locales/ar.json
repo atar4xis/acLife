@@ -794,6 +794,7 @@
     "cannot_end_current_session": "لا يمكن إنهاء الجلسة الحالية.",
     "bad_request": "طلب غير صالح.",
     "internal_error": "حدث خطأ غير متوقع.",
+    "event_limit_reached": "تم الوصول إلى الحد الأقصى للأحداث.",
     "too_many_attempts_seconds_zero": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} ثانية.",
     "too_many_attempts_seconds_one": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} ثانية.",
     "too_many_attempts_seconds_two": "محاولات كثيرة جدًا. حاول مرة أخرى بعد ثانيتين.",

@@ -158,7 +158,16 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 	newEmail := triplet.Username()
 	verificationRequired := constants.Metadata.Registration.Email.VerificationRequired
 
-	if _, err := database.Exec(r.Context(),
+	ctx := r.Context()
+	tx, err := database.DB.BeginTx(ctx, nil)
+	if err != nil {
+		utils.LogError("UpdateEmail", "BeginTx", err)
+		utils.SendInternalError(w)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx,
 		"UPDATE users SET email = ?, srp_salt = ?, verifier = ?, email_verified = 0 WHERE uuid = ?",
 		newEmail, triplet.Salt(), triplet.Verifier(), user.UUID,
 	); err != nil {
@@ -171,7 +180,28 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		utils.LogError("UpdateEmail", "database.Exec", err)
+		utils.LogError("UpdateEmail", "tx.Exec(update users)", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	// a token issued for the old email must not verify the new one
+	if _, err := tx.ExecContext(ctx, "DELETE FROM email_verification_tokens WHERE owner = ?", user.UUID); err != nil {
+		utils.LogError("UpdateEmail", "tx.Exec(delete token)", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if verificationRequired {
+		if err := queueVerificationTokenTx(ctx, tx, user.UUID, newEmail, utils.PreferredLanguage(r, verificationEmailLanguages())); err != nil {
+			utils.LogError("UpdateEmail", "queueVerificationTokenTx", err)
+			utils.SendInternalError(w)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		utils.LogError("UpdateEmail", "tx.Commit", err)
 		utils.SendInternalError(w)
 		return
 	}
@@ -181,10 +211,6 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 			Success: true,
 		})
 		return
-	}
-
-	if err := createAndQueueVerificationToken(r.Context(), newEmail, utils.PreferredLanguage(r, verificationEmailLanguages())); err != nil {
-		utils.LogError("UpdateEmail", "createAndQueueVerificationToken", err)
 	}
 
 	accessToken := session.Get[string](r, "access_token")
@@ -455,7 +481,7 @@ func MigrateEnvelope(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Envelopes []types.KeyEnvelope `json:"envelopes"`
-		Events    []EventChange       `json:"events"`
+		Events    eventChanges        `json:"events"`
 	}
 	if err := utils.ParseJSON(r.Body, &req); err != nil {
 		utils.SendBadRequest(w)
@@ -478,13 +504,7 @@ func MigrateEnvelope(w http.ResponseWriter, r *http.Request) {
 
 	if len(req.Events) > 0 {
 		if _, err := applyCalendarChanges(ctx, tx, user.UUID, req.Events); err != nil {
-			if errors.Is(err, errBadEventChanges) {
-				utils.SendBadRequest(w)
-				return
-			}
-
-			utils.LogError("MigrateEnvelope", "applyCalendarChanges", err)
-			utils.SendInternalError(w)
+			replyEventChangesError(w, "MigrateEnvelope", err)
 			return
 		}
 	}

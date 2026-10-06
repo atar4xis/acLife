@@ -727,6 +727,7 @@
     "cannot_end_current_session": "Impossible de terminer la session actuelle.",
     "bad_request": "Requête incorrecte.",
     "internal_error": "Une erreur inattendue s'est produite.",
+    "event_limit_reached": "Limite d'événements atteinte.",
     "too_many_attempts_seconds_one": "Trop de tentatives. Réessayez dans {{count}} seconde.",
     "too_many_attempts_seconds_other": "Trop de tentatives. Réessayez dans {{count}} secondes.",
     "too_many_attempts_minutes_one": "Trop de tentatives. Réessayez dans {{count}} minute.",

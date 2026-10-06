@@ -710,6 +710,7 @@
     "cannot_end_current_session": "現在のセッションは終了できません。",
     "bad_request": "不正なリクエストです。",
     "internal_error": "予期しないエラーが発生しました。",
+    "event_limit_reached": "イベントの上限に達しました。",
     "too_many_attempts_seconds_other": "試行回数が多すぎます。{{count}}秒後にもう一度お試しください。",
     "too_many_attempts_minutes_other": "試行回数が多すぎます。{{count}}分後にもう一度お試しください。"
   }
