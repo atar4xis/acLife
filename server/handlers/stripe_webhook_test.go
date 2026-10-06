@@ -35,6 +35,17 @@ func subscriptionEvent(eventType, subID, status string) string {
 	return fmt.Sprintf(`{"id":"evt_1","object":"event","type":%q,"data":{"object":{"id":%q,"status":%q}}}`, eventType, subID, status)
 }
 
+// reportStripeStatus makes Stripe report status for every subscription, as the webhook asks Stripe instead of trusting its payload.
+func reportStripeStatus(t *testing.T, status string) {
+	t.Helper()
+
+	handlers.SetSubscriptionUpdater(func(subID string, _ ...string) (string, error) {
+		_, err := database.DB.Exec("UPDATE users SET subscription_status = ? WHERE stripe_subscription_id = ?", status, subID)
+		return status, err
+	})
+	t.Cleanup(func() { handlers.SetSubscriptionUpdater(database.UpdateSubscriptionStatus) })
+}
+
 func subscriptionStatus(t *testing.T, uuid string) string {
 	t.Helper()
 
@@ -51,6 +62,7 @@ func TestStripeWebhookUpdatesSubscriptionStatus(t *testing.T) {
 
 	for _, eventType := range []string{"customer.subscription.updated", "customer.subscription.deleted"} {
 		t.Run(eventType, func(t *testing.T) {
+			reportStripeStatus(t, "canceled")
 			c := testutil.NewClient(t)
 			user := testutil.NewUser(t, testutil.Subscribed("active"))
 			bystander := testutil.NewUser(t, testutil.Subscribed("active"))
@@ -65,6 +77,35 @@ func TestStripeWebhookUpdatesSubscriptionStatus(t *testing.T) {
 				t.Fatalf("other user's status changed to %q", got)
 			}
 		})
+	}
+}
+
+func TestStripeWebhookTrustsStripeOverThePayload(t *testing.T) {
+	testutil.RequireDB(t)
+	t.Setenv("STRIPE_WEBHOOK_SECRET", webhookSecret)
+	reportStripeStatus(t, "canceled")
+	user := testutil.NewUser(t, testutil.Subscribed("canceled"))
+
+	if status := signedWebhook(t, testutil.NewClient(t), subscriptionEvent("customer.subscription.updated", user.SubscriptionID, "active")); status != http.StatusOK {
+		t.Fatalf("got %d", status)
+	}
+	if got := subscriptionStatus(t, user.UUID); got != "canceled" {
+		t.Fatalf("status %q", got)
+	}
+}
+
+func TestStripeWebhookAsksStripeToRetryWhenItCannotFetchTheStatus(t *testing.T) {
+	testutil.RequireDB(t)
+	t.Setenv("STRIPE_WEBHOOK_SECRET", webhookSecret)
+	handlers.SetSubscriptionUpdater(func(string, ...string) (string, error) { return "", errors.New("stripe down") })
+	t.Cleanup(func() { handlers.SetSubscriptionUpdater(database.UpdateSubscriptionStatus) })
+	user := testutil.NewUser(t, testutil.Subscribed("active"))
+
+	if status := signedWebhook(t, testutil.NewClient(t), subscriptionEvent("customer.subscription.deleted", user.SubscriptionID, "canceled")); status != http.StatusInternalServerError {
+		t.Fatalf("got %d", status)
+	}
+	if got := subscriptionStatus(t, user.UUID); got != "active" {
+		t.Fatalf("status %q", got)
 	}
 }
 
@@ -130,6 +171,7 @@ func TestStripeWebhookRejectsTamperedPayload(t *testing.T) {
 func TestStripeWebhookRejectsOversizedBody(t *testing.T) {
 	testutil.RequireDB(t)
 	t.Setenv("STRIPE_WEBHOOK_SECRET", webhookSecret)
+	reportStripeStatus(t, "canceled")
 	c := testutil.NewClient(t)
 	user := testutil.NewUser(t, testutil.Subscribed("active"))
 

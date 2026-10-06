@@ -248,6 +248,7 @@ type Client struct {
 	t      *testing.T
 	URL    string
 	cookie *http.Cookie
+	ip     string
 }
 
 // NewClient starts the real router on a local test server.
@@ -264,6 +265,13 @@ func NewClient(t *testing.T) *Client {
 func (c *Client) WithCookie(cookie *http.Cookie) *Client {
 	cp := *c
 	cp.cookie = cookie
+	return &cp
+}
+
+// FromIP returns a copy of c that presents itself as ip, the test must set IS_BEHIND_PROXY for the server to trust it.
+func (c *Client) FromIP(ip string) *Client {
+	cp := *c
+	cp.ip = ip
 	return &cp
 }
 
@@ -294,6 +302,9 @@ func (c *Client) Do(method, path string, body any, mods ...func(*http.Request)) 
 		c.t.Fatalf("new request: %v", err)
 	}
 	req.Header.Set("Origin", Origin)
+	if c.ip != "" {
+		req.Header.Set("X-Real-IP", c.ip)
+	}
 	if c.cookie != nil {
 		req.AddCookie(c.cookie)
 	}

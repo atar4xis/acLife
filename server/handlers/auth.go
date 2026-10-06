@@ -397,6 +397,26 @@ func validateEnvelopes(envelopes []types.KeyEnvelope) bool {
 	return true
 }
 
+// deleteReplaceableAccount deletes the unverified registration of email if it is older than ReregisterCooldown and has no subscription or events.
+func deleteReplaceableAccount(ctx context.Context, tx *sql.Tx, email string) (bool, error) {
+	res, err := tx.ExecContext(ctx, `
+		DELETE u FROM users u
+		JOIN email_verification_tokens t ON t.owner = u.uuid
+		WHERE u.email = ?
+			AND u.email_verified = 0
+			AND u.stripe_subscription_id IS NULL
+			AND t.created_at < ?
+			AND NOT EXISTS (SELECT 1 FROM calendar_events ce WHERE ce.owner = u.uuid)`,
+		email, time.Now().Add(-constants.ReregisterCooldown),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
 // Register handles creating new accounts.
 func Register(w http.ResponseWriter, r *http.Request) {
 	if !constants.Metadata.Registration.Enabled {
@@ -487,11 +507,29 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = tx.Rollback() }()
 
 	// Insert into database
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO users (email, srp_salt, verifier)
-		VALUES (?, ?, ?)`,
-		triplet.Username(), triplet.Salt(), triplet.Verifier(),
-	); err != nil {
+	insertUser := func() error {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO users (email, srp_salt, verifier)
+			VALUES (?, ?, ?)`,
+			triplet.Username(), triplet.Salt(), triplet.Verifier(),
+		)
+		return err
+	}
+
+	err = insertUser()
+	if database.IsDuplicateEntry(err) && constants.Metadata.Registration.Email.VerificationRequired {
+		// whoever owns the address can always register, an unverified claim on it is dropped
+		replaced, replaceErr := deleteReplaceableAccount(ctx, tx, triplet.Username())
+		if replaceErr != nil {
+			utils.LogError("Register", "deleteReplaceableAccount", replaceErr)
+			utils.SendInternalError(w)
+			return
+		}
+		if replaced {
+			err = insertUser()
+		}
+	}
+	if err != nil {
 		if database.IsDuplicateEntry(err) {
 			utils.SendJSON(w, http.StatusConflict, types.Reply[any]{
 				Success: false,
@@ -610,7 +648,7 @@ func LoginStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	startSRP(w, "LoginStart", types.SRPSession{Email: req.Email, UserUUID: userUUID}, salt, verifier, req.A)
+	startSRP(w, r, "LoginStart", types.SRPSession{Email: req.Email, UserUUID: userUUID}, salt, verifier, req.A)
 }
 
 // LoginVerify is the second step of the SRP login procedure.
@@ -653,7 +691,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify client proof
-	if !checkProof(w, sess, req.M1, http.StatusUnauthorized, "Invalid credentials.", "invalid_credentials") {
+	if !checkProof(w, r, sess, req.M1, http.StatusUnauthorized, "Invalid credentials.", "invalid_credentials") {
 		return
 	}
 

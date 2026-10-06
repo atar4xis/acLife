@@ -21,7 +21,7 @@ func ReauthStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	startSRP(w, "ReauthStart", types.SRPSession{Email: user.Email, UserUUID: user.UUID, Reauth: true}, user.SrpSalt, user.Verifier, req.A)
+	startSRP(w, r, "ReauthStart", types.SRPSession{Email: user.Email, UserUUID: user.UUID, Reauth: true}, user.SrpSalt, user.Verifier, req.A)
 }
 
 // reauthProof is embedded in the request of every endpoint that needs the current password.
@@ -31,7 +31,7 @@ type reauthProof struct {
 }
 
 // requirePassword checks the proof against the session ReauthStart opened, replying and returning false when it fails.
-func requirePassword(w http.ResponseWriter, user *types.User, proof reauthProof) bool {
+func requirePassword(w http.ResponseWriter, r *http.Request, user *types.User, proof reauthProof) bool {
 	sess, ok := takeSRPSession(proof.SessionID, true)
 	if !ok || sess.UserUUID != user.UUID {
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{
@@ -42,5 +42,5 @@ func requirePassword(w http.ResponseWriter, user *types.User, proof reauthProof)
 		return false
 	}
 
-	return checkProof(w, sess, proof.M1, http.StatusBadRequest, "Current password is incorrect.", "current_password_incorrect")
+	return checkProof(w, r, sess, proof.M1, http.StatusBadRequest, "Current password is incorrect.", "current_password_incorrect")
 }

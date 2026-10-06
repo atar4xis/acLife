@@ -2,8 +2,10 @@ package handlers_test
 
 import (
 	"bytes"
+	"fmt"
 	"maps"
 	"net/http"
+	"sync"
 	"testing"
 
 	"acLife/constants"
@@ -169,12 +171,13 @@ func TestLoginWithThePassword(t *testing.T) {
 	}
 }
 
-func TestAccountLocksAfterRepeatedFailedProofs(t *testing.T) {
+func TestAddressLocksAfterRepeatedFailedProofs(t *testing.T) {
 	testutil.RequireDB(t)
+	t.Setenv("IS_BEHIND_PROXY", "1")
 	user, bystander := testutil.NewUser(t), testutil.NewUser(t)
-	c := testutil.NewClient(t)
+	c := testutil.NewClient(t).FromIP("203.0.113.1")
 
-	for range constants.MaxLoginFailures {
+	for range constants.MaxLoginFailuresPerIP {
 		if status, _ := login(t, c, user, "wrong password"); status != http.StatusUnauthorized {
 			t.Fatalf("got %d", status)
 		}
@@ -186,39 +189,93 @@ func TestAccountLocksAfterRepeatedFailedProofs(t *testing.T) {
 	if status, _ := login(t, c, bystander, testutil.Password); status != http.StatusOK {
 		t.Fatalf("another account was locked: %d", status)
 	}
+	if status, _ := login(t, testutil.NewClient(t).FromIP("203.0.113.2"), user, testutil.Password); status != http.StatusOK {
+		t.Fatalf("another address was locked out: %d", status)
+	}
 
-	asUser := testutil.NewClient(t).As(user)
+	asUser := testutil.NewClient(t).FromIP("203.0.113.1").As(user)
 	if status, reply := testutil.Call[any](asUser, "POST", "/user/reauth/start", map[string]any{"A": []byte{1}}); status != http.StatusTooManyRequests || reply.Code != "too_many_attempts_minutes" {
 		t.Fatalf("reauth while locked: %d %q", status, reply.Code)
 	}
 }
 
+func TestAccountLocksAfterFailuresFromManyAddresses(t *testing.T) {
+	testutil.RequireDB(t)
+	t.Setenv("IS_BEHIND_PROXY", "1")
+	user := testutil.NewUser(t)
+
+	for i := range constants.MaxLoginFailures {
+		c := testutil.NewClient(t).FromIP(fmt.Sprintf("198.51.100.%d", i))
+		if status, _ := login(t, c, user, "wrong password"); status != http.StatusUnauthorized {
+			t.Fatalf("attempt %d: %d", i, status)
+		}
+	}
+
+	fresh := testutil.NewClient(t).FromIP("192.0.2.200")
+	if status, _ := login(t, fresh, user, testutil.Password); status != http.StatusTooManyRequests {
+		t.Fatalf("correct password while locked: %d", status)
+	}
+}
+
+func TestAddressSlowsDownAcrossAccounts(t *testing.T) {
+	testutil.RequireDB(t)
+	t.Setenv("IS_BEHIND_PROXY", "1")
+	c := testutil.NewClient(t).FromIP("203.0.113.9")
+
+	for range constants.IPFailureFreeAttempts + 1 {
+		login(t, c, testutil.NewUser(t), "wrong password")
+	}
+
+	if status, _ := login(t, c, testutil.NewUser(t), testutil.Password); status != http.StatusTooManyRequests {
+		t.Fatalf("got %d", status)
+	}
+}
+
 func TestSuccessfulLoginClearsFailedProofs(t *testing.T) {
 	testutil.RequireDB(t)
+	t.Setenv("IS_BEHIND_PROXY", "1")
 	user := testutil.NewUser(t)
-	c := testutil.NewClient(t)
+	c := testutil.NewClient(t).FromIP("203.0.113.3")
 
-	for range constants.MaxLoginFailures - 1 {
+	for range constants.MaxLoginFailuresPerIP - 1 {
 		login(t, c, user, "wrong password")
 	}
 	if status, _ := login(t, c, user, testutil.Password); status != http.StatusOK {
 		t.Fatalf("got %d", status)
 	}
-	c = testutil.NewClient(t) // fresh rate limit
-	for range constants.MaxLoginFailures - 1 {
-		login(t, c, user, "wrong password")
-	}
+	login(t, c, user, "wrong password")
 	if status, _ := login(t, c, user, testutil.Password); status != http.StatusOK {
 		t.Fatalf("failures were not cleared: %d", status)
 	}
 }
 
-func TestStartedSessionsCannotBeVerifiedWhileLocked(t *testing.T) {
+func TestOwnLoginsDoNotCancelFailuresAgainstOthers(t *testing.T) {
 	testutil.RequireDB(t)
-	user := testutil.NewUser(t)
-	c := testutil.NewClient(t)
+	t.Setenv("IS_BEHIND_PROXY", "1")
+	own := testutil.NewUser(t)
+	c := testutil.NewClient(t).FromIP("203.0.113.4")
 
-	proofs := make([]map[string]any, constants.MaxLoginFailures+1)
+	for range constants.IPFailureFreeAttempts {
+		login(t, c, testutil.NewUser(t), "wrong password")
+		if status, _ := login(t, c, own, testutil.Password); status != http.StatusOK {
+			t.Fatalf("own login: %d", status)
+		}
+	}
+	login(t, c, testutil.NewUser(t), "wrong password")
+
+	if status, _ := login(t, c, own, testutil.Password); status != http.StatusTooManyRequests {
+		t.Fatalf("alternating logins reset the address: %d", status)
+	}
+}
+
+func TestConcurrentProofsCannotExceedTheAddressLimit(t *testing.T) {
+	testutil.RequireDB(t)
+	t.Setenv("IS_BEHIND_PROXY", "1")
+	user := testutil.NewUser(t)
+	c := testutil.NewClient(t).FromIP("203.0.113.5")
+
+	const sessions = 12
+	proofs := make([]map[string]any, sessions)
 	for i := range proofs {
 		status, proof := testutil.Proof(t, c, "/auth/login/start", map[string]any{"email": user.Email}, user.Email, testutil.Password)
 		if status != http.StatusOK {
@@ -227,14 +284,18 @@ func TestStartedSessionsCannotBeVerifiedWhileLocked(t *testing.T) {
 		proofs[i] = proof
 	}
 
-	for i := range constants.MaxLoginFailures {
+	statuses := make([]int, sessions)
+	var wg sync.WaitGroup
+	for i := range proofs {
 		proofs[i]["M1"] = []byte{1}
-		testutil.Call[any](c, "POST", "/auth/login/verify", withProof(map[string]any{"email": user.Email}, proofs[i]))
+		wg.Go(func() {
+			statuses[i], _ = testutil.Call[any](c, "POST", "/auth/login/verify", withProof(map[string]any{"email": user.Email}, proofs[i]))
+		})
 	}
+	wg.Wait()
 
-	status, reply := testutil.Call[any](c, "POST", "/auth/login/verify", withProof(map[string]any{"email": user.Email}, proofs[constants.MaxLoginFailures]))
-	if status != http.StatusTooManyRequests || reply.Code != "too_many_attempts_minutes" {
-		t.Fatalf("got %d %q", status, reply.Code)
+	if checked := count401(statuses); checked > constants.MaxLoginFailuresPerIP {
+		t.Fatalf("%d proofs checked at once, statuses %v", checked, statuses)
 	}
 }
 
@@ -263,4 +324,14 @@ func TestRemovedRoutesAreGone(t *testing.T) {
 			t.Fatalf("%s: got %d", path, resp.StatusCode)
 		}
 	}
+}
+
+func count401(statuses []int) int {
+	n := 0
+	for _, s := range statuses {
+		if s == http.StatusUnauthorized {
+			n++
+		}
+	}
+	return n
 }

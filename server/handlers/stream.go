@@ -122,15 +122,9 @@ func stillAllowed(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 
-	if constants.Metadata.Registration.SubscriptionRequired {
-		status := ""
-		if user.SubscriptionStatus != nil {
-			status = *user.SubscriptionStatus
-		}
-		if status != "active" && status != "trialing" {
-			denySubscription(w)
-			return false
-		}
+	if constants.Metadata.Registration.SubscriptionRequired && !hasActiveSubscription(user.SubscriptionStatus) {
+		denySubscription(w)
+		return false
 	}
 
 	return true

@@ -168,3 +168,32 @@ func TestSyncLogsInvalidIDsOnce(t *testing.T) {
 		t.Fatal("request content in the log")
 	}
 }
+
+func TestSaveEnforcesTheStorageQuotaPerUser(t *testing.T) {
+	testutil.RequireDB(t)
+	size := int64(len(ev(testutil.NewUUID(), baseTS).Data) * 3 / 4)
+	old := constants.MaxUserBytes
+	constants.MaxUserBytes = size*2 + size/2
+	t.Cleanup(func() { constants.MaxUserBytes = old })
+
+	c := testutil.NewClient(t).As(testutil.NewUser(t))
+	bucket := testutil.BucketID(1)
+	first, second, over := testutil.NewUUID(), testutil.NewUUID(), testutil.NewUUID()
+	mustSave(t, c, added(ev(first, baseTS, bucket)), added(ev(second, baseTS, bucket)))
+
+	status, reply := testutil.Call[any](c, "POST", "/calendar/events/save", []any{added(ev(over, baseTS, bucket))})
+	if status != http.StatusRequestEntityTooLarge || reply.Code != "storage_limit_reached" {
+		t.Fatalf("got %d %q", status, reply.Code)
+	}
+	if count(t, "SELECT COUNT(*) FROM calendar_events WHERE id = ?", over) != 0 {
+		t.Fatal("rejected event stored")
+	}
+
+	t.Run("replacing within the quota works", func(t *testing.T) {
+		mustSave(t, c, deleted(first), added(ev(over, baseTS, bucket)))
+	})
+	t.Run("other users are unaffected", func(t *testing.T) {
+		other := testutil.NewClient(t).As(testutil.NewUser(t))
+		mustSave(t, other, added(ev(testutil.NewUUID(), baseTS, bucket)), added(ev(testutil.NewUUID(), baseTS, bucket)))
+	})
+}

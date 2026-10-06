@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	"acLife/constants"
 	"acLife/database"
@@ -22,8 +24,35 @@ import (
 	"github.com/stripe/stripe-go/v84/webhook"
 )
 
-// Pricing gets the subscription prices from Stripe.
+var pricingCache struct {
+	mu      sync.Mutex
+	prices  []types.Price
+	fetched time.Time
+}
+
+// Pricing gets the subscription prices from Stripe, answering from a short-lived cache so users cannot spend the API quota.
 func Pricing(w http.ResponseWriter, r *http.Request) {
+	pricingCache.mu.Lock()
+	defer pricingCache.mu.Unlock()
+
+	if pricingCache.prices == nil || time.Since(pricingCache.fetched) > constants.StripePricingCacheTTL {
+		prices, err := listPrices()
+		if err != nil {
+			utils.LogError("Pricing", "iter", err)
+			utils.SendInternalError(w)
+			return
+		}
+
+		pricingCache.prices, pricingCache.fetched = prices, time.Now()
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[[]types.Price]{
+		Success: true,
+		Data:    pricingCache.prices,
+	})
+}
+
+func fetchPrices() ([]types.Price, error) {
 	stripe.Key = os.Getenv("STRIPE_API_KEY")
 	productID := os.Getenv("STRIPE_PRODUCT_ID")
 
@@ -35,9 +64,8 @@ func Pricing(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
+	prices := []types.Price{}
 	iter := price.List(params)
-
-	var prices []types.Price
 	for iter.Next() {
 		p := iter.Price()
 
@@ -53,16 +81,7 @@ func Pricing(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if err := iter.Err(); err != nil {
-		utils.LogError("Pricing", "iter", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	utils.SendJSON(w, http.StatusOK, types.Reply[[]types.Price]{
-		Success: true,
-		Data:    prices,
-	})
+	return prices, iter.Err()
 }
 
 // CreatePortalSession creates a Stripe Customer Portal session and returns the URL.
@@ -107,6 +126,15 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := utils.ParseJSON(r.Body, &req); err != nil {
 		utils.SendBadRequest(w)
+		return
+	}
+
+	if hasActiveSubscription(user.SubscriptionStatus) {
+		utils.SendJSON(w, http.StatusConflict, types.Reply[any]{
+			Success: false,
+			Message: "You already have a subscription.",
+			Code:    "already_subscribed",
+		})
 		return
 	}
 
@@ -157,6 +185,7 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 
 var (
 	updateSubscriptionStatus = database.UpdateSubscriptionStatus
+	listPrices               = fetchPrices
 	getPrice                 = price.Get
 	createCheckout           = session.New
 )
@@ -222,16 +251,16 @@ func StripeWebhook(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-	case "customer.subscription.updated":
-		fallthrough
-	case "customer.subscription.deleted":
+	case "customer.subscription.updated", "customer.subscription.deleted":
 		subID, _ := obj["id"].(string)
-		status, _ := obj["status"].(string)
 
-		status, err := database.UpdateSubscriptionStatus(subID, status)
+		// the status in the payload is stale when events arrive out of order, so ask Stripe for the current one
+		status, err := updateSubscriptionStatus(subID)
 		if err != nil {
-			utils.LogError("StripeWebhook", "UpdateSubscriptionStatus", err)
-		} else if status != "active" && status != "trialing" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if status != "active" && status != "trialing" {
 			closeStreamsOfSubscription(r.Context(), subID)
 		}
 	}

@@ -81,16 +81,29 @@ func BodyCloseMiddleware() mux.MiddlewareFunc {
 // RateLimitMiddleware limits the number of requests made by the user in a specified period of time.
 // Each call gets its own isolated store, so independently configured limiters never share state.
 func RateLimitMiddleware(maxRequests int, window time.Duration) mux.MiddlewareFunc {
+	return rateLimit(maxRequests, window, getClientIP)
+}
+
+// UserRateLimitMiddleware limits the requests of each logged-in user, it must run after AuthMiddleware.
+func UserRateLimitMiddleware(maxRequests int, window time.Duration) mux.MiddlewareFunc {
+	return rateLimit(maxRequests, window, func(r *http.Request) string {
+		user := session.GetLoggedInUser(r)
+		utils.Assert(user != nil) // ensured by AuthMiddleware
+		return user.UUID
+	})
+}
+
+func rateLimit(maxRequests int, window time.Duration, keyOf func(*http.Request) string) mux.MiddlewareFunc {
 	store := &sync.Map{} // map[string]*rateLimitEntry
 
 	go cleanupRateLimits(store, constants.RateLimitCacheTTL)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip := getClientIP(r)
+			key := keyOf(r)
 			now := time.Now()
 
-			val, _ := store.LoadOrStore(ip, &rateLimitEntry{})
+			val, _ := store.LoadOrStore(key, &rateLimitEntry{})
 			entry := val.(*rateLimitEntry)
 
 			entry.mu.Lock()
@@ -176,8 +189,7 @@ func SubscriptionMiddleware() mux.MiddlewareFunc {
 			user := session.GetLoggedInUser(r)
 			utils.Assert(user != nil) // should be ensured by AuthMiddleware
 
-			if user.SubscriptionStatus == nil ||
-				(*user.SubscriptionStatus != "active" && *user.SubscriptionStatus != "trialing") {
+			if !hasActiveSubscription(user.SubscriptionStatus) {
 				denySubscription(w)
 				return
 			}
@@ -209,13 +221,15 @@ func CSRFMiddleware() mux.MiddlewareFunc {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Allow GET, HEAD, and OPTIONS requests without Origin header
-			if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
+			origin := r.Header.Get("Origin")
+
+			// GET, HEAD, and OPTIONS requests may come without Origin header, but one that is sent must be allowed
+			safeMethod := r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions
+
+			if origin == "" && safeMethod {
 				next.ServeHTTP(w, r)
 				return
 			}
-
-			origin := r.Header.Get("Origin")
 
 			if origin == "" {
 				utils.SendJSON(w, http.StatusForbidden, types.Reply[any]{
@@ -241,6 +255,11 @@ func CSRFMiddleware() mux.MiddlewareFunc {
 }
 
 /* -------------------- Helpers -------------------- */
+
+// hasActiveSubscription reports whether a stored Stripe status grants access.
+func hasActiveSubscription(status *string) bool {
+	return status != nil && (*status == "active" || *status == "trialing")
+}
 
 func denySubscription(w http.ResponseWriter) {
 	utils.SendJSON(w, http.StatusPaymentRequired, types.Reply[any]{

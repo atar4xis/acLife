@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"net/http"
 	"time"
 
 	"acLife/handlers"
@@ -24,6 +25,8 @@ func Stripe(r *mux.Router) {
 
 	// Other routes are authenticated
 	sr.HandleFunc("/pricing", handlers.Pricing).Methods("GET")
-	sr.HandleFunc("/checkout", handlers.CreateCheckoutSession).Methods("POST")
-	sr.HandleFunc("/manage", handlers.CreatePortalSession).Methods("GET")
+	// each of these calls Stripe, so a user gets only a few per minute
+	perUser := handlers.UserRateLimitMiddleware(5, time.Minute)
+	sr.Handle("/checkout", perUser(http.HandlerFunc(handlers.CreateCheckoutSession))).Methods("POST")
+	sr.Handle("/manage", perUser(http.HandlerFunc(handlers.CreatePortalSession))).Methods("GET")
 }

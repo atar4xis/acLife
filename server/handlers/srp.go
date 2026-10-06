@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"fmt"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -14,62 +15,138 @@ import (
 	"mz.attahri.com/code/srp/v3"
 )
 
+// loginFailures counts a proof before it is checked, so concurrent guesses cannot slip under a limit.
 var loginFailures = struct {
 	mu    sync.Mutex
-	times map[string][]time.Time // user uuid -> failed proofs inside the window
-}{times: map[string][]time.Time{}}
+	times map[string][]time.Time // user uuid, or user uuid|ip, -> failed proofs inside the window
+	ips   map[string]*ipFailures
+}{times: map[string][]time.Time{}, ips: map[string]*ipFailures{}}
 
-// recentLoginFailures drops expired failures of uuid and returns the rest, the caller holds loginFailures.mu.
-func recentLoginFailures(uuid string, now time.Time) []time.Time {
+// ipFailures slows one address down exponentially while it keeps failing, whatever accounts it targets.
+type ipFailures struct {
+	count        int
+	last         time.Time
+	blockedUntil time.Time
+}
+
+func accountIPKey(uuid, ip string) string { return uuid + "|" + ip }
+
+// recentLoginFailures drops expired failures under key and returns the rest, the caller holds loginFailures.mu.
+func recentLoginFailures(key string, now time.Time) []time.Time {
 	var recent []time.Time
-	for _, ts := range loginFailures.times[uuid] {
+	for _, ts := range loginFailures.times[key] {
 		if now.Sub(ts) < constants.LoginFailureWindow {
 			recent = append(recent, ts)
 		}
 	}
 
 	if len(recent) == 0 {
-		delete(loginFailures.times, uuid)
+		delete(loginFailures.times, key)
 	} else {
-		loginFailures.times[uuid] = recent
+		loginFailures.times[key] = recent
 	}
 	return recent
 }
 
-// lockWait returns how long guesses against the account stay blocked, zero when they are not.
-func lockWait(uuid string) time.Duration {
-	now := time.Now()
-	loginFailures.mu.Lock()
-	defer loginFailures.mu.Unlock()
-
-	recent := recentLoginFailures(uuid, now)
-	if len(recent) < constants.MaxLoginFailures {
+// limitWait returns how long until the failures under key drop below max.
+func limitWait(key string, max int, now time.Time) time.Duration {
+	recent := recentLoginFailures(key, now)
+	if len(recent) < max {
 		return 0
 	}
-	return recent[len(recent)-constants.MaxLoginFailures].Add(constants.LoginFailureWindow).Sub(now)
+	return recent[len(recent)-max].Add(constants.LoginFailureWindow).Sub(now)
 }
 
-func recordLoginFailure(uuid string) {
+// attemptWait returns how long guesses against the account from ip stay blocked, zero when they are not, the caller holds loginFailures.mu.
+func attemptWait(uuid, ip string, now time.Time) time.Duration {
+	wait := max(
+		limitWait(accountIPKey(uuid, ip), constants.MaxLoginFailuresPerIP, now),
+		limitWait(uuid, constants.MaxLoginFailures, now),
+	)
+	if f := loginFailures.ips[ip]; f != nil {
+		wait = max(wait, f.blockedUntil.Sub(now))
+	}
+	return wait
+}
+
+// lockWait returns how long guesses against the account from ip stay blocked, zero when they are not.
+func lockWait(uuid, ip string) time.Duration {
 	now := time.Now()
 	loginFailures.mu.Lock()
 	defer loginFailures.mu.Unlock()
 
-	loginFailures.times[uuid] = append(recentLoginFailures(uuid, now), now)
+	return attemptWait(uuid, ip, now)
 }
 
-func clearLoginFailures(uuid string) {
+// reserveAttempt counts a proof as failed and returns release to undo that once it proves valid, or the wait when the attempt is not allowed.
+func reserveAttempt(uuid, ip string) (release func(), wait time.Duration) {
+	now := time.Now()
 	loginFailures.mu.Lock()
 	defer loginFailures.mu.Unlock()
 
-	delete(loginFailures.times, uuid)
+	if wait := attemptWait(uuid, ip, now); wait > 0 {
+		return nil, wait
+	}
+
+	pairKey := accountIPKey(uuid, ip)
+	loginFailures.times[pairKey] = append(loginFailures.times[pairKey], now)
+	loginFailures.times[uuid] = append(loginFailures.times[uuid], now)
+
+	f := loginFailures.ips[ip]
+	if f == nil || now.Sub(f.last) > constants.IPFailureDecay {
+		f = &ipFailures{}
+		loginFailures.ips[ip] = f
+	}
+	previousBlock := f.blockedUntil
+	f.count++
+	f.last = now
+	if over := f.count - constants.IPFailureFreeAttempts; over > 0 {
+		delay := min(time.Second<<min(over-1, 30), constants.LoginFailureWindow)
+		f.blockedUntil = now.Add(delay)
+	}
+	blockedUntil := f.blockedUntil
+
+	return func() {
+		loginFailures.mu.Lock()
+		defer loginFailures.mu.Unlock()
+
+		// the account is proven to belong to the caller, other addresses' failures stay counted
+		delete(loginFailures.times, pairKey)
+		loginFailures.times[uuid] = removeTime(loginFailures.times[uuid], now)
+		if len(loginFailures.times[uuid]) == 0 {
+			delete(loginFailures.times, uuid)
+		}
+
+		// only this attempt's own share is undone, so own-account logins never cancel failures elsewhere
+		if g := loginFailures.ips[ip]; g == f {
+			f.count--
+			if f.blockedUntil.Equal(blockedUntil) {
+				f.blockedUntil = previousBlock
+			}
+		}
+	}, 0
+}
+
+func removeTime(times []time.Time, t time.Time) []time.Time {
+	for i, ts := range times {
+		if ts.Equal(t) {
+			return slices.Delete(times, i, i+1)
+		}
+	}
+	return times
 }
 
 func pruneLoginFailures(now time.Time) {
 	loginFailures.mu.Lock()
 	defer loginFailures.mu.Unlock()
 
-	for uuid := range loginFailures.times {
-		recentLoginFailures(uuid, now)
+	for key := range loginFailures.times {
+		recentLoginFailures(key, now)
+	}
+	for ip, f := range loginFailures.ips {
+		if now.Sub(f.last) > constants.IPFailureDecay {
+			delete(loginFailures.ips, ip)
+		}
 	}
 }
 
@@ -90,8 +167,8 @@ type srpStart struct {
 }
 
 // startSRP opens an SRP session for the account of sess (Email, UserUUID and Reauth set) and replies with B, or with the error.
-func startSRP(w http.ResponseWriter, fn string, sess types.SRPSession, salt, verifier, A []byte) {
-	if wait := lockWait(sess.UserUUID); wait > 0 {
+func startSRP(w http.ResponseWriter, r *http.Request, fn string, sess types.SRPSession, salt, verifier, A []byte) {
+	if wait := lockWait(sess.UserUUID, getClientIP(r)); wait > 0 {
 		replyLocked(w, wait)
 		return
 	}
@@ -137,19 +214,19 @@ func takeSRPSession(sessionID string, reauth bool) (types.SRPSession, bool) {
 	return sess, sess.Reauth == reauth && time.Since(sess.CreatedAt) <= constants.SRPSessionTTL
 }
 
-// checkProof verifies the client proof of sess, counting a wrong one against the account. It replies and returns false on failure.
-func checkProof(w http.ResponseWriter, sess types.SRPSession, m1 []byte, status int, message, code string) bool {
-	if wait := lockWait(sess.UserUUID); wait > 0 {
+// checkProof verifies the client proof of sess, counting a wrong one against the account and the caller's address. It replies and returns false on failure.
+func checkProof(w http.ResponseWriter, r *http.Request, sess types.SRPSession, m1 []byte, status int, message, code string) bool {
+	release, wait := reserveAttempt(sess.UserUUID, getClientIP(r))
+	if wait > 0 {
 		replyLocked(w, wait)
 		return false
 	}
 
 	if verified, err := sess.Server.CheckM1(m1); err != nil || !verified {
-		recordLoginFailure(sess.UserUUID)
 		utils.SendJSON(w, status, types.Reply[any]{Success: false, Message: message, Code: code})
 		return false
 	}
 
-	clearLoginFailures(sess.UserUUID)
+	release()
 	return true
 }

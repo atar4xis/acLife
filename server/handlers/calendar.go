@@ -72,6 +72,7 @@ func (c *eventChanges) UnmarshalJSON(data []byte) error {
 var (
 	errBadEventChanges = errors.New("invalid event changes")
 	errEventLimit      = errors.New("event limit reached")
+	errStorageLimit    = errors.New("storage limit reached")
 )
 
 // replyEventChangesError answers a failed applyCalendarChanges.
@@ -84,6 +85,12 @@ func replyEventChangesError(w http.ResponseWriter, function string, err error) {
 			Success: false,
 			Message: "Event limit reached.",
 			Code:    "event_limit_reached",
+		})
+	case errors.Is(err, errStorageLimit):
+		utils.SendJSON(w, http.StatusRequestEntityTooLarge, types.Reply[any]{
+			Success: false,
+			Message: "Storage limit reached.",
+			Code:    "storage_limit_reached",
 		})
 	default:
 		utils.LogError(function, "applyCalendarChanges", err)
@@ -254,11 +261,18 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 		}
 
 		var stored int
-		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM calendar_events WHERE owner = ?", owner).Scan(&stored); err != nil {
+		var storedBytes int64
+		if err := tx.QueryRowContext(ctx,
+			"SELECT COUNT(*), COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM calendar_events WHERE owner = ?",
+			owner,
+		).Scan(&stored, &storedBytes); err != nil {
 			return nil, err
 		}
 		if stored > constants.MaxUserEvents {
 			return nil, errEventLimit
+		}
+		if storedBytes > constants.MaxUserBytes {
+			return nil, errStorageLimit
 		}
 	}
 

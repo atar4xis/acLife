@@ -88,6 +88,10 @@ func main() {
 		AllowCredentials: true,
 	})
 
+	if os.Getenv("IS_BEHIND_PROXY") != "" {
+		log.Println("Proxy mode is enabled (IS_BEHIND_PROXY set). Make sure you're actually behind a trusted proxy that sets X-Real-IP correctly. If not, clients can spoof their IP address.")
+	}
+
 	// Register all routes
 	handler := c.Handler(routes.New())
 

@@ -29,10 +29,13 @@ const (
 	MaxStreamsPerUser     = 30
 	MaxStreamPayloadBytes = 64 << 10
 
-	SRPSessionTTL      = 5 * time.Minute
-	MaxLoginFailures   = 10
-	LoginFailureWindow = 15 * time.Minute
-	RateLimitCacheTTL  = 2 * time.Minute
+	SRPSessionTTL         = 5 * time.Minute
+	MaxLoginFailures      = 50
+	MaxLoginFailuresPerIP = 5
+	LoginFailureWindow    = 15 * time.Minute
+	IPFailureFreeAttempts = 5             // failures from one address before its delay starts
+	IPFailureDecay        = 1 * time.Hour // a quiet address starts over after this
+	RateLimitCacheTTL     = 2 * time.Minute
 
 	DBMaxOpenConns    = 50
 	DBMaxIdleConns    = 10
@@ -40,6 +43,10 @@ const (
 	DBTimeout         = 5 * time.Second
 
 	SMTPTimeout = 30 * time.Second
+
+	StripePricingCacheTTL = 5 * time.Minute
+	// used when PUSH_ALLOWED_ENDPOINTS is empty
+	DefaultPushAllowedEndpoints = "*.push.services.mozilla.com,*.googleapis.com,*.windows.com,*.notify.windows.com,*.push.apple.com"
 
 	EmailQueuePollInterval   = 10 * time.Second
 	EmailQueueStaleThreshold = 1 * time.Minute
@@ -49,7 +56,6 @@ const (
 	MaxSaltLen     = 16
 	MaxVerifierLen = 520
 	MaxEventLen    = 10000
-	MaxUserEvents  = 50000
 	MaxPowTokenLen = 512
 	MaxPowNonceLen = 32
 
@@ -74,6 +80,14 @@ const (
 	EmailVerificationTTL             = 1 * Day
 	EmailVerificationResendCooldown  = 60 * time.Second
 	EmailVerificationMaxSendsPerHour = 4
+	ReregisterCooldown               = 5 * time.Minute // an unverified account this young cannot be replaced by a new registration
+)
+
+var (
+	MaxUserEvents    int
+	MaxUserBytes     int64
+	MaxSaveBodyBytes int64
+	MaxSyncBodyBytes int64
 )
 
 // AccessTokenExpiry set in init: ACCESS_TOKEN_EXPIRY_DAYS env var if present, else default 3 days.
@@ -101,6 +115,11 @@ func Configure() {
 		}
 	}
 
+	MaxUserEvents = int(envInt("MAX_USER_EVENTS", 50000))
+	MaxUserBytes = envInt("MAX_USER_BYTES", 500<<20)
+	MaxSaveBodyBytes = envInt("MAX_SAVE_BODY_BYTES", 16<<20)
+	MaxSyncBodyBytes = int64(MaxUserEvents)*80 + 64<<10 // about 80 bytes per cached event entry
+
 	Metadata = types.ServerMetadata{
 		URL: os.Getenv("SERVER_URL"),
 		Policies: &types.Policies{
@@ -118,4 +137,19 @@ func Configure() {
 		},
 		VapidPublicKey: os.Getenv("VAPID_PUBLIC_KEY"), // for push service
 	}
+}
+
+// envInt reads a positive integer from the environment, falling back to def when unset or invalid.
+func envInt(name string, def int64) int64 {
+	v := os.Getenv(name)
+	if v == "" {
+		return def
+	}
+
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil || n <= 0 {
+		log.Printf("Invalid %s %q, using default", name, v)
+		return def
+	}
+	return n
 }

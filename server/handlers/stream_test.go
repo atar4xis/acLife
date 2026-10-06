@@ -401,6 +401,7 @@ func TestStreamStaysOpenWithoutRequiredSubscription(t *testing.T) {
 	testutil.RequireDB(t)
 	t.Setenv("STRIPE_WEBHOOK_SECRET", webhookSecret)
 
+	reportStripeStatus(t, "canceled")
 	user := testutil.NewUser(t, testutil.Subscribed("active"))
 	srv := testutil.NewClient(t)
 	conn, _ := openStream(t, srv.As(user))
@@ -426,6 +427,7 @@ func TestStreamClosesWhenSubscriptionLapses(t *testing.T) {
 	mine, _ := openStream(t, srv.As(user))
 	theirs, _ := openStream(t, srv.As(bystander))
 
+	reportStripeStatus(t, "active")
 	if status := signedWebhook(t, srv, subscriptionEvent("customer.subscription.updated", user.SubscriptionID, "active")); status != http.StatusOK {
 		t.Fatalf("webhook: %d", status)
 	}
@@ -434,6 +436,7 @@ func TestStreamClosesWhenSubscriptionLapses(t *testing.T) {
 		t.Fatalf("active update closed the stream: %+v", got)
 	}
 
+	reportStripeStatus(t, "canceled")
 	if status := signedWebhook(t, srv, subscriptionEvent("customer.subscription.deleted", user.SubscriptionID, "canceled")); status != http.StatusOK {
 		t.Fatalf("webhook: %d", status)
 	}

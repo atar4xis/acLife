@@ -128,7 +128,8 @@ func TestCSRF(t *testing.T) {
 		{"delete with foreign origin", "DELETE", "/user/sessions/x", withOrigin("https://evil.example"), http.StatusForbidden, "invalid_origin"},
 		{"post with allowed origin", "POST", "/calendar/events/save", withOrigin(testutil.Origin), http.StatusOK, ""},
 		{"get without origin", "GET", "/user/sessions", withoutOrigin, http.StatusOK, ""},
-		{"get with foreign origin", "GET", "/user/sessions", withOrigin("https://evil.example"), http.StatusOK, ""},
+		{"get with foreign origin", "GET", "/user/sessions", withOrigin("https://evil.example"), http.StatusForbidden, "invalid_origin"},
+		{"get with allowed origin", "GET", "/user/sessions", withOrigin(testutil.Origin), http.StatusOK, ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -141,6 +142,16 @@ func TestCSRF(t *testing.T) {
 				t.Fatalf("got %d %+v", status, reply)
 			}
 		})
+	}
+}
+
+func TestStreamChecksAPresentOrigin(t *testing.T) {
+	testutil.RequireDB(t)
+	c := testutil.NewClient(t).As(testutil.NewUser(t))
+
+	resp, _ := c.Do("GET", "/stream", nil, withOrigin("https://evil.example"))
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("got %d", resp.StatusCode)
 	}
 }
 

@@ -4,8 +4,14 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"maps"
+	"math/bits"
 	"testing"
+
+	"acLife/constants"
 
 	"mz.attahri.com/code/srp/v3"
 )
@@ -76,4 +82,57 @@ func Reauth(t *testing.T, c *Client, u User, password string) map[string]any {
 		t.Fatalf("reauth start: %d", status)
 	}
 	return proof
+}
+
+// Register runs the whole registration of email with Password as a client would, proof of work included, and returns the status of the final request.
+func Register(t *testing.T, c *Client, email string) int {
+	t.Helper()
+
+	status, challenge := Call[struct {
+		Token string `json:"token"`
+	}](c, "POST", "/auth/register/challenge", map[string]any{"email": email})
+	if status != 200 {
+		t.Fatalf("challenge: %d", status)
+	}
+
+	payload, _, _ := bytes.Cut([]byte(challenge.Data.Token), []byte("."))
+	raw, err := base64.RawURLEncoding.DecodeString(string(payload))
+	if err != nil {
+		t.Fatalf("decode challenge: %v", err)
+	}
+	var data struct{ Seed, Email string }
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatalf("unmarshal challenge: %v", err)
+	}
+
+	nonce := 0
+	for ; ; nonce++ {
+		sum := sha256.Sum256(fmt.Appendf(nil, "%s|%s|%d", data.Seed, data.Email, nonce))
+		zeros := 0
+		for _, b := range sum {
+			if b != 0 {
+				zeros += bits.LeadingZeros8(b)
+				break
+			}
+			zeros += 8
+		}
+		if zeros >= constants.PowDifficultyBits {
+			break
+		}
+	}
+
+	triplet, err := srp.ComputeVerifier(srpParams, email, Password, srpSalt)
+	if err != nil {
+		t.Fatalf("compute verifier: %v", err)
+	}
+
+	status, _ = Call[any](c, "POST", "/auth/register", map[string]any{
+		"triplet": []byte(triplet),
+		"envelopes": []map[string]any{
+			{"type": "master", "version": 1, "salt": []byte{1}, "data": []byte{1}, "kdfParams": "{}"},
+		},
+		"powToken": challenge.Data.Token,
+		"powNonce": fmt.Sprint(nonce),
+	})
+	return status
 }

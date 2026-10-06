@@ -116,7 +116,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !requirePassword(w, user, req.reauthProof) {
+	if !requirePassword(w, r, user, req.reauthProof) {
 		return
 	}
 
@@ -250,7 +250,7 @@ func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !requirePassword(w, user, req.reauthProof) {
+	if !requirePassword(w, r, user, req.reauthProof) {
 		return
 	}
 
@@ -526,31 +526,33 @@ func PushSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the endpoint is allowed
 	allowed := os.Getenv("PUSH_ALLOWED_ENDPOINTS")
-	if allowed != "" {
-		host := u.Hostname()
-		found := false
+	if allowed == "" {
+		allowed = constants.DefaultPushAllowedEndpoints
+	}
 
-		for pattern := range strings.SplitSeq(allowed, ",") {
-			pattern = strings.TrimSpace(pattern)
-			if pattern == "" {
-				continue
-			}
+	host := u.Hostname()
+	found := false
 
-			re := "^" + regexp.QuoteMeta(pattern) + "$"
-			re = strings.ReplaceAll(re, `\*`, ".*")
-
-			matched, _ := regexp.MatchString(re, host)
-
-			if matched {
-				found = true
-				break
-			}
+	for pattern := range strings.SplitSeq(allowed, ",") {
+		pattern = strings.TrimSpace(pattern)
+		if pattern == "" {
+			continue
 		}
 
-		if !found {
-			utils.SendBadRequest(w)
-			return
+		re := "^" + regexp.QuoteMeta(pattern) + "$"
+		re = strings.ReplaceAll(re, `\*`, ".*")
+
+		matched, _ := regexp.MatchString(re, host)
+
+		if matched {
+			found = true
+			break
 		}
+	}
+
+	if !found {
+		utils.SendBadRequest(w)
+		return
 	}
 
 	// Validate auth: valid base64 and 16 bytes long

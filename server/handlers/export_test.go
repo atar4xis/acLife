@@ -1,8 +1,15 @@
 package handlers
 
-import "github.com/stripe/stripe-go/v84"
+import (
+	"acLife/types"
 
-var BucketHash = bucketHash
+	"github.com/stripe/stripe-go/v84"
+)
+
+var (
+	BucketHash  = bucketHash
+	FetchPrices = fetchPrices
+)
 
 func SetSubscriptionUpdater(f func(string, ...string) (string, error)) { updateSubscriptionStatus = f }
 
@@ -13,3 +20,7 @@ func SetCheckoutCreator(f func(*stripe.CheckoutSessionParams) (*stripe.CheckoutS
 }
 
 func SetAfterSubscribe(f func()) { afterSubscribe = f }
+
+func SetPriceLister(f func() ([]types.Price, error)) { listPrices = f }
+
+func ResetPricingCache() { pricingCache.prices = nil }
