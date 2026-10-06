@@ -1,31 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// argon2's WASM loader doesn't work under jsdom, so stub Worker with a SubtleCrypto-based hash
-class FakeArgonWorker {
-  onmessage: ((e: MessageEvent) => void) | null = null;
-
-  terminate() {}
-
-  postMessage(data: { password: string; salt: number[]; hashLen: number }) {
-    void crypto.subtle
-      .digest(
-        "SHA-256",
-        new TextEncoder().encode(
-          data.password + ":" + JSON.stringify(data.salt),
-        ),
-      )
-      .then((digest) => {
-        this.onmessage?.({
-          data: { hash: Array.from(new Uint8Array(digest, 0, data.hashLen)) },
-        } as MessageEvent);
-      })
-      .catch((err: unknown) => {
-        this.onmessage?.({
-          data: { error: err instanceof Error ? err.message : String(err) },
-        } as MessageEvent);
-      });
-  }
-}
+import { FakeArgonWorker } from "./fakeArgonWorker";
 
 vi.stubGlobal("Worker", FakeArgonWorker);
 
@@ -34,6 +9,7 @@ const {
   generateMasterKeyEnvelope,
   importKeyPair,
   rewrapMasterKeyEnvelope,
+  SRP_PARAMS,
   unwrapKeyPairWithPin,
   unwrapMasterKeyEnvelope,
   wrapKeyPairWithPin,
@@ -187,4 +163,45 @@ describe("key pair export and PIN wrapping", () => {
     expect(a.salt).not.toBe(b.salt);
     expect(a.encrypted).not.toBe(b.encrypted);
   }, 30000);
+});
+
+describe("SRP_PARAMS kdf", () => {
+  const salt = new Uint8Array(16).fill(7);
+
+  beforeEach(() => {
+    FakeArgonWorker.requests = [];
+  });
+
+  it("runs Argon2id with the envelope cost and a labelled salt", async () => {
+    await SRP_PARAMS.kdf("user@example.com", "pw", salt);
+
+    expect(FakeArgonWorker.requests).toHaveLength(1);
+    const req = FakeArgonWorker.requests[0];
+    expect(req).toMatchObject({
+      password: "user@example.com:pw",
+      type: 2,
+      time: 3,
+      mem: 65536,
+      parallelism: 1,
+      hashLen: 32,
+    });
+    expect(
+      new TextDecoder().decode(new Uint8Array(req.salt.slice(0, 13))),
+    ).toBe("acLife-srp-v2");
+    expect(req.salt.slice(13)).toEqual(Array.from(salt));
+  });
+
+  it("depends on username, password and salt", async () => {
+    const outputs = await Promise.all([
+      SRP_PARAMS.kdf("user@example.com", "pw", salt),
+      SRP_PARAMS.kdf("other@example.com", "pw", salt),
+      SRP_PARAMS.kdf("user@example.com", "pw2", salt),
+      SRP_PARAMS.kdf("user@example.com", "pw", new Uint8Array(16).fill(8)),
+    ]);
+
+    expect(new Set(outputs.map((o) => o.join(","))).size).toBe(outputs.length);
+    expect(await SRP_PARAMS.kdf("user@example.com", "pw", salt)).toEqual(
+      outputs[0],
+    );
+  });
 });

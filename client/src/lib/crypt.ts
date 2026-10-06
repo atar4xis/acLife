@@ -11,13 +11,16 @@ import { t } from "@/i18n";
 
 export const MAX_PASSWORD_LENGTH = 256;
 
-export const SRP_PARAMS: Params = {
+const srpHash = async (...inputs: Uint8Array[]) => {
+  const data = new Uint8Array(concatUint8Array(...inputs));
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", data));
+};
+
+// temporary migration: verifiers created before the Argon2id kdf, see lib/srpLogin.ts
+export const LEGACY_SRP_PARAMS: Params = {
   name: "DH16-SHA256-CustomKDF",
   group: RFC5054Group4096,
-  hash: async (...inputs: Uint8Array[]) => {
-    const data = new Uint8Array(concatUint8Array(...inputs));
-    return new Uint8Array(await crypto.subtle.digest("SHA-256", data));
-  },
+  hash: srpHash,
   kdf: async (username: string, password: string, salt: Uint8Array) => {
     const enc = new TextEncoder();
     const inner = await crypto.subtle.digest(
@@ -37,6 +40,26 @@ export const SRP_PARAMS: Params = {
       ),
     );
   },
+};
+
+const SRP_KDF_LABEL = new TextEncoder().encode("acLife-srp-v2");
+
+export const SRP_PARAMS: Params = {
+  name: "DH16-SHA256-Argon2id",
+  group: RFC5054Group4096,
+  hash: srpHash,
+  kdf: (username: string, password: string, salt: Uint8Array) =>
+    argon2Hash(
+      `${username}:${password}`,
+      new Uint8Array(concatUint8Array(SRP_KDF_LABEL, salt)),
+      {
+        time: DEFAULT_ENVELOPE_KDF.time,
+        mem: DEFAULT_ENVELOPE_KDF.mem,
+        hashLen: DEFAULT_ENVELOPE_KDF.hashLen,
+        parallelism: DEFAULT_ENVELOPE_KDF.parallelism,
+        type: ArgonType.Argon2id,
+      },
+    ),
 };
 
 export const UNLOCK_CHECK_BYTES = new Uint8Array([
@@ -455,8 +478,9 @@ export async function generateSRPTriplet(
   email: string,
   password: string,
   salt: Uint8Array = generateSalt(),
+  params: Params = SRP_PARAMS,
 ): Promise<Triplet> {
-  return await Triplet.create(SRP_PARAMS, email, password, salt);
+  return await Triplet.create(params, email, password, salt);
 }
 
 export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {

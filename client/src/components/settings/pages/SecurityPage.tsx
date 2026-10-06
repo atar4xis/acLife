@@ -15,6 +15,7 @@ import {
   rewrapMasterKeyEnvelope,
 } from "@/lib/crypt";
 import { unlockAccount } from "@/lib/unlockAccount";
+import { postWithCurrentTriplet } from "@/lib/srpLogin";
 import { validatePassword } from "@/lib/validators";
 import { bytesToBase64, uint8ArrayFromBase64 } from "@/lib/utils";
 import type { AutoLockOption, UnlockMethod } from "@/types/Storage";
@@ -312,18 +313,14 @@ function AccountSection({
   ) => {
     const currentSalt = await fetchCurrentSalt();
 
-    const [triplet, currentTriplet] = await Promise.all([
-      generateSRPTriplet(newEmail, currentPassword),
-      generateSRPTriplet(user.email, currentPassword, currentSalt),
-    ]);
+    const triplet = await generateSRPTriplet(newEmail, currentPassword);
 
-    const res = await post<{ email: string; requiresVerification: boolean }>(
-      "user/email",
-      {
-        current_triplet: bytesToBase64(currentTriplet.toUint8Array()),
-        triplet: bytesToBase64(triplet.toUint8Array()),
-      },
-    );
+    const res = await postWithCurrentTriplet<{
+      email: string;
+      requiresVerification: boolean;
+    }>(post, user.email, currentPassword, currentSalt, "user/email", {
+      triplet: bytesToBase64(triplet.toUint8Array()),
+    });
 
     if (res.data?.requiresVerification) {
       setEmailDialogOpen(false);
@@ -351,23 +348,27 @@ function AccountSection({
     const currentSalt = await fetchCurrentSalt();
 
     // re-derive an exportable copy of the master key
-    const [{ masterKey: verifiedMasterKey }, triplet, currentTriplet] =
-      await Promise.all([
-        unlockAccount(currentPassword, user, post, undefined, true),
-        generateSRPTriplet(user.email, newPassword),
-        generateSRPTriplet(user.email, currentPassword, currentSalt),
-      ]);
+    const [{ masterKey: verifiedMasterKey }, triplet] = await Promise.all([
+      unlockAccount(currentPassword, user, post, undefined, true),
+      generateSRPTriplet(user.email, newPassword),
+    ]);
 
     const envelope = await rewrapMasterKeyEnvelope(
       newPassword,
       verifiedMasterKey,
     );
 
-    const res = await post<never>("user/password", {
-      current_triplet: bytesToBase64(currentTriplet.toUint8Array()),
-      triplet: bytesToBase64(triplet.toUint8Array()),
-      envelopes: [envelope],
-    });
+    const res = await postWithCurrentTriplet<never>(
+      post,
+      user.email,
+      currentPassword,
+      currentSalt,
+      "user/password",
+      {
+        triplet: bytesToBase64(triplet.toUint8Array()),
+        envelopes: [envelope],
+      },
+    );
 
     if (!res.success) {
       throw new Error(res.message || t("settings.security.passwordFailed"));

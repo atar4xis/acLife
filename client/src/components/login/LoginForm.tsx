@@ -18,13 +18,11 @@ import {
   generateSRPTriplet,
   MAX_PASSWORD_LENGTH,
   solveProofOfWork,
-  SRP_CheckM2,
-  SRP_PARAMS,
 } from "@/lib/crypt";
+import { srpLogin, upgradeSrpKdf } from "@/lib/srpLogin";
 import { useStorage } from "@/context/StorageContext";
 import { validatePassword } from "@/lib/validators";
 import { useApi } from "@/context/ApiContext";
-import { Client } from "@mzattahri/srp";
 import { Spinner } from "../ui/spinner";
 import { useTranslation } from "react-i18next";
 
@@ -147,58 +145,16 @@ export function LoginForm({
     setLoading(true);
 
     try {
-      const saltResponse = await post<string>("auth/login/start", { email });
-      if (!saltResponse.success || !saltResponse.data) {
-        setError(saltResponse.message || t("common.unknownError"));
+      const login = await srpLogin(post, email, password);
+      if (!login.success) {
+        setError(login.message);
         return;
       }
 
-      const salt = Uint8Array.from(atob(saltResponse.data), (c) =>
-        c.charCodeAt(0),
-      );
-      const client = await Client.initialize(SRP_PARAMS, email, password, salt);
-
-      // stage 1 - send salt along with A
-      const res1 = await post<{
-        salt: string;
-        B: string;
-        session_id: string;
-      }>("auth/login/start", {
-        email,
-        A: btoa(String.fromCharCode(...client.A)),
-      });
-
-      if (!res1.success || !res1.data) {
-        setError(res1.message || t("common.unknownError"));
-        return;
+      const user = await checkLogin(password);
+      if (login.legacy && user?.type === "online") {
+        await upgradeSrpKdf(post, user, password, login.salt);
       }
-
-      const B = Uint8Array.from(atob(res1.data.B), (c) => c.charCodeAt(0));
-      await client.setB(B);
-      const M1 = btoa(String.fromCharCode(...client.M1));
-
-      // stage 2 - send M1
-      const res2 = await post<{ M2: string }>("auth/login/verify", {
-        email,
-        M1,
-        session_id: res1.data.session_id,
-      });
-
-      if (!res2.success || !res2.data) {
-        setError(res2.message || t("common.unknownError"));
-        return;
-      }
-
-      const M2 = Uint8Array.from(atob(res2.data.M2), (c) => c.charCodeAt(0));
-
-      // workaround for SRP_CheckM2 bug
-      // eslint-disable-next-line
-      if (!SRP_CheckM2((client as any).M2, M2, SRP_PARAMS.group.bitLength)) {
-        setError(t("login.integrityFailed"));
-        return;
-      }
-
-      await checkLogin(password);
     } finally {
       setLoading(false);
     }
