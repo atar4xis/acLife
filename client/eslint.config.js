@@ -14,11 +14,13 @@ export default defineConfig([
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
-      reactHooks.configs["recommended-latest"],
       reactRefresh.configs.vite,
       jsxA11y.flatConfigs.recommended,
     ],
+    plugins: { "react-hooks": reactHooks },
     rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
       "jsx-a11y/no-autofocus": ["error", { ignoreNonDOM: true }],
     },
     languageOptions: {

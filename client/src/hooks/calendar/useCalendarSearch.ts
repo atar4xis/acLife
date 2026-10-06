@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { DateTime } from "luxon";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { User } from "@/types/User";
@@ -120,8 +127,7 @@ export const useCalendarSearch = (
     [currentDate, masterKey, bucketKey, syncBuckets, onExpandedEvents],
   );
 
-  const runStageRef = useRef(runStage);
-  runStageRef.current = runStage;
+  const runSearchStage = useEffectEvent(runStage);
 
   useEffect(() => {
     const gen = ++searchGenRef.current;
@@ -136,7 +142,7 @@ export const useCalendarSearch = (
     const run = async () => {
       setIsExpanding(true);
       try {
-        await runStageRef.current(target, tokens, gen);
+        await runSearchStage(target, tokens, gen);
       } finally {
         if (gen === searchGenRef.current) setIsExpanding(false);
       }
@@ -157,14 +163,14 @@ export const useCalendarSearch = (
     const run = async () => {
       setIsExpanding(true);
       try {
-        await runStageRef.current(target, tokens, gen);
+        await runStage(target, tokens, gen);
       } finally {
         if (gen === searchGenRef.current) setIsExpanding(false);
       }
     };
 
     run();
-  }, [isExpanding, tokens, user, masterKey, bucketKey]);
+  }, [isExpanding, tokens, user, masterKey, bucketKey, runStage]);
 
   return {
     query,
