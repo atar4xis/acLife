@@ -222,6 +222,7 @@
     "invalidMetadata": "Nieprawidłowa odpowiedź zawierająca metadane. Sprawdź adres URL.",
     "saveChanges": "Zapisz zmiany",
     "title": "Zaloguj się na swoje konto",
+    "createTitle": "Utwórz konto",
     "onServer": "na",
     "offlineMode": "Użyj w trybie offline",
     "fillAll": "Wypełnij wszystkie pola.",

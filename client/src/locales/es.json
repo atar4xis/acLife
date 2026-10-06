@@ -206,6 +206,7 @@
     "invalidMetadata": "Respuesta de metadatos no válida. Confirma la URL.",
     "saveChanges": "Guardar cambios",
     "title": "Inicia sesión en tu cuenta",
+    "createTitle": "Crear una cuenta",
     "onServer": "en",
     "offlineMode": "Usar sin conexión",
     "fillAll": "Rellena todos los campos.",

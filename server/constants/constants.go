@@ -62,7 +62,7 @@ const (
 	MaxEnvelopeSaltLen = 64
 	MaxEnvelopeDataLen = 256
 	MaxKDFParamsLen    = 255
-	MaxEnvelopeCount   = 4
+	MaxEnvelopeCount   = 1
 
 	PowChallengeTTL   = 2 * time.Minute
 	PowDifficultyBits = 17 // ~1-5s of client-side hashing
@@ -80,7 +80,10 @@ const (
 	EmailVerificationTTL             = 1 * Day
 	EmailVerificationResendCooldown  = 60 * time.Second
 	EmailVerificationMaxSendsPerHour = 4
-	ReregisterCooldown               = 5 * time.Minute // an unverified account this young cannot be replaced by a new registration
+	PendingRegistrationTTL           = 24 * time.Hour
+	RegistrationMailsPerMinute       = 1
+	RegistrationMailsPerHour         = 3
+	RegistrationMailsPerDay          = 6
 )
 
 var (

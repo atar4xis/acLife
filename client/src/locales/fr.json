@@ -208,6 +208,7 @@
     "invalidMetadata": "Réponse de métadonnées invalide. Vérifiez l'URL.",
     "saveChanges": "Enregistrer les modifications",
     "title": "Connectez-vous à votre compte",
+    "createTitle": "Créer un compte",
     "onServer": "sur",
     "offlineMode": "Utiliser hors ligne",
     "fillAll": "Veuillez remplir tous les champs.",

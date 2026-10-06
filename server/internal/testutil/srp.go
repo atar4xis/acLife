@@ -84,8 +84,7 @@ func Reauth(t *testing.T, c *Client, u User, password string) map[string]any {
 	return proof
 }
 
-// Register runs the whole registration of email with Password as a client would, proof of work included, and returns the status of the final request.
-func Register(t *testing.T, c *Client, email string) int {
+func SolvePow(t *testing.T, c *Client, email string) (token, nonce string) {
 	t.Helper()
 
 	status, challenge := Call[struct {
@@ -105,9 +104,8 @@ func Register(t *testing.T, c *Client, email string) int {
 		t.Fatalf("unmarshal challenge: %v", err)
 	}
 
-	nonce := 0
-	for ; ; nonce++ {
-		sum := sha256.Sum256(fmt.Appendf(nil, "%s|%s|%d", data.Seed, data.Email, nonce))
+	for n := 0; ; n++ {
+		sum := sha256.Sum256(fmt.Appendf(nil, "%s|%s|%d", data.Seed, data.Email, n))
 		zeros := 0
 		for _, b := range sum {
 			if b != 0 {
@@ -117,22 +115,36 @@ func Register(t *testing.T, c *Client, email string) int {
 			zeros += 8
 		}
 		if zeros >= constants.PowDifficultyBits {
-			break
+			return challenge.Data.Token, fmt.Sprint(n)
 		}
 	}
+}
 
-	triplet, err := srp.ComputeVerifier(srpParams, email, Password, srpSalt)
+func Credentials(t *testing.T, email string) (triplet []byte, envelopes []map[string]any) {
+	t.Helper()
+
+	tr, err := srp.ComputeVerifier(srpParams, email, Password, srpSalt)
 	if err != nil {
 		t.Fatalf("compute verifier: %v", err)
 	}
 
-	status, _ = Call[any](c, "POST", "/auth/register", map[string]any{
-		"triplet": []byte(triplet),
-		"envelopes": []map[string]any{
-			{"type": "master", "version": 1, "salt": []byte{1}, "data": []byte{1}, "kdfParams": "{}"},
-		},
-		"powToken": challenge.Data.Token,
-		"powNonce": fmt.Sprint(nonce),
+	return []byte(tr), []map[string]any{
+		{"type": "master", "version": 1, "salt": []byte{1}, "data": []byte{1}, "kdfParams": "{}"},
+	}
+}
+
+// Register runs the whole registration of email with Password as a client would, proof of work included, and returns the status of the final request.
+func Register(t *testing.T, c *Client, email string) int {
+	t.Helper()
+
+	token, nonce := SolvePow(t, c, email)
+	triplet, envelopes := Credentials(t, email)
+
+	status, _ := Call[any](c, "POST", "/auth/register", map[string]any{
+		"triplet":   triplet,
+		"envelopes": envelopes,
+		"powToken":  token,
+		"powNonce":  nonce,
 	})
 	return status
 }

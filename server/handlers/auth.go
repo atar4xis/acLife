@@ -150,6 +150,10 @@ func cleanupExpiredVerifications() {
 		); err != nil {
 			utils.LogError("cleanupExpiredVerifications", "Exec(delete verified tokens)", err)
 		}
+
+		if err := deleteStalePendingRegistrations(ctx, now); err != nil {
+			utils.LogError("cleanupExpiredVerifications", "deleteStalePendingRegistrations", err)
+		}
 	}
 }
 
@@ -198,38 +202,7 @@ func userHasProtectedData(ctx context.Context, uuid string) (bool, error) {
 	return hasEvents, nil
 }
 
-// createAndQueueVerificationToken generates a fresh verification token for the given user, stores it, and queues it for the background worker to send.
-func createAndQueueVerificationToken(ctx context.Context, email, lang string) error {
-	var uuid string
-	if err := database.QueryRow(ctx,
-		"SELECT uuid FROM users WHERE email = ?",
-		email,
-	).Scan(&uuid); err != nil {
-		return err
-	}
-
-	token := utils.RandomToken(32)
-	now := time.Now()
-	expires := now.Add(constants.EmailVerificationTTL)
-
-	if _, err := database.Exec(ctx, `
-		INSERT INTO email_verification_tokens (owner, email, token, expires_at, last_sent_at, send_window_start, send_count)
-		VALUES (?, ?, ?, ?, ?, ?, 1)`,
-		uuid, email, token, expires, now, now,
-	); err != nil {
-		return err
-	}
-
-	// Clear any previously queued email for this address.
-	if err := mail.CancelQueuedMails(ctx, database.DB, email); err != nil {
-		return err
-	}
-
-	subject, body := verificationEmailContent(token, lang)
-	return mail.QueueMail(ctx, database.DB, email, subject, body)
-}
-
-// queueVerificationTokenTx is createAndQueueVerificationToken's transaction-scoped counterpart, used where the caller already holds a lock on the owner's email_verification_tokens row.
+// queueVerificationTokenTx generates a fresh verification token for the owner, stores it, and queues it for the background worker to send.
 func queueVerificationTokenTx(ctx context.Context, tx *sql.Tx, uuid, email, lang string) error {
 	token := utils.RandomToken(32)
 	now := time.Now()
@@ -397,29 +370,9 @@ func validateEnvelopes(envelopes []types.KeyEnvelope) bool {
 	return true
 }
 
-// deleteReplaceableAccount deletes the unverified registration of email if it is older than ReregisterCooldown and has no subscription or events.
-func deleteReplaceableAccount(ctx context.Context, tx *sql.Tx, email string) (bool, error) {
-	res, err := tx.ExecContext(ctx, `
-		DELETE u FROM users u
-		JOIN email_verification_tokens t ON t.owner = u.uuid
-		WHERE u.email = ?
-			AND u.email_verified = 0
-			AND u.stripe_subscription_id IS NULL
-			AND t.created_at < ?
-			AND NOT EXISTS (SELECT 1 FROM calendar_events ce WHERE ce.owner = u.uuid)`,
-		email, time.Now().Add(-constants.ReregisterCooldown),
-	)
-	if err != nil {
-		return false, err
-	}
-
-	n, err := res.RowsAffected()
-	return n > 0, err
-}
-
 // Register handles creating new accounts.
 func Register(w http.ResponseWriter, r *http.Request) {
-	if !constants.Metadata.Registration.Enabled {
+	if !constants.Metadata.Registration.Enabled || constants.Metadata.Registration.Email.VerificationRequired {
 		utils.SendBadRequest(w)
 		return
 	}
@@ -446,24 +399,10 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	var triplet srp.Triplet = req.Triplet
 
-	// Make sure the fields are not empty
-	if len(triplet.Username()) == 0 || len(triplet.Verifier()) == 0 || len(triplet.Salt()) == 0 ||
-		len(req.PowToken) == 0 || len(req.PowNonce) == 0 {
-		utils.SendBadRequest(w)
-		return
-	}
-
-	// Enforce max lengths
-	if len(triplet.Username()) > constants.MaxEmailLen ||
-		len(triplet.Salt()) > constants.MaxSaltLen ||
-		len(triplet.Verifier()) > constants.MaxVerifierLen ||
+	if len(req.PowToken) == 0 || len(req.PowNonce) == 0 ||
 		len(req.PowToken) > constants.MaxPowTokenLen ||
-		len(req.PowNonce) > constants.MaxPowNonceLen {
-		utils.SendBadRequest(w)
-		return
-	}
-
-	if !validateEnvelopes(req.Envelopes) {
+		len(req.PowNonce) > constants.MaxPowNonceLen ||
+		!validCredentials(triplet, req.Envelopes) {
 		utils.SendBadRequest(w)
 		return
 	}
@@ -506,30 +445,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Insert into database
-	insertUser := func() error {
-		_, err := tx.ExecContext(ctx, `
-			INSERT INTO users (email, srp_salt, verifier)
-			VALUES (?, ?, ?)`,
-			triplet.Username(), triplet.Salt(), triplet.Verifier(),
-		)
-		return err
-	}
-
-	err = insertUser()
-	if database.IsDuplicateEntry(err) && constants.Metadata.Registration.Email.VerificationRequired {
-		// whoever owns the address can always register, an unverified claim on it is dropped
-		replaced, replaceErr := deleteReplaceableAccount(ctx, tx, triplet.Username())
-		if replaceErr != nil {
-			utils.LogError("Register", "deleteReplaceableAccount", replaceErr)
-			utils.SendInternalError(w)
-			return
-		}
-		if replaced {
-			err = insertUser()
-		}
-	}
-	if err != nil {
+	if err := insertAccount(ctx, tx, triplet, req.Envelopes, false); err != nil {
 		if database.IsDuplicateEntry(err) {
 			utils.SendJSON(w, http.StatusConflict, types.Reply[any]{
 				Success: false,
@@ -539,43 +455,15 @@ func Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		utils.LogError("Register", "tx.Exec(insert user)", err)
+		utils.LogError("Register", "insertAccount", err)
 		utils.SendInternalError(w)
 		return
-	}
-
-	var userUUID string
-	if err := tx.QueryRowContext(ctx,
-		"SELECT uuid FROM users WHERE email = ?",
-		triplet.Username(),
-	).Scan(&userUUID); err != nil {
-		utils.LogError("Register", "tx.QueryRow(uuid)", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	for _, e := range req.Envelopes {
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO key_envelopes (owner, type, version, salt, data, kdf_params)
-			VALUES (?, ?, ?, ?, ?, ?)`,
-			userUUID, e.Type, e.Version, e.Salt, e.Data, e.KDFParams,
-		); err != nil {
-			utils.LogError("Register", "tx.Exec(insert envelope)", err)
-			utils.SendInternalError(w)
-			return
-		}
 	}
 
 	if err := tx.Commit(); err != nil {
 		utils.LogError("Register", "tx.Commit", err)
 		utils.SendInternalError(w)
 		return
-	}
-
-	if constants.Metadata.Registration.Email.VerificationRequired {
-		if err := createAndQueueVerificationToken(r.Context(), triplet.Username(), utils.PreferredLanguage(r, verificationEmailLanguages())); err != nil {
-			utils.LogError("Register", "createAndQueueVerificationToken", err)
-		}
 	}
 
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
@@ -808,6 +696,8 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 	).Scan(&uuid, &verified); err != nil {
 		if err != sql.ErrNoRows {
 			utils.LogError("ResendVerification", "QueryRow(users)", err)
+		} else if constants.Metadata.Registration.Email.VerificationRequired && resendPendingRegistration(w, r, req.Email) {
+			return
 		}
 
 		utils.SendJSON(w, http.StatusBadRequest, types.Reply[any]{

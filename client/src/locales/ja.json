@@ -202,6 +202,7 @@
     "invalidMetadata": "メタデータの応答が無効です。URLを確認してください。",
     "saveChanges": "変更を保存",
     "title": "アカウントにログイン",
+    "createTitle": "アカウントを作成",
     "onServer": "サーバー:",
     "offlineMode": "オフラインモードで使う",
     "fillAll": "すべての項目を入力してください。",

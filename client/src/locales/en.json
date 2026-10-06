@@ -212,6 +212,7 @@
     "invalidMetadata": "Invalid metadata response. Please confirm the URL.",
     "saveChanges": "Save changes",
     "title": "Log in to your account",
+    "createTitle": "Create an account",
     "onServer": "on",
     "offlineMode": "Use in offline mode",
     "fillAll": "Please fill out all the fields.",

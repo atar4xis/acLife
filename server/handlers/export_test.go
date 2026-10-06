@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	BucketHash  = bucketHash
-	FetchPrices = fetchPrices
+	BucketHash                      = bucketHash
+	FetchPrices                     = fetchPrices
+	DeleteStalePendingRegistrations = deleteStalePendingRegistrations
 )
 
 func SetSubscriptionUpdater(f func(string, ...string) (string, error)) { updateSubscriptionStatus = f }

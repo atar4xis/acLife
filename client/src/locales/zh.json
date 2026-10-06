@@ -202,6 +202,7 @@
     "invalidMetadata": "元数据响应无效，请确认 URL。",
     "saveChanges": "保存更改",
     "title": "登录您的账户",
+    "createTitle": "创建账户",
     "onServer": "服务器：",
     "offlineMode": "以离线模式使用",
     "fillAll": "请填写所有字段。",

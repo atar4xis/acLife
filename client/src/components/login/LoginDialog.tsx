@@ -32,6 +32,16 @@ import { deriveMasterKey, randomBytes } from "@/lib/crypt";
 import { useStorage } from "@/context/StorageContext";
 import type { User } from "@/types/User";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { t as translate } from "@/i18n";
+import {
+  parseRegisterLink,
+  sameServer,
+  type RegisterLink,
+} from "@/lib/registerLink";
+
+const rejectRegisterLink = () =>
+  toast.error(translate("serverErrors.verification_link_invalid"));
 
 export default function LoginDialog() {
   const { t } = useTranslation();
@@ -46,7 +56,10 @@ export default function LoginDialog() {
   );
   const [verificationCooldown, setVerificationCooldown] = useState(0);
   const [confirmToken, setConfirmToken] = useState<string | null>(null);
+  const [newAccount, setNewAccount] = useState(false);
+  const [registerLink, setRegisterLink] = useState<RegisterLink | null>(null);
   const {
+    url,
     setUrl,
     serverMeta,
     pendingVerificationEmail,
@@ -96,6 +109,38 @@ export default function LoginDialog() {
       window.location.pathname + (newSearch ? `?${newSearch}` : ""),
     );
   }, []);
+
+  useEffect(() => {
+    const readLink = () => {
+      const hash = window.location.hash;
+      if (!new URLSearchParams(hash.slice(1)).has("token")) return;
+
+      const link = parseRegisterLink(hash);
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + window.location.search,
+      );
+
+      if (link) setRegisterLink(link);
+      else rejectRegisterLink();
+    };
+
+    readLink();
+    window.addEventListener("hashchange", readLink);
+    return () => window.removeEventListener("hashchange", readLink);
+  }, []);
+
+  useEffect(() => {
+    if (!registerLink || !url || sameServer(registerLink.server, url)) return;
+
+    setRegisterLink(null);
+    rejectRegisterLink();
+  }, [registerLink, url]);
+
+  const activeLink =
+    registerLink && sameServer(registerLink.server, url) ? registerLink : null;
+  const creating = newAccount || activeLink !== null;
 
   const handleServerURLChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPendingServerURL(e.target.value || "");
@@ -265,7 +310,7 @@ export default function LoginDialog() {
           <>
             <DialogHeader>
               <DialogTitle className="text-center">
-                {t("login.title")}
+                {creating ? t("login.createTitle") : t("login.title")}
               </DialogTitle>
               <DialogDescription className="text-center">
                 {t("login.onServer")}{" "}
@@ -294,6 +339,10 @@ export default function LoginDialog() {
                 handleOfflineClick={handleOfflineClick}
                 serverMeta={serverMeta}
                 onNeedsVerification={handleNeedsVerification}
+                registerLink={activeLink}
+                newAccount={newAccount}
+                onNewAccountChange={setNewAccount}
+                onRegisterLinkDone={() => setRegisterLink(null)}
               />
             ) : (
               <Button variant="outline" onClick={handleOfflineClick}>

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"os"
@@ -59,10 +61,21 @@ func verificationEmailLanguages() []string {
 }
 
 // verificationEmailContent builds the subject and body of a verification email for the given token in the given language.
-// VERIFICATION_EMAIL_SUBJECT and VERIFICATION_EMAIL_BODY override the built-in text for every language.
 func verificationEmailContent(token, lang string) (subject, body string) {
-	verifyURL := strings.TrimRight(os.Getenv("SERVER_URL"), "/") + "/auth/verify-email?token=" + token
+	return emailContent(strings.TrimRight(os.Getenv("SERVER_URL"), "/")+"/auth/verify-email?token="+token, lang)
+}
 
+func registrationEmailContent(token, email, lang string) (subject, body string) {
+	payload, _ := json.Marshal(map[string]string{
+		"token":  token,
+		"email":  email,
+		"server": strings.TrimRight(os.Getenv("SERVER_URL"), "/"),
+	})
+	return emailContent(os.Getenv("CLIENT_URL")+"#token="+base64.RawURLEncoding.EncodeToString(payload), lang)
+}
+
+// emailContent fills the template of lang with link, VERIFICATION_EMAIL_SUBJECT and VERIFICATION_EMAIL_BODY override the built-in text.
+func emailContent(link, lang string) (subject, body string) {
 	tpl, ok := verificationEmailTemplates[lang]
 	if !ok {
 		tpl = verificationEmailTemplates["en"]
@@ -73,13 +86,13 @@ func verificationEmailContent(token, lang string) (subject, body string) {
 		subject = v
 	}
 
-	body = fmt.Sprintf(tpl.body, verifyURL)
+	body = fmt.Sprintf(tpl.body, link)
 	if v := os.Getenv("VERIFICATION_EMAIL_BODY"); v != "" {
 		body = v
 	}
 
-	subject = strings.ReplaceAll(subject, "{url}", verifyURL)
-	body = strings.ReplaceAll(body, "{url}", verifyURL)
+	subject = strings.ReplaceAll(subject, "{url}", link)
+	body = strings.ReplaceAll(body, "{url}", link)
 
 	return subject, body
 }
