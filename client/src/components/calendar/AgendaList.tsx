@@ -79,7 +79,9 @@ export default memo(function AgendaList() {
 
     return (
       <SidebarGroup key={key}>
-        <SidebarGroupLabel>{d.label}</SidebarGroupLabel>
+        <SidebarGroupLabel>
+          {d.label} · {events.length}
+        </SidebarGroupLabel>
         {events.map((event) => (
           <AgendaEvent
             key={(event._parent || event.id) + "_" + event.start.toISODate()}

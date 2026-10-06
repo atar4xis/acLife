@@ -172,7 +172,7 @@ describe("AgendaList", () => {
       </SettingsStoreProvider>,
     );
 
-    expect(screen.getByText("Today")).toBeInTheDocument();
+    expect(screen.getByText("Today · 1")).toBeInTheDocument();
 
     act(() => {
       store.setSettings({
@@ -181,8 +181,8 @@ describe("AgendaList", () => {
       });
     });
 
-    expect(screen.getByText("Tomorrow")).toBeInTheDocument();
-    expect(screen.queryByText("Today")).not.toBeInTheDocument();
+    expect(screen.getByText("Tomorrow · 1")).toBeInTheDocument();
+    expect(screen.queryByText("Today · 1")).not.toBeInTheDocument();
   });
 
   it("shows only one editor when clicking a multi-day event from the agenda view", async () => {
