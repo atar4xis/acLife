@@ -122,14 +122,18 @@ export default function LoginDialog() {
         window.location.pathname + window.location.search,
       );
 
-      if (link) setRegisterLink(link);
-      else rejectRegisterLink();
+      if (link) {
+        setRegisterLink(link);
+        setVerificationEmail(null);
+        setVerificationCooldown(0);
+        setPendingVerificationEmail(null);
+      } else rejectRegisterLink();
     };
 
     readLink();
     window.addEventListener("hashchange", readLink);
     return () => window.removeEventListener("hashchange", readLink);
-  }, []);
+  }, [setPendingVerificationEmail]);
 
   useEffect(() => {
     if (!registerLink || !url || sameServer(registerLink.server, url)) return;
