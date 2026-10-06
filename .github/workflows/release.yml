@@ -14,7 +14,11 @@ env:
   SIGNING_KEY_FINGERPRINT: "0752974F303C1E0B2F914A067950BE1352DC8C8B"
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   build-and-sign:
+    needs: ci
     runs-on: ubuntu-latest
 
     steps:
