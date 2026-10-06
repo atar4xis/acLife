@@ -52,6 +52,7 @@ vi.mock("../../src/context/ApiContext.tsx", () => ({
     setServerMeta: vi.fn(),
     pendingLogout: false,
     setPendingLogout: vi.fn(),
+    setPendingVerificationEmail: vi.fn(),
   }),
 }));
 
