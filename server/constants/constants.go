@@ -80,6 +80,7 @@ const (
 	MinEventTimestampMs = int64(Day / time.Millisecond)
 	MaxEventTimestampMs = 2147483647000 - MinEventTimestampMs
 
+	UnusedAccountTTL                 = 7 * Day
 	EmailVerificationTTL             = 1 * Day
 	EmailVerificationResendCooldown  = 60 * time.Second
 	EmailVerificationMaxSendsPerHour = 4

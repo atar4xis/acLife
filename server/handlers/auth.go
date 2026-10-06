@@ -35,6 +35,9 @@ func StartWorkers() {
 	go cleanupSRPSessions()
 	go cleanupAccountSessions()
 	go cleanupExpiredVerifications()
+	if constants.Metadata.Registration.SubscriptionRequired {
+		go cleanupUnusedAccounts()
+	}
 }
 
 /* -------------------- Cleanup -------------------- */
@@ -153,6 +156,25 @@ func cleanupExpiredVerifications() {
 
 		if err := deleteStalePendingRegistrations(ctx, now); err != nil {
 			utils.LogError("cleanupExpiredVerifications", "deleteStalePendingRegistrations", err)
+		}
+	}
+}
+
+// cleanupUnusedAccounts deletes accounts older than UnusedAccountTTL that never subscribed or used the app.
+func cleanupUnusedAccounts() {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if _, err := database.Exec(context.Background(), `
+			DELETE u FROM users u
+			WHERE u.created_at < ?
+				AND u.stripe_subscription_id IS NULL
+				AND NOT EXISTS (SELECT 1 FROM calendar_events ce WHERE ce.owner = u.uuid)
+				AND NOT EXISTS (SELECT 1 FROM user_settings us WHERE us.owner = u.uuid)`,
+			time.Now().Add(-constants.UnusedAccountTTL),
+		); err != nil {
+			utils.LogError("cleanupUnusedAccounts", "Exec", err)
 		}
 	}
 }
