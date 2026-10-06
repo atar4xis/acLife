@@ -5,6 +5,8 @@ import { FakeArgonWorker } from "./fakeArgonWorker";
 vi.stubGlobal("Worker", FakeArgonWorker);
 
 const {
+  decrypt,
+  encrypt,
   exportKeyPair,
   generateMasterKeyEnvelope,
   importKeyPair,
@@ -20,8 +22,11 @@ const sign = async (key: CryptoKey) =>
     await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("probe")),
   );
 
-const rawKey = async (key: CryptoKey) =>
-  new Uint8Array(await crypto.subtle.exportKey("raw", key));
+const decryptsWith = async (key: CryptoKey, other: CryptoKey) => {
+  const plain = new TextEncoder().encode("hello");
+  const decrypted = await decrypt(await encrypt(plain, other), key);
+  return new TextDecoder().decode(decrypted) === "hello";
+};
 
 describe("key envelopes", () => {
   beforeEach(() => {
@@ -111,7 +116,9 @@ describe("key pair export and PIN wrapping", () => {
       exported.bucketKeyB64,
     );
 
-    expect(await rawKey(imported.masterKey)).toEqual(await rawKey(masterKey));
+    expect(imported.masterKey.extractable).toBe(false);
+    expect(imported.bucketKey.extractable).toBe(false);
+    expect(await decryptsWith(imported.masterKey, masterKey)).toBe(true);
     expect(await sign(imported.bucketKey)).toEqual(await sign(bucketKey));
   }, 30000);
 
@@ -136,7 +143,7 @@ describe("key pair export and PIN wrapping", () => {
       wrapped.encrypted,
     );
 
-    expect(await rawKey(unwrapped.masterKey)).toEqual(await rawKey(masterKey));
+    expect(await decryptsWith(unwrapped.masterKey, masterKey)).toBe(true);
     expect(await sign(unwrapped.bucketKey)).toEqual(await sign(bucketKey));
   }, 30000);
 

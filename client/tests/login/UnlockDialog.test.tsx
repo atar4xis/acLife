@@ -20,7 +20,6 @@ const storageMock = vi.hoisted(() => ({
 const apiMock = vi.hoisted(() => ({ post: vi.fn() }));
 
 const cryptMock = vi.hoisted(() => ({
-  importKeyPair: vi.fn(),
   unwrapKeyPairWithPin: vi.fn(),
   MAX_PASSWORD_LENGTH: 256,
 }));
@@ -51,7 +50,7 @@ const pinWrapped = { salt: "salt", encrypted: "blob" };
 
 const setStorage = (data: Partial<StorageData>, ready = true) => {
   storageMock.ready = ready;
-  storageMock.data = { unlockMethod: "password", ...data };
+  storageMock.data = { unlockMethod: "password", pinFailures: 0, ...data };
 };
 
 const password = () => screen.findByLabelText("Password");
@@ -62,7 +61,6 @@ beforeEach(() => {
   userMock.setBucketKey.mockReset();
   userMock.logout.mockReset();
   apiMock.post.mockReset();
-  cryptMock.importKeyPair.mockReset();
   cryptMock.unwrapKeyPairWithPin.mockReset();
   unlockMock.unlockAccount.mockReset();
   unlockMock.unlockAccount.mockResolvedValue({ masterKey, bucketKey });
@@ -84,7 +82,6 @@ describe("UnlockDialog password unlock", () => {
     expect(unlockMock.unlockAccount).toHaveBeenCalledWith(
       "secret",
       onlineUser,
-      false,
     );
     expect(screen.queryByText("Invalid password.")).not.toBeInTheDocument();
   });
@@ -99,19 +96,6 @@ describe("UnlockDialog password unlock", () => {
 
     expect(await screen.findByText("Invalid password.")).toBeInTheDocument();
     expect(userMock.setMasterKey).not.toHaveBeenCalled();
-  });
-
-  it("requests extractable keys when a PIN or stay-unlocked is configured", async () => {
-    setStorage({ unlockMethod: "pin" });
-    const user = userEvent.setup();
-    render(<UnlockDialog />);
-
-    // PIN mode without wrapped keys falls back to the password form
-    await user.type(await password(), "secret");
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-
-    await waitFor(() => expect(unlockMock.unlockAccount).toHaveBeenCalled());
-    expect(unlockMock.unlockAccount.mock.calls[0][2]).toBe(true);
   });
 
   it("lets the user log out instead", async () => {
@@ -143,29 +127,18 @@ describe("UnlockDialog visibility", () => {
 });
 
 describe("UnlockDialog stay-unlocked", () => {
-  const unlockKeys = { masterKeyB64: "m", bucketKeyB64: "b" };
-
   it("unlocks automatically from the stored keys without showing the form", async () => {
-    setStorage({ unlockMethod: "stay-unlocked", unlockKeys });
-    cryptMock.importKeyPair.mockResolvedValue({ masterKey, bucketKey });
+    setStorage({
+      unlockMethod: "stay-unlocked",
+      unlockKeys: { masterKey, bucketKey },
+    });
     render(<UnlockDialog />);
 
     await waitFor(() =>
       expect(userMock.setMasterKey).toHaveBeenCalledWith(masterKey),
     );
-    expect(cryptMock.importKeyPair).toHaveBeenCalledWith("m", "b");
     expect(userMock.setBucketKey).toHaveBeenCalledWith(bucketKey);
     expect(screen.queryByText("Decrypt data")).not.toBeInTheDocument();
-  });
-
-  it("falls back to the password form when the stored keys are unusable", async () => {
-    setStorage({ unlockMethod: "stay-unlocked", unlockKeys });
-    cryptMock.importKeyPair.mockRejectedValue(new Error("bad keys"));
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    render(<UnlockDialog />);
-
-    expect(await password()).toBeInTheDocument();
-    expect(userMock.setMasterKey).not.toHaveBeenCalled();
   });
 
   it("shows the password form when no keys were stored", async () => {
@@ -173,7 +146,18 @@ describe("UnlockDialog stay-unlocked", () => {
     render(<UnlockDialog />);
 
     expect(await password()).toBeInTheDocument();
-    expect(cryptMock.importKeyPair).not.toHaveBeenCalled();
+    expect(userMock.setMasterKey).not.toHaveBeenCalled();
+  });
+
+  it("shows the password form when the stored keys are in the old format", async () => {
+    setStorage({
+      unlockMethod: "stay-unlocked",
+      unlockKeys: { masterKeyB64: "m", bucketKeyB64: "b" } as never,
+    });
+    render(<UnlockDialog />);
+
+    expect(await password()).toBeInTheDocument();
+    expect(userMock.setMasterKey).not.toHaveBeenCalled();
   });
 });
 
@@ -199,6 +183,34 @@ describe("UnlockDialog PIN", () => {
       "blob",
     );
     expect(userMock.setBucketKey).toHaveBeenCalledWith(bucketKey);
+    expect(storageMock.set).toHaveBeenLastCalledWith("pinFailures", 0);
+  });
+
+  it("removes the PIN after three wrong attempts", async () => {
+    storageMock.set.mockImplementation((key: keyof StorageData, value) => {
+      (storageMock.data as Record<string, unknown>)[key] = value;
+    });
+    cryptMock.unwrapKeyPairWithPin.mockRejectedValue(new Error("bad pin"));
+    const user = userEvent.setup();
+    render(<UnlockDialog />);
+
+    for (const attempt of ["1111", "2222"]) {
+      await user.type(await screen.findByLabelText("PIN code"), attempt);
+      await user.click(screen.getByRole("button", { name: "Continue" }));
+      await screen.findByText("Invalid PIN.");
+      await user.clear(screen.getByLabelText("PIN code"));
+    }
+    expect(storageMock.data.pinWrappedKeys).not.toBeNull();
+
+    await user.type(screen.getByLabelText("PIN code"), "3333");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(await screen.findByText(/PIN was removed/)).toBeInTheDocument();
+    expect(await password()).toHaveValue("");
+    expect(storageMock.data.pinWrappedKeys).toBeNull();
+    expect(storageMock.data.unlockKeys).toBeNull();
+    expect(storageMock.data.unlockMethod).toBe("password");
+    storageMock.set.mockReset();
   });
 
   it("shows an error for a wrong PIN", async () => {
@@ -247,7 +259,6 @@ describe("UnlockDialog PIN", () => {
     await waitFor(() =>
       expect(userMock.setMasterKey).toHaveBeenCalledWith(masterKey),
     );
-    expect(unlockMock.unlockAccount.mock.calls[0][2]).toBe(true);
   });
 
   it("offers the PIN option for the password method once PIN keys exist", async () => {

@@ -24,17 +24,29 @@ export const encryptOfflineEvents = async (
   return encrypt(compressed, masterKey);
 };
 
+const MAX_TIMESTAMP_DRIFT_MS = 1000;
+
 export const decryptEvents = async (
   events: EncryptedEvent[],
   masterKey: CryptoKey,
 ) => {
-  return Promise.all(
+  const decrypted = await Promise.all(
     events.map(async (ev) => {
       const raw = JSON.parse(
         new TextDecoder().decode(
           await decrypt(uint8ArrayFromBase64(ev.data), masterKey),
         ),
       ) as RawCalendarEvent;
+
+      if (raw.id?.toLowerCase() !== ev.id.toLowerCase()) {
+        console.warn("Ignoring an event stored under a different id");
+        return null;
+      }
+
+      if (Math.abs(raw.timestamp - ev.updatedAt) > MAX_TIMESTAMP_DRIFT_MS) {
+        console.warn("Ignoring an event whose timestamp does not match");
+        return null;
+      }
 
       return {
         ...ev,
@@ -43,6 +55,8 @@ export const decryptEvents = async (
       } as DecryptedEvent;
     }),
   );
+
+  return decrypted.filter((ev) => ev !== null);
 };
 
 export const encryptEvents = async (

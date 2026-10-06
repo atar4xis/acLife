@@ -36,8 +36,9 @@ export function createStorageContext<T extends object>(
       Promise.resolve(adapter.load())
         .then((loaded) => {
           if (!cancelled) {
-            dataRef.current = loaded;
-            setData(loaded);
+            const merged = { ...defaults, ...loaded };
+            dataRef.current = merged;
+            setData(merged);
           }
         })
         .catch((error) => {
@@ -104,6 +105,7 @@ const defaults: StorageData = {
   ...defaultSecuritySettings,
   unlockKeys: null,
   pinWrappedKeys: null,
+  pinFailures: 0,
 };
 
 export const { StorageProvider, useStorage } =

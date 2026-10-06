@@ -248,6 +248,7 @@
     "pinCode": "Code PIN",
     "pinPlaceholder": "Saisissez le PIN",
     "invalidPin": "PIN invalide.",
+    "pinWiped": "Trop de tentatives de PIN incorrectes. Le PIN a été supprimé. Déverrouillez avec votre mot de passe.",
     "invalidPassword": "Mot de passe invalide.",
     "usePassword": "Utiliser le mot de passe",
     "usePin": "Utiliser le PIN"
@@ -725,6 +726,8 @@
     "bad_request": "Requête incorrecte.",
     "internal_error": "Une erreur inattendue s'est produite.",
     "event_limit_reached": "Limite d'événements atteinte.",
+    "storage_limit_reached": "Limite de stockage atteinte.",
+    "already_subscribed": "Vous avez déjà un abonnement.",
     "too_many_attempts_seconds_one": "Trop de tentatives. Réessayez dans {{count}} seconde.",
     "too_many_attempts_seconds_other": "Trop de tentatives. Réessayez dans {{count}} secondes.",
     "too_many_attempts_minutes_one": "Trop de tentatives. Réessayez dans {{count}} minute.",

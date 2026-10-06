@@ -1,8 +1,4 @@
-import {
-  importKeyPair,
-  MAX_PASSWORD_LENGTH,
-  unwrapKeyPairWithPin,
-} from "@/lib/crypt";
+import { MAX_PASSWORD_LENGTH, unwrapKeyPairWithPin } from "@/lib/crypt";
 import { unlockAccount } from "@/lib/unlockAccount";
 import { useStorage } from "@/context/StorageContext";
 import { Card, CardContent } from "../ui/card";
@@ -20,6 +16,8 @@ import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { useTranslation } from "react-i18next";
 
+const MAX_PIN_FAILURES = 3;
+
 export default function UnlockDialog() {
   const { user, setMasterKey, setBucketKey, logout } = useUser();
   const storage = useStorage();
@@ -28,6 +26,7 @@ export default function UnlockDialog() {
   const [loading, setLoading] = useState(false);
   const [checkingAutoUnlock, setCheckingAutoUnlock] = useState(true);
   const [usePin, setUsePin] = useState(false);
+  const [pinWiped, setPinWiped] = useState(false);
 
   const unlockMethod = storage.get("unlockMethod") || "password";
   const pinWrappedKeys = storage.get("pinWrappedKeys");
@@ -39,18 +38,10 @@ export default function UnlockDialog() {
     (async () => {
       if (unlockMethod === "stay-unlocked") {
         const unlockKeys = storage.get("unlockKeys");
-        if (unlockKeys) {
-          try {
-            const { masterKey, bucketKey } = await importKeyPair(
-              unlockKeys.masterKeyB64,
-              unlockKeys.bucketKeyB64,
-            );
-            setMasterKey(masterKey);
-            setBucketKey(bucketKey);
-            return;
-          } catch (err) {
-            console.error("Auto-unlock error:", err);
-          }
+        if (unlockKeys?.masterKey) {
+          setMasterKey(unlockKeys.masterKey);
+          setBucketKey(unlockKeys.bucketKey);
+          return;
         }
       } else if (unlockMethod === "pin" && pinWrappedKeys) {
         setUsePin(true);
@@ -72,17 +63,31 @@ export default function UnlockDialog() {
 
     const pin = new FormData(e.currentTarget).get("pin") as string;
 
+    const failures = storage.get("pinFailures") + 1;
+    storage.set("pinFailures", failures);
+
     try {
       const { masterKey, bucketKey } = await unwrapKeyPairWithPin(
         pin,
         pinWrappedKeys.salt,
         pinWrappedKeys.encrypted,
       );
+      storage.set("pinFailures", 0);
       setError(false);
       setMasterKey(masterKey);
       setBucketKey(bucketKey);
     } catch {
-      setError(true);
+      if (failures >= MAX_PIN_FAILURES) {
+        storage.set("pinWrappedKeys", null);
+        storage.set("unlockKeys", null);
+        storage.set("unlockMethod", "password");
+        storage.set("pinFailures", 0);
+        setUsePin(false);
+        setPinWiped(true);
+        setError(false);
+      } else {
+        setError(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -98,13 +103,7 @@ export default function UnlockDialog() {
     const password = data.get("password") as string;
 
     try {
-      const exportable =
-        unlockMethod === "stay-unlocked" || unlockMethod === "pin";
-      const { masterKey, bucketKey } = await unlockAccount(
-        password,
-        user,
-        exportable,
-      );
+      const { masterKey, bucketKey } = await unlockAccount(password, user);
       setError(false);
       setMasterKey(masterKey);
       setBucketKey(bucketKey);
@@ -128,7 +127,7 @@ export default function UnlockDialog() {
           <Card className="bg-transparent border-none shadow-none">
             <CardContent>
               {usePin ? (
-                <form onSubmit={handlePinSubmit}>
+                <form key="pin" onSubmit={handlePinSubmit}>
                   <FieldGroup>
                     <Field>
                       <FieldLabel htmlFor="pin">
@@ -157,7 +156,7 @@ export default function UnlockDialog() {
                   </FieldGroup>
                 </form>
               ) : (
-                <form onSubmit={handleFormSubmit}>
+                <form key="password" onSubmit={handleFormSubmit}>
                   <FieldGroup>
                     <Field>
                       <FieldLabel htmlFor="password">
@@ -173,6 +172,11 @@ export default function UnlockDialog() {
                         required
                       />
                     </Field>
+                    {pinWiped && (
+                      <span className="text-sm text-destructive text-start">
+                        {t("unlock.pinWiped")}
+                      </span>
+                    )}
                     {error && (
                       <span className="text-sm text-destructive text-start">
                         {t("unlock.invalidPassword")}

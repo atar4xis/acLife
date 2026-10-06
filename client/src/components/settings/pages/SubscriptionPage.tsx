@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isStripeUrl } from "@/lib/validators";
 import type { TFunction } from "i18next";
 import { toast } from "sonner";
 import { useApi } from "@/context/ApiContext";
@@ -41,7 +42,7 @@ export default function SubscriptionPage({
     const res = await get<string>("stripe/manage");
     setLoading(false);
 
-    if (!res.success || !res.data) {
+    if (!res.success || !res.data || !isStripeUrl(res.data)) {
       toast.error(res.message || t("settings.subscription.portalFailed"));
       return;
     }

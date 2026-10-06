@@ -273,6 +273,7 @@
     "pinCode": "رمز PIN",
     "pinPlaceholder": "أدخل رمز PIN",
     "invalidPin": "رمز PIN غير صالح.",
+    "pinWiped": "محاولات إدخال PIN غير صحيحة كثيرة جدًا. تمت إزالة رمز PIN، افتح القفل باستخدام كلمة المرور.",
     "invalidPassword": "كلمة المرور غير صالحة.",
     "usePassword": "استخدم كلمة المرور بدلًا من ذلك",
     "usePin": "استخدم رمز PIN بدلًا من ذلك"
@@ -792,6 +793,8 @@
     "bad_request": "طلب غير صالح.",
     "internal_error": "حدث خطأ غير متوقع.",
     "event_limit_reached": "تم الوصول إلى الحد الأقصى للأحداث.",
+    "storage_limit_reached": "تم الوصول إلى الحد الأقصى للتخزين.",
+    "already_subscribed": "لديك اشتراك بالفعل.",
     "too_many_attempts_seconds_zero": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} ثانية.",
     "too_many_attempts_seconds_one": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} ثانية.",
     "too_many_attempts_seconds_two": "محاولات كثيرة جدًا. حاول مرة أخرى بعد ثانيتين.",

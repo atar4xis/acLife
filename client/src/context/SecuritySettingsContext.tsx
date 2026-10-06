@@ -46,21 +46,15 @@ export function SecuritySettingsProvider({ children }: WithChildren) {
       if (method === "stay-unlocked" || method === "pin") {
         if (!opts?.currentPassword) return;
 
-        const exportableKeys = await unlockAccount(
-          opts.currentPassword,
-          user,
-          true,
-        );
-        const exported = await exportKeyPair(
-          exportableKeys.masterKey,
-          exportableKeys.bucketKey,
-        );
+        const pinMethod = method === "pin";
+        const keys = await unlockAccount(opts.currentPassword, user, pinMethod);
 
-        if (method === "stay-unlocked") {
-          storage.set("unlockKeys", exported);
+        if (!pinMethod) {
+          storage.set("unlockKeys", keys);
           storage.set("pinWrappedKeys", null);
         } else {
           if (!opts.pin) return;
+          const exported = await exportKeyPair(keys.masterKey, keys.bucketKey);
           const wrapped = await wrapKeyPairWithPin(
             opts.pin,
             exported.masterKeyB64,

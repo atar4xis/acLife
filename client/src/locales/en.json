@@ -252,6 +252,7 @@
     "pinCode": "PIN code",
     "pinPlaceholder": "Enter PIN",
     "invalidPin": "Invalid PIN.",
+    "pinWiped": "Too many incorrect PIN attempts. The PIN was removed. Unlock with your password.",
     "invalidPassword": "Invalid password.",
     "usePassword": "Use password instead",
     "usePin": "Use PIN instead"
@@ -729,6 +730,8 @@
     "bad_request": "Bad request.",
     "internal_error": "An unexpected error occurred.",
     "event_limit_reached": "Event limit reached.",
+    "storage_limit_reached": "Storage limit reached.",
+    "already_subscribed": "You already have a subscription.",
     "too_many_attempts_seconds_one": "Too many attempts. Try again in {{count}} second.",
     "too_many_attempts_seconds_other": "Too many attempts. Try again in {{count}} seconds.",
     "too_many_attempts_minutes_one": "Too many attempts. Try again in {{count}} minute.",

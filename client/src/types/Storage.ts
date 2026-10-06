@@ -19,9 +19,9 @@ export interface WrappedKeyPair {
   encrypted: string;
 }
 
-export interface RawKeyPair {
-  masterKeyB64: string;
-  bucketKeyB64: string;
+export interface StoredKeyPair {
+  masterKey: CryptoKey;
+  bucketKey: CryptoKey;
 }
 
 export interface StorageData {
@@ -33,7 +33,8 @@ export interface StorageData {
   sidebarOpen: boolean;
   sidebarWidth: string | null;
   unlockMethod: UnlockMethod;
-  unlockKeys: RawKeyPair | null;
+  unlockKeys: StoredKeyPair | null;
   pinWrappedKeys: WrappedKeyPair | null;
+  pinFailures: number;
   autoLock: AutoLockOption;
 }

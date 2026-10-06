@@ -242,6 +242,7 @@
     "pinCode": "PINコード",
     "pinPlaceholder": "PINを入力",
     "invalidPin": "PINが正しくありません。",
+    "pinWiped": "PINの入力を何度も間違えたため、PINを削除しました。パスワードでロックを解除してください。",
     "invalidPassword": "パスワードが正しくありません。",
     "usePassword": "パスワードを使う",
     "usePin": "PINを使う"
@@ -708,6 +709,8 @@
     "bad_request": "不正なリクエストです。",
     "internal_error": "予期しないエラーが発生しました。",
     "event_limit_reached": "イベントの上限に達しました。",
+    "storage_limit_reached": "ストレージの上限に達しました。",
+    "already_subscribed": "すでにサブスクリプションに登録されています。",
     "too_many_attempts_seconds_other": "試行回数が多すぎます。{{count}}秒後にもう一度お試しください。",
     "too_many_attempts_minutes_other": "試行回数が多すぎます。{{count}}分後にもう一度お試しください。"
   }

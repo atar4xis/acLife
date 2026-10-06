@@ -9,6 +9,19 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
+const STRIPE_HOSTS = ["checkout.stripe.com", "billing.stripe.com"];
+
+export function isStripeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === "https:" && STRIPE_HOSTS.includes(parsed.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function validateServerMeta(
   data: ServerMetadata,
 ): data is ServerMetadata {

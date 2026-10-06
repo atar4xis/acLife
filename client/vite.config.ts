@@ -1,13 +1,39 @@
 /// <reference types="vitest/config" />
-import { defineConfig, type ConfigEnv } from "vite";
+import { defineConfig, type ConfigEnv, type Plugin } from "vite";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react-swc";
 
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https:",
+  "connect-src 'self' https: http://localhost:* http://127.0.0.1:*",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-src 'none'",
+].join("; ");
+
+const cspPlugin = (): Plugin => ({
+  name: "csp",
+  apply: "build",
+  transformIndexHtml: () => [
+    {
+      tag: "meta",
+      attrs: { "http-equiv": "Content-Security-Policy", content: CSP },
+      injectTo: "head-prepend",
+    },
+  ],
+});
+
 // https://vite.dev/config/
 export default ({ mode }: ConfigEnv) => {
   return defineConfig({
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), cspPlugin()],
     base: mode === "tauri" ? "./" : "/acLife/",
     resolve: {
       alias: {

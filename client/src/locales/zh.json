@@ -242,6 +242,7 @@
     "pinCode": "PIN 码",
     "pinPlaceholder": "输入 PIN",
     "invalidPin": "PIN 无效。",
+    "pinWiped": "PIN 错误次数过多。PIN 已被移除，请使用密码解锁。",
     "invalidPassword": "密码无效。",
     "usePassword": "改用密码",
     "usePin": "改用 PIN"
@@ -708,6 +709,8 @@
     "bad_request": "请求有误。",
     "internal_error": "发生意外错误。",
     "event_limit_reached": "已达到日程数量上限。",
+    "storage_limit_reached": "已达到存储空间上限。",
+    "already_subscribed": "您已有订阅。",
     "too_many_attempts_seconds_other": "尝试次数过多，请在{{count}}秒后重试。",
     "too_many_attempts_minutes_other": "尝试次数过多，请在{{count}}分钟后重试。"
   }

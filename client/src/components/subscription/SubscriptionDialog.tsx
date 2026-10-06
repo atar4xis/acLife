@@ -1,4 +1,5 @@
 import { Card, CardContent } from "../ui/card";
+import { isStripeUrl } from "@/lib/validators";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +45,7 @@ export default function SubscriptionDialog() {
     setLoading(true);
     const res = await post<string>("stripe/checkout", { priceId });
 
-    if (!res.success || !res.data) {
+    if (!res.success || !res.data || !isStripeUrl(res.data)) {
       toast.error(t("subscription.checkoutFailed"));
       setLoading(false);
       return;

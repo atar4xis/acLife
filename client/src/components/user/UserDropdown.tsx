@@ -1,4 +1,5 @@
 import { useUser } from "@/context/UserContext";
+import { isStripeUrl } from "@/lib/validators";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,12 +35,12 @@ export default function UserDropdown({
   const manageSubscription = async () => {
     const res = await get<string>("stripe/manage");
 
-    if (!res.success || !res.data) {
+    if (!res.success || !res.data || !isStripeUrl(res.data)) {
       toast.error(res.message || t("user.portalFailed"));
       return;
     }
 
-    window.open(res.data);
+    window.open(res.data, "_blank", "noopener");
   };
 
   return (

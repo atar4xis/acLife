@@ -144,14 +144,19 @@ export const deriveBucketKeyFromMaster = async (
   );
 };
 
+type KDFCost = Pick<EnvelopeKDFParams, "time" | "mem">;
+
+export const PIN_KDF: KDFCost = { time: 8, mem: 131072 };
+
 export const deriveMasterKey = async (
   password: string,
   salt: Uint8Array,
   exportable: boolean = false,
+  kdf: KDFCost = DEFAULT_ENVELOPE_KDF,
 ): Promise<DerivedKeys> => {
   const hash = await argon2Hash(password, salt, {
-    time: 3,
-    mem: 65536,
+    time: kdf.time,
+    mem: kdf.mem,
     hashLen: 32,
     parallelism: 1,
     type: ArgonType.Argon2id,
@@ -304,14 +309,14 @@ export const importKeyPair = async (
       "raw",
       uint8ArrayFromBase64(masterKeyB64),
       { name: "AES-GCM" },
-      true,
+      false,
       ["encrypt", "decrypt"],
     ),
     crypto.subtle.importKey(
       "raw",
       uint8ArrayFromBase64(bucketKeyB64),
       { name: "HMAC", hash: "SHA-256" },
-      true,
+      false,
       ["sign"],
     ),
   ]);
@@ -325,7 +330,12 @@ export const wrapKeyPairWithPin = async (
   bucketKeyB64: string,
 ) => {
   const salt = randomBytes(16);
-  const { masterKey: wrappingKey } = await deriveMasterKey(pin, salt);
+  const { masterKey: wrappingKey } = await deriveMasterKey(
+    pin,
+    salt,
+    false,
+    PIN_KDF,
+  );
 
   const payload = new TextEncoder().encode(
     JSON.stringify({ masterKeyB64, bucketKeyB64 }),
@@ -344,7 +354,12 @@ export const unwrapKeyPairWithPin = async (
   encryptedB64: string,
 ) => {
   const salt = uint8ArrayFromBase64(saltB64);
-  const { masterKey: wrappingKey } = await deriveMasterKey(pin, salt);
+  const { masterKey: wrappingKey } = await deriveMasterKey(
+    pin,
+    salt,
+    false,
+    PIN_KDF,
+  );
 
   const decrypted = await decrypt(
     uint8ArrayFromBase64(encryptedB64),

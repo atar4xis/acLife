@@ -86,28 +86,11 @@ describe("UserProvider.checkLogin", () => {
     expect(unlockMock.unlockAccount).toHaveBeenCalledWith(
       "pw",
       expect.objectContaining({ uuid: "u1" }),
-      false,
     );
     expect(ctx.masterKey).toBe(masterKey);
     expect(ctx.bucketKey).toBe(bucketKey);
     expect(ctx.isUnlocking).toBe(false);
   });
-
-  it.each([
-    ["password", false],
-    ["pin", true],
-    ["stay-unlocked", true],
-  ] as const)(
-    "requests extractable keys for the %s unlock method: %s",
-    async (method, exportable) => {
-      storageMock.data = { unlockMethod: method };
-      renderProvider();
-
-      await act(() => ctx.checkLogin("pw"));
-
-      expect(unlockMock.unlockAccount.mock.calls[0][2]).toBe(exportable);
-    },
-  );
 
   it("keeps the user but clears the keys when unlocking fails", async () => {
     unlockMock.unlockAccount.mockRejectedValue(new Error("Invalid password."));

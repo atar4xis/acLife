@@ -223,7 +223,7 @@ describe("enabling stay-unlocked", () => {
     expect(store.set).not.toHaveBeenCalled();
   });
 
-  it("stores the exported keys after the password is confirmed", async () => {
+  it("stores non-exported keys after the password is confirmed", async () => {
     const user = userEvent.setup();
     renderProvider();
 
@@ -237,9 +237,13 @@ describe("enabling stay-unlocked", () => {
     expect(unlockMock.unlockAccount).toHaveBeenCalledWith(
       "my-password",
       onlineUser,
-      true,
+      false,
     );
-    expect(store.set).toHaveBeenCalledWith("unlockKeys", exported);
+    expect(cryptMock.exportKeyPair).not.toHaveBeenCalled();
+    expect(store.set).toHaveBeenCalledWith("unlockKeys", {
+      masterKey: {},
+      bucketKey: {},
+    });
     expect(store.set).toHaveBeenCalledWith("pinWrappedKeys", null);
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),

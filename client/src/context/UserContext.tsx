@@ -52,13 +52,9 @@ export function UserProvider({ children }: WithChildren) {
       if (password) {
         setIsUnlocking(true);
         try {
-          const unlockMethod = storage.get("unlockMethod");
-          const exportable =
-            unlockMethod === "stay-unlocked" || unlockMethod === "pin";
           const { masterKey, bucketKey } = await unlockAccount(
             password,
             newUser,
-            exportable,
           );
           setMasterKey(masterKey);
           setBucketKey(bucketKey);
