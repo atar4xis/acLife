@@ -352,6 +352,7 @@
       "calendar-default-timezone": "Default time zone",
       "calendar-timezones-list": "Time zones",
       "calendar-detach-recurring": "Detach edited occurrences from the series",
+      "calendar-follow-current-time": "Follow current time",
       "calendar-click-action": "When an event is clicked",
       "calendar-double-click-action": "When an event is double-clicked",
       "calendar-default-view": "Default view",

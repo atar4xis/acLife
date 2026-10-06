@@ -45,6 +45,7 @@ export const defaultCalendarSettings: CalendarSettings = {
     "#141414",
   ],
   addColorsAutomatically: false,
+  followCurrentTime: true,
   eventEditorOpacity: 80,
   eventEditorBlur: 10,
   eventEditorRadius: 10,

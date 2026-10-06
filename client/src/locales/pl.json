@@ -362,6 +362,7 @@
       "calendar-default-timezone": "Domyślna strefa czasowa",
       "calendar-timezones-list": "Strefy czasowe",
       "calendar-detach-recurring": "Odłączaj edytowane wystąpienia od serii",
+      "calendar-follow-current-time": "Podążaj za bieżącym czasem",
       "calendar-click-action": "Po kliknięciu wydarzenia",
       "calendar-double-click-action": "Po dwukrotnym kliknięciu wydarzenia",
       "calendar-default-view": "Widok domyślny",

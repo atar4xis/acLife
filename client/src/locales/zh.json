@@ -342,6 +342,7 @@
       "calendar-default-timezone": "默认时区",
       "calendar-timezones-list": "时区",
       "calendar-detach-recurring": "编辑时将该日程从重复系列中分离",
+      "calendar-follow-current-time": "跟随当前时间",
       "calendar-click-action": "单击日程时",
       "calendar-double-click-action": "双击日程时",
       "calendar-default-view": "默认视图",

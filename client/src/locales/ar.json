@@ -373,6 +373,7 @@
       "calendar-default-timezone": "المنطقة الزمنية الافتراضية",
       "calendar-timezones-list": "المناطق الزمنية",
       "calendar-detach-recurring": "فصل الحدث عن سلسلة التكرار عند تعديله",
+      "calendar-follow-current-time": "تتبّع الوقت الحالي",
       "calendar-click-action": "عند النقر على الحدث",
       "calendar-double-click-action": "عند النقر المزدوج على الحدث",
       "calendar-default-view": "العرض الافتراضي",

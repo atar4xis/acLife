@@ -277,6 +277,7 @@ export default function CalendarPage({
     miniCalendarAdaptiveNumbers,
     miniCalendarDropdowns,
     detachRecurringOnEdit,
+    followCurrentTime,
     eventClickAction,
     eventDoubleClickAction,
     addColorsAutomatically,
@@ -315,6 +316,17 @@ export default function CalendarPage({
             checked={detachRecurringOnEdit}
             onCheckedChange={(checked) =>
               setSetting("detachRecurringOnEdit", checked)
+            }
+          />
+        </Field>
+
+        <Field orientation="responsive" className="mb-2">
+          <SettingsLabel settingKey="followCurrentTime" />
+          <Switch
+            aria-labelledby={settingLabelId("followCurrentTime")}
+            checked={followCurrentTime}
+            onCheckedChange={(checked) =>
+              setSetting("followCurrentTime", checked)
             }
           />
         </Field>

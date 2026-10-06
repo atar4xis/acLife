@@ -346,6 +346,7 @@
       "calendar-default-timezone": "Zona horaria predeterminada",
       "calendar-timezones-list": "Zonas horarias",
       "calendar-detach-recurring": "Separar de la serie los eventos que se editen",
+      "calendar-follow-current-time": "Seguir la hora actual",
       "calendar-click-action": "Al hacer clic en un evento",
       "calendar-double-click-action": "Al hacer doble clic en un evento",
       "calendar-default-view": "Vista predeterminada",

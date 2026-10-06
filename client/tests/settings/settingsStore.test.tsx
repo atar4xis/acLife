@@ -379,6 +379,7 @@ describe("sync rules", () => {
         "eventEditorBlur",
         "eventEditorOpacity",
         "eventEditorRadius",
+        "followCurrentTime",
         "fontFamily",
         "fontSize",
         "language",

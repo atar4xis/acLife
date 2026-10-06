@@ -354,6 +354,7 @@
       "calendar-default-timezone": "डिफ़ॉल्ट समय क्षेत्र",
       "calendar-timezones-list": "समय क्षेत्र",
       "calendar-detach-recurring": "संपादन पर इवेंट को दोहराव की श्रृंखला से अलग करें",
+      "calendar-follow-current-time": "वर्तमान समय के साथ चलें",
       "calendar-click-action": "किसी इवेंट पर क्लिक करने पर",
       "calendar-double-click-action": "किसी इवेंट पर डबल-क्लिक करने पर",
       "calendar-default-view": "डिफ़ॉल्ट व्यू",

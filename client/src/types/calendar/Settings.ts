@@ -34,6 +34,7 @@ export interface CalendarSettings {
   eventColorPresets: string[];
   addColorsAutomatically: boolean;
   detachRecurringOnEdit: boolean;
+  followCurrentTime: boolean;
   eventClickAction: EventClickAction;
   eventDoubleClickAction: EventClickAction;
   eventEditorOpacity: number;

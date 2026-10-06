@@ -5,6 +5,7 @@ import {
   useMemo,
   useEffect,
   useCallback,
+  useEffectEvent,
   type CSSProperties,
 } from "react";
 import { DateTime } from "luxon";
@@ -306,6 +307,7 @@ export default memo(function AppCalendar({
     resyncIntervalMinutes: s.resyncIntervalMinutes,
     addColorsAutomatically: s.addColorsAutomatically,
     detachRecurringOnEdit: s.detachRecurringOnEdit,
+    followCurrentTime: s.followCurrentTime,
     eventColorPresets: s.eventColorPresets,
     timezones: s.timezones,
     defaultTimezone: s.defaultTimezone,
@@ -452,10 +454,7 @@ export default memo(function AppCalendar({
     return (minutes / 60) * hourHeight;
   }, [now, hourHeight]);
 
-  const goToToday = useCallback(() => {
-    setCurrentDate(DateTime.now());
-
-    // align with current time indicator
+  const centerOnNow = useCallback(() => {
     const container = gridRef.current;
     if (!container) return;
     container.scrollTo({
@@ -465,7 +464,41 @@ export default memo(function AppCalendar({
       ),
       behavior: "smooth",
     });
-  }, [setCurrentDate, getNowY, getGridHeaderOffset]);
+  }, [getNowY, getGridHeaderOffset]);
+
+  const goToToday = useCallback(() => {
+    setCurrentDate(DateTime.now());
+    centerOnNow();
+  }, [setCurrentDate, centerOnNow]);
+
+  const onFollowTime = useEffectEvent(centerOnNow);
+
+  const showsToday = visibleDays.some((d) => isSameDate(d.date, now));
+
+  // follow the current time after 30s without scrolling or when the window loses focus
+  useEffect(() => {
+    const container = gridRef.current;
+    if (!settings.followCurrentTime || !showsToday || !container) return;
+
+    let timer: number;
+    const arm = () => {
+      clearTimeout(timer);
+      timer = window.setTimeout(onFollowTime, 30000);
+    };
+    const onBlur = () => {
+      clearTimeout(timer);
+      onFollowTime();
+    };
+
+    arm();
+    container.addEventListener("scroll", arm, { passive: true });
+    window.addEventListener("blur", onBlur);
+    return () => {
+      clearTimeout(timer);
+      container.removeEventListener("scroll", arm);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [settings.followCurrentTime, showsToday]);
 
   const updateChange = useCallback(
     (change: EventChange) => {

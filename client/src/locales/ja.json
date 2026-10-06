@@ -342,6 +342,7 @@
       "calendar-default-timezone": "既定のタイムゾーン",
       "calendar-timezones-list": "タイムゾーン",
       "calendar-detach-recurring": "編集した予定を繰り返しから切り離す",
+      "calendar-follow-current-time": "現在時刻に追従",
       "calendar-click-action": "予定をクリックしたとき",
       "calendar-double-click-action": "予定をダブルクリックしたとき",
       "calendar-default-view": "既定の表示",

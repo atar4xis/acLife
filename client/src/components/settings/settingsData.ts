@@ -150,6 +150,10 @@ export const settingsCategories: SettingsCategory[] = [
             settingKey: "detachRecurringOnEdit",
           },
           {
+            id: "calendar-follow-current-time",
+            settingKey: "followCurrentTime",
+          },
+          {
             id: "calendar-click-action",
             settingKey: "eventClickAction",
           },

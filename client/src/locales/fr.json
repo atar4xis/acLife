@@ -348,6 +348,7 @@
       "calendar-default-timezone": "Fuseau horaire par défaut",
       "calendar-timezones-list": "Fuseaux horaires",
       "calendar-detach-recurring": "Détacher les occurrences modifiées de la série",
+      "calendar-follow-current-time": "Suivre l'heure actuelle",
       "calendar-click-action": "Au clic sur un événement",
       "calendar-double-click-action": "Au double-clic sur un événement",
       "calendar-default-view": "Vue par défaut",
