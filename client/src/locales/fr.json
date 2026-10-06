@@ -729,6 +729,7 @@
     "event_limit_reached": "Limite d'événements atteinte.",
     "storage_limit_reached": "Limite de stockage atteinte.",
     "already_subscribed": "Vous avez déjà un abonnement.",
+    "registration_busy": "Les inscriptions sont très sollicitées en ce moment. Veuillez réessayer plus tard.",
     "too_many_attempts_seconds_one": "Trop de tentatives. Réessayez dans {{count}} seconde.",
     "too_many_attempts_seconds_other": "Trop de tentatives. Réessayez dans {{count}} secondes.",
     "too_many_attempts_minutes_one": "Trop de tentatives. Réessayez dans {{count}} minute.",

@@ -11,8 +11,6 @@ import (
 	"math/bits"
 	"testing"
 
-	"acLife/constants"
-
 	"mz.attahri.com/code/srp/v3"
 )
 
@@ -94,12 +92,21 @@ func SolvePow(t *testing.T, c *Client, email string) (token, nonce string) {
 		t.Fatalf("challenge: %d", status)
 	}
 
-	payload, _, _ := bytes.Cut([]byte(challenge.Data.Token), []byte("."))
+	return challenge.Data.Token, PowNonce(t, challenge.Data.Token, func(zeros, difficulty int) bool { return zeros >= difficulty })
+}
+
+func PowNonce(t *testing.T, token string, accept func(zeros, difficulty int) bool) string {
+	t.Helper()
+
+	payload, _, _ := bytes.Cut([]byte(token), []byte("."))
 	raw, err := base64.RawURLEncoding.DecodeString(string(payload))
 	if err != nil {
 		t.Fatalf("decode challenge: %v", err)
 	}
-	var data struct{ Seed, Email string }
+	var data struct {
+		Seed, Email string
+		Difficulty  int
+	}
 	if err := json.Unmarshal(raw, &data); err != nil {
 		t.Fatalf("unmarshal challenge: %v", err)
 	}
@@ -114,8 +121,8 @@ func SolvePow(t *testing.T, c *Client, email string) (token, nonce string) {
 			}
 			zeros += 8
 		}
-		if zeros >= constants.PowDifficultyBits {
-			return challenge.Data.Token, fmt.Sprint(n)
+		if accept(zeros, data.Difficulty) {
+			return fmt.Sprint(n)
 		}
 	}
 }

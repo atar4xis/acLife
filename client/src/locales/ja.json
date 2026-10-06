@@ -712,6 +712,7 @@
     "event_limit_reached": "イベントの上限に達しました。",
     "storage_limit_reached": "ストレージの上限に達しました。",
     "already_subscribed": "すでにサブスクリプションに登録されています。",
+    "registration_busy": "現在、登録が混み合っています。しばらくしてからもう一度お試しください。",
     "too_many_attempts_seconds_other": "試行回数が多すぎます。{{count}}秒後にもう一度お試しください。",
     "too_many_attempts_minutes_other": "試行回数が多すぎます。{{count}}分後にもう一度お試しください。"
   }

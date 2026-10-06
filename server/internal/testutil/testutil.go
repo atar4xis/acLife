@@ -117,7 +117,7 @@ func RequireDB(t *testing.T) {
 	if !dbReady {
 		t.Skip("TEST_DB_USER not set")
 	}
-	for _, q := range []string{"DELETE FROM users", "DELETE FROM email_queue", "DELETE FROM pending_registrations"} {
+	for _, q := range []string{"DELETE FROM users", "DELETE FROM email_queue", "DELETE FROM sent_mail", "DELETE FROM pending_registrations"} {
 		if _, err := database.DB.Exec(q); err != nil {
 			t.Fatalf("reset: %v", err)
 		}

@@ -31,8 +31,7 @@ func NewStore(key []byte, domain string) *sessions.CookieStore {
 func GetSession(r *http.Request) (*sessions.Session, error) {
 	sess, err := Store.Get(r, constants.SessionName)
 	if err != nil {
-		var mErr securecookie.MultiError
-		if errors.As(err, &mErr) {
+		if _, ok := errors.AsType[securecookie.MultiError](err); ok {
 			return sess, nil
 		}
 		return nil, err

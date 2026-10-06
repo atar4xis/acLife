@@ -13,6 +13,7 @@ import (
 	"acLife/database"
 	"acLife/handlers"
 	"acLife/internal/testutil"
+	"acLife/mail"
 	"acLife/types"
 )
 
@@ -81,6 +82,19 @@ func addPending(t *testing.T, email string, ages ...time.Duration) {
 		if _, err := database.DB.Exec(
 			"INSERT INTO pending_registrations (token_hash, email, created_at, expires_at) VALUES (?, ?, ?, ?)",
 			testutil.RandomHex(32), email, created, created.Add(constants.PendingRegistrationTTL),
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func addSent(t *testing.T, email string, ages ...time.Duration) {
+	t.Helper()
+
+	for _, age := range ages {
+		if _, err := database.DB.Exec(
+			"INSERT INTO sent_mail (kind, recipient_key, created_at) VALUES (?, ?, ?)",
+			mail.KindRegistration, mail.RecipientKey(email), time.Now().Add(-age),
 		); err != nil {
 			t.Fatal(err)
 		}
@@ -217,7 +231,7 @@ func TestRegisterStartLimitsTheMailsPerAddress(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			email := newEmail()
-			addPending(t, email, tc.ages...)
+			addSent(t, email, tc.ages...)
 
 			status, reply := startRegistration(t, email, nil)
 			if status != http.StatusOK || reply.Data.Registered {
@@ -226,13 +240,28 @@ func TestRegisterStartLimitsTheMailsPerAddress(t *testing.T) {
 			if sent := mailsTo(t, email) == 1; sent != tc.sent {
 				t.Fatalf("mail sent = %v, want %v", sent, tc.sent)
 			}
-			if want := len(tc.ages); tc.sent {
-				want++
-				if pendingRows(t, email) != want {
-					t.Fatal("pending row missing")
-				}
+			wantPending := 0
+			if tc.sent {
+				wantPending = 1
+			}
+			if got := pendingRows(t, email); got != wantPending {
+				t.Fatalf("pending rows = %d, want %d", got, wantPending)
 			}
 		})
+	}
+}
+
+func TestRegisterStartLimitsAliasesOfOneMailbox(t *testing.T) {
+	testutil.RequireDB(t)
+	requireVerification(t)
+	name := testutil.RandomHex(6)
+
+	startRegistration(t, name+"@gmail.com", nil)
+	alias := name[:3] + "." + name[3:] + "+x@gmail.com"
+	status, reply := startRegistration(t, alias, nil)
+
+	if status != http.StatusOK || reply.Data.Registered || mailsTo(t, alias) != 0 {
+		t.Fatalf("got %d %+v", status, reply)
 	}
 }
 

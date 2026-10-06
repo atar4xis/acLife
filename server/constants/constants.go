@@ -37,8 +37,8 @@ const (
 	IPFailureDecay        = 1 * time.Hour // a quiet address starts over after this
 	RateLimitCacheTTL     = 2 * time.Minute
 
-	DBMaxOpenConns    = 50
-	DBMaxIdleConns    = 10
+	DBMaxOpenConns    = 100
+	DBMaxIdleConns    = 25
 	DBConnMaxLifetime = 1 * time.Hour
 	DBTimeout         = 5 * time.Second
 
@@ -48,7 +48,6 @@ const (
 	// used when PUSH_ALLOWED_ENDPOINTS is empty
 	DefaultPushAllowedEndpoints = "*.push.services.mozilla.com,*.googleapis.com,*.windows.com,*.notify.windows.com,*.push.apple.com"
 
-	EmailQueuePollInterval   = 10 * time.Second
 	EmailQueueStaleThreshold = 1 * time.Minute
 	EmailQueueMaxAttempts    = 5
 
@@ -66,6 +65,10 @@ const (
 
 	PowChallengeTTL   = 2 * time.Minute
 	PowDifficultyBits = 17 // ~1-5s of client-side hashing
+	PowLoadWindow     = 10 * time.Minute
+	PowMaxExtraBits   = 3
+
+	MaxConcurrentRegistrations = 10
 
 	BucketIDLen     = 32  // HMAC-SHA256 output size
 	MaxEventBuckets = 60  // caps the number of weeks a single event may span
@@ -81,16 +84,21 @@ const (
 	EmailVerificationResendCooldown  = 60 * time.Second
 	EmailVerificationMaxSendsPerHour = 4
 	PendingRegistrationTTL           = 24 * time.Hour
-	RegistrationMailsPerMinute       = 1
-	RegistrationMailsPerHour         = 3
-	RegistrationMailsPerDay          = 6
+	MailsPerRecipientPerMinute       = 1
+	MailsPerRecipientPerHour         = 3
+	MailsPerRecipientPerDay          = 6
+	MailBudgetWarnFraction           = 0.8
+	DefaultMailHourlyLimit           = 400
+	DefaultMailDomainHourlyLimit     = 100
 )
 
 var (
-	MaxUserEvents    int
-	MaxUserBytes     int64
-	MaxSaveBodyBytes int64
-	MaxSyncBodyBytes int64
+	MaxUserEvents         int
+	MaxUserBytes          int64
+	MaxSaveBodyBytes      int64
+	MaxSyncBodyBytes      int64
+	MailHourlyLimit       int
+	MailDomainHourlyLimit int
 )
 
 // AccessTokenExpiry set in init: ACCESS_TOKEN_EXPIRY_DAYS env var if present, else default 3 days.
@@ -122,6 +130,8 @@ func Configure() {
 	MaxUserBytes = envInt("MAX_USER_BYTES", 500<<20)
 	MaxSaveBodyBytes = envInt("MAX_SAVE_BODY_BYTES", 16<<20)
 	MaxSyncBodyBytes = int64(MaxUserEvents)*80 + 64<<10 // about 80 bytes per cached event entry
+	MailHourlyLimit = int(envInt("MAIL_HOURLY_LIMIT", DefaultMailHourlyLimit))
+	MailDomainHourlyLimit = int(envInt("MAIL_DOMAIN_HOURLY_LIMIT", DefaultMailDomainHourlyLimit))
 
 	Metadata = types.ServerMetadata{
 		URL: os.Getenv("SERVER_URL"),

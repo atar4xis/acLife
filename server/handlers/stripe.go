@@ -58,7 +58,7 @@ func fetchPrices() ([]types.Price, error) {
 
 	params := &stripe.PriceListParams{
 		Product: stripe.String(productID),
-		Active:  stripe.Bool(true),
+		Active:  new(true),
 		ListParams: stripe.ListParams{
 			Limit: stripe.Int64(3),
 		},

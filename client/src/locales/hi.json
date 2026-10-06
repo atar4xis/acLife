@@ -735,6 +735,7 @@
     "event_limit_reached": "इवेंट सीमा पूरी हो गई है।",
     "storage_limit_reached": "स्टोरेज सीमा पूरी हो गई है।",
     "already_subscribed": "आपके पास पहले से सदस्यता है।",
+    "registration_busy": "अभी पंजीकरण के लिए बहुत अधिक अनुरोध आ रहे हैं। कृपया बाद में पुनः प्रयास करें।",
     "too_many_attempts_seconds_one": "बहुत अधिक प्रयास। {{count}} सेकंड बाद पुनः प्रयास करें।",
     "too_many_attempts_seconds_other": "बहुत अधिक प्रयास। {{count}} सेकंड बाद पुनः प्रयास करें।",
     "too_many_attempts_minutes_one": "बहुत अधिक प्रयास। {{count}} मिनट बाद पुनः प्रयास करें।",

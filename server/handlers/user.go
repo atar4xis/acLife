@@ -177,8 +177,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 
 	if verificationRequired {
 		if err := queueVerificationTokenTx(ctx, tx, user.UUID, newEmail, utils.PreferredLanguage(r, verificationEmailLanguages())); err != nil {
-			utils.LogError("UpdateEmail", "queueVerificationTokenTx", err)
-			utils.SendInternalError(w)
+			replyMailError(w, "UpdateEmail", "queueVerificationTokenTx", err)
 			return
 		}
 	}

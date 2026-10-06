@@ -5,9 +5,8 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
-	"fmt"
+	"errors"
 	"net/http"
-	"sync"
 	"time"
 
 	"acLife/constants"
@@ -18,17 +17,6 @@ import (
 
 	"mz.attahri.com/code/srp/v3"
 )
-
-var registrationMailLimits = []struct {
-	n      int
-	window time.Duration
-}{
-	{constants.RegistrationMailsPerMinute, time.Minute},
-	{constants.RegistrationMailsPerHour, time.Hour},
-	{constants.RegistrationMailsPerDay, constants.Day},
-}
-
-var registrationMails sync.Mutex
 
 func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
@@ -73,38 +61,24 @@ func insertAccount(ctx context.Context, tx *sql.Tx, triplet srp.Triplet, envelop
 	return nil
 }
 
-func registrationMailWait(ctx context.Context, email string, now time.Time) (time.Duration, error) {
-	rows, err := database.Query(ctx,
-		"SELECT created_at FROM pending_registrations WHERE email = ? AND created_at > ? ORDER BY created_at DESC",
-		email, now.Add(-constants.PendingRegistrationTTL),
-	)
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	var sent []time.Time
-	for rows.Next() {
-		var createdAt time.Time
-		if err := rows.Scan(&createdAt); err != nil {
-			return 0, err
-		}
-		sent = append(sent, createdAt)
-	}
-	if err := rows.Err(); err != nil {
-		return 0, err
-	}
-
-	var wait time.Duration
-	for _, limit := range registrationMailLimits {
-		if len(sent) >= limit.n && now.Sub(sent[limit.n-1]) < limit.window {
-			wait = max(wait, sent[limit.n-1].Add(limit.window).Sub(now))
-		}
-	}
-	return wait, nil
-}
+var (
+	errRegistrationBusy = errors.New("registration busy")
+	registrationStarts  = newRateWindow(time.Hour)
+	registrationSlots   = make(chan struct{}, constants.MaxConcurrentRegistrations)
+)
 
 func queueRegistrationMail(ctx context.Context, email, lang string) error {
+	select {
+	case registrationSlots <- struct{}{}:
+		defer func() { <-registrationSlots }()
+	default:
+		return errRegistrationBusy
+	}
+
+	if !registrationStarts.admit(time.Now(), mail.Budget(mail.KindRegistration)) {
+		return errRegistrationBusy
+	}
+
 	token := utils.RandomToken(32)
 	now := time.Now()
 
@@ -122,7 +96,7 @@ func queueRegistrationMail(ctx context.Context, email, lang string) error {
 	}
 
 	subject, body := registrationEmailContent(token, email, lang)
-	if err := mail.QueueMail(ctx, tx, email, subject, body); err != nil {
+	if err := mail.QueueMail(ctx, tx, mail.KindRegistration, email, subject, body); err != nil {
 		return err
 	}
 
@@ -211,20 +185,9 @@ func RegisterStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	registrationMails.Lock()
-	defer registrationMails.Unlock()
-
-	wait, err := registrationMailWait(ctx, req.Email, time.Now())
-	if err != nil {
-		utils.LogError("RegisterStart", "registrationMailWait", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	if wait == 0 {
-		if err := queueRegistrationMail(ctx, req.Email, utils.PreferredLanguage(r, verificationEmailLanguages())); err != nil {
-			utils.LogError("RegisterStart", "queueRegistrationMail", err)
-			utils.SendInternalError(w)
+	if err := queueRegistrationMail(ctx, req.Email, utils.PreferredLanguage(r, verificationEmailLanguages())); err != nil {
+		if _, limited := errors.AsType[*mail.LimitedError](err); !limited {
+			replyMailError(w, "RegisterStart", "queueRegistrationMail", err)
 			return
 		}
 	}
@@ -345,25 +308,8 @@ func resendPendingRegistration(w http.ResponseWriter, r *http.Request, email str
 		return false
 	}
 
-	registrationMails.Lock()
-	defer registrationMails.Unlock()
-
-	now := time.Now()
-	wait, err := registrationMailWait(ctx, email, now)
-	if err != nil {
-		utils.LogError("ResendVerification", "registrationMailWait", err)
-		utils.SendInternalError(w)
-		return true
-	}
-
-	if wait > 0 {
-		replyTooManyAttempts(w, wait)
-		return true
-	}
-
 	if err := queueRegistrationMail(ctx, email, utils.PreferredLanguage(r, verificationEmailLanguages())); err != nil {
-		utils.LogError("ResendVerification", "queueRegistrationMail", err)
-		utils.SendInternalError(w)
+		replyMailError(w, "ResendVerification", "queueRegistrationMail", err)
 		return true
 	}
 
@@ -373,21 +319,6 @@ func resendPendingRegistration(w http.ResponseWriter, r *http.Request, email str
 		Code:    "verification_email_sent",
 	})
 	return true
-}
-
-func replyTooManyAttempts(w http.ResponseWriter, wait time.Duration) {
-	if wait <= time.Minute {
-		seconds := int(wait.Seconds()) + 1
-		utils.SendJSON(w, http.StatusTooManyRequests, types.Reply[any]{
-			Success: false,
-			Message: fmt.Sprintf("Too many attempts. Try again in %d seconds.", seconds),
-			Code:    "too_many_attempts_seconds",
-			Params:  map[string]any{"count": seconds},
-		})
-		return
-	}
-
-	replyLocked(w, wait)
 }
 
 func deleteStalePendingRegistrations(ctx context.Context, now time.Time) error {

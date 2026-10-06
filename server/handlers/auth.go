@@ -221,7 +221,7 @@ func queueVerificationTokenTx(ctx context.Context, tx *sql.Tx, uuid, email, lang
 	}
 
 	subject, body := verificationEmailContent(token, lang)
-	return mail.QueueMail(ctx, tx, email, subject, body)
+	return mail.QueueMail(ctx, tx, mail.KindAccount, email, subject, body)
 }
 
 /* -------------------- Handlers -------------------- */
@@ -229,9 +229,18 @@ func queueVerificationTokenTx(ctx context.Context, tx *sql.Tx, uuid, email, lang
 // powChallengeData is the signed, self-contained payload embedded in a PoW token.
 // Bound to a specific email so a solved proof cannot be replayed.
 type powChallengeData struct {
-	Seed    string `json:"seed"`
-	Email   string `json:"email"`
-	Expires int64  `json:"expires"`
+	Seed       string `json:"seed"`
+	Email      string `json:"email"`
+	Expires    int64  `json:"expires"`
+	Difficulty int    `json:"difficulty"`
+}
+
+var powLoad = newRateWindow(constants.PowLoadWindow)
+
+func powDifficulty() int {
+	perWindow := mail.Budget(mail.KindRegistration) / int(time.Hour/constants.PowLoadWindow)
+	extra := bits.Len(uint(powLoad.record(time.Now()) / max(perWindow, 1)))
+	return constants.PowDifficultyBits + min(extra, constants.PowMaxExtraBits)
 }
 
 func signPowPayload(payload string) string {
@@ -277,7 +286,7 @@ func verifyPowProof(token, nonce, email string) bool {
 		break
 	}
 
-	return zeroBits >= constants.PowDifficultyBits
+	return zeroBits >= max(data.Difficulty, constants.PowDifficultyBits)
 }
 
 // RegisterChallenge issues a proof-of-work challenge bound to an email address.
@@ -314,9 +323,10 @@ func RegisterChallenge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := powChallengeData{
-		Seed:    utils.RandomToken(16),
-		Email:   req.Email,
-		Expires: time.Now().Add(constants.PowChallengeTTL).Unix(),
+		Seed:       utils.RandomToken(16),
+		Email:      req.Email,
+		Expires:    time.Now().Add(constants.PowChallengeTTL).Unix(),
+		Difficulty: powDifficulty(),
 	}
 
 	raw, err := json.Marshal(data)
@@ -338,7 +348,7 @@ func RegisterChallenge(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Data: PowData{
 			Token:      token,
-			Difficulty: constants.PowDifficultyBits,
+			Difficulty: data.Difficulty,
 		},
 	})
 }
@@ -739,8 +749,7 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 	if err == sql.ErrNoRows {
 		// No token on record (e.g. verification was enabled after this account registered)
 		if err := queueVerificationTokenTx(ctx, tx, uuid, req.Email, lang); err != nil {
-			utils.LogError("ResendVerification", "queueVerificationTokenTx", err)
-			utils.SendInternalError(w)
+			replyMailError(w, "ResendVerification", "queueVerificationTokenTx", err)
 			return
 		}
 
@@ -778,8 +787,7 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if err := queueVerificationTokenTx(ctx, tx, uuid, req.Email, lang); err != nil {
-				utils.LogError("ResendVerification", "queueVerificationTokenTx", err)
-				utils.SendInternalError(w)
+				replyMailError(w, "ResendVerification", "queueVerificationTokenTx", err)
 				return
 			}
 
@@ -862,9 +870,8 @@ func ResendVerification(w http.ResponseWriter, r *http.Request) {
 
 	if !hasQueued {
 		subject, body := verificationEmailContent(token, lang)
-		if err := mail.QueueMail(ctx, tx, req.Email, subject, body); err != nil {
-			utils.LogError("ResendVerification", "mail.QueueMail", err)
-			utils.SendInternalError(w)
+		if err := mail.QueueMail(ctx, tx, mail.KindAccount, req.Email, subject, body); err != nil {
+			replyMailError(w, "ResendVerification", "mail.QueueMail", err)
 			return
 		}
 	}

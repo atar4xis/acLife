@@ -146,3 +146,87 @@ func TestUpdateEmailToATakenAddressChangesNothing(t *testing.T) {
 		t.Fatal("verification lost by a failed change")
 	}
 }
+
+func requireTooManyAttempts(t *testing.T, status int, code string) {
+	t.Helper()
+
+	if status != http.StatusTooManyRequests || code != "too_many_attempts_seconds" {
+		t.Fatalf("got %d %q", status, code)
+	}
+}
+
+func resendVerification(t *testing.T, email string) (int, types.Reply[any]) {
+	t.Helper()
+
+	return testutil.Call[any](testutil.NewClient(t), "POST", "/auth/resend-verification", map[string]any{"email": email})
+}
+
+func TestUpdateEmailIsRefusedWhileTheNewAddressIsLimited(t *testing.T) {
+	testutil.RequireDB(t)
+	withRegistration(t, func(r *types.Registration) { r.Email.VerificationRequired = true })
+	user := testutil.NewUser(t)
+	const newEmail = "limited-address@example.org"
+	addSent(t, newEmail, 30*time.Second)
+
+	status, reply := changeEmail(t, testutil.NewClient(t).As(user), user, newEmail)
+
+	requireTooManyAttempts(t, status, reply.Code)
+	if n := count(t, "SELECT COUNT(*) FROM users WHERE uuid = ? AND email = ?", user.UUID, user.Email); n != 1 {
+		t.Fatal("email changed")
+	}
+	if n := count(t, "SELECT COUNT(*) FROM email_verification_tokens WHERE owner = ?", user.UUID); n != 0 {
+		t.Fatal("token kept")
+	}
+	if mailsTo(t, newEmail) != 0 {
+		t.Fatal("mail queued while limited")
+	}
+}
+
+func TestResendVerificationIsRefusedWhileTheAddressIsLimited(t *testing.T) {
+	testutil.RequireDB(t)
+	withRegistration(t, func(r *types.Registration) { r.Email.VerificationRequired = true })
+
+	t.Run("no token on record", func(t *testing.T) {
+		user := testutil.NewUser(t, testutil.Unverified())
+		addSent(t, user.Email, 30*time.Second)
+
+		status, reply := resendVerification(t, user.Email)
+
+		requireTooManyAttempts(t, status, reply.Code)
+		if count(t, "SELECT COUNT(*) FROM email_verification_tokens WHERE owner = ?", user.UUID) != 0 || mailsTo(t, user.Email) != 0 {
+			t.Fatal("token or mail kept")
+		}
+	})
+
+	t.Run("expired token of an account with data", func(t *testing.T) {
+		user := testutil.NewUser(t, testutil.Unverified(), testutil.Subscribed("active"))
+		insertVerificationToken(t, user.UUID, user.Email)
+		if _, err := database.DB.Exec("UPDATE email_verification_tokens SET expires_at = ? WHERE owner = ?", time.Now().Add(-time.Minute), user.UUID); err != nil {
+			t.Fatal(err)
+		}
+		addSent(t, user.Email, 30*time.Second)
+
+		status, reply := resendVerification(t, user.Email)
+
+		requireTooManyAttempts(t, status, reply.Code)
+		if count(t, "SELECT COUNT(*) FROM email_verification_tokens WHERE owner = ?", user.UUID) != 1 || mailsTo(t, user.Email) != 0 {
+			t.Fatal("token replaced or mail queued")
+		}
+	})
+
+	t.Run("live token past the resend cooldown", func(t *testing.T) {
+		user := testutil.NewUser(t, testutil.Unverified())
+		insertVerificationToken(t, user.UUID, user.Email)
+		if _, err := database.DB.Exec("UPDATE email_verification_tokens SET last_sent_at = ? WHERE owner = ?", time.Now().Add(-2*time.Minute), user.UUID); err != nil {
+			t.Fatal(err)
+		}
+		addSent(t, user.Email, 30*time.Second)
+
+		status, reply := resendVerification(t, user.Email)
+
+		requireTooManyAttempts(t, status, reply.Code)
+		if mailsTo(t, user.Email) != 0 {
+			t.Fatal("mail queued while limited")
+		}
+	})
+}

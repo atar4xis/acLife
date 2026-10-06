@@ -796,6 +796,7 @@
     "event_limit_reached": "تم الوصول إلى الحد الأقصى للأحداث.",
     "storage_limit_reached": "تم الوصول إلى الحد الأقصى للتخزين.",
     "already_subscribed": "لديك اشتراك بالفعل.",
+    "registration_busy": "هناك ضغط كبير على التسجيل حاليًا. يرجى المحاولة مرة أخرى لاحقًا.",
     "too_many_attempts_seconds_zero": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} ثانية.",
     "too_many_attempts_seconds_one": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} ثانية.",
     "too_many_attempts_seconds_two": "محاولات كثيرة جدًا. حاول مرة أخرى بعد ثانيتين.",
