@@ -34,9 +34,14 @@ const GithubMark = () => (
   </svg>
 );
 
-const VERSION = __BUILD_NUMBER__
-  ? `${__APP_VERSION__} (${__BUILD_NUMBER__})`
-  : __APP_VERSION__;
+const VERSION = (
+  <>
+    {__APP_VERSION__}
+    {__BUILD_NUMBER__ && (
+      <span className="ms-1 text-xs">(build {__BUILD_NUMBER__})</span>
+    )}
+  </>
+);
 
 export default function ApplicationPage({
   sectionRefs,
