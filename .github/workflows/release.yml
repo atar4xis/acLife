@@ -89,12 +89,23 @@ jobs:
         run: |
           set -euo pipefail
 
-          appimage=$(ls target/release/bundle/appimage/*.AppImage)
+          base="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}"
+          platforms='{}'
+          for entry in \
+            "appimage:target/release/bundle/appimage/*.AppImage" \
+            "deb:target/release/bundle/deb/*.deb" \
+            "rpm:target/release/bundle/rpm/*.rpm"; do
+            file=$(ls ${entry#*:})
+            platforms=$(jq \
+              --arg key "linux-x86_64-${entry%%:*}" \
+              --arg signature "$(cat "$file.sig")" \
+              --arg url "$base/$(basename "$file")" \
+              '.[$key] = {signature: $signature, url: $url}' <<< "$platforms")
+          done
           jq -n \
             --arg version "$(node -p "require('../package.json').version")" \
-            --arg signature "$(cat "$appimage.sig")" \
-            --arg url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$(basename "$appimage")" \
-            '{version: $version, pub_date: (now | todate), platforms: {"linux-x86_64": {signature: $signature, url: $url}}}' \
+            --argjson platforms "$platforms" \
+            '{version: $version, pub_date: (now | todate), platforms: $platforms}' \
             > latest.json
 
       - name: Import release signing key

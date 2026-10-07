@@ -12,10 +12,6 @@ async fn check_update(
     pending: State<'_, PendingUpdate>,
     tag: String,
 ) -> Result<bool, String> {
-    let can_self_update = !cfg!(target_os = "linux") || std::env::var_os("APPIMAGE").is_some();
-    if !can_self_update {
-        return Ok(false);
-    }
     if !tag
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || ".-+_".contains(c))
