@@ -17,8 +17,60 @@ jobs:
   ci:
     uses: ./.github/workflows/ci.yml
 
-  build-and-sign:
+  build-windows:
     needs: ci
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "pnpm"
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: client/src-tauri
+
+      - name: Install dependencies
+        working-directory: client
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Tauri app
+        working-directory: client
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: pnpm exec tauri build
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-bundles
+          path: |
+            client/src-tauri/target/release/aclife-desktop.exe
+            client/src-tauri/target/release/bundle/nsis/*-setup.exe
+            client/src-tauri/target/release/bundle/nsis/*-setup.exe.sig
+            client/src-tauri/target/release/bundle/msi/*.msi
+            client/src-tauri/target/release/bundle/msi/*.msi.sig
+          if-no-files-found: error
+
+  build-and-sign:
+    needs: [ci, build-windows]
     runs-on: ubuntu-latest
 
     steps:
@@ -84,6 +136,12 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: pnpm exec tauri build
 
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-bundles
+          path: client/src-tauri/target/release
+
       - name: Generate updater manifest
         working-directory: client/src-tauri
         run: |
@@ -92,12 +150,14 @@ jobs:
           base="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}"
           platforms='{}'
           for entry in \
-            "appimage:target/release/bundle/appimage/*.AppImage" \
-            "deb:target/release/bundle/deb/*.deb" \
-            "rpm:target/release/bundle/rpm/*.rpm"; do
+            "linux-x86_64-appimage:target/release/bundle/appimage/*.AppImage" \
+            "linux-x86_64-deb:target/release/bundle/deb/*.deb" \
+            "linux-x86_64-rpm:target/release/bundle/rpm/*.rpm" \
+            "windows-x86_64-nsis:target/release/bundle/nsis/*-setup.exe" \
+            "windows-x86_64-msi:target/release/bundle/msi/*.msi"; do
             file=$(ls ${entry#*:})
             platforms=$(jq \
-              --arg key "linux-x86_64-${entry%%:*}" \
+              --arg key "${entry%%:*}" \
               --arg signature "$(cat "$file.sig")" \
               --arg url "$base/$(basename "$file")" \
               '.[$key] = {signature: $signature, url: $url}' <<< "$platforms")
@@ -163,6 +223,9 @@ jobs:
           }
 
           sign "target/release/aclife-desktop"
+          sign "target/release/aclife-desktop.exe"
+          sign_glob "target/release/bundle/nsis/*-setup.exe"
+          sign_glob "target/release/bundle/msi/*.msi"
           sign_glob "target/release/bundle/deb/*.deb"
           sign_glob "target/release/bundle/rpm/*.rpm"
           sign_glob "target/release/bundle/appimage/*.AppImage"
@@ -174,6 +237,9 @@ jobs:
 
           artifacts=(
             "target/release/aclife-desktop"
+            "target/release/aclife-desktop.exe"
+            target/release/bundle/nsis/*-setup.exe
+            target/release/bundle/msi/*.msi
             target/release/bundle/deb/*.deb
             target/release/bundle/rpm/*.rpm
             target/release/bundle/appimage/*.AppImage
@@ -205,7 +271,10 @@ jobs:
           }
 
           verify "target/release/aclife-desktop"
-          for f in target/release/bundle/deb/*.deb \
+          verify "target/release/aclife-desktop.exe"
+          for f in target/release/bundle/nsis/*-setup.exe \
+                   target/release/bundle/msi/*.msi \
+                   target/release/bundle/deb/*.deb \
                    target/release/bundle/rpm/*.rpm \
                    target/release/bundle/appimage/*.AppImage; do
             [ -e "$f" ] || continue
@@ -228,6 +297,12 @@ jobs:
           path: |
             client/src-tauri/target/release/aclife-desktop
             client/src-tauri/target/release/aclife-desktop.asc
+            client/src-tauri/target/release/aclife-desktop.exe
+            client/src-tauri/target/release/aclife-desktop.exe.asc
+            client/src-tauri/target/release/bundle/nsis/*-setup.exe
+            client/src-tauri/target/release/bundle/nsis/*-setup.exe.asc
+            client/src-tauri/target/release/bundle/msi/*.msi
+            client/src-tauri/target/release/bundle/msi/*.msi.asc
             client/src-tauri/target/release/bundle/deb/*.deb
             client/src-tauri/target/release/bundle/deb/*.deb.asc
             client/src-tauri/target/release/bundle/rpm/*.rpm
@@ -272,6 +347,12 @@ jobs:
           files: |
             client/src-tauri/target/release/aclife-desktop
             client/src-tauri/target/release/aclife-desktop.asc
+            client/src-tauri/target/release/aclife-desktop.exe
+            client/src-tauri/target/release/aclife-desktop.exe.asc
+            client/src-tauri/target/release/bundle/nsis/*-setup.exe
+            client/src-tauri/target/release/bundle/nsis/*-setup.exe.asc
+            client/src-tauri/target/release/bundle/msi/*.msi
+            client/src-tauri/target/release/bundle/msi/*.msi.asc
             client/src-tauri/target/release/bundle/deb/*.deb
             client/src-tauri/target/release/bundle/deb/*.deb.asc
             client/src-tauri/target/release/bundle/rpm/*.rpm
