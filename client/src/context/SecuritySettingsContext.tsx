@@ -2,7 +2,12 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useUser } from "@/context/UserContext";
 import { useStorage } from "@/context/StorageContext";
-import { exportKeyPair, wrapKeyPairWithPin } from "@/lib/crypt";
+import {
+  exportKeyPair,
+  protectUnlockKeys,
+  wrapKeyPairWithPin,
+} from "@/lib/crypt";
+import { isTauri } from "@/lib/nativeUpdater";
 import { unlockAccount } from "@/lib/unlockAccount";
 import type { WithChildren } from "@/types/Props";
 import type { AutoLockOption, UnlockMethod } from "@/types/Storage";
@@ -47,10 +52,14 @@ export function SecuritySettingsProvider({ children }: WithChildren) {
         if (!opts?.currentPassword) return;
 
         const pinMethod = method === "pin";
-        const keys = await unlockAccount(opts.currentPassword, user, pinMethod);
+        const keys = await unlockAccount(
+          opts.currentPassword,
+          user,
+          pinMethod || isTauri,
+        );
 
         if (!pinMethod) {
-          storage.set("unlockKeys", keys);
+          storage.set("unlockKeys", await protectUnlockKeys(keys));
           storage.set("pinWrappedKeys", null);
         } else {
           if (!opts.pin) return;

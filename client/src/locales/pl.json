@@ -265,6 +265,7 @@
     "pinCode": "Kod PIN",
     "pinPlaceholder": "Wpisz PIN",
     "invalidPin": "Nieprawidłowy PIN.",
+    "keystoreUnavailable": "Nie można uzyskać dostępu do systemowego magazynu kluczy. Odblokuj hasłem.",
     "pinWiped": "Zbyt wiele nieudanych prób wprowadzenia kodu PIN. Kod PIN został usunięty. Odblokuj za pomocą hasła.",
     "invalidPassword": "Nieprawidłowe hasło.",
     "usePassword": "Użyj hasła",

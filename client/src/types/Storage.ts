@@ -1,4 +1,4 @@
-import type { Encrypted } from "./Crypt";
+import type { Encrypted, KDFCost } from "./Crypt";
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -17,6 +17,12 @@ export type AutoLockOption =
 export interface WrappedKeyPair {
   salt: string;
   encrypted: string;
+  kdf?: KDFCost;
+  keystore?: true;
+}
+
+export interface WrappedUnlockKeys {
+  encrypted: string;
 }
 
 export interface StoredKeyPair {
@@ -33,7 +39,7 @@ export interface StorageData {
   sidebarOpen: boolean;
   sidebarWidth: string | null;
   unlockMethod: UnlockMethod;
-  unlockKeys: StoredKeyPair | null;
+  unlockKeys: StoredKeyPair | WrappedUnlockKeys | null;
   pinWrappedKeys: WrappedKeyPair | null;
   pinFailures: number;
   autoLock: AutoLockOption;

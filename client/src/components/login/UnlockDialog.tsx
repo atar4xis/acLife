@@ -1,4 +1,9 @@
-import { MAX_PASSWORD_LENGTH, unwrapKeyPairWithPin } from "@/lib/crypt";
+import {
+  KeystoreUnavailableError,
+  MAX_PASSWORD_LENGTH,
+  restoreUnlockKeys,
+  unwrapKeyPairWithPin,
+} from "@/lib/crypt";
 import { unlockAccount } from "@/lib/unlockAccount";
 import { useStorage } from "@/context/StorageContext";
 import { Card, CardContent } from "../ui/card";
@@ -22,7 +27,7 @@ export default function UnlockDialog() {
   const { user, setMasterKey, setBucketKey, logout } = useUser();
   const storage = useStorage();
   const { t } = useTranslation();
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<"invalid" | "keystore" | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkingAutoUnlock, setCheckingAutoUnlock] = useState(true);
   const [usePin, setUsePin] = useState(false);
@@ -38,10 +43,20 @@ export default function UnlockDialog() {
     (async () => {
       if (unlockMethod === "stay-unlocked") {
         const unlockKeys = storage.get("unlockKeys");
-        if (unlockKeys?.masterKey) {
-          setMasterKey(unlockKeys.masterKey);
-          setBucketKey(unlockKeys.bucketKey);
-          return;
+        if (unlockKeys) {
+          try {
+            const { masterKey, bucketKey } =
+              await restoreUnlockKeys(unlockKeys);
+            setMasterKey(masterKey);
+            setBucketKey(bucketKey);
+            return;
+          } catch (err) {
+            if (err instanceof KeystoreUnavailableError) {
+              setError("keystore");
+            } else {
+              storage.set("unlockKeys", null);
+            }
+          }
         }
       } else if (unlockMethod === "pin" && pinWrappedKeys) {
         setUsePin(true);
@@ -55,6 +70,14 @@ export default function UnlockDialog() {
 
   if (!user || user.type != "online" || checkingAutoUnlock) return null;
 
+  const wipePin = () => {
+    storage.set("pinWrappedKeys", null);
+    storage.set("unlockKeys", null);
+    storage.set("unlockMethod", "password");
+    storage.set("pinFailures", 0);
+    setUsePin(false);
+  };
+
   const handlePinSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!pinWrappedKeys) return;
@@ -67,26 +90,25 @@ export default function UnlockDialog() {
     storage.set("pinFailures", failures);
 
     try {
-      const { masterKey, bucketKey } = await unwrapKeyPairWithPin(
+      const { masterKey, bucketKey, upgraded } = await unwrapKeyPairWithPin(
         pin,
-        pinWrappedKeys.salt,
-        pinWrappedKeys.encrypted,
+        pinWrappedKeys,
       );
+      if (upgraded) storage.set("pinWrappedKeys", upgraded);
       storage.set("pinFailures", 0);
-      setError(false);
+      setError(null);
       setMasterKey(masterKey);
       setBucketKey(bucketKey);
-    } catch {
-      if (failures >= MAX_PIN_FAILURES) {
-        storage.set("pinWrappedKeys", null);
-        storage.set("unlockKeys", null);
-        storage.set("unlockMethod", "password");
-        storage.set("pinFailures", 0);
-        setUsePin(false);
+    } catch (err) {
+      if (err instanceof KeystoreUnavailableError) {
+        wipePin();
+        setError("keystore");
+      } else if (failures >= MAX_PIN_FAILURES) {
+        wipePin();
         setPinWiped(true);
-        setError(false);
+        setError(null);
       } else {
-        setError(true);
+        setError("invalid");
       }
     } finally {
       setLoading(false);
@@ -104,11 +126,11 @@ export default function UnlockDialog() {
 
     try {
       const { masterKey, bucketKey } = await unlockAccount(password, user);
-      setError(false);
+      setError(null);
       setMasterKey(masterKey);
       setBucketKey(bucketKey);
     } catch {
-      setError(true);
+      setError("invalid");
     } finally {
       setLoading(false);
     }
@@ -179,7 +201,11 @@ export default function UnlockDialog() {
                     )}
                     {error && (
                       <span className="text-sm text-destructive text-start">
-                        {t("unlock.invalidPassword")}
+                        {t(
+                          error === "keystore"
+                            ? "unlock.keystoreUnavailable"
+                            : "unlock.invalidPassword",
+                        )}
                       </span>
                     )}
                     <Field>
@@ -195,7 +221,7 @@ export default function UnlockDialog() {
                   className="mt-2 w-full"
                   variant="ghost"
                   onClick={() => {
-                    setError(false);
+                    setError(null);
                     setUsePin((v) => !v);
                   }}
                 >

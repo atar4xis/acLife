@@ -1,4 +1,11 @@
-import type { Encrypted } from "@/types/Crypt";
+import type { Encrypted, EnvelopeKDFParams, KDFCost } from "@/types/Crypt";
+import { invoke } from "@tauri-apps/api/core";
+import type {
+  StoredKeyPair,
+  WrappedKeyPair,
+  WrappedUnlockKeys,
+} from "@/types/Storage";
+import { isTauri } from "./nativeUpdater";
 import {
   RFC5054Group4096,
   Triplet,
@@ -48,14 +55,6 @@ const BUCKET_KEY_INFO = new TextEncoder().encode("acLife-bucket-key-v1");
 export type DerivedKeys = {
   masterKey: CryptoKey;
   bucketKey: CryptoKey;
-};
-
-export type EnvelopeKDFParams = {
-  algo: "argon2id" | "argon2d" | "argon2i";
-  time: number;
-  mem: number;
-  parallelism: number;
-  hashLen: number;
 };
 
 export const DEFAULT_ENVELOPE_KDF: EnvelopeKDFParams = {
@@ -144,9 +143,12 @@ export const deriveBucketKeyFromMaster = async (
   );
 };
 
-type KDFCost = Pick<EnvelopeKDFParams, "time" | "mem">;
-
-export const PIN_KDF: KDFCost = { time: 8, mem: 131072 };
+const LEGACY_PIN_KDF: KDFCost = { time: 8, mem: 131072 };
+const PIN_KDF: KDFCost = {
+  time: DEFAULT_ENVELOPE_KDF.time,
+  mem: DEFAULT_ENVELOPE_KDF.mem,
+};
+const KEYSTORE_PIN_KDF: KDFCost = { time: 2, mem: 16384 };
 
 export const deriveMasterKey = async (
   password: string,
@@ -324,52 +326,111 @@ export const importKeyPair = async (
   return { masterKey, bucketKey };
 };
 
+const parseKeyPayload = (payload: AllowSharedBufferSource) =>
+  JSON.parse(new TextDecoder().decode(payload)) as {
+    masterKeyB64: string;
+    bucketKeyB64: string;
+  };
+
+export class KeystoreUnavailableError extends Error {}
+
+const keystoreKey = async (): Promise<CryptoKey> => {
+  const bytes = await invoke<number[]>("device_key").catch(() => {
+    throw new KeystoreUnavailableError();
+  });
+  return crypto.subtle.importKey(
+    "raw",
+    new Uint8Array(bytes),
+    { name: "AES-GCM" },
+    false,
+    ["encrypt", "decrypt"],
+  );
+};
+
+const availableKeystoreKey = async (): Promise<CryptoKey | null> =>
+  isTauri ? keystoreKey().catch(() => null) : null;
+
+export const protectUnlockKeys = async (
+  keys: DerivedKeys,
+): Promise<StoredKeyPair | WrappedUnlockKeys> => {
+  const key = await availableKeystoreKey();
+  if (!key && !isTauri) return keys;
+
+  const exported = await exportKeyPair(keys.masterKey, keys.bucketKey);
+  if (!key) return importKeyPair(exported.masterKeyB64, exported.bucketKeyB64);
+
+  const payload = new TextEncoder().encode(JSON.stringify(exported));
+  return { encrypted: arrayBufferToBase64(await encrypt(payload, key)) };
+};
+
+export const restoreUnlockKeys = async (
+  stored: StoredKeyPair | WrappedUnlockKeys,
+): Promise<DerivedKeys> => {
+  if (!("encrypted" in stored)) {
+    if (!stored.masterKey) throw new Error("invalid stored keys");
+    return stored;
+  }
+
+  const decrypted = await decrypt(
+    uint8ArrayFromBase64(stored.encrypted),
+    await keystoreKey(),
+  );
+  const { masterKeyB64, bucketKeyB64 } = parseKeyPayload(decrypted);
+  return importKeyPair(masterKeyB64, bucketKeyB64);
+};
+
 export const wrapKeyPairWithPin = async (
   pin: string,
   masterKeyB64: string,
   bucketKeyB64: string,
-) => {
+): Promise<WrappedKeyPair> => {
   const salt = randomBytes(16);
-  const { masterKey: wrappingKey } = await deriveMasterKey(
-    pin,
-    salt,
-    false,
-    PIN_KDF,
-  );
+  const key = await availableKeystoreKey();
+  const kdf = key ? KEYSTORE_PIN_KDF : PIN_KDF;
+  const { masterKey: pinKey } = await deriveMasterKey(pin, salt, false, kdf);
 
   const payload = new TextEncoder().encode(
     JSON.stringify({ masterKeyB64, bucketKeyB64 }),
   );
-  const encrypted = await encrypt(payload, wrappingKey);
+  let encrypted = await encrypt(payload, pinKey);
+  if (key) encrypted = await encrypt(new Uint8Array(encrypted), key);
 
   return {
     salt: arrayBufferToBase64(salt.buffer),
     encrypted: arrayBufferToBase64(encrypted),
+    kdf,
+    ...(key && { keystore: true }),
   };
 };
 
 export const unwrapKeyPairWithPin = async (
   pin: string,
-  saltB64: string,
-  encryptedB64: string,
+  wrapped: WrappedKeyPair,
 ) => {
-  const salt = uint8ArrayFromBase64(saltB64);
-  const { masterKey: wrappingKey } = await deriveMasterKey(
+  let blob: Uint8Array = uint8ArrayFromBase64(wrapped.encrypted);
+  if (wrapped.keystore) {
+    const key = await keystoreKey();
+    blob = await decrypt(blob, key).catch(() => {
+      throw new KeystoreUnavailableError();
+    });
+  }
+  const { masterKey: pinKey } = await deriveMasterKey(
     pin,
-    salt,
+    uint8ArrayFromBase64(wrapped.salt),
     false,
-    PIN_KDF,
+    wrapped.kdf ?? LEGACY_PIN_KDF,
   );
+  const decrypted = await decrypt(blob, pinKey);
+  const { masterKeyB64, bucketKeyB64 } = parseKeyPayload(decrypted);
+  const keys = await importKeyPair(masterKeyB64, bucketKeyB64);
+  const upgraded =
+    isTauri && !wrapped.keystore
+      ? await wrapKeyPairWithPin(pin, masterKeyB64, bucketKeyB64).catch(
+          () => null,
+        )
+      : null;
 
-  const decrypted = await decrypt(
-    uint8ArrayFromBase64(encryptedB64),
-    wrappingKey,
-  );
-  const { masterKeyB64, bucketKeyB64 } = JSON.parse(
-    new TextDecoder().decode(decrypted),
-  ) as { masterKeyB64: string; bucketKeyB64: string };
-
-  return importKeyPair(masterKeyB64, bucketKeyB64);
+  return { ...keys, upgraded: upgraded?.keystore ? upgraded : null };
 };
 
 export const hmacSign = async (

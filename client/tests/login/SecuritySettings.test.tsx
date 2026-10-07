@@ -30,6 +30,7 @@ const apiMock = vi.hoisted(() => ({ post: vi.fn() }));
 const cryptMock = vi.hoisted(() => ({
   exportKeyPair: vi.fn(),
   wrapKeyPairWithPin: vi.fn(),
+  protectUnlockKeys: vi.fn(),
   MAX_PASSWORD_LENGTH: 256,
 }));
 
@@ -62,6 +63,13 @@ vi.mock("../../src/context/ApiContext.tsx", () => ({
 
 vi.mock("../../src/lib/crypt.ts", () => cryptMock);
 vi.mock("../../src/lib/unlockAccount.ts", () => unlockMock);
+
+const nativeMock = vi.hoisted(() => ({ isTauri: false }));
+vi.mock("../../src/lib/nativeUpdater.ts", () => ({
+  get isTauri() {
+    return nativeMock.isTauri;
+  },
+}));
 
 import {
   SecuritySettingsProvider,
@@ -119,9 +127,13 @@ beforeEach(() => {
   apiMock.post.mockReset();
   cryptMock.exportKeyPair.mockReset().mockResolvedValue(exported);
   cryptMock.wrapKeyPairWithPin.mockReset().mockResolvedValue(wrapped);
+  cryptMock.protectUnlockKeys
+    .mockReset()
+    .mockImplementation(async (keys) => keys);
   unlockMock.unlockAccount
     .mockReset()
     .mockResolvedValue({ masterKey: {}, bucketKey: {} });
+  nativeMock.isTauri = false;
   vi.mocked(toast.success).mockClear();
   vi.mocked(toast.error).mockClear();
 });
@@ -247,6 +259,28 @@ describe("enabling stay-unlocked", () => {
     expect(store.set).toHaveBeenCalledWith("pinWrappedKeys", null);
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("stores the protected keys and requests exportable keys on Tauri", async () => {
+    nativeMock.isTauri = true;
+    cryptMock.protectUnlockKeys.mockResolvedValue({ encrypted: "blob" });
+    const user = userEvent.setup();
+    renderProvider();
+
+    await user.click(screen.getByText("stay"));
+    await user.type(dialogInputs()[0], "my-password");
+    await user.click(screen.getByRole("button", { name: "Enable" }));
+
+    await waitFor(() =>
+      expect(store.set).toHaveBeenCalledWith("unlockKeys", {
+        encrypted: "blob",
+      }),
+    );
+    expect(unlockMock.unlockAccount).toHaveBeenCalledWith(
+      "my-password",
+      onlineUser,
+      true,
     );
   });
 

@@ -245,6 +245,7 @@
     "pinCode": "PINコード",
     "pinPlaceholder": "PINを入力",
     "invalidPin": "PINが正しくありません。",
+    "keystoreUnavailable": "システムのキーストアにアクセスできません。パスワードでロック解除してください。",
     "pinWiped": "PINの入力を何度も間違えたため、PINを削除しました。パスワードでロックを解除してください。",
     "invalidPassword": "パスワードが正しくありません。",
     "usePassword": "パスワードを使う",

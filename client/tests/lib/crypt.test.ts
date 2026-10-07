@@ -6,16 +6,20 @@ vi.stubGlobal("Worker", FakeArgonWorker);
 
 const {
   decrypt,
+  deriveMasterKey,
   encrypt,
   exportKeyPair,
   generateMasterKeyEnvelope,
   importKeyPair,
+  protectUnlockKeys,
+  randomBytes,
   rewrapMasterKeyEnvelope,
   SRP_PARAMS,
   unwrapKeyPairWithPin,
   unwrapMasterKeyEnvelope,
   wrapKeyPairWithPin,
 } = await import("../../src/lib/crypt.ts");
+const { arrayBufferToBase64 } = await import("../../src/lib/utils.ts");
 
 const sign = async (key: CryptoKey) =>
   new Uint8Array(
@@ -109,6 +113,14 @@ describe("key pair export and PIN wrapping", () => {
     };
   };
 
+  it("keeps non-extractable stay-unlocked keys as they are on web", async () => {
+    const keys = await generateMasterKeyEnvelope("password-123!");
+
+    const stored = await protectUnlockKeys(keys);
+
+    expect(stored).toBe(keys);
+  }, 30000);
+
   it("round-trips a key pair through export and import", async () => {
     const { masterKey, bucketKey, exported } = await makeKeys();
     const imported = await importKeyPair(
@@ -137,14 +149,39 @@ describe("key pair export and PIN wrapping", () => {
       exported.bucketKeyB64,
     );
 
-    const unwrapped = await unwrapKeyPairWithPin(
-      "1234",
-      wrapped.salt,
-      wrapped.encrypted,
-    );
+    const unwrapped = await unwrapKeyPairWithPin("1234", wrapped);
 
     expect(await decryptsWith(unwrapped.masterKey, masterKey)).toBe(true);
     expect(await sign(unwrapped.bucketKey)).toEqual(await sign(bucketKey));
+    expect(unwrapped.upgraded).toBeNull();
+    expect(wrapped.kdf).toEqual({ time: 3, mem: 65536 });
+    expect(wrapped.keystore).toBeUndefined();
+  }, 30000);
+
+  it("unwraps a blob without stored cost params using the old PIN cost", async () => {
+    const { masterKey, exported } = await makeKeys();
+    const salt = randomBytes(16);
+    const { masterKey: pinKey } = await deriveMasterKey("1234", salt, false, {
+      time: 8,
+      mem: 131072,
+    });
+    const legacy = {
+      salt: arrayBufferToBase64(salt.buffer),
+      encrypted: arrayBufferToBase64(
+        await encrypt(
+          new TextEncoder().encode(JSON.stringify(exported)),
+          pinKey,
+        ),
+      ),
+    };
+
+    const unwrapped = await unwrapKeyPairWithPin("1234", legacy);
+
+    expect(await decryptsWith(unwrapped.masterKey, masterKey)).toBe(true);
+    expect(FakeArgonWorker.requests.at(-1)).toMatchObject({
+      time: 8,
+      mem: 131072,
+    });
   }, 30000);
 
   it("rejects unwrapping with the wrong PIN", async () => {
@@ -156,7 +193,7 @@ describe("key pair export and PIN wrapping", () => {
     );
 
     await expect(
-      unwrapKeyPairWithPin("4321", wrapped.salt, wrapped.encrypted),
+      unwrapKeyPairWithPin("4321", wrapped),
     ).rejects.toThrow();
   }, 30000);
 

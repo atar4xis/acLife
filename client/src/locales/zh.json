@@ -245,6 +245,7 @@
     "pinCode": "PIN 码",
     "pinPlaceholder": "输入 PIN",
     "invalidPin": "PIN 无效。",
+    "keystoreUnavailable": "无法访问系统密钥库。请使用密码解锁。",
     "pinWiped": "PIN 错误次数过多。PIN 已被移除，请使用密码解锁。",
     "invalidPassword": "密码无效。",
     "usePassword": "改用密码",

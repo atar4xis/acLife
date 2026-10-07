@@ -62,6 +62,39 @@ fn restart_app(app: AppHandle) {
     app.restart()
 }
 
+#[cfg(not(target_os = "android"))]
+static DEVICE_KEY_LOCK: Mutex<()> = Mutex::new(());
+
+#[cfg(not(target_os = "android"))]
+fn load_device_key() -> Result<Vec<u8>, String> {
+    let _guard = DEVICE_KEY_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let entry =
+        keyring::Entry::new("com.atrxis.aclife", "device-key").map_err(|e| e.to_string())?;
+    match entry.get_secret() {
+        Ok(key) if key.len() == 32 => Ok(key),
+        Ok(_) => Err("device key has an unexpected length".into()),
+        Err(keyring::Error::NoEntry) => {
+            let mut key = vec![0u8; 32];
+            getrandom::fill(&mut key).map_err(|e| e.to_string())?;
+            entry.set_secret(&key).map_err(|e| e.to_string())?;
+            Ok(key)
+        }
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[cfg(target_os = "android")]
+fn load_device_key() -> Result<Vec<u8>, String> {
+    Err("no system keystore on android".into())
+}
+
+#[tauri::command]
+async fn device_key() -> Result<Vec<u8>, String> {
+    tauri::async_runtime::spawn_blocking(load_device_key)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -71,7 +104,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             check_update,
             install_update,
-            restart_app
+            restart_app,
+            device_key
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

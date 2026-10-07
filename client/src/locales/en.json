@@ -255,6 +255,7 @@
     "pinCode": "PIN code",
     "pinPlaceholder": "Enter PIN",
     "invalidPin": "Invalid PIN.",
+    "keystoreUnavailable": "Could not access the system keystore. Unlock with your password instead.",
     "pinWiped": "Too many incorrect PIN attempts. The PIN was removed. Unlock with your password.",
     "invalidPassword": "Invalid password.",
     "usePassword": "Use password instead",

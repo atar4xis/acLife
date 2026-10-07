@@ -251,6 +251,7 @@
     "pinCode": "Code PIN",
     "pinPlaceholder": "Saisissez le PIN",
     "invalidPin": "PIN invalide.",
+    "keystoreUnavailable": "Impossible d'accéder au trousseau du système. Déverrouillez avec votre mot de passe.",
     "pinWiped": "Trop de tentatives de PIN incorrectes. Le PIN a été supprimé. Déverrouillez avec votre mot de passe.",
     "invalidPassword": "Mot de passe invalide.",
     "usePassword": "Utiliser le mot de passe",

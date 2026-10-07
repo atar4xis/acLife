@@ -249,6 +249,7 @@
     "pinCode": "Código PIN",
     "pinPlaceholder": "Introduce el PIN",
     "invalidPin": "PIN no válido.",
+    "keystoreUnavailable": "No se pudo acceder al almacén de claves del sistema. Desbloquea con tu contraseña.",
     "pinWiped": "Demasiados intentos fallidos con el PIN. Se eliminó el PIN. Desbloquea con tu contraseña.",
     "invalidPassword": "Contraseña no válida.",
     "usePassword": "Usar contraseña",
