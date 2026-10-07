@@ -54,8 +54,8 @@ export default function UndoRedoButtons({
       onPointerDown={wake}
       onPointerUp={wake}
       className={cn(
-        "fixed bottom-4 inset-e-4 z-30 flex gap-2 transition-opacity duration-500",
-        faded ? "opacity-50" : "opacity-100",
+        "fixed bottom-4 inset-e-4 z-10 flex gap-2 transition-opacity duration-500",
+        faded ? "opacity-80" : "opacity-100",
       )}
     >
       <Button
