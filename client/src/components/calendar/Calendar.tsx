@@ -1501,7 +1501,11 @@ export default memo(function AppCalendar({
 
       let working = calendarEventsRef.current;
 
-      for (const ev of batch) {
+      const parentsLast = batch.toSorted(
+        (a, b) => Number(isChainParent(a)) - Number(isChainParent(b)),
+      );
+
+      for (const ev of parentsLast) {
         if (ev._parent || ev.repeat) {
           const parent = skipSingleOccurrence(
             ev,
