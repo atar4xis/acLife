@@ -1,5 +1,6 @@
 import type {
   CalendarEvent,
+  EventNotification,
   EventStyle,
   PositionedEvent,
 } from "@/types/calendar/Event";
@@ -161,6 +162,11 @@ export const resolveInstanceCompleted = (
     ? (event.completedInstances?.includes(dateKey) ?? false)
     : event.completed;
 
+export const sameNotifications = (
+  a: EventNotification[] = [],
+  b: EventNotification[] = [],
+) => JSON.stringify(a) === JSON.stringify(b);
+
 export const makeOccurrence = (
   event: CalendarEvent,
   start: DateTime,
@@ -176,6 +182,7 @@ export const makeOccurrence = (
     color,
     title,
     allDay,
+    notifications,
   } = override ?? {};
 
   return {
@@ -187,6 +194,7 @@ export const makeOccurrence = (
         : (description ?? undefined),
     color: color === undefined ? event.color : (color ?? undefined),
     allDay: allDay ?? event.allDay,
+    notifications: notifications ?? event.notifications,
     _instanceId: `${event.id}_${key}`,
     start: start.plus(startShift),
     end: start.plus(duration).plus(endShift),

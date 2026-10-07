@@ -209,6 +209,23 @@ export const settingsCategories: SettingsCategory[] = [
         ],
       },
       {
+        id: "notifications",
+        items: [
+          {
+            id: "calendar-default-event-notifications",
+            settingKey: "defaultEventNotifications",
+          },
+          {
+            id: "calendar-notification-sound",
+            settingKey: "notificationSound",
+          },
+          {
+            id: "calendar-notification-volume",
+            settingKey: "notificationVolume",
+          },
+        ],
+      },
+      {
         id: "events",
         items: [
           {

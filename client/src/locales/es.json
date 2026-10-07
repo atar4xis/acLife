@@ -111,7 +111,8 @@
     "unavailable": "El servicio push no está disponible.",
     "permissionDenied": "Se denegó el permiso para mostrar notificaciones.",
     "error": "Algo salió mal. Inténtalo de nuevo.",
-    "errorLater": "Algo salió mal. Inténtalo de nuevo más tarde."
+    "errorLater": "Algo salió mal. Inténtalo de nuevo más tarde.",
+    "invalid": "Tu suscripción push ya no es válida, así que se desactivaron las notificaciones push. Vuelve a activarlas en los ajustes."
   },
   "agenda": {
     "inProgress": "en curso",
@@ -319,6 +320,7 @@
       "timezones": "Zonas horarias",
       "behavior": "Comportamiento",
       "grid": "Cuadrícula",
+      "notifications": "Notificaciones",
       "events": "Valores predeterminados de eventos",
       "event-editor": "Editor de eventos",
       "mini-calendar": "Minicalendario",
@@ -361,6 +363,9 @@
       "calendar-default-event-name": "Nombre del evento",
       "calendar-default-task-name": "Nombre de la tarea",
       "calendar-default-event-duration": "Duración del evento",
+      "calendar-default-event-notifications": "Notificaciones predeterminadas de los eventos",
+      "calendar-notification-sound": "Sonido de notificación",
+      "calendar-notification-volume": "Volumen de las notificaciones",
       "calendar-event-editor-color-presets": "Colores predefinidos",
       "calendar-event-editor-add-colors-automatically": "Añadir colores nuevos automáticamente",
       "calendar-event-editor-opacity": "Opacidad del fondo",
@@ -507,7 +512,11 @@
       "bottom": "Abajo",
       "left": "Izquierda",
       "right": "Derecha",
-      "auto": "Automático"
+      "auto": "Automático",
+      "customSound": "Personalizado",
+      "customSoundReplace": "Elegir otro archivo",
+      "customSoundInvalid": "Elige un archivo de audio de menos de 1 MB.",
+      "notificationSound": "Sonido {{number}}"
     },
     "security": {
       "sameEmail": "Ese ya es tu correo electrónico.",
@@ -679,7 +688,35 @@
     "allDay": "Todo el día",
     "completed": "Completada",
     "delete": "Eliminar evento",
-    "duplicate": "Duplicar evento"
+    "duplicate": "Duplicar evento",
+    "notifications": "Notificaciones"
+  },
+  "notify": {
+    "when": "Cuándo notificar",
+    "amount": "Cantidad",
+    "how": "Cómo notificar",
+    "remove": "Quitar notificación",
+    "add": "Añadir notificación",
+    "eventStarting": "El evento va a empezar",
+    "summary": {
+      "minutes_one": "{{count}} minuto antes del evento",
+      "minutes_other": "{{count}} minutos antes del evento",
+      "hours_one": "{{count}} hora antes del evento",
+      "hours_other": "{{count}} horas antes del evento",
+      "days_one": "{{count}} día antes del evento",
+      "days_other": "{{count}} días antes del evento"
+    },
+    "whenOptions": {
+      "start": "Cuando empiece el evento",
+      "minutes": "Minutos antes del evento",
+      "hours": "Horas antes del evento",
+      "days": "Días antes del evento"
+    },
+    "methodOptions": {
+      "sound": "Reproducir un sonido",
+      "device": "Enviar una notificación push a este dispositivo",
+      "all": "Enviar una notificación push a todos los dispositivos"
+    }
   },
   "details": {
     "title": "Detalles del evento",

@@ -1,8 +1,11 @@
 import { Settings } from "luxon";
 import { isValidTimezone } from "@/lib/calendar/timezone";
+import { sanitizeNotifications } from "@/lib/calendar/notifications";
 import {
   defaultCalendarSettings,
   defaultStoreSettings,
+  CUSTOM_NOTIFICATION_SOUND,
+  NOTIFICATION_SOUNDS,
   RESYNC_INTERVAL_OPTIONS,
   type StoreKey,
   type StoreSettings,
@@ -140,6 +143,15 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
     parsed.resyncIntervalMinutes =
       defaultCalendarSettings.resyncIntervalMinutes;
   }
+  if (
+    parsed.notificationSound !== CUSTOM_NOTIFICATION_SOUND &&
+    !NOTIFICATION_SOUNDS.includes(parsed.notificationSound)
+  ) {
+    parsed.notificationSound = defaultCalendarSettings.notificationSound;
+  }
+  parsed.notificationVolume = Number.isFinite(parsed.notificationVolume)
+    ? Math.min(100, Math.max(0, Math.round(parsed.notificationVolume)))
+    : defaultCalendarSettings.notificationVolume;
   if (!parsed.agendaRangeDays) {
     parsed.agendaRangeDays = defaultCalendarSettings.agendaRangeDays;
   }
@@ -159,6 +171,10 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
   if (!parsed.eventColorPresets.length) {
     parsed.eventColorPresets = defaultCalendarSettings.eventColorPresets;
   }
+
+  parsed.defaultEventNotifications = sanitizeNotifications(
+    parsed.defaultEventNotifications,
+  );
 
   parsed.timezones = parsed.timezones.filter(
     (tz) => typeof tz === "string" && isValidTimezone(tz),

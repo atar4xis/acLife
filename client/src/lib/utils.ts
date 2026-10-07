@@ -178,6 +178,9 @@ export function uint8ArrayFromUrlSafeBase64(
   return uint8ArrayFromBase64(safe);
 }
 
+export const sameBytes = (a: Uint8Array, b: Uint8Array) =>
+  a.length === b.length && a.every((byte, i) => byte === b[i]);
+
 export function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(value, max));
 }

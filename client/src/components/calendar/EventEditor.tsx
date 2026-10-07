@@ -64,6 +64,9 @@ import {
 } from "../ui/dropdown-menu";
 import { MoveMenuItems } from "./MoveMenuItems";
 import RepeatDialog from "./RepeatDialog";
+import NotificationsField, {
+  AddNotificationButton,
+} from "./NotificationsField";
 import {
   Select,
   SelectContent,
@@ -146,6 +149,7 @@ export default function EventEditor({
   const [isTask, setIsTask] = useState(event.isTask ?? false);
   const [completed, setCompleted] = useState(event.completed ?? false);
   const [allDay, setAllDay] = useState(event.allDay ?? false);
+  const [notifications, setNotifications] = useState(event.notifications ?? []);
   const startTime = DateTime.fromJSDate(start || new Date());
 
   const newEvent = useRef<CalendarEvent>({
@@ -353,6 +357,9 @@ export default function EventEditor({
     newEvent.current.end = allDay ? endDate.endOf("day") : endDate;
     newEvent.current.allDay = allDay || undefined;
     newEvent.current.repeat = repeat;
+    newEvent.current.notifications = notifications.length
+      ? notifications
+      : undefined;
     newEvent.current.isTask = isTask;
     newEvent.current.completed = isTask ? completed : undefined;
     newEvent.current.timestamp = Date.now();
@@ -364,6 +371,7 @@ export default function EventEditor({
     end,
     allDay,
     repeat,
+    notifications,
     isTask,
     completed,
   ]);
@@ -559,6 +567,20 @@ export default function EventEditor({
                 {t("editor.detachWarning")}
               </p>
             )}
+        </Field>
+
+        <Field>
+          <div className="flex items-center gap-1.5">
+            <FieldLabel>{t("editor.notifications")}</FieldLabel>
+            <AddNotificationButton
+              value={notifications}
+              onChange={setNotifications}
+            />
+          </div>
+          <NotificationsField
+            value={notifications}
+            onChange={setNotifications}
+          />
         </Field>
 
         <Field>

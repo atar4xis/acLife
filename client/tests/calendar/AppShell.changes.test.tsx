@@ -54,6 +54,9 @@ vi.mock("../../src/components/calendar/Calendar.tsx", () => ({ default: () => nu
 vi.mock("../../src/components/Sidebar.tsx", () => ({ default: () => null }));
 vi.mock("../../src/components/PushService.tsx", () => ({ default: () => null }));
 vi.mock("../../src/components/StreamService.tsx", () => ({ default: () => null }));
+vi.mock("../../src/components/NotificationService.tsx", () => ({
+  default: () => null,
+}));
 vi.mock("../../src/components/AutoLockService.tsx", () => ({ default: () => null }));
 vi.mock("../../src/components/settings/SettingsDialog.tsx", () => ({ default: () => null }));
 vi.mock("../../src/components/calendar/TimezoneChangeDialog.tsx", () => ({ default: () => null }));

@@ -123,7 +123,8 @@
     "unavailable": "Usługa push jest niedostępna.",
     "permissionDenied": "Odmówiono zgody na wysyłanie powiadomień.",
     "error": "Coś poszło nie tak. Spróbuj ponownie.",
-    "errorLater": "Coś poszło nie tak. Spróbuj ponownie później."
+    "errorLater": "Coś poszło nie tak. Spróbuj ponownie później.",
+    "invalid": "Twoja subskrypcja push nie jest już ważna, więc powiadomienia push zostały wyłączone. Włącz je ponownie w ustawieniach."
   },
   "agenda": {
     "inProgress": "w trakcie",
@@ -335,6 +336,7 @@
       "timezones": "Strefy czasowe",
       "behavior": "Zachowanie",
       "grid": "Siatka",
+      "notifications": "Powiadomienia",
       "events": "Domyślne ustawienia wydarzeń",
       "event-editor": "Edytor wydarzeń",
       "mini-calendar": "Minikalendarz",
@@ -377,6 +379,9 @@
       "calendar-default-event-name": "Nazwa wydarzenia",
       "calendar-default-task-name": "Nazwa zadania",
       "calendar-default-event-duration": "Czas trwania wydarzenia",
+      "calendar-default-event-notifications": "Domyślne powiadomienia o wydarzeniach",
+      "calendar-notification-sound": "Dźwięk powiadomienia",
+      "calendar-notification-volume": "Głośność powiadomień",
       "calendar-event-editor-color-presets": "Gotowe kolory",
       "calendar-event-editor-add-colors-automatically": "Dodawaj nowe kolory automatycznie",
       "calendar-event-editor-opacity": "Krycie tła",
@@ -531,7 +536,11 @@
       "bottom": "Dół",
       "left": "Lewo",
       "right": "Prawo",
-      "auto": "Automatycznie"
+      "auto": "Automatycznie",
+      "customSound": "Własny",
+      "customSoundReplace": "Wybierz inny plik",
+      "customSoundInvalid": "Wybierz plik audio mniejszy niż 1 MB.",
+      "notificationSound": "Dźwięk {{number}}"
     },
     "security": {
       "sameEmail": "To już jest Twój adres e-mail.",
@@ -705,7 +714,41 @@
     "allDay": "Cały dzień",
     "completed": "Ukończone",
     "delete": "Usuń wydarzenie",
-    "duplicate": "Duplikuj wydarzenie"
+    "duplicate": "Duplikuj wydarzenie",
+    "notifications": "Powiadomienia"
+  },
+  "notify": {
+    "when": "Kiedy powiadomić",
+    "amount": "Liczba",
+    "how": "Jak powiadomić",
+    "remove": "Usuń powiadomienie",
+    "add": "Dodaj powiadomienie",
+    "eventStarting": "Wydarzenie się zaczyna",
+    "summary": {
+      "minutes_one": "{{count}} minutę przed wydarzeniem",
+      "minutes_few": "{{count}} minuty przed wydarzeniem",
+      "minutes_many": "{{count}} minut przed wydarzeniem",
+      "minutes_other": "{{count}} minuty przed wydarzeniem",
+      "hours_one": "{{count}} godzinę przed wydarzeniem",
+      "hours_few": "{{count}} godziny przed wydarzeniem",
+      "hours_many": "{{count}} godzin przed wydarzeniem",
+      "hours_other": "{{count}} godziny przed wydarzeniem",
+      "days_one": "{{count}} dzień przed wydarzeniem",
+      "days_few": "{{count}} dni przed wydarzeniem",
+      "days_many": "{{count}} dni przed wydarzeniem",
+      "days_other": "{{count}} dnia przed wydarzeniem"
+    },
+    "whenOptions": {
+      "start": "Gdy wydarzenie się zaczyna",
+      "minutes": "Minuty przed wydarzeniem",
+      "hours": "Godziny przed wydarzeniem",
+      "days": "Dni przed wydarzeniem"
+    },
+    "methodOptions": {
+      "sound": "Odtwórz dźwięk",
+      "device": "Wyślij powiadomienie push na to urządzenie",
+      "all": "Wyślij powiadomienie push na wszystkie urządzenia"
+    }
   },
   "details": {
     "title": "Szczegóły wydarzenia",

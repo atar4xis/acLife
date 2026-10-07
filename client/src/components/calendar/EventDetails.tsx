@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import {
   AlignLeftIcon,
+  BellIcon,
   ClockIcon,
   PencilIcon,
   RepeatIcon,
@@ -154,6 +155,20 @@ export default function EventDetails({
           <div className="flex items-center gap-2 text-sm">
             <RepeatIcon className="size-4 shrink-0" />
             {repeatLabel(event.repeat, event.start)}
+          </div>
+        )}
+        {!!event.notifications?.length && (
+          <div className="flex items-start gap-2 text-sm">
+            <BellIcon className="size-4 shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-1">
+              {event.notifications.map((n, i) => (
+                <span key={i}>
+                  {n.when === "start"
+                    ? t("notify.whenOptions.start")
+                    : t(`notify.summary.${n.when}`, { count: n.amount })}
+                </span>
+              ))}
+            </div>
           </div>
         )}
         {event.description && (

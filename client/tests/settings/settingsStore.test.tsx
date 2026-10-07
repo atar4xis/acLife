@@ -211,6 +211,51 @@ describe("settings store", () => {
     expect(createSettingsStore().getSnapshot().overdueDays).toBe(expected);
   });
 
+  it.each([
+    [0, 0],
+    [-5, 0],
+    [150, 100],
+    [33.4, 33],
+    ["abc", 80],
+  ])("clamps a stored notificationVolume of %s to %s", (stored, expected) => {
+    seedSettings({ notificationVolume: stored });
+
+    expect(createSettingsStore().getSnapshot().notificationVolume).toBe(
+      expected,
+    );
+  });
+
+  it.each([
+    [3, 3],
+    [0, 0],
+    [-1, 1],
+    [6, 1],
+    ["x", 1],
+  ])("normalizes a stored notificationSound of %s to %s", (stored, expected) => {
+    seedSettings({ notificationSound: stored });
+
+    expect(createSettingsStore().getSnapshot().notificationSound).toBe(
+      expected,
+    );
+  });
+
+  it("drops invalid default notifications and keeps at most three", () => {
+    const valid = { when: "hours", amount: 2, method: "all" };
+    seedSettings({
+      defaultEventNotifications: [
+        valid,
+        { when: "weeks", amount: 1, method: "sound" },
+        valid,
+        valid,
+        valid,
+      ],
+    });
+
+    expect(
+      createSettingsStore().getSnapshot().defaultEventNotifications,
+    ).toEqual([valid, valid, valid]);
+  });
+
   it("keeps a stored language only if a locale file exists for it", () => {
     seedSettings({ language: "es" });
     expect(createSettingsStore().getSnapshot().language).toBe("es");
@@ -384,6 +429,7 @@ describe("sync rules", () => {
         "dayHeaderPosition",
         "defaultEventDuration",
         "defaultEventName",
+        "defaultEventNotifications",
         "defaultTaskName",
         "defaultTimezone",
         "defaultView",
@@ -396,6 +442,8 @@ describe("sync rules", () => {
         "fontSize",
         "language",
         "lineOpacity",
+        "notificationSound",
+        "notificationVolume",
         "overdueDays",
         "presets",
         "showOverdueTasks",

@@ -621,6 +621,36 @@ func PushUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// PushCheck reports whether the server still has the caller's push subscription.
+func PushCheck(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	var req struct {
+		Endpoint string `json:"endpoint"`
+	}
+
+	if err := utils.ParseJSON(r.Body, &req); err != nil {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	var known bool
+	if err := database.QueryRow(r.Context(),
+		"SELECT EXISTS(SELECT 1 FROM push_subscriptions WHERE owner = ? AND endpoint = ?)",
+		user.UUID, req.Endpoint,
+	).Scan(&known); err != nil {
+		utils.LogError("PushCheck", "database.QueryRow", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[map[string]bool]{
+		Success: true,
+		Data:    map[string]bool{"known": known},
+	})
+}
+
 // PushTest sends a test notification to the user.
 func PushTest(w http.ResponseWriter, r *http.Request) {
 	user := session.GetLoggedInUser(r)
@@ -629,6 +659,8 @@ func PushTest(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Query().Get("type") {
 	case "notification":
 		push.SendToUser(r.Context(), user.UUID, push.NotificationEvent("Test Notification", "You are user: "+user.UUID))
+	case "event-start":
+		push.SendToUser(r.Context(), user.UUID, push.EventStartEvent())
 	case "sync":
 		stream.Publish(user.UUID, stream.Sync(r.URL.Query().Get("origin")))
 	default:

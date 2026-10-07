@@ -109,7 +109,8 @@
     "unavailable": "プッシュサービスは利用できません。",
     "permissionDenied": "通知の許可が拒否されました。",
     "error": "問題が発生しました。もう一度お試しください。",
-    "errorLater": "問題が発生しました。しばらくしてからもう一度お試しください。"
+    "errorLater": "問題が発生しました。しばらくしてからもう一度お試しください。",
+    "invalid": "プッシュ購読が無効になったため、プッシュ通知をオフにしました。設定で再度オンにしてください。"
   },
   "agenda": {
     "inProgress": "進行中",
@@ -315,6 +316,7 @@
       "timezones": "タイムゾーン",
       "behavior": "動作",
       "grid": "グリッド",
+      "notifications": "通知",
       "events": "予定の既定値",
       "event-editor": "予定エディター",
       "mini-calendar": "ミニカレンダー",
@@ -357,6 +359,9 @@
       "calendar-default-event-name": "予定名",
       "calendar-default-task-name": "タスク名",
       "calendar-default-event-duration": "予定の所要時間",
+      "calendar-default-event-notifications": "予定のデフォルト通知",
+      "calendar-notification-sound": "通知音",
+      "calendar-notification-volume": "通知音量",
       "calendar-event-editor-color-presets": "プリセットカラー",
       "calendar-event-editor-add-colors-automatically": "新しい色を自動的に追加",
       "calendar-event-editor-opacity": "背景の不透明度",
@@ -499,7 +504,11 @@
       "bottom": "下",
       "left": "左",
       "right": "右",
-      "auto": "自動"
+      "auto": "自動",
+      "customSound": "カスタム",
+      "customSoundReplace": "別のファイルを選択",
+      "customSoundInvalid": "1 MB未満のオーディオファイルを選択してください。",
+      "notificationSound": "サウンド {{number}}"
     },
     "security": {
       "sameEmail": "すでにこのメールアドレスを使用しています。",
@@ -671,7 +680,32 @@
     "allDay": "終日",
     "completed": "完了",
     "delete": "予定を削除",
-    "duplicate": "予定を複製"
+    "duplicate": "予定を複製",
+    "notifications": "通知"
+  },
+  "notify": {
+    "when": "通知するタイミング",
+    "amount": "値",
+    "how": "通知の方法",
+    "remove": "通知を削除",
+    "add": "通知を追加",
+    "eventStarting": "予定が始まります",
+    "summary": {
+      "minutes_other": "予定の{{count}}分前",
+      "hours_other": "予定の{{count}}時間前",
+      "days_other": "予定の{{count}}日前"
+    },
+    "whenOptions": {
+      "start": "予定の開始時",
+      "minutes": "予定の何分前",
+      "hours": "予定の何時間前",
+      "days": "予定の何日前"
+    },
+    "methodOptions": {
+      "sound": "音を鳴らす",
+      "device": "このデバイスにプッシュ通知を送信",
+      "all": "すべてのデバイスにプッシュ通知を送信"
+    }
   },
   "details": {
     "title": "予定の詳細",

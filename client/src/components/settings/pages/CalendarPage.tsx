@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -7,7 +7,16 @@ import {
   useCalendarSettings,
 } from "@/context/CalendarSettingsContext";
 import { useTheme } from "@/components/ThemeProvider";
-import { defaultCalendarSettings } from "@/lib/settingsDefaults";
+import {
+  defaultCalendarSettings,
+  CUSTOM_NOTIFICATION_SOUND,
+  NOTIFICATION_SOUNDS,
+} from "@/lib/settingsDefaults";
+import {
+  MAX_CUSTOM_SOUND_BYTES,
+  playNotificationSound,
+  saveCustomSound,
+} from "@/lib/calendar/notifications";
 import { DARK_COLORS, LIGHT_COLORS } from "@/lib/themeColors";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
 import { useDragReorder } from "@/hooks/useDragReorder";
@@ -41,6 +50,9 @@ import SyncToggle from "../SyncToggle";
 import SettingsSelect from "../SettingsSelect";
 import SettingsSlider from "../SettingsSlider";
 import EventEditorPreview from "../EventEditorPreview";
+import NotificationsField, {
+  AddNotificationButton,
+} from "@/components/calendar/NotificationsField";
 import DeferredContent from "../DeferredContent";
 import { useTranslation } from "react-i18next";
 
@@ -258,6 +270,35 @@ const DefaultTaskNameField = memo(function DefaultTaskNameField() {
   );
 });
 
+const DefaultNotificationsField = memo(function DefaultNotificationsField() {
+  useTranslation();
+  const { defaultEventNotifications, setSetting } = useCalendarSettings();
+
+  return (
+    <Field>
+      <div className="flex items-center gap-1.5">
+        <FieldTitle id={settingLabelId("defaultEventNotifications")}>
+          {settingLabel("calendar-default-event-notifications")}
+        </FieldTitle>
+        <AddNotificationButton
+          value={defaultEventNotifications}
+          onChange={(value) => setSetting("defaultEventNotifications", value)}
+        />
+        <SyncToggle settingKey="defaultEventNotifications" />
+        {defaultEventNotifications.length > 0 && (
+          <ResetToDefault
+            onClick={() => setSetting("defaultEventNotifications", [])}
+          />
+        )}
+      </div>
+      <NotificationsField
+        value={defaultEventNotifications}
+        onChange={(value) => setSetting("defaultEventNotifications", value)}
+      />
+    </Field>
+  );
+});
+
 export default function CalendarPage({
   sectionRefs,
 }: {
@@ -266,6 +307,8 @@ export default function CalendarPage({
   const { t } = useTranslation();
   const {
     defaultView,
+    notificationSound,
+    notificationVolume,
     lineOpacity,
     dayHeaderPosition,
     timeLabelPosition,
@@ -294,6 +337,23 @@ export default function CalendarPage({
     eventEditorBlur,
     eventEditorRadius,
   });
+  const soundInput = useRef<HTMLInputElement>(null);
+  const chooseCustomSound = async (file: File) => {
+    const valid =
+      file.type.startsWith("audio/") && file.size <= MAX_CUSTOM_SOUND_BYTES;
+    if (
+      !valid ||
+      !(await saveCustomSound(file).then(
+        () => true,
+        () => false,
+      ))
+    ) {
+      toast.error(t("settings.calendar.customSoundInvalid"));
+      return;
+    }
+    setSetting("notificationSound", CUSTOM_NOTIFICATION_SOUND);
+    void playNotificationSound(CUSTOM_NOTIFICATION_SOUND, notificationVolume);
+  };
   const trackPreview = (key: keyof typeof preview) => (value: number) =>
     setPreview((prev) =>
       prev[key] === value ? prev : { ...prev, [key]: value },
@@ -424,6 +484,77 @@ export default function CalendarPage({
           max={100}
           format={(v) => `${v}%`}
           onLiveChange={trackPreview("lineOpacity")}
+        />
+      </Section>
+
+      <Separator />
+
+      <Section
+        id="notifications"
+        label={sectionLabel("notifications")}
+        sectionRefs={sectionRefs}
+      >
+        <DefaultNotificationsField />
+
+        <Field orientation="responsive">
+          <SettingsLabel settingKey="notificationSound" />
+          <SettingsSelect
+            labelledBy={settingLabelId("notificationSound")}
+            value={String(notificationSound)}
+            onValueChange={(value) => {
+              if (Number(value) === CUSTOM_NOTIFICATION_SOUND) {
+                soundInput.current?.click();
+                return;
+              }
+              setSetting("notificationSound", Number(value));
+              void playNotificationSound(Number(value), notificationVolume);
+            }}
+            footer={
+              <>
+                <input
+                  ref={soundInput}
+                  type="file"
+                  accept="audio/*"
+                  hidden
+                  data-testid="custom-sound-input"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) void chooseCustomSound(file);
+                  }}
+                />
+                {notificationSound === CUSTOM_NOTIFICATION_SOUND && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => soundInput.current?.click()}
+                  >
+                    {t("settings.calendar.customSoundReplace")}
+                  </Button>
+                )}
+              </>
+            }
+          >
+            {NOTIFICATION_SOUNDS.map((number) => (
+              <SelectItem key={number} value={String(number)}>
+                {t("settings.calendar.notificationSound", { number })}
+              </SelectItem>
+            ))}
+            <SelectItem value={String(CUSTOM_NOTIFICATION_SOUND)}>
+              {t("settings.calendar.customSound")}
+            </SelectItem>
+          </SettingsSelect>
+        </Field>
+
+        <SettingsSlider
+          settingKey="notificationVolume"
+          min={0}
+          max={100}
+          format={(v) => `${v}%`}
+          onCommit={(value) => {
+            setSetting("notificationVolume", value);
+            void playNotificationSound(notificationSound, value);
+          }}
         />
       </Section>
 

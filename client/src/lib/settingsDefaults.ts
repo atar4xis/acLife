@@ -6,6 +6,8 @@ import { getDeviceTimezone } from "@/lib/calendar/timezone";
 const deviceTimezone = getDeviceTimezone();
 
 export const RESYNC_INTERVAL_OPTIONS = [5, 15, 30];
+export const NOTIFICATION_SOUNDS = [1, 2, 3, 4, 5];
+export const CUSTOM_NOTIFICATION_SOUND = 0;
 
 export const defaultCalendarSettings: CalendarSettings = {
   language: "system",
@@ -21,6 +23,9 @@ export const defaultCalendarSettings: CalendarSettings = {
   defaultEventName: "new event",
   defaultTaskName: "new task",
   defaultEventDuration: 60,
+  defaultEventNotifications: [],
+  notificationSound: 1,
+  notificationVolume: 80,
   resyncIntervalMinutes: 15,
   agendaEnabled: true,
   agendaRangeDays: 3,

@@ -119,7 +119,8 @@
     "unavailable": "पुश सेवा उपलब्ध नहीं है।",
     "permissionDenied": "नोटिफ़िकेशन की अनुमति का अनुरोध अस्वीकार कर दिया गया।",
     "error": "कुछ गड़बड़ हो गई। कृपया पुनः प्रयास करें।",
-    "errorLater": "कुछ गड़बड़ हो गई। कृपया बाद में पुनः प्रयास करें।"
+    "errorLater": "कुछ गड़बड़ हो गई। कृपया बाद में पुनः प्रयास करें।",
+    "invalid": "आपकी पुश सदस्यता अब मान्य नहीं है, इसलिए पुश सूचनाएँ बंद कर दी गईं। उन्हें सेटिंग्स में फिर से चालू करें।"
   },
   "agenda": {
     "inProgress": "जारी है",
@@ -327,6 +328,7 @@
       "timezones": "समय क्षेत्र",
       "behavior": "व्यवहार",
       "grid": "ग्रिड",
+      "notifications": "सूचनाएँ",
       "events": "इवेंट की डिफ़ॉल्ट सेटिंग्स",
       "event-editor": "इवेंट एडिटर",
       "mini-calendar": "मिनी कैलेंडर",
@@ -369,6 +371,9 @@
       "calendar-default-event-name": "इवेंट का नाम",
       "calendar-default-task-name": "कार्य का नाम",
       "calendar-default-event-duration": "इवेंट की अवधि",
+      "calendar-default-event-notifications": "डिफ़ॉल्ट इवेंट सूचनाएँ",
+      "calendar-notification-sound": "सूचना की ध्वनि",
+      "calendar-notification-volume": "सूचना की ध्वनि का स्तर",
       "calendar-event-editor-color-presets": "रंग प्रीसेट",
       "calendar-event-editor-add-colors-automatically": "नए रंग अपने आप जोड़ें",
       "calendar-event-editor-opacity": "पृष्ठभूमि की अपारदर्शिता",
@@ -515,7 +520,11 @@
       "bottom": "नीचे",
       "left": "बाएँ",
       "right": "दाएँ",
-      "auto": "स्वचालित"
+      "auto": "स्वचालित",
+      "customSound": "कस्टम",
+      "customSoundReplace": "दूसरी फ़ाइल चुनें",
+      "customSoundInvalid": "1 MB से छोटी ऑडियो फ़ाइल चुनें।",
+      "notificationSound": "ध्वनि {{number}}"
     },
     "security": {
       "sameEmail": "यह पहले से आपका ईमेल पता है।",
@@ -687,7 +696,35 @@
     "allDay": "पूरे दिन",
     "completed": "पूर्ण",
     "delete": "इवेंट हटाएँ",
-    "duplicate": "इवेंट की प्रतिलिपि बनाएँ"
+    "duplicate": "इवेंट की प्रतिलिपि बनाएँ",
+    "notifications": "सूचनाएँ"
+  },
+  "notify": {
+    "when": "कब सूचित करें",
+    "amount": "संख्या",
+    "how": "कैसे सूचित करें",
+    "remove": "सूचना हटाएँ",
+    "add": "सूचना जोड़ें",
+    "eventStarting": "इवेंट शुरू हो रहा है",
+    "summary": {
+      "minutes_one": "इवेंट से {{count}} मिनट पहले",
+      "minutes_other": "इवेंट से {{count}} मिनट पहले",
+      "hours_one": "इवेंट से {{count}} घंटा पहले",
+      "hours_other": "इवेंट से {{count}} घंटे पहले",
+      "days_one": "इवेंट से {{count}} दिन पहले",
+      "days_other": "इवेंट से {{count}} दिन पहले"
+    },
+    "whenOptions": {
+      "start": "इवेंट शुरू होने पर",
+      "minutes": "इवेंट से कितने मिनट पहले",
+      "hours": "इवेंट से कितने घंटे पहले",
+      "days": "इवेंट से कितने दिन पहले"
+    },
+    "methodOptions": {
+      "sound": "ध्वनि बजाएँ",
+      "device": "इस डिवाइस पर पुश सूचना भेजें",
+      "all": "सभी डिवाइस पर पुश सूचना भेजें"
+    }
   },
   "details": {
     "title": "इवेंट का विवरण",

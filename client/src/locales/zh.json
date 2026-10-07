@@ -109,7 +109,8 @@
     "unavailable": "推送服务不可用。",
     "permissionDenied": "通知权限请求被拒绝。",
     "error": "出了点问题，请重试。",
-    "errorLater": "出了点问题，请稍后重试。"
+    "errorLater": "出了点问题，请稍后重试。",
+    "invalid": "您的推送订阅已失效，推送通知已关闭。请在设置中重新启用。"
   },
   "agenda": {
     "inProgress": "进行中",
@@ -315,6 +316,7 @@
       "timezones": "时区",
       "behavior": "行为",
       "grid": "网格",
+      "notifications": "通知",
       "events": "日程默认值",
       "event-editor": "日程编辑器",
       "mini-calendar": "迷你日历",
@@ -357,6 +359,9 @@
       "calendar-default-event-name": "日程名称",
       "calendar-default-task-name": "任务名称",
       "calendar-default-event-duration": "日程时长",
+      "calendar-default-event-notifications": "默认日程通知",
+      "calendar-notification-sound": "通知音",
+      "calendar-notification-volume": "通知音量",
       "calendar-event-editor-color-presets": "预设颜色",
       "calendar-event-editor-add-colors-automatically": "自动添加新颜色",
       "calendar-event-editor-opacity": "背景不透明度",
@@ -499,7 +504,11 @@
       "bottom": "底部",
       "left": "左侧",
       "right": "右侧",
-      "auto": "自动"
+      "auto": "自动",
+      "customSound": "自定义",
+      "customSoundReplace": "选择其他文件",
+      "customSoundInvalid": "请选择小于 1 MB 的音频文件。",
+      "notificationSound": "声音 {{number}}"
     },
     "security": {
       "sameEmail": "这已经是您的邮箱地址。",
@@ -671,7 +680,32 @@
     "allDay": "全天",
     "completed": "已完成",
     "delete": "删除日程",
-    "duplicate": "复制日程"
+    "duplicate": "复制日程",
+    "notifications": "通知"
+  },
+  "notify": {
+    "when": "通知时间",
+    "amount": "数量",
+    "how": "通知方式",
+    "remove": "移除通知",
+    "add": "添加通知",
+    "eventStarting": "日程即将开始",
+    "summary": {
+      "minutes_other": "日程开始前 {{count}} 分钟",
+      "hours_other": "日程开始前 {{count}} 小时",
+      "days_other": "日程开始前 {{count}} 天"
+    },
+    "whenOptions": {
+      "start": "日程开始时",
+      "minutes": "日程开始前几分钟",
+      "hours": "日程开始前几小时",
+      "days": "日程开始前几天"
+    },
+    "methodOptions": {
+      "sound": "播放声音",
+      "device": "向此设备发送推送通知",
+      "all": "向所有设备发送推送通知"
+    }
   },
   "details": {
     "title": "日程详情",

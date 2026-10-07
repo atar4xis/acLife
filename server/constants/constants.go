@@ -76,6 +76,13 @@ const (
 
 	MaxSettingsBytes = 128 << 10 // caps the encrypted settings blob
 
+	MaxNotificationEvents = 200              // events per notifications sync request
+	MaxNotificationTimes  = 5000             // notification times per request, and scheduled per user
+	NotificationSyncBody  = 256 << 10        // body limit of a notifications sync
+	NotificationHorizon   = 15 * Day         // furthest fire time a client may schedule
+	NotificationGrace     = 10 * time.Minute // notifications this old are dropped, not sent
+	NotificationTickEvery = 5 * time.Second
+
 	// MySQL TIMESTAMP range + 1 day
 	MinEventTimestampMs = int64(Day / time.Millisecond)
 	MaxEventTimestampMs = 2147483647000 - MinEventTimestampMs

@@ -15,6 +15,8 @@ const resources = Object.fromEntries(
 );
 
 export const FALLBACK_LANGUAGE = "en";
+export const LOCALE_CACHE = "acl-locale";
+export const LOCALE_KEY = "/locale";
 export const languageCodes = Object.keys(resources);
 export const languageNames = Object.fromEntries(
   languageCodes.map((code) => [

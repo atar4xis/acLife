@@ -1,12 +1,14 @@
 import { useApi } from "@/context/ApiContext";
 import YesNoDialog from "./dialog/YesNoDialog";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useState } from "react";
 import { useStorage } from "@/context/StorageContext";
 import { browserSupportsPush } from "@/lib/utils";
 import { toast } from "sonner";
 import { useUser } from "@/context/UserContext";
 import { usePushService } from "@/hooks/usePushService";
 import { useTranslation } from "react-i18next";
+
+const VERIFY_MS = 60 * 60 * 1000;
 
 export default function PushService() {
   const storage = useStorage();
@@ -16,7 +18,7 @@ export default function PushService() {
   const [loading, setLoading] = useState(false);
   const { serverMeta } = useApi();
   const { user } = useUser();
-  const { enable } = usePushService();
+  const { enable, enabled, verify } = usePushService();
 
   // ask to enable push if not yet enabled
   useEffect(() => {
@@ -42,6 +44,20 @@ export default function PushService() {
       if (reg) reg.update();
     });
   }, []);
+
+  const runVerify = useEffectEvent(verify);
+  const online = user?.type === "online";
+  useEffect(() => {
+    if (!enabled || !online) return;
+
+    runVerify();
+    const id = setInterval(runVerify, VERIFY_MS);
+    window.addEventListener("online", runVerify);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("online", runVerify);
+    };
+  }, [enabled, online]);
 
   const handleDismissPushService = useCallback(() => {
     if (!storage) return;

@@ -20,5 +20,6 @@ func Calendar(r *mux.Router) {
 	sr.Use(handlers.MaxBodySizeMiddleware(constants.MaxSaveBodyBytes))
 
 	sr.HandleFunc("/events/save", handlers.SaveCalendarEvents).Methods("POST")
+	sr.Handle("/notifications/sync", handlers.MaxBodySizeMiddleware(constants.NotificationSyncBody)(http.HandlerFunc(handlers.SyncNotifications))).Methods("POST")
 	sr.Handle("/events/sync", handlers.MaxBodySizeMiddleware(constants.MaxSyncBodyBytes)(http.HandlerFunc(handlers.SyncCalendarEvents))).Methods("POST") // fits MaxUserEvents cached events
 }

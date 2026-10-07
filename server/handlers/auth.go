@@ -35,6 +35,7 @@ func StartWorkers() {
 	go cleanupSRPSessions()
 	go cleanupAccountSessions()
 	go cleanupExpiredVerifications()
+	go dispatchNotifications()
 	if constants.Metadata.Registration.SubscriptionRequired {
 		go cleanupUnusedAccounts()
 	}

@@ -7,6 +7,7 @@ export type OccurrenceOverride = {
   description?: string | null; // null clears the series value
   color?: string | null;
   allDay?: boolean;
+  notifications?: EventNotification[];
   startShift?: number; // millis from the nominal start
   endShift?: number; // millis from the nominal end
 };
@@ -24,6 +25,15 @@ export type RepeatInterval = {
   overrides?: Record<string, OccurrenceOverride>; // edited attached instances, by UTC date
 };
 
+export type NotifyWhen = "start" | "minutes" | "hours" | "days";
+export type NotifyMethod = "sound" | "device" | "all";
+
+export type EventNotification = {
+  when: NotifyWhen;
+  amount: number;
+  method: NotifyMethod;
+};
+
 export type CalendarEvent = {
   id: string;
   start: DateTime;
@@ -37,12 +47,14 @@ export type CalendarEvent = {
   completed?: boolean; // completion state for non-recurring tasks
   completedInstances?: string[]; // ISO dates of completed occurrences, for recurring tasks
   deadline?: DateTime;
+  notifications?: EventNotification[];
   timestamp: number;
   _parent?: string; // uuid of parent event
   _continued?: boolean; // events spanning multiple days
   _instanceId?: string; // internal instance id
   _overrideKey?: string; // UTC date of the occurrence, the key of its override
   _resettable?: boolean; // instance with an override that can be removed
+  _remote?: boolean;
 };
 
 export type RejectedEvent = {

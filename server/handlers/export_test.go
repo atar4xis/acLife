@@ -14,6 +14,7 @@ var (
 	FetchPrices                     = fetchPrices
 	DeleteStalePendingRegistrations = deleteStalePendingRegistrations
 	PowDifficulty                   = powDifficulty
+	SendDueNotifications            = sendDueNotifications
 )
 
 func SetSubscriptionUpdater(f func(string, ...string) (string, error)) { updateSubscriptionStatus = f }

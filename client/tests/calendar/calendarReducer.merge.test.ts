@@ -15,7 +15,7 @@ describe("calendarReducer merge", () => {
       deletedIds: [],
     });
 
-    expect(next).toEqual([ev("local", 5), ev("remote", 1)]);
+    expect(next).toEqual([ev("local", 5), { ...ev("remote", 1), _remote: true }]);
   });
 
   it("replaces an event only with a newer version", () => {
@@ -27,7 +27,23 @@ describe("calendarReducer merge", () => {
       deletedIds: [],
     });
 
-    expect(next).toEqual([ev("old", 2), ev("edited", 9)]);
+    expect(next).toEqual([{ ...ev("old", 2), _remote: true }, ev("edited", 9)]);
+  });
+
+  it("clears the remote mark when the event is edited locally", () => {
+    const merged = calendarReducer([], {
+      type: "merge",
+      events: [ev("a", 1)],
+      deletedIds: [],
+    });
+
+    const edited = calendarReducer(merged, {
+      type: "update",
+      id: "a",
+      data: { title: "moved" },
+    });
+
+    expect(edited[0]._remote).toBeUndefined();
   });
 
   it("removes deleted events", () => {

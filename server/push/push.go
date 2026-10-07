@@ -3,16 +3,21 @@ package push
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 
+	"acLife/constants"
 	"acLife/database"
 	"acLife/types"
 	"acLife/utils"
 
 	"github.com/SherClockHolmes/webpush-go"
 )
+
+var httpClient = &http.Client{Timeout: constants.HTTPTimeout}
 
 func send(
 	ctx context.Context,
@@ -35,6 +40,7 @@ func send(
 			},
 		},
 		&webpush.Options{
+			HTTPClient:      httpClient,
 			TTL:             60,
 			VAPIDPublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
 			VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
@@ -96,4 +102,31 @@ func NotificationEvent(title string, body string) types.PushEvent {
 		Title: title,
 		Body:  body,
 	}
+}
+
+func EventStartEvent() types.PushEvent {
+	return types.PushEvent{Type: "event-start"}
+}
+
+// SendToSubscription sends a JSON-serializable payload to one push subscription.
+func SendToSubscription(
+	ctx context.Context,
+	id int64,
+	payload any,
+) {
+	var sub types.PushSubscription
+	err := database.QueryRow(ctx, `
+		SELECT endpoint, p256dh, auth
+		FROM push_subscriptions
+		WHERE id = ?`,
+		id,
+	).Scan(&sub.Endpoint, &sub.P256DH, &sub.Auth)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			utils.LogError("push.SendToSubscription", "Scan", err)
+		}
+		return
+	}
+
+	send(ctx, sub, payload)
 }

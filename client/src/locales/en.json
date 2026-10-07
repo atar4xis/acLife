@@ -117,7 +117,8 @@
     "unavailable": "Push service is not available.",
     "permissionDenied": "Notification permission request denied.",
     "error": "Something went wrong. Please try again.",
-    "errorLater": "Something went wrong. Please try again later."
+    "errorLater": "Something went wrong. Please try again later.",
+    "invalid": "Your push subscription is no longer valid, so push notifications were turned off. Enable them again in settings."
   },
   "agenda": {
     "inProgress": "in progress",
@@ -325,6 +326,7 @@
       "timezones": "Time zones",
       "behavior": "Behavior",
       "grid": "Grid",
+      "notifications": "Notifications",
       "events": "Event defaults",
       "event-editor": "Event editor",
       "mini-calendar": "Mini calendar",
@@ -367,6 +369,9 @@
       "calendar-default-event-name": "Event name",
       "calendar-default-task-name": "Task name",
       "calendar-default-event-duration": "Event duration",
+      "calendar-default-event-notifications": "Default event notifications",
+      "calendar-notification-sound": "Notification sound",
+      "calendar-notification-volume": "Notification volume",
       "calendar-event-editor-color-presets": "Color presets",
       "calendar-event-editor-add-colors-automatically": "Add new colors automatically",
       "calendar-event-editor-opacity": "Background opacity",
@@ -513,7 +518,11 @@
       "bottom": "Bottom",
       "left": "Left",
       "right": "Right",
-      "auto": "Automatic"
+      "auto": "Automatic",
+      "customSound": "Custom",
+      "customSoundReplace": "Choose another file",
+      "customSoundInvalid": "Choose an audio file smaller than 1 MB.",
+      "notificationSound": "Sound {{number}}"
     },
     "security": {
       "sameEmail": "This is already your email address.",
@@ -685,7 +694,35 @@
     "allDay": "All day",
     "completed": "Completed",
     "delete": "Delete event",
-    "duplicate": "Duplicate event"
+    "duplicate": "Duplicate event",
+    "notifications": "Notifications"
+  },
+  "notify": {
+    "when": "When to notify",
+    "amount": "Amount",
+    "how": "How to notify",
+    "remove": "Remove notification",
+    "add": "Add notification",
+    "eventStarting": "Event starting",
+    "summary": {
+      "minutes_one": "{{count}} minute before the event",
+      "minutes_other": "{{count}} minutes before the event",
+      "hours_one": "{{count}} hour before the event",
+      "hours_other": "{{count}} hours before the event",
+      "days_one": "{{count}} day before the event",
+      "days_other": "{{count}} days before the event"
+    },
+    "whenOptions": {
+      "start": "When the event starts",
+      "minutes": "Minutes before the event",
+      "hours": "Hours before the event",
+      "days": "Days before the event"
+    },
+    "methodOptions": {
+      "sound": "Play a sound",
+      "device": "Send a push notification to this device",
+      "all": "Send a push notification to all devices"
+    }
   },
   "details": {
     "title": "Event details",

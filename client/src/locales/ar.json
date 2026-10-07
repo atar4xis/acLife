@@ -130,7 +130,8 @@
     "unavailable": "خدمة الإشعارات الفورية غير متاحة.",
     "permissionDenied": "تم رفض طلب إذن الإشعارات.",
     "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
-    "errorLater": "حدث خطأ ما. يرجى المحاولة لاحقًا."
+    "errorLater": "حدث خطأ ما. يرجى المحاولة لاحقًا.",
+    "invalid": "لم يعد اشتراك الإشعارات الفورية صالحًا، لذا تم إيقاف الإشعارات الفورية. فعّلها مرة أخرى من الإعدادات."
   },
   "agenda": {
     "inProgress": "قيد التنفيذ",
@@ -346,6 +347,7 @@
       "timezones": "المناطق الزمنية",
       "behavior": "السلوك",
       "grid": "الشبكة",
+      "notifications": "الإشعارات",
       "events": "الإعدادات الافتراضية للأحداث",
       "event-editor": "محرر الأحداث",
       "mini-calendar": "التقويم المصغر",
@@ -388,6 +390,9 @@
       "calendar-default-event-name": "اسم الحدث",
       "calendar-default-task-name": "اسم المهمة",
       "calendar-default-event-duration": "مدة الحدث",
+      "calendar-default-event-notifications": "الإشعارات الافتراضية للأحداث",
+      "calendar-notification-sound": "صوت الإشعار",
+      "calendar-notification-volume": "مستوى صوت الإشعارات",
       "calendar-event-editor-color-presets": "الألوان المحددة مسبقًا",
       "calendar-event-editor-add-colors-automatically": "إضافة الألوان الجديدة تلقائيًا",
       "calendar-event-editor-opacity": "عتامة الخلفية",
@@ -550,7 +555,11 @@
       "bottom": "أسفل",
       "left": "يسار",
       "right": "يمين",
-      "auto": "تلقائي"
+      "auto": "تلقائي",
+      "customSound": "مخصص",
+      "customSoundReplace": "اختيار ملف آخر",
+      "customSoundInvalid": "اختر ملفًا صوتيًا أصغر من 1 ميغابايت.",
+      "notificationSound": "الصوت {{number}}"
     },
     "security": {
       "sameEmail": "هذا هو بريدك الإلكتروني الحالي بالفعل.",
@@ -725,7 +734,47 @@
     "allDay": "على مدار اليوم",
     "completed": "مكتملة",
     "delete": "حذف الحدث",
-    "duplicate": "إنشاء نسخة من الحدث"
+    "duplicate": "إنشاء نسخة من الحدث",
+    "notifications": "الإشعارات"
+  },
+  "notify": {
+    "when": "وقت الإشعار",
+    "amount": "العدد",
+    "how": "طريقة الإشعار",
+    "remove": "إزالة الإشعار",
+    "add": "إضافة إشعار",
+    "eventStarting": "الحدث على وشك البدء",
+    "summary": {
+      "minutes_zero": "قبل الحدث بـ {{count}} دقيقة",
+      "minutes_one": "قبل الحدث بـ {{count}} دقيقة",
+      "minutes_two": "قبل الحدث بدقيقتين",
+      "minutes_few": "قبل الحدث بـ {{count}} دقائق",
+      "minutes_many": "قبل الحدث بـ {{count}} دقيقة",
+      "minutes_other": "قبل الحدث بـ {{count}} دقيقة",
+      "hours_zero": "قبل الحدث بـ {{count}} ساعة",
+      "hours_one": "قبل الحدث بـ {{count}} ساعة",
+      "hours_two": "قبل الحدث بساعتين",
+      "hours_few": "قبل الحدث بـ {{count}} ساعات",
+      "hours_many": "قبل الحدث بـ {{count}} ساعة",
+      "hours_other": "قبل الحدث بـ {{count}} ساعة",
+      "days_zero": "قبل الحدث بـ {{count}} يوم",
+      "days_one": "قبل الحدث بـ {{count}} يوم",
+      "days_two": "قبل الحدث بيومين",
+      "days_few": "قبل الحدث بـ {{count}} أيام",
+      "days_many": "قبل الحدث بـ {{count}} يومًا",
+      "days_other": "قبل الحدث بـ {{count}} يوم"
+    },
+    "whenOptions": {
+      "start": "عند بدء الحدث",
+      "minutes": "دقائق قبل الحدث",
+      "hours": "ساعات قبل الحدث",
+      "days": "أيام قبل الحدث"
+    },
+    "methodOptions": {
+      "sound": "تشغيل صوت",
+      "device": "إرسال إشعار فوري إلى هذا الجهاز",
+      "all": "إرسال إشعار فوري إلى جميع الأجهزة"
+    }
   },
   "details": {
     "title": "تفاصيل الحدث",

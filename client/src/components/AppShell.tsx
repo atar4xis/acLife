@@ -16,6 +16,7 @@ import SubscriptionDialog from "./subscription/SubscriptionDialog";
 import { toast } from "sonner";
 import PushService from "./PushService";
 import StreamService from "./StreamService";
+import NotificationService from "./NotificationService";
 import AutoLockService from "./AutoLockService";
 import SettingsDialog from "./settings/SettingsDialog";
 import TimezoneChangeDialog from "./calendar/TimezoneChangeDialog";
@@ -190,6 +191,7 @@ export default function AppShell() {
       )}
       <PushService />
       <StreamService />
+      <NotificationService />
       <AutoLockService />
       <TimezoneChangeDialog />
       {calEvents !== null && (

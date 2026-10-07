@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyLanguage } from "../../src/i18n";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -37,8 +37,48 @@ const renderLoadedCalendarPage = async () => {
   return result;
 };
 
+vi.mock("../../src/context/StorageContext.tsx", () => ({
+  useStorage: () => ({ get: () => "{}" }),
+}));
+
+const mocks = vi.hoisted(() => ({ toastError: vi.fn() }));
+
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: mocks.toastError },
+}));
+
+const stubCache = () => {
+  const put = vi.fn();
+  vi.stubGlobal("caches", {
+    open: async () => ({ put, match: async () => new Response("x") }),
+  });
+  URL.createObjectURL = () => "blob:custom";
+  URL.revokeObjectURL = () => {};
+  return put;
+};
+
+const stubAudio = () => {
+  const players: { src: string; volume: number }[] = [];
+  vi.stubGlobal("Audio", function (src: string) {
+    const player = {
+      src,
+      volume: 1,
+      pause: () => {},
+      play: () => Promise.resolve(),
+    };
+    players.push(player);
+    return player;
+  });
+  return players;
+};
+
 describe("CalendarPage", () => {
-  afterEach(() => applyLanguage("en"));
+  afterEach(() => {
+    applyLanguage("en");
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    mocks.toastError.mockReset();
+  });
 
   beforeEach(() => {
     // radix Select relies on pointer capture, which jsdom doesn't implement
@@ -97,6 +137,122 @@ describe("CalendarPage", () => {
     await user.click(options[options.length - 1]);
 
     expect(await screen.findByText("Day")).toBeInTheDocument();
+  });
+
+  it("saves and previews the notification sound when it changes", async () => {
+    const user = userEvent.setup();
+    const players = stubAudio();
+    await renderLoadedCalendarPage();
+
+    await user.click(
+      screen.getByRole("combobox", { name: "Notification sound" }),
+    );
+    await user.click(await screen.findByRole("option", { name: "Sound 3" }));
+
+    expect(readSettings().notificationSound).toBe(3);
+    await waitFor(() => expect(players).toHaveLength(1));
+    expect(players).toEqual([
+      expect.objectContaining({ src: `${import.meta.env.BASE_URL}sounds/notification_3.mp3`, volume: 0.8 }),
+    ]);
+  });
+
+  it("saves and previews the notification volume when the slider is released", async () => {
+    const user = userEvent.setup();
+    const players = stubAudio();
+    await renderLoadedCalendarPage();
+
+    screen.getByRole("slider", { name: "Notification volume" }).focus();
+    await user.keyboard("[ArrowLeft]");
+
+    expect(readSettings().notificationVolume).toBe(79);
+    await waitFor(() => expect(players).toHaveLength(1));
+    expect(players).toEqual([
+      expect.objectContaining({ src: `${import.meta.env.BASE_URL}sounds/notification_1.mp3`, volume: 0.79 }),
+    ]);
+  });
+
+  describe("custom notification sound", () => {
+    const chooseCustom = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(
+        screen.getByRole("combobox", { name: "Notification sound" }),
+      );
+      await user.click(await screen.findByRole("option", { name: "Custom" }));
+    };
+
+    it("opens the file picker instead of changing the setting", async () => {
+      const user = userEvent.setup();
+      const click = vi.spyOn(HTMLInputElement.prototype, "click");
+      await renderLoadedCalendarPage();
+
+      await chooseCustom(user);
+
+      expect(click).toHaveBeenCalledTimes(1);
+      expect(
+        screen.getByRole("combobox", { name: "Notification sound" }),
+      ).toHaveTextContent("Sound 1");
+    });
+
+    it("keeps an uploaded file as the sound and previews it", async () => {
+      const user = userEvent.setup();
+      const players = stubAudio();
+      const put = stubCache();
+      await renderLoadedCalendarPage();
+      const file = new File(["x"], "ding.mp3", { type: "audio/mpeg" });
+
+      await user.upload(screen.getByTestId("custom-sound-input"), file);
+
+      await waitFor(() => expect(players).toHaveLength(1));
+      expect(put).toHaveBeenCalledWith("/custom", expect.any(Response));
+      expect(readSettings().notificationSound).toBe(0);
+      expect(players[0].src).toBe("blob:custom");
+      expect(
+        screen.getByRole("button", { name: "Choose another file" }),
+      ).toBeInTheDocument();
+    });
+
+    it.each([
+      ["a file that is not audio", new File(["x"], "a.txt", { type: "text/plain" })],
+      [
+        "an audio file over 1 MB",
+        new File([new Uint8Array((1 << 20) + 1)], "big.mp3", {
+          type: "audio/mpeg",
+        }),
+      ],
+    ])("rejects %s", async (_, file) => {
+      const user = userEvent.setup({ applyAccept: false });
+      const put = stubCache();
+      await renderLoadedCalendarPage();
+
+      await user.upload(screen.getByTestId("custom-sound-input"), file);
+
+      expect(mocks.toastError).toHaveBeenCalledWith(
+        "Choose an audio file smaller than 1 MB.",
+      );
+      expect(put).not.toHaveBeenCalledWith("/custom", expect.anything());
+      expect(
+        screen.getByRole("combobox", { name: "Notification sound" }),
+      ).toHaveTextContent("Sound 1");
+    });
+  });
+
+  it("saves default notifications for new events", async () => {
+    const user = userEvent.setup();
+    await renderLoadedCalendarPage();
+
+    await user.click(screen.getByRole("button", { name: "Add notification" }));
+    await user.click(screen.getByRole("combobox", { name: "How to notify" }));
+    await user.click(
+      await screen.findByRole("option", {
+        name: "Send a push notification to this device",
+      }),
+    );
+
+    expect(readSettings().defaultEventNotifications).toEqual([
+      { when: "start", amount: 10, method: "device" },
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "Reset to default" }));
+    expect(readSettings().defaultEventNotifications).toEqual([]);
   });
 
   it("changes what a click and a double click do", async () => {
@@ -167,8 +323,7 @@ describe("CalendarPage", () => {
     const user = userEvent.setup();
     renderCalendarPage();
 
-    const sliders = screen.getAllByRole("slider");
-    sliders[2].focus();
+    screen.getByRole("slider", { name: "Event duration" }).focus();
     await user.keyboard("[ArrowRight]");
 
     expect(screen.getByText("61 min")).toBeInTheDocument();

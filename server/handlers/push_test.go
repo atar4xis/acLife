@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"acLife/database"
 	"acLife/internal/testutil"
 )
 
@@ -51,5 +52,47 @@ func TestPushSubscribeHonoursTheConfiguredHosts(t *testing.T) {
 	}
 	if got := subscribePush(t, "https://fcm.googleapis.com/x"); got != http.StatusBadRequest {
 		t.Fatalf("default host after override: %d", got)
+	}
+}
+
+func pushKnown(t *testing.T, c *testutil.Client, endpoint string) bool {
+	t.Helper()
+
+	status, reply := testutil.Call[map[string]bool](c, "POST", "/user/push/check", map[string]string{"endpoint": endpoint})
+	if status != http.StatusOK {
+		t.Fatalf("got %d", status)
+	}
+	return reply.Data["known"]
+}
+
+func TestPushCheckReportsOnlyTheCallersOwnSubscriptions(t *testing.T) {
+	testutil.RequireDB(t)
+
+	owner := testutil.NewUser(t)
+	other := testutil.NewUser(t)
+	insertSubscription(t, owner.UUID, "https://push.example/mine")
+
+	if !pushKnown(t, testutil.NewClient(t).As(owner), "https://push.example/mine") {
+		t.Fatal("own subscription reported as gone")
+	}
+	if pushKnown(t, testutil.NewClient(t).As(owner), "https://push.example/other") {
+		t.Fatal("unknown endpoint reported as known")
+	}
+	if pushKnown(t, testutil.NewClient(t).As(other), "https://push.example/mine") {
+		t.Fatal("another user's subscription reported as known")
+	}
+}
+
+func TestPushCheckNoLongerKnowsAnExpiredSubscription(t *testing.T) {
+	testutil.RequireDB(t)
+
+	user := testutil.NewUser(t)
+	insertSubscription(t, user.UUID, "https://push.example/mine")
+	if _, err := database.DB.Exec("DELETE FROM push_subscriptions WHERE endpoint = ?", "https://push.example/mine"); err != nil {
+		t.Fatal(err)
+	}
+
+	if pushKnown(t, testutil.NewClient(t).As(user), "https://push.example/mine") {
+		t.Fatal("deleted subscription reported as known")
 	}
 }

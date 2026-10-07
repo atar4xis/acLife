@@ -29,6 +29,21 @@ vi.mock("../src/context/ApiContext.tsx", () => {
   };
 });
 
+vi.mock("../src/context/StorageContext.tsx", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("../src/context/StorageContext.tsx")>();
+  return {
+    ...original,
+    useStorage: () => {
+      try {
+        return original.useStorage();
+      } catch {
+        return { ready: true, get: () => null, set: () => {} };
+      }
+    },
+  };
+});
+
 Element.prototype.scrollTo = function (this: Element, options) {
   if (typeof options === "object")
     this.scrollTop = options.top ?? this.scrollTop;

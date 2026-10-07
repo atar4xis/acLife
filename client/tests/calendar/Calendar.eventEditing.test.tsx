@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 import { applyLanguage } from "../../src/i18n";
+import { seedSettings } from "../settingsStorage.ts";
 import {
   FIXED_NOW,
   buildPlainEvent,
@@ -43,6 +44,91 @@ describe("Calendar", () => {
     } finally {
       applyLanguage("en");
     }
+  });
+
+  it("gives new events the default notifications", async () => {
+    const saveEvents = vi.fn();
+    const notifications = [{ when: "hours", amount: 2, method: "all" }];
+    seedSettings({ defaultEventNotifications: notifications });
+
+    renderCalendar({ mode: "week", saveEvents });
+    const pointer = {
+      button: 0,
+      pointerId: 7,
+      pointerType: "mouse",
+      clientX: dayCenterX(4),
+      clientY: timeToClientY(11, 27),
+    };
+    fireEvent.pointerDown(getDayCell(4), pointer);
+    dispatchWindowPointer("pointerup", pointer);
+    await screen.findByText("new event");
+    await advanceSave();
+
+    expect(getLastSavedEvents(saveEvents)[0].notifications).toEqual(
+      notifications,
+    );
+  });
+
+  it("creates new events without notifications by default", async () => {
+    const saveEvents = vi.fn();
+
+    renderCalendar({ mode: "week", saveEvents });
+    const pointer = {
+      button: 0,
+      pointerId: 7,
+      pointerType: "mouse",
+      clientX: dayCenterX(4),
+      clientY: timeToClientY(11, 27),
+    };
+    fireEvent.pointerDown(getDayCell(4), pointer);
+    dispatchWindowPointer("pointerup", pointer);
+    await screen.findByText("new event");
+    await advanceSave();
+
+    expect(getLastSavedEvents(saveEvents)[0].notifications).toBeUndefined();
+  });
+
+  it("saves a change that only touches notifications", async () => {
+    const saveEvents = vi.fn();
+    const { user } = renderCalendar({
+      events: [{ ...buildPlainEvent(), color: "#2563eb", isTask: false }],
+      saveEvents,
+    });
+    await openEventEditor(user, "Planning");
+
+    await user.click(screen.getByRole("button", { name: "Add notification" }));
+    await user.click(screen.getByRole("combobox", { name: "When to notify" }));
+    await user.click(
+      await screen.findByRole("option", { name: "Minutes before the event" }),
+    );
+    await user.keyboard("{Control>}s{/Control}");
+    await advanceSave();
+
+    expect(getLastSavedEvents(saveEvents)[0].notifications).toEqual([
+      { when: "minutes", amount: 10, method: "sound" },
+    ]);
+  });
+
+  it("removes notifications from an event", async () => {
+    const saveEvents = vi.fn();
+    const { user } = renderCalendar({
+      events: [
+        {
+          ...buildPlainEvent(),
+          notifications: [{ when: "start", amount: 10, method: "sound" }],
+        },
+      ],
+      saveEvents,
+    });
+    await openEventEditor(user, "Planning");
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove notification" }),
+    );
+    await user.keyboard("{Control>}s{/Control}");
+    await advanceSave();
+
+    expect(getLastSavedEvents(saveEvents)[0].notifications).toBeUndefined();
   });
 
   it("creates new event on correct day and time", async () => {

@@ -110,6 +110,7 @@ import {
   getDayEventStyles,
   getEventMap,
   getEventPixelPosition,
+  sameNotifications,
 } from "@/lib/calendar/event";
 import { weekLabel } from "@/lib/calendar/buckets";
 import { useUser } from "@/context/UserContext";
@@ -172,6 +173,7 @@ const eventUnchanged = (a: CalendarEvent, b: CalendarEvent) =>
   a.isTask === b.isTask &&
   a.allDay === b.allDay &&
   a.completed === b.completed &&
+  sameNotifications(a.notifications, b.notifications) &&
   repeatEqual(a.repeat, b.repeat);
 
 const serializeEventForDiff = (ev: CalendarEvent) => {
@@ -302,6 +304,7 @@ export default memo(function AppCalendar({
     snapMinutes: s.snapMinutes,
     lineOpacity: s.lineOpacity,
     defaultEventName: s.defaultEventName,
+    defaultEventNotifications: s.defaultEventNotifications,
     defaultTaskName: s.defaultTaskName,
     defaultEventDuration: s.defaultEventDuration,
     resyncIntervalMinutes: s.resyncIntervalMinutes,
@@ -1762,6 +1765,9 @@ export default memo(function AppCalendar({
         timestamp: Date.now(),
         isTask,
         allDay: allDayEnd ? true : undefined,
+        notifications: settings.defaultEventNotifications.length
+          ? settings.defaultEventNotifications
+          : undefined,
       } as CalendarEvent;
 
       pushHistory();
@@ -1774,6 +1780,7 @@ export default memo(function AppCalendar({
       settings.defaultEventName,
       settings.defaultTaskName,
       settings.defaultEventDuration,
+      settings.defaultEventNotifications,
       settings.eventColorPresets,
       dispatch,
       updateChange,

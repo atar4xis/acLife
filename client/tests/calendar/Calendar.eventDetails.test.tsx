@@ -50,6 +50,40 @@ describe("event details", () => {
     expect(screen.queryByRole("heading", { name: /edit event/i })).toBeNull();
   });
 
+  it("lists the notifications in plain text without the method", async () => {
+    renderCalendar({
+      events: [
+        buildEvent({
+          notifications: [
+            { when: "start", amount: 10, method: "sound" },
+            { when: "minutes", amount: 5, method: "device" },
+            { when: "hours", amount: 1, method: "all" },
+            { when: "days", amount: 2, method: "sound" },
+          ],
+        }),
+      ],
+    });
+
+    await openDetails("Planning");
+
+    const dialog = detailsDialog()!;
+    expect(dialog).toHaveTextContent("When the event starts");
+    expect(dialog).toHaveTextContent("5 minutes before the event");
+    expect(dialog).toHaveTextContent("1 hour before the event");
+    expect(dialog).toHaveTextContent("2 days before the event");
+    expect(dialog).not.toHaveTextContent(/sound|push/i);
+    expect(dialog.querySelectorAll("svg.lucide-bell")).toHaveLength(1);
+  });
+
+  it("shows no notification rows for an event without any", async () => {
+    renderCalendar({ events: [buildEvent()] });
+
+    await openDetails("Planning");
+
+    expect(detailsDialog()).not.toHaveTextContent("before the event");
+    expect(detailsDialog()).not.toHaveTextContent("When the event starts");
+  });
+
   it("shows after a touch tap", async () => {
     renderCalendar({ events: [buildEvent()] });
 

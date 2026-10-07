@@ -7,7 +7,11 @@ import type {
   RepeatInterval,
 } from "@/types/calendar/Event";
 import type { CalendarAction } from "@/types/calendar/Action";
-import { eventKey, makeOccurrence } from "@/lib/calendar/event";
+import {
+  eventKey,
+  makeOccurrence,
+  sameNotifications,
+} from "@/lib/calendar/event";
 import {
   nominalOnDate,
   occurrences,
@@ -486,6 +490,9 @@ export function detachSingleOccurrence(
     }
     if (!!event.allDay !== !!originalParent.allDay) {
       override.allDay = !!event.allDay;
+    }
+    if (!sameNotifications(event.notifications, originalParent.notifications)) {
+      override.notifications = event.notifications ?? [];
     }
 
     const untouched = isEmptyOverride(override);
