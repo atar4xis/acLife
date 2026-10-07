@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 
 export default function SettingsSelect({
-  triggerClassName = "w-full @md:w-[220px]",
+  triggerClassName = "w-full @md:w-55",
   labelledBy,
   placeholder,
   footer,

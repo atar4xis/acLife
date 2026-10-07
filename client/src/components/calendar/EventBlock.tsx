@@ -216,7 +216,7 @@ export default memo(
 
     const blockRef = useRef<HTMLDivElement>(null);
     const padding =
-      event.allDay || style.height > lineHeight * 3 ? "p-1" : "p-[1px]"; // TODO: maybe make it smarter in the future
+      event.allDay || style.height > lineHeight * 3 ? "p-1" : "p-px"; // TODO: maybe make it smarter in the future
     const lineClamp = useMemo(
       () => Math.ceil((popOut ? popOutHeight : style.height) / lineHeight) - 2,
       [style.height, popOut, popOutHeight],
@@ -409,7 +409,7 @@ export default memo(
                   "scale-[1.03] shadow-lg ring-2 ring-white/80 z-30 transition-transform",
                 popOut && "z-20 shadow-lg",
                 keyboardFocused &&
-                  "group-data-[keyboard-mode]/grid:outline-2 group-data-[keyboard-mode]/grid:-outline-offset-2 group-data-[keyboard-mode]/grid:outline-foreground",
+                  "group-data-keyboard-mode/grid:outline-2 group-data-keyboard-mode/grid:-outline-offset-2 group-data-keyboard-mode/grid:outline-foreground",
                 event.isTask && event.completed && "opacity-50",
               )}
               role={event.isTask ? "group" : "button"}

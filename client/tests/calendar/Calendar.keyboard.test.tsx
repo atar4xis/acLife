@@ -156,7 +156,7 @@ describe("Calendar grid keyboard: focus model", () => {
 
     expect(slot().className).toContain("opacity-0");
     expect(slot().className).toContain(
-      "group-data-[keyboard-mode]/grid:opacity-100",
+      "group-data-keyboard-mode/grid:opacity-100",
     );
     expect(grid().className).toContain("group/grid");
     expect(grid().className).toContain("outline-none");
@@ -860,17 +860,17 @@ describe("Calendar grid keyboard: events", () => {
     const overlap = await getEventBlock("Overlap");
 
     expect(planning.className).toContain(
-      "group-data-[keyboard-mode]/grid:outline-2",
+      "group-data-keyboard-mode/grid:outline-2",
     );
     expect(overlap.className).not.toContain(
-      "group-data-[keyboard-mode]/grid:outline-2",
+      "group-data-keyboard-mode/grid:outline-2",
     );
     await user.keyboard("{Tab}");
     expect(planning.className).not.toContain(
-      "group-data-[keyboard-mode]/grid:outline-2",
+      "group-data-keyboard-mode/grid:outline-2",
     );
     expect(overlap.className).toContain(
-      "group-data-[keyboard-mode]/grid:outline-2",
+      "group-data-keyboard-mode/grid:outline-2",
     );
   });
 
@@ -1123,7 +1123,7 @@ describe("Calendar grid keyboard: pointer users", () => {
     expect(grid()).not.toHaveAttribute("aria-activedescendant");
     const block = await getEventBlock("Planning");
     expect(block.className).not.toContain(
-      "group-data-[keyboard-mode]/grid:outline-2",
+      "group-data-keyboard-mode/grid:outline-2",
     );
   });
 
@@ -1269,7 +1269,7 @@ describe("Calendar grid keyboard: more coverage", () => {
     const blocks = document.querySelectorAll('[data-event-key="trip"]');
     expect(blocks).toHaveLength(2);
     const focused = [...blocks].filter((b) =>
-      b.className.includes("group-data-[keyboard-mode]/grid:outline-2"),
+      b.className.includes("group-data-keyboard-mode/grid:outline-2"),
     );
     expect(focused).toHaveLength(1);
     expect(focused[0].id).toBe(activeId());
@@ -1454,7 +1454,7 @@ describe("Calendar grid keyboard: keyboard mode", () => {
 
     expect(inKeyboardMode()).toBe(true);
     expect(slot().className).toContain(
-      "group-data-[keyboard-mode]/grid:opacity-100",
+      "group-data-keyboard-mode/grid:opacity-100",
     );
     expect(slot().className).toContain("border-2");
     expect(slot().className).toContain("bg-foreground/15");

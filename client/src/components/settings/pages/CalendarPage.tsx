@@ -243,7 +243,7 @@ const DefaultEventNameField = memo(function DefaultEventNameField() {
         value={resolveDefaultName("defaultEventName", field.value)}
         onChange={(e) => field.onChange(e.target.value)}
         onBlur={field.flush}
-        className="w-[220px]"
+        className="w-55"
       />
     </Field>
   );
@@ -264,7 +264,7 @@ const DefaultTaskNameField = memo(function DefaultTaskNameField() {
         value={resolveDefaultName("defaultTaskName", field.value)}
         onChange={(e) => field.onChange(e.target.value)}
         onBlur={field.flush}
-        className="w-[220px]"
+        className="w-55"
       />
     </Field>
   );

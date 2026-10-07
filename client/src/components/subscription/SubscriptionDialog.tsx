@@ -102,7 +102,7 @@ export default function SubscriptionDialog() {
 
   return (
     <Dialog open>
-      <DialogContent showCloseButton={false} className="w-auto !max-w-[90vw]">
+      <DialogContent showCloseButton={false} className="w-auto max-w-[90vw]!">
         <DialogHeader>
           <DialogTitle className="text-center">
             {t("subscription.title")}

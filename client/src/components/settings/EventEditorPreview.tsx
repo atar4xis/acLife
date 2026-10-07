@@ -49,7 +49,7 @@ export default memo(function EventEditorPreview({
       className="pointer-events-none select-none relative isolate flex justify-center py-1 overflow-hidden"
       style={{ "--line-opacity": lineOpacity } as CSSProperties}
     >
-      <div className="absolute left-1/2 top-[calc(50%-120px)] -translate-x-1/2 grid auto-rows-[80px] w-64 border-s border-t border-[color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)]">
+      <div className="absolute left-1/2 top-[calc(50%-120px)] -translate-x-1/2 grid auto-rows-20 w-64 border-s border-t border-[color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)]">
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}

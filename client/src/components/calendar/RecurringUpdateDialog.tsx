@@ -97,7 +97,7 @@ export default memo(function RecurringUpdateDialog({
             </Label>
           </div>
         )}
-        <AlertDialogFooter className="!flex-col mt-5">
+        <AlertDialogFooter className="flex-col! mt-5">
           <AlertDialogAction
             onClick={() => {
               onSubmit(option, keepChanges);

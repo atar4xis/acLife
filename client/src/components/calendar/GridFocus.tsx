@@ -77,7 +77,7 @@ export const SlotIndicator = memo(function SlotIndicator({
         eventsAtSlot(events, date, focus.minutes, snapMins).map((e) => e.title),
       )}
       className={cn(
-        "pointer-events-none absolute left-0 right-0 z-20 border-2 border-foreground bg-foreground/15 shadow-[0_0_0_1px_var(--background)] opacity-0 group-data-[keyboard-mode]/grid:opacity-100",
+        "pointer-events-none absolute left-0 right-0 z-20 border-2 border-foreground bg-foreground/15 shadow-[0_0_0_1px_var(--background)] opacity-0 group-data-keyboard-mode/grid:opacity-100",
         allDay && "inset-y-0",
       )}
       style={

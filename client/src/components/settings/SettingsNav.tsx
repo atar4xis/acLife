@@ -31,7 +31,7 @@ export default function SettingsNav({
   return (
     <div className="flex h-full flex-col">
       <div className="relative p-3">
-        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 start-6 size-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 inset-s-6 size-4 -translate-y-1/2" />
         <Input
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}

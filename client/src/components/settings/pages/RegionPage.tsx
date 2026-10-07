@@ -129,7 +129,7 @@ const TimezonesField = memo(function TimezonesField() {
           <SyncToggle settingKey="defaultTimezone" />
         </div>
         <SearchableSelect
-          className="w-full shrink-0 @md/field-group:w-[250px]!"
+          className="w-full shrink-0 @md/field-group:w-62.5!"
           labelledBy="default-timezone-label"
           options={allOptions}
           value={defaultTimezone}
@@ -151,7 +151,7 @@ const TimezonesField = memo(function TimezonesField() {
           </FieldDescription>
         </FieldContent>
         <SearchableSelect
-          className="w-full shrink-0 @md/field-group:w-[250px]!"
+          className="w-full shrink-0 @md/field-group:w-62.5!"
           labelledBy="additional-timezones-label"
           options={allOptions}
           value=""
@@ -316,7 +316,7 @@ const DateFormatField = memo(function DateFormatField({
           placeholder={defaultPattern}
           onChange={(e) => field.onChange(e.target.value)}
           onBlur={field.flush}
-          className="w-full @md:w-[220px]"
+          className="w-full @md:w-55"
         />
         <span className="text-muted-foreground text-xs">
           {DateTime.now().toFormat(pattern)}

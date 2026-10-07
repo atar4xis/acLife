@@ -3093,7 +3093,7 @@ export default memo(function AppCalendar({
                     <button
                       type="button"
                       aria-label={t("calendar.clearSearch")}
-                      className="text-muted-foreground hover:text-foreground absolute end-2"
+                      className="text-muted-foreground hover:text-foreground absolute inset-e-2"
                       onClick={() => {
                         setSearchQuery("");
                         searchInputRef.current?.focus();
@@ -3131,7 +3131,7 @@ export default memo(function AppCalendar({
                   <button
                     type="button"
                     aria-label={t("calendar.clearSearch")}
-                    className="text-muted-foreground hover:text-foreground absolute end-2"
+                    className="text-muted-foreground hover:text-foreground absolute inset-e-2"
                     onClick={() => {
                       setSearchQuery("");
                       searchInputRef.current?.focus();

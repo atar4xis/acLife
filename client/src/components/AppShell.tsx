@@ -187,7 +187,7 @@ export default function AppShell() {
         </div>
       )}
       {saving && (
-        <Spinner className="fixed bottom-5 end-5 z-30 size-8 in-[[data-has-undo-buttons]]:end-32" />
+        <Spinner className="fixed bottom-5 inset-e-5 z-30 size-8 in-data-has-undo-buttons:inset-e-32" />
       )}
       <PushService />
       <StreamService />

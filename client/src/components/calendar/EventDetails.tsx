@@ -141,7 +141,7 @@ export default function EventDetails({
             className="size-4 shrink-0 rounded-full border"
             style={{ backgroundColor: event.color ?? EVENT_COLOR_FALLBACK }}
           />
-          <span dir="auto" className="break-words min-w-0">
+          <span dir="auto" className="wrap-break-word min-w-0">
             {event.title}
           </span>
         </div>
@@ -174,7 +174,10 @@ export default function EventDetails({
         {event.description && (
           <div className="flex items-start gap-2 text-sm">
             <AlignLeftIcon className="size-4 shrink-0 mt-0.5" />
-            <p dir="auto" className="whitespace-pre-wrap break-words min-w-0">
+            <p
+              dir="auto"
+              className="whitespace-pre-wrap wrap-break-word min-w-0"
+            >
               {event.description}
             </p>
           </div>

@@ -347,7 +347,7 @@ function EventBars({
           );
         })}
         {overflow > 0 && (
-          <span className="absolute inset-x-0 top-full mt-[2px] text-center text-[length:20cqw]! leading-none">
+          <span className="absolute inset-x-0 top-full mt-0.5 text-center text-[20cqw]! leading-none">
             +{overflow}
           </span>
         )}

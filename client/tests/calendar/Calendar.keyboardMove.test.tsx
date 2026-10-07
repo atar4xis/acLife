@@ -452,7 +452,7 @@ describe("keyboard move: confirming", () => {
       "Moved Planning to Thursday 19 March, 10 to 11 AM",
     );
     expect(moved.className).toContain(
-      "group-data-[keyboard-mode]/grid:outline-2",
+      "group-data-keyboard-mode/grid:outline-2",
     );
   });
 

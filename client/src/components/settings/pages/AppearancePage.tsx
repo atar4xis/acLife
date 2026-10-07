@@ -372,7 +372,7 @@ const PresetsList = memo(function PresetsList() {
                         autoFocus
                         aria-label={t("settings.themes.rename")}
                         value={renameDraft}
-                        className="h-6 w-[200px] px-1.5 py-0 text-sm"
+                        className="h-6 w-50 px-1.5 py-0 text-sm"
                         onChange={(e) => setRenameDraft(e.target.value)}
                         onBlur={() => {
                           if (skipRenameCommit.current) {
@@ -622,7 +622,7 @@ const FontFamilyField = memo(function FontFamilyField() {
           onChange={(e) => field.onChange(e.target.value)}
           onBlur={field.flush}
           placeholder={t("settings.font.systemDefault")}
-          className="w-[220px]"
+          className="w-55"
         />
       </Field>
     </div>

@@ -136,7 +136,7 @@ describe("Event editor focus: opened from the keyboard", () => {
 
     const block = await getEventBlock("Planning");
     expect(block.className).toContain(
-      "group-data-[keyboard-mode]/grid:outline-2",
+      "group-data-keyboard-mode/grid:outline-2",
     );
   });
 
