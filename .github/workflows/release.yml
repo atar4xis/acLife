@@ -55,7 +55,7 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm exec tauri build
+        run: pnpm exec tauri build --bundles nsis
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -65,8 +65,6 @@ jobs:
             client/src-tauri/target/release/aclife-desktop.exe
             client/src-tauri/target/release/bundle/nsis/*-setup.exe
             client/src-tauri/target/release/bundle/nsis/*-setup.exe.sig
-            client/src-tauri/target/release/bundle/msi/*.msi
-            client/src-tauri/target/release/bundle/msi/*.msi.sig
           if-no-files-found: error
 
   build-and-sign:
@@ -153,8 +151,7 @@ jobs:
             "linux-x86_64-appimage:target/release/bundle/appimage/*.AppImage" \
             "linux-x86_64-deb:target/release/bundle/deb/*.deb" \
             "linux-x86_64-rpm:target/release/bundle/rpm/*.rpm" \
-            "windows-x86_64-nsis:target/release/bundle/nsis/*-setup.exe" \
-            "windows-x86_64-msi:target/release/bundle/msi/*.msi"; do
+            "windows-x86_64-nsis:target/release/bundle/nsis/*-setup.exe"; do
             file=$(ls ${entry#*:})
             platforms=$(jq \
               --arg key "${entry%%:*}" \
@@ -225,7 +222,6 @@ jobs:
           sign "target/release/aclife-desktop"
           sign "target/release/aclife-desktop.exe"
           sign_glob "target/release/bundle/nsis/*-setup.exe"
-          sign_glob "target/release/bundle/msi/*.msi"
           sign_glob "target/release/bundle/deb/*.deb"
           sign_glob "target/release/bundle/rpm/*.rpm"
           sign_glob "target/release/bundle/appimage/*.AppImage"
@@ -239,7 +235,6 @@ jobs:
             "target/release/aclife-desktop"
             "target/release/aclife-desktop.exe"
             target/release/bundle/nsis/*-setup.exe
-            target/release/bundle/msi/*.msi
             target/release/bundle/deb/*.deb
             target/release/bundle/rpm/*.rpm
             target/release/bundle/appimage/*.AppImage
@@ -273,7 +268,6 @@ jobs:
           verify "target/release/aclife-desktop"
           verify "target/release/aclife-desktop.exe"
           for f in target/release/bundle/nsis/*-setup.exe \
-                   target/release/bundle/msi/*.msi \
                    target/release/bundle/deb/*.deb \
                    target/release/bundle/rpm/*.rpm \
                    target/release/bundle/appimage/*.AppImage; do
@@ -301,8 +295,6 @@ jobs:
             client/src-tauri/target/release/aclife-desktop.exe.asc
             client/src-tauri/target/release/bundle/nsis/*-setup.exe
             client/src-tauri/target/release/bundle/nsis/*-setup.exe.asc
-            client/src-tauri/target/release/bundle/msi/*.msi
-            client/src-tauri/target/release/bundle/msi/*.msi.asc
             client/src-tauri/target/release/bundle/deb/*.deb
             client/src-tauri/target/release/bundle/deb/*.deb.asc
             client/src-tauri/target/release/bundle/rpm/*.rpm
@@ -351,8 +343,6 @@ jobs:
             client/src-tauri/target/release/aclife-desktop.exe.asc
             client/src-tauri/target/release/bundle/nsis/*-setup.exe
             client/src-tauri/target/release/bundle/nsis/*-setup.exe.asc
-            client/src-tauri/target/release/bundle/msi/*.msi
-            client/src-tauri/target/release/bundle/msi/*.msi.asc
             client/src-tauri/target/release/bundle/deb/*.deb
             client/src-tauri/target/release/bundle/deb/*.deb.asc
             client/src-tauri/target/release/bundle/rpm/*.rpm
