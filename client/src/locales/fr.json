@@ -346,6 +346,7 @@
       "subscription-manage": "Gérer l'abonnement",
       "account-email": "Adresse e-mail",
       "account-password": "Mot de passe",
+      "account-usage": "Utilisation",
       "security-unlock-method": "Méthode de déchiffrement des données",
       "security-auto-lock": "Verrouillage automatique",
       "calendar-week-start": "Début de la semaine",
@@ -551,6 +552,10 @@
         "disabled": "Désactivé",
         "focus": "Quand l'application perd le focus"
       }
+    },
+    "usage": {
+      "summary": "{{used}} utilisés sur {{limit}}",
+      "loadFailed": "Impossible de charger les données d’utilisation."
     },
     "push": {
       "enabling": "Activation du service push...",
@@ -808,8 +813,8 @@
     "cannot_end_current_session": "Impossible de terminer la session actuelle.",
     "bad_request": "Requête incorrecte.",
     "internal_error": "Une erreur inattendue s'est produite.",
-    "event_limit_reached": "Limite d'événements atteinte.",
     "storage_limit_reached": "Limite de stockage atteinte.",
+    "push_subscription_limit_reached": "Limite d'appareils avec notifications push atteinte. Désactivez les notifications push sur un autre appareil, puis réessayez.",
     "already_subscribed": "Vous avez déjà un abonnement.",
     "registration_busy": "Les inscriptions sont très sollicitées en ce moment. Veuillez réessayer plus tard.",
     "too_many_attempts_seconds_one": "Trop de tentatives. Réessayez dans {{count}} seconde.",

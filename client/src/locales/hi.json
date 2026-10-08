@@ -352,6 +352,7 @@
       "subscription-manage": "सदस्यता प्रबंधित करें",
       "account-email": "ईमेल पता",
       "account-password": "पासवर्ड",
+      "account-usage": "उपयोग",
       "security-unlock-method": "डेटा डिक्रिप्शन विधि",
       "security-auto-lock": "ऑटो-लॉक",
       "calendar-week-start": "सप्ताह शुरू होने का दिन",
@@ -557,6 +558,10 @@
         "disabled": "बंद",
         "focus": "ऐप से फ़ोकस हटने पर"
       }
+    },
+    "usage": {
+      "summary": "{{limit}} में से {{used}} उपयोग किया गया",
+      "loadFailed": "उपयोग की जानकारी लोड नहीं हो सकी।"
     },
     "push": {
       "enabling": "पुश सेवा चालू की जा रही है...",
@@ -814,8 +819,8 @@
     "cannot_end_current_session": "वर्तमान सत्र समाप्त नहीं किया जा सकता।",
     "bad_request": "अमान्य अनुरोध।",
     "internal_error": "एक अप्रत्याशित त्रुटि हुई।",
-    "event_limit_reached": "इवेंट सीमा पूरी हो गई है।",
     "storage_limit_reached": "स्टोरेज सीमा पूरी हो गई है।",
+    "push_subscription_limit_reached": "पुश सूचनाओं वाले डिवाइसों की सीमा पूरी हो गई है। किसी दूसरे डिवाइस पर पुश सूचनाएँ बंद करें और फिर से प्रयास करें।",
     "already_subscribed": "आपके पास पहले से सदस्यता है।",
     "registration_busy": "अभी पंजीकरण के लिए बहुत अधिक अनुरोध आ रहे हैं। कृपया बाद में पुनः प्रयास करें।",
     "too_many_attempts_seconds_one": "बहुत अधिक प्रयास। {{count}} सेकंड बाद पुनः प्रयास करें।",

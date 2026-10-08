@@ -344,6 +344,7 @@
       "subscription-manage": "Gestionar suscripción",
       "account-email": "Correo electrónico",
       "account-password": "Contraseña",
+      "account-usage": "Uso",
       "security-unlock-method": "Método de descifrado de datos",
       "security-auto-lock": "Bloqueo automático",
       "calendar-week-start": "Inicio de la semana",
@@ -549,6 +550,10 @@
         "disabled": "Desactivado",
         "focus": "Cuando la aplicación pierde el foco"
       }
+    },
+    "usage": {
+      "summary": "{{used}} de {{limit}} usados",
+      "loadFailed": "No se pudo cargar el uso."
     },
     "push": {
       "enabling": "Activando el servicio push...",
@@ -806,8 +811,8 @@
     "cannot_end_current_session": "No se puede finalizar la sesión actual.",
     "bad_request": "Solicitud no válida.",
     "internal_error": "Se produjo un error inesperado.",
-    "event_limit_reached": "Se alcanzó el límite de eventos.",
     "storage_limit_reached": "Se alcanzó el límite de almacenamiento.",
+    "push_subscription_limit_reached": "Se alcanzó el límite de dispositivos con notificaciones push. Desactiva las notificaciones push en otro dispositivo e inténtalo de nuevo.",
     "already_subscribed": "Ya tienes una suscripción.",
     "registration_busy": "Hay mucha demanda de registros en este momento. Inténtalo de nuevo más tarde.",
     "too_many_attempts_seconds_one": "Demasiados intentos. Inténtalo de nuevo en {{count}} segundo.",

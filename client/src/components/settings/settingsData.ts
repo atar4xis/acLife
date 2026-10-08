@@ -91,7 +91,11 @@ export const settingsCategories: SettingsCategory[] = [
     sections: [
       {
         id: "account",
-        items: [{ id: "account-email" }, { id: "account-password" }],
+        items: [
+          { id: "account-email" },
+          { id: "account-password" },
+          { id: "account-usage" },
+        ],
       },
       {
         id: "encryption",

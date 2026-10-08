@@ -371,6 +371,7 @@
       "subscription-manage": "إدارة الاشتراك",
       "account-email": "البريد الإلكتروني",
       "account-password": "كلمة المرور",
+      "account-usage": "الاستخدام",
       "security-unlock-method": "طريقة فك تشفير البيانات",
       "security-auto-lock": "القفل التلقائي",
       "calendar-week-start": "بداية الأسبوع",
@@ -592,6 +593,10 @@
         "disabled": "معطّل",
         "focus": "عند فقدان التطبيق للتركيز"
       }
+    },
+    "usage": {
+      "summary": "تم استخدام {{used}} من {{limit}}",
+      "loadFailed": "تعذّر تحميل الاستخدام."
     },
     "push": {
       "enabling": "جارٍ تفعيل خدمة الإشعارات الفورية...",
@@ -887,8 +892,8 @@
     "cannot_end_current_session": "لا يمكن إنهاء الجلسة الحالية.",
     "bad_request": "طلب غير صالح.",
     "internal_error": "حدث خطأ غير متوقع.",
-    "event_limit_reached": "تم الوصول إلى الحد الأقصى للأحداث.",
     "storage_limit_reached": "تم الوصول إلى الحد الأقصى للتخزين.",
+    "push_subscription_limit_reached": "تم الوصول إلى الحد الأقصى للأجهزة المفعّل عليها الإشعارات الفورية. أوقف الإشعارات الفورية على جهاز آخر ثم حاول مجددًا.",
     "already_subscribed": "لديك اشتراك بالفعل.",
     "registration_busy": "هناك ضغط كبير على التسجيل حاليًا. يرجى المحاولة مرة أخرى لاحقًا.",
     "too_many_attempts_seconds_zero": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} ثانية.",

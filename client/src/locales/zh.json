@@ -340,6 +340,7 @@
       "subscription-manage": "管理订阅",
       "account-email": "电子邮箱",
       "account-password": "密码",
+      "account-usage": "用量",
       "security-unlock-method": "数据解密方式",
       "security-auto-lock": "自动锁定",
       "calendar-week-start": "每周起始日",
@@ -541,6 +542,10 @@
         "disabled": "已禁用",
         "focus": "应用失去焦点时"
       }
+    },
+    "usage": {
+      "summary": "已使用 {{used}}，共 {{limit}}",
+      "loadFailed": "无法加载用量。"
     },
     "push": {
       "enabling": "正在启用推送服务...",
@@ -788,8 +793,8 @@
     "cannot_end_current_session": "无法终止当前会话。",
     "bad_request": "请求有误。",
     "internal_error": "发生意外错误。",
-    "event_limit_reached": "已达到日程数量上限。",
     "storage_limit_reached": "已达到存储空间上限。",
+    "push_subscription_limit_reached": "已达到可启用推送通知的设备数量上限。请先在其他设备上关闭推送通知，然后重试。",
     "already_subscribed": "您已有订阅。",
     "registration_busy": "目前注册人数较多，请稍后再试。",
     "too_many_attempts_seconds_other": "尝试次数过多，请在{{count}}秒后重试。",

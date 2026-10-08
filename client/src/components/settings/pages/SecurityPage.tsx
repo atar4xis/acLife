@@ -44,6 +44,7 @@ import type { SectionRefs } from "../SettingsSection";
 import Section from "../SettingsSection";
 import SettingsLabel from "../SettingsLabel";
 import SettingsSelect from "../SettingsSelect";
+import UsageField from "./UsageField";
 import { useTranslation } from "react-i18next";
 
 function ChangeEmailDialog({
@@ -390,6 +391,8 @@ function AccountSection({
             {t("settings.security.changePassword")}
           </Button>
         </Field>
+
+        <UsageField />
       </Section>
 
       <ChangeEmailDialog

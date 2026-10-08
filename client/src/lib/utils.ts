@@ -199,6 +199,31 @@ export function shallowEqual(a: unknown, b: unknown): boolean {
   return aKeys.every((key) => Object.is(aRecord[key], bRecord[key]));
 }
 
+const BYTE_UNITS = ["byte", "kilobyte", "megabyte", "gigabyte", "terabyte"];
+
+export function formatBytes(bytes: number, language: string): string {
+  let unit = 0;
+  let value = bytes;
+  while (Math.round(value * 10) / 10 >= 1024 && unit < BYTE_UNITS.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+
+  return new Intl.NumberFormat(language, {
+    style: "unit",
+    unit: BYTE_UNITS[unit],
+    unitDisplay: "short",
+    maximumFractionDigits: unit === 0 ? 0 : 1,
+  }).format(value);
+}
+
+export const USAGE_WARNING_PERCENT = 90;
+
+export function usagePercent(used: number, limit: number): number {
+  if (limit > 0) return Math.min(100, (used / limit) * 100);
+  return used > 0 ? 100 : 0;
+}
+
 export function browserSupportsPush(): boolean {
   return (
     !isTauri &&

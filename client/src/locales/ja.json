@@ -340,6 +340,7 @@
       "subscription-manage": "サブスクリプションを管理",
       "account-email": "メールアドレス",
       "account-password": "パスワード",
+      "account-usage": "使用状況",
       "security-unlock-method": "データの復号方法",
       "security-auto-lock": "自動ロック",
       "calendar-week-start": "週の開始日",
@@ -541,6 +542,10 @@
         "disabled": "無効",
         "focus": "アプリがフォーカスを失ったとき"
       }
+    },
+    "usage": {
+      "summary": "{{limit}}中{{used}}を使用",
+      "loadFailed": "使用状況を読み込めませんでした。"
     },
     "push": {
       "enabling": "プッシュサービスを有効にしています...",
@@ -788,8 +793,8 @@
     "cannot_end_current_session": "現在のセッションは終了できません。",
     "bad_request": "不正なリクエストです。",
     "internal_error": "予期しないエラーが発生しました。",
-    "event_limit_reached": "イベントの上限に達しました。",
     "storage_limit_reached": "ストレージの上限に達しました。",
+    "push_subscription_limit_reached": "プッシュ通知を使用できるデバイスの上限に達しました。別のデバイスでプッシュ通知をオフにしてから、もう一度お試しください。",
     "already_subscribed": "すでにサブスクリプションに登録されています。",
     "registration_busy": "現在、登録が混み合っています。しばらくしてからもう一度お試しください。",
     "too_many_attempts_seconds_other": "試行回数が多すぎます。{{count}}秒後にもう一度お試しください。",

@@ -40,7 +40,10 @@ export function usePushService() {
     }
 
     const existing = await sw.pushManager.getSubscription();
-    if (existing) await existing.unsubscribe();
+    if (existing) {
+      await post("user/push/unsubscribe", { endpoint: existing.endpoint });
+      await existing.unsubscribe();
+    }
 
     const sub = await sw.pushManager.subscribe({
       userVisibleOnly: true,
@@ -63,7 +66,8 @@ export function usePushService() {
 
     const res = await post("user/push/subscribe", { endpoint, p256dh, auth });
     if (!res.success) {
-      throw t("push.errorLater");
+      await sub.unsubscribe();
+      throw res.message || t("push.errorLater");
     }
 
     set("pushSubscription", JSON.stringify(sub));
