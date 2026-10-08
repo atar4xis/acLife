@@ -78,8 +78,7 @@ import {
 } from "@/lib/calendar/gridLayout";
 import {
   SELECT_DRAG_THRESHOLD,
-  AUTO_SCROLL_ZONE,
-  AUTO_SCROLL_SPEED,
+  edgeScrollSpeed,
   resolveSelection,
   getBoxedKeys,
   getEventsByKey,
@@ -655,6 +654,8 @@ export default memo(function AppCalendar({
     [],
   );
 
+  const dragPointerRef = useRef<PointerEvent | null>(null);
+
   const onGlobalPointerMove = useCallback(
     (e: PointerEvent) => {
       const state = dragRef.current;
@@ -662,6 +663,8 @@ export default memo(function AppCalendar({
 
       // stop the page from scrolling while dragging an event on a touch screen
       if (e.pointerType === "touch" && e.cancelable) e.preventDefault();
+
+      dragPointerRef.current = e;
 
       const container = gridRef.current;
       if (!container) return;
@@ -1020,21 +1023,11 @@ export default memo(function AppCalendar({
         if (!state) return;
 
         const rect = container.getBoundingClientRect();
-        const speed = (pointer: number, min: number, max: number) => {
-          const depth = Math.max(
-            min + AUTO_SCROLL_ZONE - pointer,
-            pointer - max + AUTO_SCROLL_ZONE,
-          );
-          const ease = clamp(depth / AUTO_SCROLL_ZONE, 0, 1) ** 2;
-          return Math.round(
-            AUTO_SCROLL_SPEED * ease * (pointer < (min + max) / 2 ? -1 : 1),
-          );
-        };
         const left = container.scrollLeft;
         const top = container.scrollTop;
         container.scrollLeft = clamp(
           left +
-            speed(
+            edgeScrollSpeed(
               state.px,
               Math.max(rect.left, 0),
               Math.min(rect.right, window.innerWidth),
@@ -1044,7 +1037,7 @@ export default memo(function AppCalendar({
         );
         container.scrollTop = clamp(
           top +
-            speed(
+            edgeScrollSpeed(
               state.py,
               Math.max(rect.top, 0),
               Math.min(rect.bottom, window.innerHeight),
@@ -1128,6 +1121,31 @@ export default memo(function AppCalendar({
       window.addEventListener("pointermove", onGlobalPointerMove);
       window.addEventListener("pointerup", onGlobalPointerUp);
       window.addEventListener("pointercancel", onGlobalPointerCancel);
+
+      dragPointerRef.current = null;
+      const scrollNearEdge = () => {
+        if (dragRef.current?.pointerId !== e.pointerId) return;
+
+        const pointer = dragPointerRef.current;
+        if (pointer) {
+          const rect = container.getBoundingClientRect();
+          const top = container.scrollTop;
+          container.scrollTop = clamp(
+            top +
+              edgeScrollSpeed(
+                pointer.clientY,
+                Math.max(rect.top, 0),
+                Math.min(rect.bottom, window.innerHeight),
+              ),
+            0,
+            container.scrollHeight - container.clientHeight,
+          );
+          if (container.scrollTop !== top) onGlobalPointerMove(pointer);
+        }
+        requestAnimationFrame(scrollNearEdge);
+      };
+      requestAnimationFrame(scrollNearEdge);
+
       if (e.pointerType === "touch") {
         window.addEventListener("touchmove", blockTouchMove, {
           passive: false,

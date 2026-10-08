@@ -2,12 +2,24 @@ import type { DateTime, Duration } from "luxon";
 import { fmt, t as translate } from "@/i18n";
 import { describeAllDayRange } from "@/lib/calendar/date";
 import { eventKey, MAX_EVENT_DURATION_MINUTES } from "@/lib/calendar/event";
+import { clamp } from "@/lib/utils";
 import type { GridSelectionRef } from "@/types/calendar/Cell";
 import type { CalendarEvent, EventDragRef } from "@/types/calendar/Event";
 
 export const SELECT_DRAG_THRESHOLD = 4;
 export const AUTO_SCROLL_ZONE = 24;
 export const AUTO_SCROLL_SPEED = 20;
+
+export const edgeScrollSpeed = (pointer: number, min: number, max: number) => {
+  const depth = Math.max(
+    min + AUTO_SCROLL_ZONE - pointer,
+    pointer - max + AUTO_SCROLL_ZONE,
+  );
+  const ease = clamp(depth / AUTO_SCROLL_ZONE, 0, 1) ** 2;
+  return Math.round(
+    AUTO_SCROLL_SPEED * ease * (pointer < (min + max) / 2 ? -1 : 1),
+  );
+};
 
 export const resolveSelection = (
   eventMap: Map<string, CalendarEvent[]> | null,
