@@ -725,6 +725,7 @@
     "remove": "Usuń powiadomienie",
     "add": "Dodaj powiadomienie",
     "eventStarting": "Wydarzenie się zaczyna",
+    "soundBlocked": "Kliknij w dowolnym miejscu, aby włączyć dźwięki powiadomień.",
     "summary": {
       "minutes_one": "{{count}} minutę przed wydarzeniem",
       "minutes_few": "{{count}} minuty przed wydarzeniem",

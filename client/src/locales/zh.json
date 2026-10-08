@@ -691,6 +691,7 @@
     "remove": "移除通知",
     "add": "添加通知",
     "eventStarting": "日程即将开始",
+    "soundBlocked": "点击任意位置以启用通知声音。",
     "summary": {
       "minutes_other": "日程开始前 {{count}} 分钟",
       "hours_other": "日程开始前 {{count}} 小时",

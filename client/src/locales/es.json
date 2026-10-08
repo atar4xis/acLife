@@ -699,6 +699,7 @@
     "remove": "Quitar notificación",
     "add": "Añadir notificación",
     "eventStarting": "El evento va a empezar",
+    "soundBlocked": "Haz clic en cualquier lugar para activar los sonidos de las notificaciones.",
     "summary": {
       "minutes_one": "{{count}} minuto antes del evento",
       "minutes_other": "{{count}} minutos antes del evento",

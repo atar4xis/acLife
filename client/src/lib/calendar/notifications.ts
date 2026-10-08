@@ -36,20 +36,32 @@ let sound: HTMLAudioElement | undefined;
 let soundUrl: string | undefined;
 let latestPlay = 0;
 
+const bundledSoundUrl = async (name: string) =>
+  URL.createObjectURL(
+    await (await fetch(`${import.meta.env.BASE_URL}sounds/${name}.mp3`)).blob(),
+  );
+
+export async function isSoundBlocked() {
+  const url = await bundledSoundUrl("silence");
+  const probe = new Audio(url);
+  try {
+    await probe.play();
+    probe.pause();
+    return false;
+  } catch (e) {
+    return (e as DOMException).name === "NotAllowedError";
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export async function playNotificationSound(number: number, volume: number) {
   const play = ++latestPlay;
   sound?.pause();
   const url =
     (number === CUSTOM_NOTIFICATION_SOUND
       ? await customSoundUrl()
-      : undefined) ??
-    URL.createObjectURL(
-      await (
-        await fetch(
-          `${import.meta.env.BASE_URL}sounds/notification_${number || 1}.mp3`,
-        )
-      ).blob(),
-    );
+      : undefined) ?? (await bundledSoundUrl(`notification_${number || 1}`));
   if (play !== latestPlay) {
     URL.revokeObjectURL(url);
     return;

@@ -705,6 +705,7 @@
     "remove": "Remove notification",
     "add": "Add notification",
     "eventStarting": "Event starting",
+    "soundBlocked": "Click anywhere to enable notification sounds.",
     "summary": {
       "minutes_one": "{{count}} minute before the event",
       "minutes_other": "{{count}} minutes before the event",

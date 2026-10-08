@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DateTime } from "luxon";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { useApi } from "@/context/ApiContext";
 import { useEventList } from "@/context/CalendarContext";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useStorage } from "@/context/StorageContext";
 import { useUser } from "@/context/UserContext";
 import {
+  isSoundBlocked,
   playNotificationSound,
   upcomingNotifications,
 } from "@/lib/calendar/notifications";
@@ -19,6 +22,7 @@ const MAX_LATE_MS = 60 * 1000;
 type PushTime = { at: number; device: boolean };
 
 export default function NotificationService() {
+  const { t } = useTranslation();
   const events = useEventList();
   const { user } = useUser();
   const { post, serverMeta } = useApi();
@@ -54,6 +58,33 @@ export default function NotificationService() {
       clearTimeout(retryTimer.current);
     };
   }, []);
+
+  const hasSound = due.some((n) => n.method === "sound");
+
+  useEffect(() => {
+    if (!hasSound) return;
+    let cancelled = false;
+    let id: string | number | undefined;
+    const dismiss = () => toast.dismiss(id);
+    void isSoundBlocked()
+      .catch(() => false)
+      .then((blocked) => {
+        if (!blocked || cancelled) return;
+        id = toast.warning(t("notify.soundBlocked"), {
+          position: "top-right",
+          duration: Infinity,
+          className: "border-warning! text-warning!"
+        });
+        window.addEventListener("pointerdown", dismiss, { once: true });
+        window.addEventListener("keydown", dismiss, { once: true });
+      });
+    return () => {
+      cancelled = true;
+      window.removeEventListener("pointerdown", dismiss);
+      window.removeEventListener("keydown", dismiss);
+      dismiss();
+    };
+  }, [hasSound, t]);
 
   useEffect(() => {
     const timers = due

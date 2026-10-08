@@ -691,6 +691,7 @@
     "remove": "通知を削除",
     "add": "通知を追加",
     "eventStarting": "予定が始まります",
+    "soundBlocked": "通知音を有効にするには、任意の場所をクリックしてください。",
     "summary": {
       "minutes_other": "予定の{{count}}分前",
       "hours_other": "予定の{{count}}時間前",

@@ -701,6 +701,7 @@
     "remove": "Supprimer la notification",
     "add": "Ajouter une notification",
     "eventStarting": "L'événement commence",
+    "soundBlocked": "Cliquez n’importe où pour activer les sons de notification.",
     "summary": {
       "minutes_one": "{{count}} minute avant l'événement",
       "minutes_other": "{{count}} minutes avant l'événement",
