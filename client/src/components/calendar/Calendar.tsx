@@ -465,7 +465,7 @@ export default memo(function AppCalendar({
         0,
         getNowY() + getGridHeaderOffset() - container.clientHeight / 2,
       ),
-      behavior: "smooth",
+      behavior: "instant",
     });
   }, [getNowY, getGridHeaderOffset]);
 

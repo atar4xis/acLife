@@ -133,7 +133,7 @@ export default function SettingsDialog({
     );
     if (!el) return;
 
-    el.scrollIntoView({ block: "start", behavior: "smooth" });
+    el.scrollIntoView({ block: "start" });
 
     // deferred content grows after mounting, keep the section aligned until it settles
     stopFollowing.current?.();
@@ -211,7 +211,7 @@ export default function SettingsDialog({
           <button
             type="button"
             onClick={() => setNavOpen(true)}
-            className="ring-offset-background focus:ring-ring absolute top-4 inset-s-4 z-10 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+            className="ring-offset-background focus:ring-ring absolute top-4 inset-s-4 z-10 rounded-xs opacity-70 hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
           >
             <Menu className="size-4" />
             <span className="sr-only">{t("settings.openNav")}</span>

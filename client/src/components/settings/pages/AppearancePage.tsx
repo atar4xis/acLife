@@ -329,7 +329,7 @@ const PresetsList = memo(function PresetsList() {
                         }
                   }
                   className={cn(
-                    "group relative flex items-center justify-between gap-3 overflow-hidden rounded-md border border-muted p-2 transition-opacity",
+                    "group relative flex items-center justify-between gap-3 overflow-hidden rounded-md border border-muted p-2",
                     dragIndex === index && "opacity-40",
                     isActive
                       ? "border-primary bg-primary/5"

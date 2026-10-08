@@ -137,7 +137,7 @@ export default memo(function ScrollThumb({
     <div
       data-testid="scroll-thumb"
       className={cn(
-        "absolute right-0.5 w-1 rounded-full bg-foreground/20 hover:bg-foreground/40 z-40 transition-opacity duration-300",
+        "absolute right-0.5 w-1 rounded-full bg-foreground/20 hover:bg-foreground/40 z-40",
         visible ? "opacity-100" : "opacity-0 pointer-events-none",
       )}
       style={{ top: thumb.top, height: thumb.height }}

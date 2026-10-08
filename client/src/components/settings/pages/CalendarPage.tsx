@@ -214,7 +214,7 @@ const ColorPresetsField = memo(function ColorPresetsField() {
                   }
                 }}
                 className={cn(
-                  "size-8 cursor-pointer rounded border opacity-90 transition-opacity hover:opacity-100",
+                  "size-8 cursor-pointer rounded border opacity-90 hover:opacity-100",
                   dragIndex === index && "opacity-40",
                 )}
                 style={{ background: presetColor, touchAction: "none" }}

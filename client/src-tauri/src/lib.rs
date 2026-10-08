@@ -111,6 +111,18 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            #[cfg(target_os = "linux")]
+            {
+                use tauri::Manager;
+                if let Some(window) = app.get_webview_window("main") {
+                    window.with_webview(|webview| {
+                        use webkit2gtk::{SettingsExt, WebViewExt};
+                        if let Some(settings) = webview.inner().settings() {
+                            settings.set_enable_smooth_scrolling(false);
+                        }
+                    })?;
+                }
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

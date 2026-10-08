@@ -431,7 +431,7 @@ describe("Calendar grid keyboard: scrolling", () => {
     return { user, scrollTo, headerBottom };
   };
 
-  it("scrolls the slot into view with smooth scrolling", async () => {
+  it("scrolls the slot into view instantly", async () => {
     const { user, scrollTo } = setup();
     await screen.findByText("Wed 18");
     focusGrid();
@@ -439,27 +439,7 @@ describe("Calendar grid keyboard: scrolling", () => {
 
     await user.keyboard("{End}");
     // slot bottom = 48 header + 1440 => 1488 - 600
-    expect(scrollTo).toHaveBeenCalledWith({ top: 888, behavior: "smooth" });
-  });
-
-  it("scrolls instantly when reduced motion is preferred", async () => {
-    const original = window.matchMedia;
-    vi.stubGlobal("matchMedia", (query: string) => ({
-      matches: query.includes("prefers-reduced-motion"),
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    }));
-    try {
-      const { user, scrollTo } = setup();
-      await screen.findByText("Wed 18");
-      focusGrid();
-      scrollTo.mockClear();
-
-      await user.keyboard("{End}");
-      expect(scrollTo).toHaveBeenCalledWith({ top: 888, behavior: "instant" });
-    } finally {
-      vi.stubGlobal("matchMedia", original);
-    }
+    expect(scrollTo).toHaveBeenCalledWith({ top: 888, behavior: "instant" });
   });
 
   it("does not scroll when the slot is already visible", async () => {
@@ -491,7 +471,7 @@ describe("Calendar grid keyboard: scrolling", () => {
     scrollTo.mockClear();
 
     await user.keyboard("{Home}");
-    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "instant" });
   });
 
   it("accounts for a bottom header", async () => {
@@ -503,7 +483,7 @@ describe("Calendar grid keyboard: scrolling", () => {
 
     await user.keyboard("{End}");
     // slot bottom 1440 + 48 header - 600
-    expect(scrollTo).toHaveBeenCalledWith({ top: 888, behavior: "smooth" });
+    expect(scrollTo).toHaveBeenCalledWith({ top: 888, behavior: "instant" });
   });
 
   it("scrolls the initial slot into view when the grid gets focus", async () => {
@@ -512,7 +492,7 @@ describe("Calendar grid keyboard: scrolling", () => {
     focusGrid();
 
     // 10:30 slot bottom = 48 header + 635 => 683 - 600
-    expect(scrollTo).toHaveBeenCalledWith({ top: 83, behavior: "smooth" });
+    expect(scrollTo).toHaveBeenCalledWith({ top: 83, behavior: "instant" });
   });
 });
 

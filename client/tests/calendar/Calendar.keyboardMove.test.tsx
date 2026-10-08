@@ -1013,7 +1013,7 @@ describe("keyboard move: keys and edge cases", () => {
     await user.keyboard("m{PageDown}");
 
     expect(scrollTo).toHaveBeenCalledWith(
-      expect.objectContaining({ behavior: "smooth" }),
+      expect.objectContaining({ behavior: "instant" }),
     );
   });
 

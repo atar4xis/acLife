@@ -63,7 +63,7 @@ function SyncGroup({ label, keys }: { label: string; keys: SyncableKey[] }) {
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className="flex items-center gap-1.5">
         <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm font-medium">
-          <ChevronRight className="size-4 text-muted-foreground rtl:-scale-x-100 transition-transform group-data-[state=open]:rotate-90" />
+          <ChevronRight className="size-4 text-muted-foreground rtl:-scale-x-100 group-data-[state=open]:rotate-90" />
           {label}
         </CollapsibleTrigger>
         <SyncToggle

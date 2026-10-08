@@ -405,8 +405,7 @@ export default memo(
                 "pointer-events-auto event-block absolute left-0 right-0 z-10 text-xs cursor-pointer select-none overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)]",
                 padding,
                 textColor,
-                isHeld &&
-                  "scale-[1.03] shadow-lg ring-2 ring-white/80 z-30 transition-transform",
+                isHeld && "scale-[1.03] shadow-lg ring-2 ring-white/80 z-30",
                 popOut && "z-20 shadow-lg",
                 keyboardFocused &&
                   "group-data-keyboard-mode/grid:outline-2 group-data-keyboard-mode/grid:-outline-offset-2 group-data-keyboard-mode/grid:outline-foreground",

@@ -73,9 +73,6 @@ type KeyContext = {
 
 const NATIVE_MENU_WINDOW_MS = 500;
 
-const prefersReducedMotion = () =>
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 function scrollRangeIntoView(
   container: HTMLElement,
   startMinutes: number,
@@ -96,10 +93,7 @@ function scrollRangeIntoView(
   const target = direction > 0 ? (toBottom ?? toTop) : (toTop ?? toBottom);
   if (target === null) return;
 
-  container.scrollTo({
-    top: target,
-    behavior: prefersReducedMotion() ? "instant" : "smooth",
-  });
+  container.scrollTo({ top: target, behavior: "instant" });
 }
 
 export default function useGridKeyboard(params: Params) {

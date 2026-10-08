@@ -175,7 +175,7 @@ const TimezonesField = memo(function TimezonesField() {
               key={tz}
               ref={setItemRef(index)}
               className={cn(
-                "flex items-center gap-2 transition-opacity",
+                "flex items-center gap-2",
                 dragIndex === index && "opacity-40",
               )}
             >
