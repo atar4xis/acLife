@@ -1329,6 +1329,11 @@ export default memo(function AppCalendar({
         if (event.completed !== originalEvent.completed) {
           patch.completed = event.completed;
         }
+        if (
+          !sameNotifications(originalEvent.notifications, event.notifications)
+        ) {
+          patch.notifications = event.notifications;
+        }
 
         let working = calendarEventsRef.current;
 
