@@ -136,9 +136,9 @@ export default function EventDetails({
         </div>
       </div>
       <div className="flex flex-col gap-2 mb-3 min-h-0 overflow-y-auto overflow-x-hidden md:min-w-80 md:max-w-120">
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-start gap-2 text-sm">
           <span
-            className="size-4 shrink-0 rounded-full border"
+            className="size-4 shrink-0 rounded-full border mt-1"
             style={{ backgroundColor: event.color ?? EVENT_COLOR_FALLBACK }}
           />
           <span dir="auto" className="wrap-break-word min-w-0">
