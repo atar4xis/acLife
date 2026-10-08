@@ -105,6 +105,9 @@ import UndoRedoButtons from "./UndoRedoButtons";
 import { getTimezoneHourLabel } from "@/lib/calendar/timezone";
 import { useWeekStart } from "@/hooks/useWeekStart";
 import {
+  MAX_CLIPBOARD_EVENTS,
+  MAX_EVENTS_PER_DAY,
+  countEventsOnDay,
   eventKey,
   stateTargets,
   getDayEventStyles,
@@ -1616,12 +1619,26 @@ export default memo(function AppCalendar({
 
       pushHistory();
 
+      const added: CalendarEvent[] = [];
+
       for (const ev of batch) {
         const newEvent = {
           ...ev,
           id: crypto.randomUUID(),
           timestamp: Date.now(),
         } as CalendarEvent;
+
+        if (
+          countEventsOnDay(
+            [...calendarEventsRef.current, ...added],
+            newEvent.start,
+          ) >= MAX_EVENTS_PER_DAY
+        ) {
+          toast.error(t("calendar.dayLimit", { count: MAX_EVENTS_PER_DAY }));
+          continue;
+        }
+
+        added.push(newEvent);
 
         delete newEvent._parent;
         delete newEvent._instanceId;
@@ -1644,6 +1661,7 @@ export default memo(function AppCalendar({
       save();
     },
     [
+      t,
       dispatch,
       updateChange,
       setEditingEvent,
@@ -1676,8 +1694,11 @@ export default memo(function AppCalendar({
 
   const copySelection = useCallback(() => {
     if (selectedEventsRef.current.size === 0) return;
-    clipboardRef.current = Array.from(selectedEventsRef.current.values());
-  }, []);
+    const selected = Array.from(selectedEventsRef.current.values());
+    if (selected.length > MAX_CLIPBOARD_EVENTS)
+      toast.warning(t("calendar.copyLimit", { count: MAX_CLIPBOARD_EVENTS }));
+    clipboardRef.current = selected.slice(0, MAX_CLIPBOARD_EVENTS);
+  }, [t]);
 
   const pasteAtPointer = useCallback(() => {
     const clipboard = clipboardRef.current;
@@ -1708,6 +1729,7 @@ export default memo(function AppCalendar({
     pushHistory();
 
     const pasted: CalendarEvent[] = [];
+    let skipped = false;
 
     for (const ev of clipboard) {
       const allDay = overAllDay || ev.allDay;
@@ -1733,6 +1755,14 @@ export default memo(function AppCalendar({
         timestamp: Date.now(),
       } as CalendarEvent;
 
+      if (
+        countEventsOnDay([...calendarEventsRef.current, ...pasted], newStart) >=
+        MAX_EVENTS_PER_DAY
+      ) {
+        skipped = true;
+        continue;
+      }
+
       delete newEvent._parent;
       delete newEvent._instanceId;
       delete newEvent.repeat;
@@ -1743,9 +1773,12 @@ export default memo(function AppCalendar({
       updateChange({ type: "added", event: newEvent });
     }
 
+    if (skipped)
+      toast.error(t("calendar.dayLimit", { count: MAX_EVENTS_PER_DAY }));
     selectEvents(pasted);
     save();
   }, [
+    t,
     visibleDays,
     hourHeight,
     getGridHeaderOffset,
@@ -1762,6 +1795,13 @@ export default memo(function AppCalendar({
 
   const addNewEvent = useCallback(
     (start: DateTime, isTask: boolean, allDayEnd?: DateTime) => {
+      if (
+        countEventsOnDay(calendarEventsRef.current, start) >= MAX_EVENTS_PER_DAY
+      ) {
+        toast.error(t("calendar.dayLimit", { count: MAX_EVENTS_PER_DAY }));
+        return;
+      }
+
       const newEvent = {
         id: crypto.randomUUID(),
         title: isTask
@@ -1786,6 +1826,7 @@ export default memo(function AppCalendar({
       return newEvent;
     },
     [
+      t,
       settings.defaultEventName,
       settings.defaultTaskName,
       settings.defaultEventDuration,
@@ -1845,6 +1886,7 @@ export default memo(function AppCalendar({
         minutes: snapMinutes(startMinutes, settings.snapMinutes),
       });
       const newEvent = addNewEvent(start, e.altKey);
+      if (!newEvent) return;
 
       if (e.pointerType !== "touch") {
         window.addEventListener("pointermove", onGlobalPointerMove);
@@ -2592,6 +2634,7 @@ export default memo(function AppCalendar({
       });
 
       const created = addAllDayEvent(visibleDays[from].date);
+      if (!created) return;
       let last = from;
 
       const onMove = (ev: PointerEvent) => {

@@ -789,6 +789,8 @@
     "expandSearch": "Expand search radius",
     "grid": "Calendar",
     "eventGone": "Event no longer exists.",
+    "copyLimit": "Only the first {{count}} events were copied.",
+    "dayLimit": "A day can hold at most {{count}} events.",
     "newTask": "new task"
   },
   "serverErrors": {

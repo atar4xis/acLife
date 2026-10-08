@@ -829,7 +829,9 @@
     "noMatches": "Brak pasujących wydarzeń.",
     "expandSearch": "Rozszerz zakres wyszukiwania",
     "grid": "Kalendarz",
-    "eventGone": "Wydarzenie już nie istnieje."
+    "eventGone": "Wydarzenie już nie istnieje.",
+    "copyLimit": "Skopiowano tylko pierwsze {{count}} wydarzeń.",
+    "dayLimit": "Jeden dzień może mieć maksymalnie {{count}} wydarzeń."
   },
   "serverErrors": {
     "verification_email_sent": "Wysłano e-mail weryfikacyjny.",

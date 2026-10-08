@@ -783,6 +783,8 @@
     "expandSearch": "Ampliar el rango de búsqueda",
     "grid": "Calendario",
     "eventGone": "El evento ya no existe.",
+    "copyLimit": "Solo se copiaron los primeros {{count}} eventos.",
+    "dayLimit": "Un día puede tener como máximo {{count}} eventos.",
     "newTask": "nueva tarea"
   },
   "serverErrors": {

@@ -765,6 +765,8 @@
     "expandSearch": "扩大搜索范围",
     "grid": "日历",
     "eventGone": "该日程已不存在。",
+    "copyLimit": "仅复制了前 {{count}} 个日程。",
+    "dayLimit": "一天最多可有 {{count}} 个日程。",
     "newTask": "新任务"
   },
   "serverErrors": {

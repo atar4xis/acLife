@@ -23,6 +23,12 @@ export const stateTargets = (
   state.day === day;
 
 export const MAX_EVENT_DURATION_MINUTES = 4 * 7 * 24 * 60; // 4 weeks
+export const MAX_EVENT_TITLE_LENGTH = 200;
+export const MAX_EVENTS_PER_DAY = 100;
+export const MAX_CLIPBOARD_EVENTS = 100;
+
+export const countEventsOnDay = (events: CalendarEvent[], day: DateTime) =>
+  events.filter((e) => e.start.hasSame(day, "day")).length;
 
 export function getEventPixelPosition(
   event: CalendarEvent,

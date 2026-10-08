@@ -39,7 +39,10 @@ type Params = {
   selectedEventsRef: RefObject<Map<string, CalendarEvent>>;
   selectEvents: (events: CalendarEvent[]) => void;
   toggleSelection: (event: CalendarEvent) => void;
-  createEventAt: (dayIndex: number, minutes: number) => CalendarEvent;
+  createEventAt: (
+    dayIndex: number,
+    minutes: number,
+  ) => CalendarEvent | undefined;
   openEvent: (event: CalendarEvent, day: number) => void;
   deleteEvent: (event: CalendarEvent) => void;
   toggleCompleted: (event: CalendarEvent) => void;
@@ -537,6 +540,7 @@ export default function useGridKeyboard(params: Params) {
         commit({ ...focus, eventKey: eventKey(atSlot[0]) });
       } else {
         const created = p.createEventAt(focus.day, focus.minutes);
+        if (!created) return;
         speak(
           t("keyboard.created", {
             title: created.title,

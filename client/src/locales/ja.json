@@ -765,7 +765,9 @@
     "noMatches": "一致する予定はありません。",
     "expandSearch": "検索範囲を広げる",
     "grid": "カレンダー",
-    "eventGone": "この予定はもう存在しません。"
+    "eventGone": "この予定はもう存在しません。",
+    "copyLimit": "最初の{{count}}件の予定のみコピーされました。",
+    "dayLimit": "1日に追加できる予定は最大{{count}}件です。"
   },
   "serverErrors": {
     "verification_email_sent": "確認メールを送信しました。",

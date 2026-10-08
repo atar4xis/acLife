@@ -1,6 +1,9 @@
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { EventBlockProps } from "@/types/calendar/Props";
-import { MAX_EVENT_DURATION_MINUTES } from "@/lib/calendar/event";
+import {
+  MAX_EVENT_DURATION_MINUTES,
+  MAX_EVENT_TITLE_LENGTH,
+} from "@/lib/calendar/event";
 import { moveToFirstOccurrence } from "@/lib/calendar/recurrence";
 import {
   monthlyOptions,
@@ -481,6 +484,7 @@ export default function EventEditor({
               ref={titleRef}
               type="text"
               className="me-2"
+              maxLength={MAX_EVENT_TITLE_LENGTH}
               placeholder={originalEvent.current.title}
               value={title}
               onChange={(e) => setTitle(e.target.value)}

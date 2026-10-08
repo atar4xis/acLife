@@ -864,6 +864,8 @@
     "expandSearch": "توسيع نطاق البحث",
     "grid": "التقويم",
     "eventGone": "الحدث لم يعد موجودًا.",
+    "copyLimit": "تم نسخ أول {{count}} أحداث فقط.",
+    "dayLimit": "يمكن أن يحتوي اليوم على {{count}} حدث كحد أقصى.",
     "newTask": "مهمة جديدة"
   },
   "serverErrors": {
