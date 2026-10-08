@@ -8,31 +8,42 @@ const apiMock = vi.hoisted(() => ({
   post: vi.fn(),
 }));
 
-const storageMock = vi.hoisted(() => ({
-  get: vi.fn(),
-  set: vi.fn(),
-}));
-
 vi.mock("../../src/context/ApiContext.tsx", () => ({
   useApi: () => ({ post: apiMock.post }),
 }));
 
-// jsdom's Blob has no .stream(), which the real gzip helpers need, so pass bytes through unchanged
-vi.mock("../../src/lib/gzip.ts", () => ({
-  compress: async (input: Uint8Array) => input,
-  decompress: async (input: Uint8Array) => input,
-}));
-
 vi.mock("../../src/context/StorageContext.tsx", () => ({
-  useStorage: () => storageMock,
+  useStorage: () => ({ ready: true, get: vi.fn(), set: vi.fn() }),
 }));
 
 const { useCalendarEvents } = await import(
   "../../src/hooks/calendar/useCalendarEvents.ts"
 );
-const { encryptOfflineEvents } = await import(
-  "../../src/lib/calendar/crypt.ts"
+const { createEventCache } = await import(
+  "../../src/lib/calendar/eventCache.ts"
 );
+const { encrypt } = await import("../../src/lib/crypt.ts");
+const { arrayBufferToBase64 } = await import("../../src/lib/utils.ts");
+
+const seed = async (events: CalendarEvent[], masterKey: CryptoKey) =>
+  createEventCache().apply(
+    await Promise.all(
+      events.map(async (event) => ({
+        id: event.id,
+        data: arrayBufferToBase64(
+          await encrypt(
+            new TextEncoder().encode(JSON.stringify(event)),
+            masterKey,
+          ),
+        ),
+        updatedAt: event.timestamp,
+        buckets: ["bucket"],
+        event,
+      })),
+    ),
+    [],
+    masterKey,
+  );
 
 const generateMasterKey = () =>
   crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, [
@@ -61,9 +72,7 @@ describe("useCalendarEvents cache corruption recovery", () => {
       end: null,
     } as unknown as CalendarEvent;
 
-    storageMock.get.mockReturnValue(
-      await encryptOfflineEvents([goodEvent, corruptedEvent], masterKey),
-    );
+    await seed([goodEvent, corruptedEvent], masterKey);
     apiMock.post.mockResolvedValue({ success: false, message: "offline" });
 
     const user = { type: "online" } as User;
@@ -85,9 +94,7 @@ describe("useCalendarEvents cache corruption recovery", () => {
     const masterKey = await generateMasterKey();
     const goodEvent = buildEvent();
 
-    storageMock.get.mockReturnValue(
-      await encryptOfflineEvents([goodEvent], masterKey),
-    );
+    await seed([goodEvent], masterKey);
     apiMock.post.mockResolvedValue({ success: false, message: "offline" });
 
     const user = { type: "online" } as User;

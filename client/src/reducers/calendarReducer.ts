@@ -10,6 +10,10 @@ export function calendarReducer(
       return action.events;
     case "add":
       return [...state, action.event];
+    case "append": {
+      const known = new Set(state.map((ev) => ev.id));
+      return [...state, ...action.events.filter((ev) => !known.has(ev.id))];
+    }
     case "update":
       return state.map((ev) => {
         const newEv = {

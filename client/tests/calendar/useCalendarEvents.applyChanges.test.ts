@@ -5,35 +5,26 @@ import type { User } from "../../src/types/User.ts";
 import type { CalendarEvent } from "../../src/types/calendar/Event.ts";
 import type { CalendarChange } from "../../src/lib/stream.ts";
 
-const store = vi.hoisted(() => ({ cached: undefined as unknown }));
 const postMock = vi.hoisted(() => vi.fn());
-
-const storageMock = vi.hoisted(() => ({
-  get: vi.fn(() => store.cached),
-  set: vi.fn((_key: string, value: unknown) => {
-    store.cached = value;
-  }),
-}));
 
 vi.mock("../../src/context/ApiContext.tsx", () => ({
   useApi: () => ({ post: postMock }),
 }));
 
-// jsdom's Blob has no .stream(), which the real gzip helpers need, so pass bytes through unchanged
-vi.mock("../../src/lib/gzip.ts", () => ({
-  compress: async (input: Uint8Array) => input,
-  decompress: async (input: Uint8Array) => input,
-}));
-
 vi.mock("../../src/context/StorageContext.tsx", () => ({
-  useStorage: () => ({ ready: true, ...storageMock }),
+  useStorage: () => ({ ready: true, get: vi.fn(), set: vi.fn() }),
 }));
 
 const { useCalendarEvents } = await import(
   "../../src/hooks/calendar/useCalendarEvents.ts"
 );
-const { encryptEvents, encryptOfflineEvents, decryptOfflineEvents } =
-  await import("../../src/lib/calendar/crypt.ts");
+const { encryptEvents } = await import("../../src/lib/calendar/crypt.ts");
+const { computeBucketId, weekLabel } = await import(
+  "../../src/lib/calendar/buckets.ts"
+);
+const { cachedEvents: readCached, seedCache } = await import(
+  "./eventCacheHelpers.ts"
+);
 
 const masterKey = await crypto.subtle.generateKey(
   { name: "AES-GCM", length: 256 },
@@ -68,15 +59,11 @@ const upsert = async (
   };
 };
 
-const cachedEvents = async () =>
-  (await decryptOfflineEvents(
-    store.cached as Parameters<typeof decryptOfflineEvents>[0],
-    masterKey,
-  )) as CalendarEvent[];
+const cachedEvents = () => readCached(masterKey);
+const bucket = await computeBucketId(bucketKey, weekLabel(start));
 
 const setup = async (...existing: CalendarEvent[]) => {
-  store.cached = await encryptOfflineEvents(existing, masterKey);
-  storageMock.set.mockClear();
+  await seedCache(existing, masterKey, bucketKey);
   return renderHook(() =>
     useCalendarEvents({ type: "online" } as User, masterKey, bucketKey),
   ).result;
@@ -84,7 +71,6 @@ const setup = async (...existing: CalendarEvent[]) => {
 
 describe("applyChanges", () => {
   beforeEach(() => {
-    store.cached = undefined;
     postMock.mockReset();
   });
 
@@ -95,6 +81,7 @@ describe("applyChanges", () => {
     const events = await result.current.applyChanges(
       [await upsert("added", incoming)],
       masterKey,
+      bucketKey,
     );
 
     expect(events.map((e) => [e.id, e.title, e.timestamp])).toEqual([
@@ -109,6 +96,7 @@ describe("applyChanges", () => {
     const events = await result.current.applyChanges(
       [await upsert("updated", eventWith(1, "newer", 2000))],
       masterKey,
+      bucketKey,
     );
 
     expect(events.map((e) => [e.title, e.timestamp])).toEqual([["newer", 2000]]);
@@ -124,9 +112,11 @@ describe("applyChanges", () => {
         await upsert("updated", eventWith(1, "same", 2000)),
       ],
       masterKey,
+      bucketKey,
     );
 
-    expect(events.map((e) => e.title)).toEqual(["current"]);
+    expect(events).toEqual([]);
+    expect((await cachedEvents()).map((e) => e.title)).toEqual(["current"]);
   });
 
   it("removes deleted events and leaves the others", async () => {
@@ -135,9 +125,10 @@ describe("applyChanges", () => {
     const events = await result.current.applyChanges(
       [{ type: "deleted", id: eventWith(1, "a", 0).id }],
       masterKey,
+      bucketKey,
     );
 
-    expect(events.map((e) => e.title)).toEqual(["b"]);
+    expect(events).toEqual([]);
     expect((await cachedEvents()).map((e) => e.title)).toEqual(["b"]);
   });
 
@@ -150,18 +141,35 @@ describe("applyChanges", () => {
         await upsert("updated", eventWith(1, "back", 2000)),
       ],
       masterKey,
+      bucketKey,
     );
 
     expect(events.map((e) => e.title)).toEqual(["back"]);
   });
 
+  it("accepts an older version of an event deleted in the same batch", async () => {
+    const result = await setup(eventWith(1, "current", 2000));
+
+    const events = await result.current.applyChanges(
+      [
+        { type: "deleted", id: eventWith(1, "", 0).id },
+        await upsert("added", eventWith(1, "recreated", 1000)),
+      ],
+      masterKey,
+      bucketKey,
+    );
+
+    expect(events.map((e) => e.title)).toEqual(["recreated"]);
+    expect((await cachedEvents()).map((e) => e.title)).toEqual(["recreated"]);
+  });
+
   it("works with an empty cache", async () => {
     const result = await setup();
-    store.cached = undefined;
 
     const events = await result.current.applyChanges(
       [await upsert("added", eventWith(1, "first", 1000))],
       masterKey,
+      bucketKey,
     );
 
     expect(events).toHaveLength(1);
@@ -169,7 +177,6 @@ describe("applyChanges", () => {
 
   it("rejects when a change cannot be decrypted, leaving the cache alone", async () => {
     const result = await setup(eventWith(1, "kept", 1000));
-    const before = store.cached;
 
     await expect(
       result.current.applyChanges(
@@ -182,10 +189,11 @@ describe("applyChanges", () => {
           },
         ],
         masterKey,
+        bucketKey,
       ),
     ).rejects.toBeDefined();
 
-    expect(store.cached).toBe(before);
+    expect((await cachedEvents()).map((e) => e.title)).toEqual(["kept"]);
   });
 
   it("does not lose changes applied at the same time", async () => {
@@ -195,10 +203,12 @@ describe("applyChanges", () => {
       result.current.applyChanges(
         [await upsert("added", eventWith(1, "first", 1000))],
         masterKey,
+        bucketKey,
       ),
       result.current.applyChanges(
         [await upsert("added", eventWith(2, "second", 1000))],
         masterKey,
+        bucketKey,
       ),
     ]);
 
@@ -215,11 +225,13 @@ describe("applyChanges", () => {
       .applyChanges(
         [{ type: "added", id: "x", data: "AAAA", updatedAt: 1 }],
         masterKey,
+        bucketKey,
       )
       .catch(() => {});
     const events = await result.current.applyChanges(
       [await upsert("added", eventWith(1, "after", 1000))],
       masterKey,
+      bucketKey,
     );
 
     expect(events.map((e) => e.title)).toEqual(["after"]);
@@ -240,7 +252,7 @@ describe("applyChanges", () => {
       );
       return {
         release: () => release(),
-        sync: result.current.syncBuckets(["YnVja2V0"], masterKey, bucketKey),
+        sync: result.current.syncBuckets([bucket], masterKey, bucketKey),
       };
     };
 
@@ -251,13 +263,17 @@ describe("applyChanges", () => {
       const change = await upsert("added", eventWith(2, "b", 1000));
       const { release, sync } = gatedSync(result);
 
-      const applied = result.current.applyChanges([change], masterKey);
+      const applied = result.current.applyChanges([change], masterKey, bucketKey,);
       await settle();
-      expect(storageMock.set).not.toHaveBeenCalled();
+      expect((await cachedEvents()).map((e) => e.title)).toEqual(["a"]);
 
       release();
       await sync;
-      expect((await applied).map((e) => e.title).sort()).toEqual(["a", "b"]);
+      await applied;
+      expect((await cachedEvents()).map((e) => e.title).sort()).toEqual([
+        "a",
+        "b",
+      ]);
     });
 
     it("saveEvents completes without touching the cache, which the stream fills in", async () => {
@@ -271,7 +287,6 @@ describe("applyChanges", () => {
       );
 
       expect(done).toHaveBeenCalledTimes(1);
-      expect(storageMock.set).not.toHaveBeenCalled();
       expect((await cachedEvents()).map((e) => e.title)).toEqual(["a"]);
 
       release();
@@ -280,11 +295,7 @@ describe("applyChanges", () => {
   });
 
   it("drops the result when the key changed while it was running", async () => {
-    store.cached = await encryptOfflineEvents(
-      [eventWith(1, "a", 1000)],
-      masterKey,
-    );
-    storageMock.set.mockClear();
+    await seedCache([eventWith(1, "a", 1000)], masterKey, bucketKey);
     const change = await upsert("added", eventWith(2, "late", 1000));
     const otherKey = await crypto.subtle.generateKey(
       { name: "AES-GCM", length: 256 },
@@ -303,16 +314,16 @@ describe("applyChanges", () => {
           release = () => resolve({ success: true, data: { mismatched: [] } });
         }),
     );
-    const sync = result.current.syncBuckets(["YnVja2V0"], masterKey, bucketKey);
+    const sync = result.current.syncBuckets([bucket], masterKey, bucketKey);
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    const applied = result.current.applyChanges([change], masterKey);
+    const applied = result.current.applyChanges([change], masterKey, bucketKey,);
     rerender({ key: otherKey });
     release();
     await sync;
     await applied;
 
-    expect(storageMock.set).not.toHaveBeenCalled();
+    expect((await cachedEvents()).map((e) => e.title)).toEqual(["a"]);
   });
 
   describe("saveEvents", () => {

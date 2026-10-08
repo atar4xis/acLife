@@ -24,7 +24,7 @@ export const MAX_EXPAND_STEP_WEEKS = Math.floor(
   MAX_SYNC_BUCKETS_PER_REQUEST / 2,
 );
 export const REQUEST_DELAY_MS = 1000;
-export const SEARCH_RADIUS_CHECKPOINTS = [53, 106, 159];
+export const SEARCH_RADIUS_CHECKPOINTS = [56, 109, 162];
 export const OCCURRENCES_PER_SIDE = 3;
 
 const matchesQuery = (event: CalendarEvent, tokens: string[]) => {
@@ -51,6 +51,7 @@ export const useCalendarSearch = (
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const [isExpanding, setIsExpanding] = useState(false);
+  const [expanded, setExpanded] = useState<CalendarEvent[]>([]);
 
   const syncedRangeRef = useRef(SYNC_RANGE_WEEKS);
   const searchGenRef = useRef(0);
@@ -61,7 +62,8 @@ export const useCalendarSearch = (
     if (tokens.length === 0) return [];
     const nowDate = DateTime.now();
     const now = nowDate.toMillis();
-    return events
+    const known = new Set(events.map((ev) => ev.id));
+    return [...events, ...expanded.filter((ev) => !known.has(ev.id))]
       .flatMap((ev) =>
         ev.repeat?.overrides || matchesQuery(ev, tokens)
           ? nearbyOccurrences(ev, nowDate, OCCURRENCES_PER_SIDE, (o) =>
@@ -75,7 +77,7 @@ export const useCalendarSearch = (
           Math.abs(b.start.toMillis() - now),
       )
       .slice(0, MAX_SEARCH_RESULTS);
-  }, [events, tokens]);
+  }, [events, expanded, tokens]);
 
   const canExpandMore =
     tokens.length > 0 &&
@@ -112,6 +114,7 @@ export const useCalendarSearch = (
         if (gen !== searchGenRef.current) return matched;
 
         syncedRangeRef.current = nextRange;
+        setExpanded((prev) => [...prev, ...merged]);
         onExpandedEvents(merged);
 
         if (merged.some((ev) => matchesQuery(ev, tokensSnapshot))) {
@@ -132,6 +135,7 @@ export const useCalendarSearch = (
   useEffect(() => {
     const gen = ++searchGenRef.current;
     syncedRangeRef.current = SYNC_RANGE_WEEKS;
+    setExpanded((prev) => (prev.length ? [] : prev));
 
     if (tokens.length === 0) return;
     if (!user || user.type !== "online" || !masterKey || !bucketKey) return;

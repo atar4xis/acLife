@@ -4,10 +4,11 @@ import { deleteDescriptionSizes } from "@/lib/calendar/descriptionSize";
 import {
   decryptOfflineEvents,
   decryptEvents,
-  encryptOfflineEvents,
   encryptEvents,
+  encryptOfflineEvents,
   MAX_ENCRYPTED_EVENT_BYTES,
 } from "@/lib/calendar/crypt";
+import { createEventCache } from "@/lib/calendar/eventCache";
 import {
   computeBucketHash,
   computeEventBuckets,
@@ -16,6 +17,7 @@ import {
 import { base64ByteLength, uuidToBase64 } from "@/lib/utils";
 import type {
   CalendarEvent,
+  DecryptedEvent,
   EventHashRequest,
   EventHashResponse,
   EventSyncRequest,
@@ -60,14 +62,22 @@ const rejectOversized = (
   return rejected;
 };
 
-// corrupted entries are dropped so the sync diff re-requests them fresh from the server
-const decryptValid = async (
-  stored: Parameters<typeof decryptOfflineEvents>[0],
-  masterKey: CryptoKey,
-) =>
-  (await decryptOfflineEvents(stored, masterKey)).filter(
-    (ev) => ev.start.isValid && ev.end.isValid,
+const toUpserts = (
+  encrypted: { id: string; data: string }[],
+  decrypted: DecryptedEvent[],
+  bucketKey: CryptoKey,
+) => {
+  const raw = new Map(encrypted.map((e) => [e.id, e.data]));
+  return Promise.all(
+    decrypted.map(async (ev) => ({
+      id: ev.id,
+      data: raw.get(ev.id)!,
+      updatedAt: ev.updatedAt,
+      buckets: await computeEventBuckets(ev.data, bucketKey),
+      event: { ...ev.data, timestamp: ev.updatedAt },
+    })),
   );
+};
 
 export const useCalendarEvents = (
   user: User | null,
@@ -75,9 +85,10 @@ export const useCalendarEvents = (
   bucketKey: CryptoKey | null,
 ) => {
   const [saving, setSaving] = useState(false);
-  const { get: getStored, set: setStored } = useStorage();
+  const { get: getStored, set: setStored, ready } = useStorage();
   const { post } = useApi();
 
+  const [cache] = useState(createEventCache);
   const [cacheQueue] = useState(createSerialQueue);
   const [saveQueue] = useState(createSerialQueue);
   const masterKeyRef = useRef(masterKey);
@@ -85,22 +96,21 @@ export const useCalendarEvents = (
     masterKeyRef.current = masterKey;
   }, [masterKey]);
 
-  const getCachedEvents = useCallback(
-    async (masterKey: CryptoKey): Promise<CalendarEvent[]> => {
-      const cached = getStored("cachedEvents");
-      const cachedEvents: CalendarEvent[] = [];
+  useEffect(() => {
+    if (ready && getStored("cachedEvents")) setStored("cachedEvents", null);
+  }, [ready, getStored, setStored]);
 
-      if (cached) {
-        try {
-          cachedEvents.push(...(await decryptValid(cached, masterKey)));
-        } catch {
-          toast.warning(t("events.cacheDecryptFailed"));
-        }
+  const readCache = useCallback(
+    async <T>(read: () => Promise<T>, fallback: T): Promise<T> => {
+      try {
+        return await read();
+      } catch {
+        toast.warning(t("events.cacheDecryptFailed"));
+        await cache.clear().catch(() => {});
+        return fallback;
       }
-
-      return cachedEvents;
     },
-    [getStored],
+    [cache],
   );
 
   const syncBucketsNow = useCallback(
@@ -109,32 +119,22 @@ export const useCalendarEvents = (
       masterKey: CryptoKey,
       bucketKey: CryptoKey,
     ): Promise<CalendarEvent[]> => {
-      // get cached events
-      const cachedEvents = await getCachedEvents(masterKey);
-
-      const byBucket = new Map<string, CalendarEvent[]>(
-        buckets.map((b) => [b, []]),
+      const index = await readCache(
+        () => cache.readIndex(buckets, masterKey),
+        new Map(buckets.map((b) => [b, []])),
       );
-      await Promise.all(
-        cachedEvents.map(async (ev) => {
-          for (const b of await computeEventBuckets(ev, bucketKey)) {
-            byBucket.get(b)?.push(ev);
-          }
-        }),
-      );
+      const idsIn = (bucketIds: string[]) => [
+        ...new Set(bucketIds.flatMap((b) => index.get(b)!.map((e) => e.id))),
+      ];
 
       let mismatched = buckets;
-      if (cachedEvents.length > 0) {
+      if (idsIn(buckets).length > 0) {
         const hashRes = await post<EventHashResponse>("calendar/events/sync", {
           hashes: Object.fromEntries(
             await Promise.all(
               buckets.map(async (b) => [
                 b,
-                await computeBucketHash(
-                  byBucket
-                    .get(b)!
-                    .map((ev) => ({ id: ev.id, ts: ev.timestamp })),
-                ),
+                await computeBucketHash(index.get(b)!),
               ]),
             ),
           ),
@@ -149,17 +149,19 @@ export const useCalendarEvents = (
         }
 
         mismatched = hashRes.data.mismatched;
-        if (mismatched.length === 0) return cachedEvents;
+        if (mismatched.length === 0) {
+          return readCache(() => cache.events(idsIn(buckets), masterKey), []);
+        }
       }
 
-      const eventsToSync = new Set(
-        mismatched.flatMap((b) => byBucket.get(b) ?? []),
+      const known = new Map(
+        mismatched.flatMap((b) => index.get(b)!.map((e) => [e.id, e.ts])),
       );
 
       const request: EventSyncRequest = {
-        events: Array.from(eventsToSync).map((ev) => ({
-          id: uuidToBase64(ev.id),
-          ts: ev.timestamp,
+        events: Array.from(known, ([id, ts]) => ({
+          id: uuidToBase64(id),
+          ts,
         })),
         buckets: mismatched,
       };
@@ -180,39 +182,28 @@ export const useCalendarEvents = (
 
       // the server tells us which events were updated, added, and deleted
       const { updated, added, deleted } = res.data;
-
-      // remove deleted events from cache
-      const cachedMap = new Map(cachedEvents.map((ev) => [ev.id, ev]));
-      for (const id of deleted) {
-        cachedMap.delete(id);
-      }
       deleteDescriptionSizes(deleted);
 
-      // decrypt updated and added event data
       try {
-        const [decryptedUpdated, decryptedAdded] = await Promise.all([
-          decryptEvents(updated, masterKey),
-          decryptEvents(added, masterKey),
-        ]);
+        const incoming = [...updated, ...added];
+        const upserts = await toUpserts(
+          incoming,
+          await decryptEvents(incoming, masterKey),
+          bucketKey,
+        );
 
-        // merge decrypted events into cachedMap
-        for (const ev of [...decryptedUpdated, ...decryptedAdded]) {
-          cachedMap.set(ev.id, { ...ev.data, timestamp: ev.updatedAt });
-        }
-
-        const finalEvents = Array.from(cachedMap.values());
-
-        // save the new cache
-        setStored(
-          "cachedEvents",
-          await encryptOfflineEvents(finalEvents, masterKey),
+        await readCache(
+          () => cache.apply(upserts, deleted, masterKey),
+          undefined,
         );
 
         // a mismatch with nothing to pull means the server copy is stale, so re-save ours
         const nothingToApply =
           !updated.length && !added.length && !deleted.length;
-        if (nothingToApply && eventsToSync.size > 0) {
-          encryptEvents([...eventsToSync], masterKey, bucketKey)
+        if (nothingToApply && known.size > 0) {
+          cache
+            .events([...known.keys()], masterKey)
+            .then((events) => encryptEvents(events, masterKey, bucketKey))
             .then((encrypted) =>
               post(
                 "calendar/events/save",
@@ -222,13 +213,17 @@ export const useCalendarEvents = (
             .catch(() => {});
         }
 
-        return finalEvents;
+        const synced = await cache.readIndex(buckets, masterKey);
+        return await cache.events(
+          buckets.flatMap((b) => synced.get(b)!.map((e) => e.id)),
+          masterKey,
+        );
       } catch {
         toast.error(t("events.decryptFailed"));
         return [];
       }
     },
-    [post, setStored, getCachedEvents],
+    [post, cache, readCache],
   );
 
   const syncBuckets = useCallback(
@@ -238,35 +233,36 @@ export const useCalendarEvents = (
   );
 
   const applyChanges = useCallback(
-    (changes: CalendarChange[], masterKey: CryptoKey) =>
+    (changes: CalendarChange[], masterKey: CryptoKey, bucketKey: CryptoKey) =>
       cacheQueue(async () => {
-        const cachedMap = new Map(
-          (await getCachedEvents(masterKey)).map((ev) => [ev.id, ev]),
+        const deleted = changes.flatMap((c) =>
+          c.type === "deleted" ? [c.id] : [],
         );
-        const upserts = [];
+        const incoming = await decryptEvents(
+          changes.filter((c) => c.type !== "deleted"),
+          masterKey,
+        );
+        const known = new Map(
+          (await cache.records(incoming.map((ev) => ev.id)))
+            .filter((r) => !deleted.includes(r.id))
+            .map((r) => [r.id, r.updatedAt]),
+        );
+        const fresh = incoming.filter(
+          (ev) => (known.get(ev.id) ?? -Infinity) < ev.updatedAt,
+        );
+        const upserts = await toUpserts(
+          changes.filter((c) => c.type !== "deleted"),
+          fresh,
+          bucketKey,
+        );
 
-        for (const c of changes) {
-          if (c.type === "deleted") cachedMap.delete(c.id);
-          else upserts.push(c);
-        }
-
-        for (const ev of await decryptEvents(upserts, masterKey)) {
-          const known = cachedMap.get(ev.id);
-          if (!known || known.timestamp < ev.updatedAt) {
-            cachedMap.set(ev.id, { ...ev.data, timestamp: ev.updatedAt });
-          }
-        }
-
-        const events = Array.from(cachedMap.values());
         // the user may have locked or switched accounts while this was running
-        if (masterKeyRef.current !== masterKey) return events;
-        setStored(
-          "cachedEvents",
-          await encryptOfflineEvents(events, masterKey),
-        );
-        return events;
+        if (masterKeyRef.current === masterKey) {
+          await cache.apply(upserts, deleted, masterKey);
+        }
+        return upserts.map((u) => u.event);
       }),
-    [cacheQueue, getCachedEvents, setStored],
+    [cacheQueue, cache],
   );
 
   const syncEvents = useCallback(
@@ -304,7 +300,7 @@ export const useCalendarEvents = (
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : (err as string);
           toast.error(errMsg);
-          return await getCachedEvents(masterKey);
+          return await readCache(() => cache.allEvents(masterKey), []);
         }
       }
 
@@ -317,7 +313,7 @@ export const useCalendarEvents = (
         return [];
       }
     },
-    [getStored, syncEvents, getCachedEvents],
+    [getStored, syncEvents, readCache, cache],
   );
 
   const saveEventsNow = useCallback(
@@ -356,10 +352,9 @@ export const useCalendarEvents = (
           );
 
           if (oversized.size > 0) {
-            const stored = getStored("cachedEvents");
-            const cached = stored
-              ? await decryptValid(stored, masterKey).catch(() => [])
-              : [];
+            const cached = await cache
+              .events([...oversized], masterKey)
+              .catch(() => []);
             const rejected = rejectOversized(changes, oversized, cached);
 
             changes = changes.filter(
@@ -433,7 +428,7 @@ export const useCalendarEvents = (
         setSaving(false);
       }
     },
-    [masterKey, bucketKey, post, getStored, setStored, user?.type],
+    [masterKey, bucketKey, post, cache, setStored, user?.type],
   );
 
   const saveEvents = useCallback(

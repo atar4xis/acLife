@@ -24,8 +24,6 @@ export const encryptOfflineEvents = async (
   return encrypt(compressed, masterKey);
 };
 
-const MAX_TIMESTAMP_DRIFT_MS = 1000;
-
 export const decryptEvents = async (
   events: EncryptedEvent[],
   masterKey: CryptoKey,
@@ -40,11 +38,6 @@ export const decryptEvents = async (
 
       if (raw.id?.toLowerCase() !== ev.id.toLowerCase()) {
         console.warn("Ignoring an event stored under a different id");
-        return null;
-      }
-
-      if (Math.abs(raw.timestamp - ev.updatedAt) > MAX_TIMESTAMP_DRIFT_MS) {
-        console.warn("Ignoring an event whose timestamp does not match");
         return null;
       }
 

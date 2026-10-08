@@ -101,7 +101,11 @@ describe("AppShell stream changes", () => {
         deletedIds: ["a"],
       }),
     );
-    expect(applyChanges).toHaveBeenCalledWith([change, upsert], masterKey);
+    expect(applyChanges).toHaveBeenCalledWith(
+      [change, upsert],
+      masterKey,
+      userMock.value.bucketKey,
+    );
   });
 
   it("does not bring back an event this client is deleting", async () => {
@@ -152,7 +156,11 @@ describe("AppShell stream changes", () => {
     });
 
     await waitFor(() =>
-      expect(applyChanges).toHaveBeenCalledWith([change], masterKey),
+      expect(applyChanges).toHaveBeenCalledWith(
+        [change],
+        masterKey,
+        userMock.value.bucketKey,
+      ),
     );
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(dispatch).not.toHaveBeenCalled();

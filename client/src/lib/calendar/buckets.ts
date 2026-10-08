@@ -4,7 +4,7 @@ import { occurrences, overrideSpan } from "./occurrences";
 import { hmacSign } from "../crypt";
 import { arrayBufferToBase64 } from "../utils";
 
-export const SYNC_RANGE_WEEKS = 1; // weeks in each direction
+export const SYNC_RANGE_WEEKS = 4; // weeks in each direction
 export const RECURRING_BUCKET_LABEL = "recurring";
 export const MAX_SYNC_BUCKETS_PER_REQUEST = 100;
 export const MAX_SERIES_BUCKETS = 32;

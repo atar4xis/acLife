@@ -203,6 +203,101 @@ describe("useCalendarSearch", () => {
     expect(result.current.canExpandMore).toBe(true);
   });
 
+  it("keeps events found while expanding when the events prop is replaced", async () => {
+    const syncBuckets = vi.fn(
+      async (): Promise<CalendarEvent[]> => [dentistEvent],
+    );
+
+    const { result, rerender } = renderHook(
+      ({ events }: { events: CalendarEvent[] }) =>
+        useCalendarSearch(
+          events,
+          onlineUser,
+          masterKey,
+          bucketKey,
+          DateTime.now(),
+          syncBuckets,
+          () => {},
+        ),
+      { initialProps: { events: [] as CalendarEvent[] } },
+    );
+
+    act(() => {
+      result.current.setQuery("dentist");
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    });
+    expect(result.current.results.map((e) => e.id)).toEqual([dentistEvent.id]);
+
+    rerender({ events: [] });
+
+    expect(result.current.results.map((e) => e.id)).toEqual([dentistEvent.id]);
+  });
+
+  it("does not list an expanded event twice when the events prop has it too", async () => {
+    const syncBuckets = vi.fn(
+      async (): Promise<CalendarEvent[]> => [dentistEvent],
+    );
+
+    const { result } = renderHook(() =>
+      useCalendarSearch(
+        [dentistEvent],
+        onlineUser,
+        masterKey,
+        bucketKey,
+        DateTime.now(),
+        syncBuckets,
+        () => {},
+      ),
+    );
+
+    act(() => {
+      result.current.setQuery("dentist");
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    });
+
+    expect(result.current.results).toHaveLength(1);
+  });
+
+  it("hands each expanded batch to onExpandedEvents and forgets them on a new query", async () => {
+    const syncBuckets = vi
+      .fn<() => Promise<CalendarEvent[]>>()
+      .mockResolvedValueOnce([dentistEvent])
+      .mockResolvedValue([]);
+    const onExpandedEvents = vi.fn();
+
+    const { result } = renderHook(() =>
+      useCalendarSearch(
+        [],
+        onlineUser,
+        masterKey,
+        bucketKey,
+        DateTime.now(),
+        syncBuckets,
+        onExpandedEvents,
+      ),
+    );
+
+    act(() => {
+      result.current.setQuery("dentist");
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    });
+    expect(onExpandedEvents).toHaveBeenCalledWith([dentistEvent]);
+
+    act(() => {
+      result.current.setQuery("appointment");
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    });
+    expect(result.current.results).toEqual([]);
+  });
+
   it("allows expanding the search radius even when local results already match", async () => {
     const syncBuckets = vi.fn(async (): Promise<CalendarEvent[]> => []);
 

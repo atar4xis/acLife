@@ -5,4 +5,5 @@ export type CalendarAction =
   | { type: "update"; id: string; data: Partial<CalendarEvent> }
   | { type: "delete"; id: string }
   | { type: "add"; event: CalendarEvent }
+  | { type: "append"; events: CalendarEvent[] }
   | { type: "merge"; events: CalendarEvent[]; deletedIds: string[] };

@@ -1,3 +1,5 @@
+import "fake-indexeddb/auto";
+import { IDBFactory } from "fake-indexeddb";
 import "@testing-library/jest-dom/vitest";
 import "@testing-library/jest-dom";
 import "../src/i18n";
@@ -58,6 +60,8 @@ Element.prototype.matches = function (this: Element, selector: string) {
 };
 
 beforeEach(() => {
+  globalThis.indexedDB = new IDBFactory();
+
   // mock localStorage
   const store: Record<string, string> = {};
 

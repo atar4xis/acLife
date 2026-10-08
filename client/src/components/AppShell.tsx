@@ -93,11 +93,11 @@ export default function AppShell() {
 
   // cache every save and show those from other devices, pull everything if that fails
   useEffect(() => {
-    if (!masterKey || user?.type !== "online") return;
+    if (!masterKey || !bucketKey || user?.type !== "online") return;
 
     let current = true;
     const stopListening = onStream("calendar", (event) => {
-      applyChanges(event.changes ?? [], masterKey)
+      applyChanges(event.changes ?? [], masterKey, bucketKey)
         .then((events) => {
           if (!current || isOwnMessage(event)) return;
 
@@ -127,7 +127,14 @@ export default function AppShell() {
       current = false;
       stopListening();
     };
-  }, [masterKey, user?.type, applyChanges, dispatch, pendingChanges]);
+  }, [
+    masterKey,
+    bucketKey,
+    user?.type,
+    applyChanges,
+    dispatch,
+    pendingChanges,
+  ]);
 
   // re-zone the visible date so day/week boundaries follow the new default
   useEffect(() => {

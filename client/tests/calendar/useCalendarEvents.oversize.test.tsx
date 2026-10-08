@@ -98,6 +98,7 @@ describe("saving an oversized event", () => {
       await result.current.applyChanges(
         [{ type: "updated", id: event.id, data: event.data, updatedAt: event.updatedAt }],
         masterKey,
+        bucketKey,
       );
     });
     server.posted = [];

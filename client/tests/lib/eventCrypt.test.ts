@@ -31,17 +31,17 @@ beforeAll(async () => {
 
 describe("decryptEvents", () => {
   it.each([
-    ["the same time", 1000, true],
-    ["a time within the drift", 1900, true],
-    ["a newer time than the content has", 5000, false],
-    ["an older time than the content has", -5000, false],
-  ])("handles an event filed under %s", async (_name, updatedAt, kept) => {
+    ["the same time", 1000],
+    ["a newer time than the content has", 5000],
+    ["an older time than the content has", -5000],
+  ])("keeps an event filed under %s", async (_name, updatedAt) => {
     const [encrypted] = await encryptEvents([event(A)], masterKey, bucketKey);
-    vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const result = await decryptEvents([{ ...encrypted, updatedAt }], masterKey);
 
-    expect(result).toHaveLength(kept ? 1 : 0);
+    expect(result.map((ev) => [ev.data.id, ev.updatedAt])).toEqual([
+      [A, updatedAt],
+    ]);
   });
 
   it("returns events filed under their own id, whatever its case", async () => {

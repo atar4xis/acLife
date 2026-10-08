@@ -331,7 +331,7 @@ export default memo(function AppCalendar({
 
   const onExpandedSearchEvents = useCallback(
     (newEvents: CalendarEvent[]) =>
-      dispatch({ type: "set", events: newEvents }),
+      dispatch({ type: "append", events: newEvents }),
     [dispatch],
   );
 
