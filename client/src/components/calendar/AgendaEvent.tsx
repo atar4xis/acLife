@@ -93,11 +93,11 @@ export default function AgendaEvent({ event, overdue }: AgendaEventProps) {
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            "relative w-full py-1 px-2 flex justify-between items-center text-foreground hover:bg-secondary hover:cursor-pointer",
+            "relative w-full py-1 px-2 flex justify-between items-start text-foreground hover:bg-secondary hover:cursor-pointer",
             event.isTask && event.completed && "opacity-50",
           )}
         >
-          <div className="font-semibold flex items-center">
+          <div className="font-semibold flex items-center min-w-0">
             <div
               className="me-2 self-stretch"
               style={{
@@ -108,7 +108,7 @@ export default function AgendaEvent({ event, overdue }: AgendaEventProps) {
             </div>
             {event.isTask && event.start.toMillis() - now <= 86_400_000 && (
               <Checkbox
-                className="relative z-10 me-2 shrink-0"
+                className="relative z-10 me-2 mt-0.5 shrink-0 self-start"
                 checked={event.completed ?? false}
                 onClick={(e) => e.stopPropagation()}
                 onCheckedChange={(c) => toggleCompleted(!!c)}
@@ -116,7 +116,7 @@ export default function AgendaEvent({ event, overdue }: AgendaEventProps) {
             )}
             <button
               type="button"
-              className="flex cursor-pointer flex-col text-start after:absolute after:inset-0"
+              className="flex min-w-0 cursor-pointer flex-col text-start wrap-anywhere after:absolute after:inset-0"
               onClick={openEditor}
             >
               <span
@@ -133,7 +133,7 @@ export default function AgendaEvent({ event, overdue }: AgendaEventProps) {
           {!event._continued && (
             <div
               className={cn(
-                "text-xs font-normal truncate",
+                "ms-2 mt-0.5 shrink-0 text-xs font-normal truncate",
                 overdue ? "text-destructive/50" : "text-foreground/50",
               )}
             >
