@@ -584,6 +584,11 @@
       "restart": "Reiniciar",
       "noChanges": "No hay notas de la versión.",
       "installFailed": "No se pudo instalar la actualización.",
+      "restartPrompt": {
+        "title": "Actualización instalada",
+        "description": "¿Reiniciar ahora para terminar de aplicar la actualización?",
+        "later": "Más tarde"
+      },
       "status": {
         "idle": "Sin comprobar",
         "checking": "Comprobando…",

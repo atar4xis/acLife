@@ -608,6 +608,11 @@
       "restart": "Uruchom ponownie",
       "noChanges": "Brak informacji o wydaniu.",
       "installFailed": "Nie udało się zainstalować aktualizacji.",
+      "restartPrompt": {
+        "title": "Aktualizacja zainstalowana",
+        "description": "Uruchomić ponownie teraz, aby dokończyć stosowanie aktualizacji?",
+        "later": "Później"
+      },
       "status": {
         "idle": "Nie sprawdzono",
         "checking": "Sprawdzanie…",

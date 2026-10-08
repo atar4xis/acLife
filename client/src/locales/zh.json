@@ -576,6 +576,11 @@
       "restart": "重启",
       "noChanges": "暂无发行说明。",
       "installFailed": "安装更新失败。",
+      "restartPrompt": {
+        "title": "更新已安装",
+        "description": "立即重启以完成更新应用吗？",
+        "later": "稍后"
+      },
       "status": {
         "idle": "未检查",
         "checking": "正在检查…",

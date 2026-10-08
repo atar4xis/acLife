@@ -8,11 +8,20 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import {
   checkNativeUpdate,
   installNativeUpdate,
   isTauri,
+  restartApp,
 } from "@/lib/nativeUpdater";
 import {
   compareVersions,
@@ -64,6 +73,7 @@ export function UpdaterProvider({ children }: WithChildren) {
     changelog: [],
     lastChecked: Number(localStorage.getItem(LAST_CHECKED_KEY)) || null,
   });
+  const [restartDismissed, setRestartDismissed] = useState(false);
   const installing = useRef(false);
 
   const check = useCallback(async () => {
@@ -126,7 +136,31 @@ export function UpdaterProvider({ children }: WithChildren) {
   );
 
   return (
-    <UpdaterContext.Provider value={value}>{children}</UpdaterContext.Provider>
+    <UpdaterContext.Provider value={value}>
+      {children}
+      <AlertDialog
+        open={
+          state.status === "ready" && settings.autoInstall && !restartDismissed
+        }
+      >
+        <AlertDialogContent aria-describedby={undefined}>
+          <AlertDialogTitle>
+            {t("settings.updates.restartPrompt.title")}
+          </AlertDialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {t("settings.updates.restartPrompt.description")}
+          </p>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRestartDismissed(true)}>
+              {t("settings.updates.restartPrompt.later")}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={restartApp}>
+              {t("settings.updates.restart")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </UpdaterContext.Provider>
   );
 }
 

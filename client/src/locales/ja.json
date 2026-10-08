@@ -576,6 +576,11 @@
       "restart": "再起動",
       "noChanges": "リリースノートはありません。",
       "installFailed": "アップデートのインストールに失敗しました。",
+      "restartPrompt": {
+        "title": "アップデートをインストールしました",
+        "description": "アップデートの適用を完了するため、今すぐ再起動しますか？",
+        "later": "後で"
+      },
       "status": {
         "idle": "未確認",
         "checking": "確認中…",

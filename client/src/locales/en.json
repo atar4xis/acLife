@@ -590,6 +590,11 @@
       "restart": "Restart",
       "noChanges": "No release notes available.",
       "installFailed": "Failed to install the update.",
+      "restartPrompt": {
+        "title": "Update installed",
+        "description": "Restart now to finish applying the update?",
+        "later": "Later"
+      },
       "status": {
         "idle": "Not checked",
         "checking": "Checking…",

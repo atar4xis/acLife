@@ -586,6 +586,11 @@
       "restart": "Redémarrer",
       "noChanges": "Aucune note de version disponible.",
       "installFailed": "Échec de l'installation de la mise à jour.",
+      "restartPrompt": {
+        "title": "Mise à jour installée",
+        "description": "Redémarrer maintenant pour terminer l’application de la mise à jour ?",
+        "later": "Plus tard"
+      },
       "status": {
         "idle": "Non vérifié",
         "checking": "Vérification…",
