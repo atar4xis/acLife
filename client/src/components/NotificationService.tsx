@@ -13,6 +13,7 @@ import { useEventList } from "@/context/CalendarContext";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useStorage } from "@/context/StorageContext";
 import { useUser } from "@/context/UserContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   isSoundBlocked,
   playNotificationSound,
@@ -42,6 +43,7 @@ async function notifyNative(options: Options) {
 
 export default function NotificationService() {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const events = useEventList();
   const { user } = useUser();
   const { post, serverMeta } = useApi();
@@ -102,7 +104,7 @@ export default function NotificationService() {
       .then((blocked) => {
         if (!blocked || cancelled) return;
         id = toast.warning(t("notify.soundBlocked"), {
-          position: "top-right",
+          position: isMobile ? "bottom-center" : "top-right",
           duration: Infinity,
           className: "border-warning! text-warning!",
         });
@@ -115,7 +117,7 @@ export default function NotificationService() {
       window.removeEventListener("keydown", dismiss);
       dismiss();
     };
-  }, [hasSound, t]);
+  }, [hasSound, isMobile, t]);
 
   useEffect(() => {
     const timers = due
