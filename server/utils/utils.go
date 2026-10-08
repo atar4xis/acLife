@@ -21,6 +21,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"acLife/types"
 )
@@ -99,6 +100,11 @@ func LogError(function, action string, err error) {
 		return
 	}
 	log.Printf("[ERROR] in %s @ %s: %v", function, action, err)
+}
+
+// LogInfo prints a timestamped informational line to stdout, errors and warnings go to stderr through LogError and the log package.
+func LogInfo(format string, args ...any) {
+	_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", time.Now().Format(time.DateTime), fmt.Sprintf(format, args...))
 }
 
 // Assert panics if a condition is false.

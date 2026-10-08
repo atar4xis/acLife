@@ -37,10 +37,15 @@ const (
 	IPFailureDecay        = 1 * time.Hour // a quiet address starts over after this
 	RateLimitCacheTTL     = 2 * time.Minute
 
+	StorageReconcileDelay = 1 * time.Minute
+	StorageReconcileEvery = 6 * time.Hour
+	StorageReconcileBatch = 100
+
 	DBMaxOpenConns    = 100
 	DBMaxIdleConns    = 25
 	DBConnMaxLifetime = 1 * time.Hour
 	DBTimeout         = 5 * time.Second
+	TxMaxAttempts     = 3
 
 	SMTPTimeout = 30 * time.Second
 
@@ -51,12 +56,14 @@ const (
 	EmailQueueStaleThreshold = 1 * time.Minute
 	EmailQueueMaxAttempts    = 5
 
-	MaxEmailLen    = 260
-	MaxSaltLen     = 16
-	MaxVerifierLen = 520
-	MaxEventLen    = 10000
-	MaxPowTokenLen = 512
-	MaxPowNonceLen = 32
+	MaxEmailLen      = 260
+	MaxSaltLen       = 16
+	MaxVerifierLen   = 520
+	MaxEventLen      = 10000
+	MaxRequestEvents = 50000                        // events in one save or sync request
+	MaxSyncBodyBytes = MaxRequestEvents*80 + 64<<10 // about 80 bytes per cached event entry
+	MaxPowTokenLen   = 512
+	MaxPowNonceLen   = 32
 
 	MaxEnvelopeSaltLen = 64
 	MaxEnvelopeDataLen = 256
@@ -70,9 +77,10 @@ const (
 
 	MaxConcurrentRegistrations = 10
 
-	BucketIDLen     = 32  // HMAC-SHA256 output size
-	MaxEventBuckets = 60  // caps the number of weeks a single event may span
-	MaxSyncBuckets  = 100 // caps the number of buckets requested in a single sync
+	BucketIDLen     = 32               // HMAC-SHA256 output size
+	BucketRowBytes  = 36 + BucketIDLen // what a calendar_event_buckets row counts toward the quota: event uuid + bucket id
+	MaxEventBuckets = 60               // caps the number of weeks a single event may span
+	MaxSyncBuckets  = 100              // caps the number of buckets requested in a single sync
 
 	MaxSettingsBytes = 128 << 10 // caps the encrypted settings blob
 
@@ -98,15 +106,15 @@ const (
 	MailBudgetWarnFraction           = 0.8
 	DefaultMailHourlyLimit           = 400
 	DefaultMailDomainHourlyLimit     = 100
+	DefaultMaxPushSubscriptions      = 50
 )
 
 var (
-	MaxUserEvents         int
 	MaxUserBytes          int64
 	MaxSaveBodyBytes      int64
-	MaxSyncBodyBytes      int64
 	MailHourlyLimit       int
 	MailDomainHourlyLimit int
+	MaxPushSubscriptions  int
 )
 
 // AccessTokenExpiry set in init: ACCESS_TOKEN_EXPIRY_DAYS env var if present, else default 3 days.
@@ -134,12 +142,11 @@ func Configure() {
 		}
 	}
 
-	MaxUserEvents = int(envInt("MAX_USER_EVENTS", 50000))
-	MaxUserBytes = envInt("MAX_USER_BYTES", 500<<20)
+	MaxUserBytes = envInt("MAX_USER_BYTES", 250<<20)
 	MaxSaveBodyBytes = envInt("MAX_SAVE_BODY_BYTES", 16<<20)
-	MaxSyncBodyBytes = int64(MaxUserEvents)*80 + 64<<10 // about 80 bytes per cached event entry
 	MailHourlyLimit = int(envInt("MAIL_HOURLY_LIMIT", DefaultMailHourlyLimit))
 	MailDomainHourlyLimit = int(envInt("MAIL_DOMAIN_HOURLY_LIMIT", DefaultMailDomainHourlyLimit))
+	MaxPushSubscriptions = int(envInt("MAX_PUSH_SUBSCRIPTIONS", DefaultMaxPushSubscriptions))
 
 	Metadata = types.ServerMetadata{
 		URL: os.Getenv("SERVER_URL"),

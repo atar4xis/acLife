@@ -38,7 +38,7 @@ type EventChange struct {
 	Event types.EncryptedEvent `json:"event"`
 }
 
-// eventChanges decodes at most constants.MaxUserEvents changes, so a huge array of tiny entries is rejected instead of expanded in memory.
+// eventChanges decodes at most constants.MaxRequestEvents changes, so a huge array of tiny entries is rejected instead of expanded in memory.
 type eventChanges []EventChange
 
 func (c *eventChanges) UnmarshalJSON(data []byte) error {
@@ -54,7 +54,7 @@ func (c *eventChanges) UnmarshalJSON(data []byte) error {
 
 	changes := eventChanges{}
 	for dec.More() {
-		if len(changes) == constants.MaxUserEvents {
+		if len(changes) == constants.MaxRequestEvents {
 			return errBadEventChanges
 		}
 
@@ -71,7 +71,6 @@ func (c *eventChanges) UnmarshalJSON(data []byte) error {
 
 var (
 	errBadEventChanges = errors.New("invalid event changes")
-	errEventLimit      = errors.New("event limit reached")
 	errStorageLimit    = errors.New("storage limit reached")
 )
 
@@ -80,12 +79,6 @@ func replyEventChangesError(w http.ResponseWriter, function string, err error) {
 	switch {
 	case errors.Is(err, errBadEventChanges):
 		utils.SendBadRequest(w)
-	case errors.Is(err, errEventLimit):
-		utils.SendJSON(w, http.StatusRequestEntityTooLarge, types.Reply[any]{
-			Success: false,
-			Message: "Event limit reached.",
-			Code:    "event_limit_reached",
-		})
 	case errors.Is(err, errStorageLimit):
 		utils.SendJSON(w, http.StatusRequestEntityTooLarge, types.Reply[any]{
 			Success: false,
@@ -116,34 +109,28 @@ func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	tx, err := database.DB.BeginTx(ctx, nil) // start transaction
-	if err != nil {
-		utils.LogError("SaveCalendarEvents", "BeginTx", err)
-		utils.SendInternalError(w)
-		return
-	}
-	defer func() { _ = tx.Rollback() }() // rollback if commit never happens
+	err := database.RunTx(ctx, func(tx *sql.Tx) error {
+		applied, err := applyCalendarChanges(ctx, tx, user.UUID, changes)
+		if err != nil {
+			return err
+		}
 
-	applied, err := applyCalendarChanges(ctx, tx, user.UUID, changes)
-	if err != nil {
-		replyEventChangesError(w, "SaveCalendarEvents", err)
-		return
-	}
+		// commit and publish together so other clients see changes in commit order
+		unlock := stream.SerializeCommits(user.UUID)
+		defer unlock()
+		if err := tx.Commit(); err != nil {
+			return err
+		}
 
-	// commit and publish together so other clients see changes in commit order
-	unlock := stream.SerializeCommits(user.UUID)
-	err = tx.Commit() // finalize transaction
-	if err == nil {
 		originClientID := r.URL.Query().Get("c")
 		if len(originClientID) != 6 {
 			originClientID = ""
 		}
 		stream.Publish(user.UUID, stream.CalendarChanged(originClientID, applied))
-	}
-	unlock()
+		return nil
+	})
 	if err != nil {
-		utils.LogError("SaveCalendarEvents", "Commit", err)
-		utils.SendInternalError(w)
+		replyEventChangesError(w, "SaveCalendarEvents", err)
 		return
 	}
 
@@ -216,6 +203,23 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 		upserts = append(upserts, upsertsByID[id])
 	}
 
+	used, limit, err := lockStorage(ctx, tx, owner)
+	if err != nil {
+		return nil, err
+	}
+
+	touched := make([]any, 0, len(deletedIDs)+len(upserts))
+	for _, id := range deletedIDs {
+		touched = append(touched, id)
+	}
+	for _, ev := range upserts {
+		touched = append(touched, ev.ID)
+	}
+	before, err := measureEvents(ctx, tx, owner, touched)
+	if err != nil {
+		return nil, err
+	}
+
 	// Batch delete
 	if len(deletedIDs) > 0 {
 		query := `DELETE FROM calendar_events WHERE owner = ? AND id IN (?` + strings.Repeat(",?", len(deletedIDs)-1) + `)`
@@ -231,11 +235,6 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 
 	// Batch upsert
 	if len(upserts) > 0 {
-		// serializes this owner's saves, so concurrent batches cannot each pass the limit check
-		if _, err := tx.ExecContext(ctx, "SELECT 1 FROM users WHERE uuid = ? FOR UPDATE", owner); err != nil {
-			return nil, err
-		}
-
 		valueStrings := make([]string, 0, len(upserts))
 		valueArgs := make([]any, 0, len(upserts)*4)
 
@@ -259,21 +258,19 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 		if err := replaceEventBuckets(ctx, tx, owner, upserts); err != nil {
 			return nil, err
 		}
+	}
 
-		var stored int
-		var storedBytes int64
-		if err := tx.QueryRowContext(ctx,
-			"SELECT COUNT(*), COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM calendar_events WHERE owner = ?",
-			owner,
-		).Scan(&stored, &storedBytes); err != nil {
-			return nil, err
-		}
-		if stored > constants.MaxUserEvents {
-			return nil, errEventLimit
-		}
-		if storedBytes > constants.MaxUserBytes {
-			return nil, errStorageLimit
-		}
+	after, err := measureEvents(ctx, tx, owner, touched)
+	if err != nil {
+		return nil, err
+	}
+	used += after - before
+
+	if len(upserts) > 0 && used > limit && after > before {
+		return nil, errStorageLimit
+	}
+	if err := saveStorage(ctx, tx, owner, used); err != nil {
+		return nil, err
 	}
 
 	applied := make([]stream.Change, 0, len(deletedIDs)+len(upserts))
@@ -471,7 +468,7 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cached := req.Events
-	if len(cached) > constants.MaxUserEvents {
+	if len(cached) > constants.MaxRequestEvents {
 		utils.SendBadRequest(w)
 		return
 	}

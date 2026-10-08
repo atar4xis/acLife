@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -25,6 +26,8 @@ type notificationEvent struct {
 	ID    string             `json:"id"`
 	Times []notificationTime `json:"times"`
 }
+
+var errNotificationLimit = errors.New("notification limit reached")
 
 // SyncNotifications replaces the scheduled notifications of the given events.
 func SyncNotifications(w http.ResponseWriter, r *http.Request) {
@@ -68,130 +71,115 @@ func SyncNotifications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	tx, err := database.DB.BeginTx(ctx, nil)
-	if err != nil {
-		utils.LogError("SyncNotifications", "BeginTx", err)
-		utils.SendInternalError(w)
-		return
-	}
-	defer func() { _ = tx.Rollback() }()
+	var retry []string
+	err := database.RunTx(ctx, func(tx *sql.Tx) error {
+		marks := "?" + strings.Repeat(",?", len(ids)-1)
 
-	marks := "?" + strings.Repeat(",?", len(ids)-1)
-
-	rows, err := tx.QueryContext(ctx,
-		`SELECT id FROM calendar_events WHERE owner = ? AND id IN (`+marks+`)`,
-		append([]any{user.UUID}, ids...)...,
-	)
-	if err != nil {
-		utils.LogError("SyncNotifications", "QueryContext", err)
-		utils.SendInternalError(w)
-		return
-	}
-	owned := map[string]bool{}
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			_ = rows.Close()
-			utils.LogError("SyncNotifications", "Scan", err)
-			utils.SendInternalError(w)
-			return
+		rows, err := tx.QueryContext(ctx,
+			`SELECT id FROM calendar_events WHERE owner = ? AND id IN (`+marks+`)`,
+			append([]any{user.UUID}, ids...)...,
+		)
+		if err != nil {
+			return fmt.Errorf("query events: %w", err)
 		}
-		owned[strings.ToLower(id)] = true
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
-		utils.LogError("SyncNotifications", "rows.Err", err)
-		utils.SendInternalError(w)
-		return
-	}
-	_ = rows.Close()
-
-	var subscription int64
-	if req.Endpoint != "" {
-		err := tx.QueryRowContext(ctx,
-			`SELECT id FROM push_subscriptions WHERE owner = ? AND endpoint = ?`,
-			user.UUID, req.Endpoint,
-		).Scan(&subscription)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			utils.LogError("SyncNotifications", "QueryRowContext", err)
-			utils.SendInternalError(w)
-			return
-		}
-	}
-
-	var (
-		retry   = []string{}
-		values  = []string{}
-		args    = []any{}
-		ownedID = []any{}
-	)
-	for _, ev := range req.Events {
-		if !owned[ev.ID] {
-			retry = append(retry, ev.ID)
-			continue
-		}
-		ownedID = append(ownedID, ev.ID)
-		skipped := false
-		for _, t := range ev.Times {
-			var sub any
-			if t.Device {
-				if subscription == 0 {
-					skipped = true
-					continue
-				}
-				sub = subscription
+		owned := map[string]bool{}
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				_ = rows.Close()
+				return fmt.Errorf("scan events: %w", err)
 			}
-			values = append(values, "(?,?,?,?)")
-			args = append(args, user.UUID, ev.ID, sub, t.At)
+			owned[strings.ToLower(id)] = true
 		}
-		if skipped {
-			retry = append(retry, ev.ID)
+		err = rows.Err()
+		_ = rows.Close()
+		if err != nil {
+			return fmt.Errorf("read events: %w", err)
 		}
-	}
 
-	if len(ownedID) > 0 {
-		if _, err := tx.ExecContext(ctx,
-			`DELETE FROM scheduled_notifications
-			WHERE owner = ? AND (subscription_id IS NULL OR subscription_id = ?)
-			AND event_id IN (?`+strings.Repeat(",?", len(ownedID)-1)+`)`,
-			append([]any{user.UUID, subscription}, ownedID...)...,
-		); err != nil {
-			utils.LogError("SyncNotifications", "delete", err)
-			utils.SendInternalError(w)
-			return
+		var subscription int64
+		if req.Endpoint != "" {
+			err := tx.QueryRowContext(ctx,
+				`SELECT id FROM push_subscriptions WHERE owner = ? AND endpoint = ?`,
+				user.UUID, req.Endpoint,
+			).Scan(&subscription)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("query subscription: %w", err)
+			}
 		}
-	}
 
-	if len(values) > 0 {
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO scheduled_notifications (owner, event_id, subscription_id, fire_at) VALUES `+strings.Join(values, ","),
-			args...,
-		); err != nil {
-			utils.LogError("SyncNotifications", "insert", err)
-			utils.SendInternalError(w)
-			return
+		var (
+			values  = []string{}
+			args    = []any{}
+			ownedID = []any{}
+		)
+		retry = []string{}
+		for _, ev := range req.Events {
+			if !owned[ev.ID] {
+				retry = append(retry, ev.ID)
+				continue
+			}
+			ownedID = append(ownedID, ev.ID)
+			skipped := false
+			for _, t := range ev.Times {
+				var sub any
+				if t.Device {
+					if subscription == 0 {
+						skipped = true
+						continue
+					}
+					sub = subscription
+				}
+				values = append(values, "(?,?,?,?)")
+				args = append(args, user.UUID, ev.ID, sub, t.At)
+			}
+			if skipped {
+				retry = append(retry, ev.ID)
+			}
 		}
-	}
 
-	var count int
-	if err := tx.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM scheduled_notifications WHERE owner = ?`,
-		user.UUID,
-	).Scan(&count); err != nil {
-		utils.LogError("SyncNotifications", "count", err)
-		utils.SendInternalError(w)
-		return
-	}
-	if count > constants.MaxNotificationTimes {
+		if len(ownedID) > 0 {
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM scheduled_notifications
+				WHERE owner = ? AND (subscription_id IS NULL OR subscription_id = ?)
+				AND event_id IN (?`+strings.Repeat(",?", len(ownedID)-1)+`)`,
+				append([]any{user.UUID, subscription}, ownedID...)...,
+			); err != nil {
+				return fmt.Errorf("delete: %w", err)
+			}
+		}
+
+		if len(values) > 0 {
+			if _, err := tx.ExecContext(ctx,
+				`INSERT INTO scheduled_notifications (owner, event_id, subscription_id, fire_at) VALUES `+strings.Join(values, ","),
+				args...,
+			); err != nil {
+				return fmt.Errorf("insert: %w", err)
+			}
+		}
+
+		var count int
+		if err := tx.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM scheduled_notifications WHERE owner = ?`,
+			user.UUID,
+		).Scan(&count); err != nil {
+			return fmt.Errorf("count: %w", err)
+		}
+		if count > constants.MaxNotificationTimes {
+			return errNotificationLimit
+		}
+
+		return tx.Commit()
+	})
+	if errors.Is(err, errNotificationLimit) {
 		utils.SendJSON(w, http.StatusRequestEntityTooLarge, types.Reply[any]{
 			Success: false,
 			Message: "Notification limit reached.",
 		})
 		return
 	}
-
-	if err := tx.Commit(); err != nil {
-		utils.LogError("SyncNotifications", "Commit", err)
+	if err != nil {
+		utils.LogError("SyncNotifications", "RunTx", err)
 		utils.SendInternalError(w)
 		return
 	}

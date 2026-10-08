@@ -53,6 +53,12 @@ type PublicUser struct {
 	Envelopes []KeyEnvelope `json:"envelopes"`
 }
 
+// Quota is how much of the stored-ciphertext quota a user has used, in bytes.
+type Quota struct {
+	Used  int64 `json:"used"`
+	Limit int64 `json:"limit"`
+}
+
 // Session is a login session belonging to a user.
 type Session struct {
 	ID        string    `json:"id"`

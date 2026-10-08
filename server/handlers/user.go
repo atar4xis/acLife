@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,6 +25,11 @@ import (
 	"mz.attahri.com/code/srp/v3"
 
 	_ "crypto/sha256"
+)
+
+var (
+	errPushEndpointTaken = errors.New("push endpoint belongs to another user")
+	errPushLimit         = errors.New("push subscription limit reached")
 )
 
 func UserInfo(w http.ResponseWriter, r *http.Request) {
@@ -254,46 +260,34 @@ func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	tx, err := database.DB.BeginTx(ctx, nil)
-	if err != nil {
-		utils.LogError("UpdatePassword", "BeginTx", err)
-		utils.SendInternalError(w)
-		return
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if _, err := tx.ExecContext(ctx,
-		"UPDATE users SET srp_salt = ?, verifier = ? WHERE uuid = ?",
-		triplet.Salt(), triplet.Verifier(), user.UUID,
-	); err != nil {
-		utils.LogError("UpdatePassword", "tx.Exec(update users)", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	if err := upsertEnvelopesTx(ctx, tx, user.UUID, req.Envelopes); err != nil {
-		utils.LogError("UpdatePassword", "upsertEnvelopesTx", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	// changing the password should invalidate every other session
 	currentToken := session.Get[string](r, "access_token")
-	if _, err := tx.ExecContext(ctx,
-		"DELETE FROM account_sessions WHERE owner = ? AND access_token != ?",
-		user.UUID, currentToken,
-	); err != nil {
-		utils.LogError("UpdatePassword", "tx.Exec(revoke sessions)", err)
+	err := database.RunTx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx,
+			"UPDATE users SET srp_salt = ?, verifier = ? WHERE uuid = ?",
+			triplet.Salt(), triplet.Verifier(), user.UUID,
+		); err != nil {
+			return fmt.Errorf("update users: %w", err)
+		}
+
+		if err := upsertEnvelopesTx(ctx, tx, user.UUID, req.Envelopes); err != nil {
+			return fmt.Errorf("upsertEnvelopesTx: %w", err)
+		}
+
+		// changing the password should invalidate every other session
+		if _, err := tx.ExecContext(ctx,
+			"DELETE FROM account_sessions WHERE owner = ? AND access_token != ?",
+			user.UUID, currentToken,
+		); err != nil {
+			return fmt.Errorf("revoke sessions: %w", err)
+		}
+
+		return tx.Commit()
+	})
+	if err != nil {
+		utils.LogError("UpdatePassword", "RunTx", err)
 		utils.SendInternalError(w)
 		return
 	}
-
-	if err := tx.Commit(); err != nil {
-		utils.LogError("UpdatePassword", "tx.Commit", err)
-		utils.SendInternalError(w)
-		return
-	}
-
 	stream.CloseUser(user.UUID, currentToken)
 
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
@@ -568,17 +562,59 @@ func PushSubscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Upsert into database
-	if _, err := database.Exec(r.Context(), `
-		INSERT INTO push_subscriptions (owner, endpoint, p256dh, auth)
-		VALUES (?, ?, ?, ?)
-		ON DUPLICATE KEY UPDATE
-			owner = VALUES(owner),
-			p256dh = VALUES(p256dh),
-			auth = VALUES(auth);`,
-		user.UUID, req.Endpoint, req.P256DH, req.Auth,
-	); err != nil {
-		utils.LogError("PushSubscribe", "database.Exec", err)
+	ctx := r.Context()
+	err = database.RunTx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, "SELECT 1 FROM users WHERE uuid = ? FOR UPDATE", user.UUID); err != nil {
+			return fmt.Errorf("lock user: %w", err)
+		}
+
+		result, err := tx.ExecContext(ctx, `
+			INSERT INTO push_subscriptions (owner, endpoint, p256dh, auth)
+			VALUES (?, ?, ?, ?)
+			ON DUPLICATE KEY UPDATE
+				p256dh = IF(owner = VALUES(owner), VALUES(p256dh), p256dh),
+				auth = IF(owner = VALUES(owner), VALUES(auth), auth);`,
+			user.UUID, req.Endpoint, req.P256DH, req.Auth,
+		)
+		if err != nil {
+			return fmt.Errorf("upsert: %w", err)
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("rows affected: %w", err)
+		}
+
+		var holder string
+		if err := tx.QueryRowContext(ctx, "SELECT owner FROM push_subscriptions WHERE endpoint = ?", req.Endpoint).Scan(&holder); err != nil {
+			return fmt.Errorf("read holder: %w", err)
+		}
+		if holder != user.UUID {
+			return errPushEndpointTaken
+		}
+
+		var total int
+		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM push_subscriptions WHERE owner = ?", user.UUID).Scan(&total); err != nil {
+			return fmt.Errorf("count: %w", err)
+		}
+		if affected == 1 && total > constants.MaxPushSubscriptions {
+			return errPushLimit
+		}
+
+		return tx.Commit()
+	})
+	switch {
+	case errors.Is(err, errPushEndpointTaken):
+		utils.SendBadRequest(w)
+		return
+	case errors.Is(err, errPushLimit):
+		utils.SendJSON(w, http.StatusConflict, types.Reply[any]{
+			Success: false,
+			Message: "Push subscription limit reached.",
+			Code:    "push_subscription_limit_reached",
+		})
+		return
+	case err != nil:
+		utils.LogError("PushSubscribe", "RunTx", err)
 		utils.SendInternalError(w)
 		return
 	}

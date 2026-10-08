@@ -34,6 +34,7 @@ var srpSessionStore = sync.Map{} // map[string]types.SRPSession
 func StartWorkers() {
 	go cleanupSRPSessions()
 	go cleanupAccountSessions()
+	go reconcileStorageLoop()
 	go cleanupExpiredVerifications()
 	go dispatchNotifications()
 	if constants.Metadata.Registration.SubscriptionRequired {

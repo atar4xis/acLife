@@ -26,6 +26,7 @@ func User(r *mux.Router) {
 	sr.Use(handlers.MaxBodySizeMiddleware(8 << 10)) // 8 KB
 
 	sr.HandleFunc("", handlers.UserInfo).Methods("GET")
+	sr.HandleFunc("/quota", handlers.GetQuota).Methods("GET")
 	sr.HandleFunc("/reauth/start", handlers.ReauthStart).Methods("POST")
 	sr.HandleFunc("/email", handlers.UpdateEmail).Methods("POST")
 	sr.HandleFunc("/password", handlers.UpdatePassword).Methods("POST")

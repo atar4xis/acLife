@@ -12,19 +12,6 @@ import (
 	"acLife/internal/testutil"
 )
 
-func fillEvents(t *testing.T, owner string, n int) {
-	t.Helper()
-
-	const chunk = 10000
-	for left := n; left > 0; left -= chunk {
-		ids := make([]string, min(chunk, left))
-		for i := range ids {
-			ids[i] = testutil.NewUUID()
-		}
-		insertEvents(t, owner, ids...)
-	}
-}
-
 func deletesBody(n int) []byte {
 	entry := `{"type":"deleted","id":"` + testutil.NewUUID() + `"}`
 	return []byte("[" + strings.TrimSuffix(strings.Repeat(entry+",", n), ",") + "]")
@@ -38,8 +25,8 @@ func TestSaveCapsTheNumberOfChanges(t *testing.T) {
 		n      int
 		status int
 	}{
-		"at the cap":   {constants.MaxUserEvents, http.StatusOK},
-		"over the cap": {constants.MaxUserEvents + 1, http.StatusBadRequest},
+		"at the cap":   {constants.MaxRequestEvents, http.StatusOK},
+		"over the cap": {constants.MaxRequestEvents + 1, http.StatusBadRequest},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if resp, _ := c.Do("POST", "/calendar/events/save", deletesBody(tc.n)); resp.StatusCode != tc.status {
@@ -65,57 +52,27 @@ func TestSaveRejectsDeleteOfAnInvalidID(t *testing.T) {
 	}
 }
 
-func TestSaveEnforcesTheEventLimitPerUser(t *testing.T) {
+func TestConcurrentSavesCannotExceedTheStorageLimit(t *testing.T) {
 	testutil.RequireDB(t)
+	old := constants.MaxUserBytes
+	constants.MaxUserBytes = 5 * fp(100)
+	t.Cleanup(func() { constants.MaxUserBytes = old })
 	user := testutil.NewUser(t)
-	c := testutil.NewClient(t).As(user)
-	fillEvents(t, user.UUID, constants.MaxUserEvents-1)
-	bucket := testutil.BucketID(1)
-	last, over := testutil.NewUUID(), testutil.NewUUID()
-
-	mustSave(t, c, added(ev(last, baseTS, bucket)))
-
-	status, reply := testutil.Call[any](c, "POST", "/calendar/events/save", []any{added(ev(over, baseTS, bucket))})
-	if status != http.StatusRequestEntityTooLarge || reply.Code != "event_limit_reached" {
-		t.Fatalf("got %d %q", status, reply.Code)
-	}
-	if count(t, "SELECT COUNT(*) FROM calendar_events WHERE id = ?", over) != 0 || count(t, "SELECT COUNT(*) FROM calendar_event_buckets WHERE event_id = ?", over) != 0 {
-		t.Fatal("rejected event stored")
-	}
-
-	t.Run("updating at the limit works", func(t *testing.T) {
-		mustSave(t, c, updated(ev(last, baseTS+1, bucket)))
-	})
-	t.Run("replacing at the limit works", func(t *testing.T) {
-		mustSave(t, c, deleted(last), added(ev(over, baseTS, bucket)))
-	})
-	t.Run("deleting at the limit works", func(t *testing.T) {
-		mustSave(t, c, deleted(over))
-	})
-	t.Run("other users are unaffected", func(t *testing.T) {
-		mustSave(t, testutil.NewClient(t).As(testutil.NewUser(t)), added(ev(testutil.NewUUID(), baseTS, bucket)))
-	})
-}
-
-func TestConcurrentSavesCannotExceedTheEventLimit(t *testing.T) {
-	testutil.RequireDB(t)
-	user := testutil.NewUser(t)
-	c := testutil.NewClient(t).As(user)
-	fillEvents(t, user.UUID, constants.MaxUserEvents-1)
 
 	const writers = 10
 	statuses := make([]int, writers)
 	var wg sync.WaitGroup
 	for i := range writers {
 		wg.Go(func() {
-			statuses[i] = save(c, added(ev(testutil.NewUUID(), baseTS, testutil.BucketID(1))))
+			statuses[i] = save(testutil.NewClient(t).As(user), added(evSized(testutil.NewUUID(), baseTS, 100, testutil.BucketID(1))))
 		})
 	}
 	wg.Wait()
 
-	if n := count(t, "SELECT COUNT(*) FROM calendar_events WHERE owner = ?", user.UUID); n != constants.MaxUserEvents {
-		t.Fatalf("%d events stored, statuses %v", n, statuses)
+	if used := stored(t, user.UUID); used != constants.MaxUserBytes {
+		t.Fatalf("%d bytes stored, statuses %v", used, statuses)
 	}
+	requireCounter(t, user.UUID, constants.MaxUserBytes)
 }
 
 func TestSyncCapsTheRequest(t *testing.T) {
@@ -128,13 +85,13 @@ func TestSyncCapsTheRequest(t *testing.T) {
 	buckets := `,"buckets":["` + testutil.BucketID(1) + `"]`
 
 	t.Run("accepts a full cache", func(t *testing.T) {
-		body := []byte(`{"events":[` + entries(constants.MaxUserEvents) + `]` + buckets + `}`)
+		body := []byte(`{"events":[` + entries(constants.MaxRequestEvents) + `]` + buckets + `}`)
 		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusOK {
 			t.Fatalf("got %d", resp.StatusCode)
 		}
 	})
 	t.Run("rejects more events than a user may own", func(t *testing.T) {
-		body := []byte(`{"events":[` + entries(constants.MaxUserEvents+1) + `]` + buckets + `}`)
+		body := []byte(`{"events":[` + entries(constants.MaxRequestEvents+1) + `]` + buckets + `}`)
 		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusBadRequest {
 			t.Fatalf("got %d", resp.StatusCode)
 		}
@@ -171,7 +128,7 @@ func TestSyncLogsInvalidIDsOnce(t *testing.T) {
 
 func TestSaveEnforcesTheStorageQuotaPerUser(t *testing.T) {
 	testutil.RequireDB(t)
-	size := int64(len(ev(testutil.NewUUID(), baseTS).Data) * 3 / 4)
+	size := int64(len(ev(testutil.NewUUID(), baseTS).Data)*3/4) + constants.BucketRowBytes
 	old := constants.MaxUserBytes
 	constants.MaxUserBytes = size*2 + size/2
 	t.Cleanup(func() { constants.MaxUserBytes = old })

@@ -15,6 +15,8 @@ var (
 	DeleteStalePendingRegistrations = deleteStalePendingRegistrations
 	PowDifficulty                   = powDifficulty
 	SendDueNotifications            = sendDueNotifications
+	ReconcileStorage                = reconcileStorage
+	FixStorage                      = fixStorage
 )
 
 func SetSubscriptionUpdater(f func(string, ...string) (string, error)) { updateSubscriptionStatus = f }

@@ -7,14 +7,16 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"acLife/constants"
 	"acLife/utils"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
@@ -118,4 +120,36 @@ func IsDuplicateEntry(err error) bool {
 
 	msg := err.Error()
 	return strings.Contains(msg, "Duplicate entry")
+}
+
+// isRetryable checks if the database aborted the transaction in a deadlock, because a row changed under it, or because it had already rolled the transaction back (4060), rerunning it can succeed.
+func isRetryable(err error) bool {
+	myErr, ok := errors.AsType[*mysql.MySQLError](err)
+	return ok && (myErr.Number == 1213 || myErr.Number == 1020 || myErr.Number == 4060)
+}
+
+// RunTx runs fn in a transaction and reruns it, up to constants.TxMaxAttempts times, when the database aborts it in a deadlock or a write conflict.
+func RunTx(ctx context.Context, fn func(tx *sql.Tx) error) error {
+	for attempt := 1; ; attempt++ {
+		err := runTxOnce(ctx, fn)
+		if err == nil || !isRetryable(err) || attempt == constants.TxMaxAttempts {
+			return err
+		}
+
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(time.Duration(attempt) * (5*time.Millisecond + rand.N(10*time.Millisecond))):
+		}
+	}
+}
+
+func runTxOnce(ctx context.Context, fn func(tx *sql.Tx) error) error {
+	tx, err := DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	return fn(tx)
 }

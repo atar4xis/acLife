@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -89,14 +88,14 @@ func main() {
 	})
 
 	if os.Getenv("IS_BEHIND_PROXY") != "" {
-		fmt.Println("Proxy mode is enabled (IS_BEHIND_PROXY set). Make sure you're actually behind a trusted proxy that sets X-Real-IP correctly. If not, clients can spoof their IP address.")
+		utils.LogInfo("Proxy mode is enabled (IS_BEHIND_PROXY set). Make sure you're actually behind a trusted proxy that sets X-Real-IP correctly. If not, clients can spoof their IP address.")
 	}
 
 	// Register all routes
 	handler := c.Handler(routes.New())
 
 	// Bind to port
-	fmt.Println("Running on port " + os.Getenv("PORT"))
+	utils.LogInfo("Running on port %s", os.Getenv("PORT"))
 	srv := &http.Server{
 		Addr:              ":" + os.Getenv("PORT"),
 		Handler:           handler,
