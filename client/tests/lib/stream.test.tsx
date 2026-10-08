@@ -164,6 +164,19 @@ describe("event stream", () => {
     stopSettings();
   });
 
+  it("delivers pushed notifications with their payload", () => {
+    const onPush = vi.fn();
+    const stop = onStream("push", onPush);
+    render(<StreamService />);
+    const push = { type: "notification", title: "Hi", body: "There" };
+
+    FakeEventSource.instances[0].send("push", { type: "push", push });
+
+    expect(onPush).toHaveBeenCalledTimes(1);
+    expect(onPush.mock.calls[0][0].push).toEqual(push);
+    stop();
+  });
+
   it("stops notifying after unsubscribing", () => {
     const onSync = vi.fn();
     onStream("sync", onSync)();

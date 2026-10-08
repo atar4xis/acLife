@@ -8,6 +8,7 @@ import {
   NOTIFY_WHEN,
 } from "@/lib/calendar/notifications";
 import { useStorage } from "@/context/StorageContext";
+import { isTauri } from "@/lib/nativeUpdater";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -51,7 +52,8 @@ export function AddNotificationButton({
 
 export default function NotificationsField({ value, onChange }: FieldProps) {
   const { t } = useTranslation();
-  const pushEnabled = !!useStorage().get("pushSubscription");
+  const hasSubscription = !!useStorage().get("pushSubscription");
+  const pushEnabled = isTauri || hasSubscription;
 
   const patch = (index: number, changes: Partial<EventNotification>) =>
     onChange(value.map((n, i) => (i === index ? { ...n, ...changes } : n)));

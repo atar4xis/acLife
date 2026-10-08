@@ -2,6 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+  type Options,
+} from "@tauri-apps/plugin-notification";
 import { useApi } from "@/context/ApiContext";
 import { useEventList } from "@/context/CalendarContext";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
@@ -13,6 +19,8 @@ import {
   upcomingNotifications,
 } from "@/lib/calendar/notifications";
 import { createSerialQueue } from "@/lib/serialQueue";
+import { isTauri } from "@/lib/nativeUpdater";
+import { onStream } from "@/lib/stream";
 import { isSubscriptionMissing } from "@/lib/subscription";
 
 const REFRESH_MS = 60 * 60 * 1000;
@@ -20,6 +28,17 @@ const RETRY_MS = 10 * 1000;
 const MAX_LATE_MS = 60 * 1000;
 
 type PushTime = { at: number; device: boolean };
+
+async function notifyNative(options: Options) {
+  try {
+    if (!(await isPermissionGranted())) {
+      if ((await requestPermission()) !== "granted") return;
+    }
+    sendNotification(options);
+  } catch (err) {
+    console.error(err);
+  }
+}
 
 export default function NotificationService() {
   const { t } = useTranslation();
@@ -59,6 +78,18 @@ export default function NotificationService() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isTauri) return;
+    return onStream("push", ({ push }) => {
+      if (!push) return;
+      void notifyNative(
+        push.type === "event-start"
+          ? { title: "acLife", body: t("notify.eventStarting") }
+          : { title: push.title ?? "Notification", body: push.body },
+      );
+    });
+  }, [t]);
+
   const hasSound = due.some((n) => n.method === "sound");
 
   useEffect(() => {
@@ -73,7 +104,7 @@ export default function NotificationService() {
         id = toast.warning(t("notify.soundBlocked"), {
           position: "top-right",
           duration: Infinity,
-          className: "border-warning! text-warning!"
+          className: "border-warning! text-warning!",
         });
         window.addEventListener("pointerdown", dismiss, { once: true });
         window.addEventListener("keydown", dismiss, { once: true });
@@ -88,15 +119,21 @@ export default function NotificationService() {
 
   useEffect(() => {
     const timers = due
-      .filter((n) => n.method === "sound")
-      .map(({ at }) =>
+      .filter((n) => n.method === "sound" || (isTauri && n.method === "device"))
+      .map(({ at, method }) =>
         setTimeout(() => {
-          if (Date.now() - at < MAX_LATE_MS)
+          if (Date.now() - at >= MAX_LATE_MS) return;
+          if (method === "sound")
             void playNotificationSound(settings.sound, settings.volume);
+          else
+            void notifyNative({
+              title: "acLife",
+              body: t("notify.eventStarting"),
+            });
         }, at - Date.now()),
       );
     return () => timers.forEach(clearTimeout);
-  }, [due, settings.sound, settings.volume]);
+  }, [due, settings.sound, settings.volume, t]);
 
   useEffect(() => {
     if (!pushActive) return;

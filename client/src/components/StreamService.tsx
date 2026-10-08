@@ -5,7 +5,7 @@ import { emitStream, type StreamMessage } from "@/lib/stream";
 import { isSubscriptionMissing } from "@/lib/subscription";
 import { joinUrl } from "@/lib/utils";
 
-const MESSAGE_TYPES = ["sync", "settings", "calendar"] as const;
+const MESSAGE_TYPES = ["sync", "settings", "calendar", "push"] as const;
 const RETRY_MS = 30000;
 const TIMEOUT_MS = 60000;
 

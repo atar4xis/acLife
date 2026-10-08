@@ -1,6 +1,7 @@
 import { act, render } from "@testing-library/react";
 import { DateTime } from "luxon";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { emitStream } from "../../src/lib/stream.ts";
 import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import { seedSettings } from "../settingsStorage.ts";
 import NotificationService from "../../src/components/NotificationService.tsx";
@@ -17,6 +18,24 @@ const mocks = vi.hoisted(() => ({
   subscription: null as string | null,
   post: vi.fn(),
   play: vi.fn(),
+  isTauri: false,
+  granted: true,
+  requested: "granted",
+  send: vi.fn(),
+  isGranted: vi.fn(),
+  request: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/plugin-notification", () => ({
+  isPermissionGranted: mocks.isGranted,
+  requestPermission: mocks.request,
+  sendNotification: mocks.send,
+}));
+vi.mock("../../src/lib/nativeUpdater.ts", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  get isTauri() {
+    return mocks.isTauri;
+  },
 }));
 
 vi.mock("../../src/context/CalendarContext.tsx", () => ({
@@ -72,9 +91,173 @@ describe("NotificationService", () => {
     mocks.subscription = null;
     mocks.post.mockReset().mockResolvedValue({ success: true, data: { retry: [] } });
     mocks.play.mockReset();
+    mocks.isTauri = false;
+    mocks.send.mockReset();
+    mocks.isGranted.mockReset().mockResolvedValue(true);
+    mocks.request.mockReset().mockResolvedValue("granted");
   });
 
   afterEach(() => vi.useRealTimers());
+
+  describe("native notifications", () => {
+    const mount = () =>
+      render(<SettingsStoreProvider><NotificationService /></SettingsStoreProvider>);
+
+    const emitPush = async (push: object) => {
+      await act(async () => emitStream({ type: "push", push } as never));
+    };
+
+    it("fires device notifications locally in the desktop app", async () => {
+      mocks.isTauri = true;
+      mocks.events = [event("a", 10, [device])];
+      mount();
+
+      await advance(9 * 60 * 1000);
+      expect(mocks.send).not.toHaveBeenCalled();
+
+      await advance(60 * 1000);
+      expect(mocks.send).toHaveBeenCalledTimes(1);
+      expect(mocks.send).toHaveBeenCalledWith({
+        title: "acLife",
+        body: "Event starting",
+      });
+    });
+
+    it("leaves device notifications to the push service on the web", async () => {
+      mocks.events = [event("a", 10, [device])];
+      mount();
+
+      await advance(11 * 60 * 1000);
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
+
+    it("only plays the sound for sound notifications in the desktop app", async () => {
+      mocks.isTauri = true;
+      mocks.events = [event("a", 10, [sound])];
+      mount();
+
+      await advance(10 * 60 * 1000);
+      expect(mocks.play).toHaveBeenCalledTimes(1);
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
+
+    it("skips a device notification the app slept through", async () => {
+      mocks.isTauri = true;
+      mocks.events = [event("a", 10, [device])];
+      mount();
+
+      vi.setSystemTime(NOW.plus({ minutes: 30 }).toJSDate());
+      await advance(10 * 60 * 1000);
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
+
+    it("shows a pushed notification in the desktop app", async () => {
+      mocks.isTauri = true;
+      mount();
+
+      await emitPush({ type: "notification", title: "Hi", body: "There" });
+
+      expect(mocks.send).toHaveBeenCalledWith({ title: "Hi", body: "There" });
+    });
+
+    it("shows a pushed event start in the desktop app", async () => {
+      mocks.isTauri = true;
+      mount();
+
+      await emitPush({ type: "event-start" });
+
+      expect(mocks.send).toHaveBeenCalledWith({
+        title: "acLife",
+        body: "Event starting",
+      });
+    });
+
+    it("ignores pushed messages on the web", async () => {
+      mount();
+
+      await emitPush({ type: "event-start" });
+
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
+
+    it("ignores a pushed message without a payload", async () => {
+      mocks.isTauri = true;
+      mount();
+
+      await act(async () => emitStream({ type: "push" }));
+
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
+
+    it("stops listening for pushed messages after unmount", async () => {
+      mocks.isTauri = true;
+      mount().unmount();
+
+      await emitPush({ type: "event-start" });
+
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
+
+    it("asks for permission before showing", async () => {
+      mocks.isTauri = true;
+      mocks.isGranted.mockResolvedValue(false);
+      mount();
+
+      await emitPush({ type: "event-start" });
+
+      expect(mocks.request).toHaveBeenCalledTimes(1);
+      expect(mocks.send).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows nothing when permission is denied", async () => {
+      mocks.isTauri = true;
+      mocks.isGranted.mockResolvedValue(false);
+      mocks.request.mockResolvedValue("denied");
+      mount();
+
+      await emitPush({ type: "event-start" });
+
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
+
+    it("logs a failure to show instead of throwing", async () => {
+      mocks.isTauri = true;
+      const error = new Error("plugin failed");
+      mocks.send.mockImplementation(() => {
+        throw error;
+      });
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      mount();
+
+      await emitPush({ type: "event-start" });
+
+      expect(log).toHaveBeenCalledWith(error);
+      log.mockRestore();
+    });
+
+    it("logs a failed permission check instead of throwing", async () => {
+      mocks.isTauri = true;
+      const error = new Error("no permission api");
+      mocks.isGranted.mockRejectedValue(error);
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      mount();
+
+      await emitPush({ type: "event-start" });
+
+      expect(log).toHaveBeenCalledWith(error);
+      expect(mocks.send).not.toHaveBeenCalled();
+      log.mockRestore();
+    });
+
+    it("does not ask for permission when already granted", async () => {
+      mocks.isTauri = true;
+      mount();
+
+      await emitPush({ type: "event-start" });
+
+      expect(mocks.request).not.toHaveBeenCalled();
+    });
+  });
 
   describe("sound", () => {
     it("plays when the notification is due, not before", async () => {

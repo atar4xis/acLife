@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"acLife/constants"
+	"acLife/types"
 )
 
 type Change struct {
@@ -17,10 +18,11 @@ type Change struct {
 
 // Message is numbered per user so a client can detect a gap, sync and settings carry no data.
 type Message struct {
-	Type           string   `json:"type"`
-	Seq            uint64   `json:"seq"`
-	OriginClientID string   `json:"originClientId,omitempty"`
-	Changes        []Change `json:"changes,omitempty"`
+	Type           string           `json:"type"`
+	Seq            uint64           `json:"seq"`
+	OriginClientID string           `json:"originClientId,omitempty"`
+	Changes        []Change         `json:"changes,omitempty"`
+	Push           *types.PushEvent `json:"push,omitempty"`
 }
 
 func Sync(originClientID string) Message {
@@ -29,6 +31,10 @@ func Sync(originClientID string) Message {
 
 func Settings(originClientID string) Message {
 	return Message{Type: "settings", OriginClientID: originClientID}
+}
+
+func Push(ev types.PushEvent) Message {
+	return Message{Type: "push", Push: &ev}
 }
 
 // CalendarChanged replicates the changes, or falls back to a sync message when they are too large to push.

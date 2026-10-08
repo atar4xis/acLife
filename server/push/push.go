@@ -11,6 +11,7 @@ import (
 
 	"acLife/constants"
 	"acLife/database"
+	"acLife/stream"
 	"acLife/types"
 	"acLife/utils"
 
@@ -65,12 +66,14 @@ func send(
 	}
 }
 
-// SendToUser sends a JSON-serializable payload to the user's push subscriptions.
+// SendToUser sends the event to the user's push subscriptions and open streams (desktop app).
 func SendToUser(
 	ctx context.Context,
 	uuid string,
-	payload any,
+	payload types.PushEvent,
 ) {
+	stream.Publish(uuid, stream.Push(payload))
+
 	rows, err := database.Query(ctx, `
 		SELECT endpoint, p256dh, auth
 		FROM push_subscriptions

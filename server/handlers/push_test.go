@@ -1,12 +1,15 @@
 package handlers_test
 
 import (
+	"context"
 	"encoding/base64"
 	"net/http"
 	"testing"
 
 	"acLife/database"
 	"acLife/internal/testutil"
+	"acLife/push"
+	"acLife/stream"
 )
 
 func subscribePush(t *testing.T, endpoint string) int {
@@ -94,5 +97,32 @@ func TestPushCheckNoLongerKnowsAnExpiredSubscription(t *testing.T) {
 
 	if pushKnown(t, testutil.NewClient(t).As(user), "https://push.example/mine") {
 		t.Fatal("deleted subscription reported as known")
+	}
+}
+
+func TestSendToUserPublishesThePushToThatUsersStreams(t *testing.T) {
+	testutil.RequireDB(t)
+
+	user := testutil.NewUser(t)
+	other := testutil.NewUser(t)
+	mine, _ := stream.Subscribe(user.UUID, "t1")
+	t.Cleanup(mine.Close)
+	theirs, _ := stream.Subscribe(other.UUID, "t2")
+	t.Cleanup(theirs.Close)
+
+	push.SendToUser(context.Background(), user.UUID, push.NotificationEvent("Title", "Body"))
+
+	select {
+	case got := <-mine.Messages:
+		if got.Type != "push" || got.Push == nil || *got.Push != push.NotificationEvent("Title", "Body") {
+			t.Fatalf("got %+v", got)
+		}
+	default:
+		t.Fatal("push not published")
+	}
+	select {
+	case got := <-theirs.Messages:
+		t.Fatalf("another user received %+v", got)
+	default:
 	}
 }

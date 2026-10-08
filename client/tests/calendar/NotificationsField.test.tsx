@@ -7,10 +7,20 @@ import NotificationsField, {
 } from "../../src/components/calendar/NotificationsField.tsx";
 import type { EventNotification } from "../../src/types/calendar/Event.ts";
 
-const push = vi.hoisted(() => ({ subscription: "{}" as string | null }));
+const push = vi.hoisted(() => ({
+  subscription: "{}" as string | null,
+  isTauri: false,
+}));
 
 vi.mock("../../src/context/StorageContext.tsx", () => ({
   useStorage: () => ({ get: () => push.subscription }),
+}));
+
+vi.mock("../../src/lib/nativeUpdater.ts", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  get isTauri() {
+    return push.isTauri;
+  },
 }));
 
 let latest: EventNotification[] = [];
@@ -32,6 +42,7 @@ const add = (user: ReturnType<typeof userEvent.setup>) =>
 describe("NotificationsField", () => {
   beforeEach(() => {
     push.subscription = "{}";
+    push.isTauri = false;
     Element.prototype.hasPointerCapture = () => false;
     Element.prototype.scrollIntoView = () => {};
   });
@@ -126,6 +137,27 @@ describe("NotificationsField", () => {
       expect(screen.getByRole("option", { name })).toHaveAttribute(
         "aria-disabled",
         "true",
+      );
+    }
+  });
+
+  it("offers push without a subscription in the desktop app", async () => {
+    const user = userEvent.setup();
+    push.subscription = null;
+    push.isTauri = true;
+    render(
+      <Harness initial={[{ when: "start", amount: 10, method: "sound" }]} />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "How to notify" }));
+
+    await screen.findByRole("option", { name: "Play a sound" });
+    for (const name of [
+      "Send a push notification to this device",
+      "Send a push notification to all devices",
+    ]) {
+      expect(screen.getByRole("option", { name })).not.toHaveAttribute(
+        "aria-disabled",
       );
     }
   });

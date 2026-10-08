@@ -1,16 +1,23 @@
 import { CLIENT_ID } from "@/lib/clientId";
 import type { EncryptedEvent } from "@/types/calendar/Event";
 
-export type StreamMessageType = "sync" | "settings" | "calendar";
+export type StreamMessageType = "sync" | "settings" | "calendar" | "push";
 
 export type CalendarChange =
   | { type: "deleted"; id: string }
   | ({ type: "added" | "updated" } & Omit<EncryptedEvent, "buckets">);
 
+export type PushEvent = {
+  type: "notification" | "event-start";
+  title?: string;
+  body?: string;
+};
+
 export type StreamMessage = {
   type: StreamMessageType;
   originClientId?: string;
   changes?: CalendarChange[];
+  push?: PushEvent;
 };
 
 export const stream = new EventTarget();
