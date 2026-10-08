@@ -13,9 +13,9 @@ import (
 func Stripe(r *mux.Router) {
 	sr := r.PathPrefix("/stripe").Subrouter()
 
+	sr.Use(handlers.RateLimitMiddleware(100, time.Second)) // 100 reqs/sec
 	sr.Use(handlers.AuthMiddleware())                      // require login
 	sr.Use(handlers.MaxBodySizeMiddleware(64 << 10))       // 64 KB
-	sr.Use(handlers.RateLimitMiddleware(100, time.Second)) // 100 reqs/sec
 	sr.Use(handlers.CSRFMiddleware())
 
 	// The webhook doesn't have to be logged in and doesn't require CSRF protection

@@ -13,8 +13,8 @@ import (
 func User(r *mux.Router) {
 	ur := r.PathPrefix("/user").Subrouter()
 
-	ur.Use(handlers.AuthMiddleware())                    // must be logged in
 	ur.Use(handlers.RateLimitMiddleware(5, time.Second)) // 5 reqs/sec
+	ur.Use(handlers.AuthMiddleware())                    // must be logged in
 
 	ss := ur.PathPrefix("/settings").Subrouter()
 	ss.Use(handlers.SubscriptionMiddleware())         // must have a valid subscription
