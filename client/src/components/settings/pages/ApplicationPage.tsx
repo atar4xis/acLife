@@ -217,7 +217,7 @@ export default function ApplicationPage({
         label={sectionLabel("about")}
         sectionRefs={sectionRefs}
       >
-        <Field orientation="responsive">
+        <Field orientation="horizontal">
           <div className="flex flex-auto items-center gap-2">
             <img
               src={`${import.meta.env.BASE_URL}app-icon.png`}
