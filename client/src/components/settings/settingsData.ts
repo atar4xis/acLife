@@ -1,4 +1,5 @@
 import { t } from "@/i18n";
+import { isTauri } from "@/lib/nativeUpdater";
 import type { SettingKey, StoreKey } from "@/lib/settingsDefaults";
 
 export interface SettingItem {
@@ -327,10 +328,9 @@ export const settingsCategories: SettingsCategory[] = [
         id: "settings-sync",
         items: [{ id: "sync-settings-enabled" }],
       },
-      {
-        id: "push-service",
-        items: [{ id: "sync-push-status" }],
-      },
+      ...(isTauri
+        ? []
+        : [{ id: "push-service", items: [{ id: "sync-push-status" }] }]),
       {
         id: "resync",
         items: [

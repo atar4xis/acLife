@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { ChevronRight, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
+import { isTauri } from "@/lib/nativeUpdater";
 import { usePushService } from "@/hooks/usePushService";
 import { RESYNC_INTERVAL_OPTIONS } from "@/lib/settingsDefaults";
 import { useSyncSettings } from "@/hooks/useSyncSettings";
@@ -211,27 +212,33 @@ export default function SyncPage({
 
       <Separator />
 
-      <Section
-        id="push-service"
-        label={sectionLabel("push-service")}
-        sectionRefs={sectionRefs}
-      >
-        <Field orientation="responsive">
-          <FieldTitle>{settingLabel("sync-push-status")}</FieldTitle>
-          <Switch
-            aria-label={settingLabel("sync-push-status")}
-            checked={enabled}
-            disabled={!supported || loading}
-            onCheckedChange={onToggle}
-          />
-        </Field>
+      {!isTauri && (
+        <>
+          <Section
+            id="push-service"
+            label={sectionLabel("push-service")}
+            sectionRefs={sectionRefs}
+          >
+            <Field orientation="responsive">
+              <FieldTitle>{settingLabel("sync-push-status")}</FieldTitle>
+              <Switch
+                aria-label={settingLabel("sync-push-status")}
+                checked={enabled}
+                disabled={!supported || loading}
+                onCheckedChange={onToggle}
+              />
+            </Field>
 
-        {!supported && (
-          <FieldDescription>{t("settings.push.unsupported")}</FieldDescription>
-        )}
-      </Section>
+            {!supported && (
+              <FieldDescription>
+                {t("settings.push.unsupported")}
+              </FieldDescription>
+            )}
+          </Section>
 
-      <Separator />
+          <Separator />
+        </>
+      )}
 
       <Section
         id="resync"

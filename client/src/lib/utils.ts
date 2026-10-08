@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { isTauri } from "./nativeUpdater";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -200,6 +201,7 @@ export function shallowEqual(a: unknown, b: unknown): boolean {
 
 export function browserSupportsPush(): boolean {
   return (
+    !isTauri &&
     "serviceWorker" in navigator &&
     "PushManager" in window &&
     "Notification" in window
