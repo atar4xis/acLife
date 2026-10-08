@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { openExternal } from "@/lib/nativeUpdater";
 import { isStripeUrl } from "@/lib/validators";
 import type { TFunction } from "i18next";
 import { toast } from "sonner";
@@ -47,7 +48,7 @@ export default function SubscriptionPage({
       return;
     }
 
-    window.open(res.data, "_blank", "noopener");
+    openExternal(res.data);
   };
 
   return (

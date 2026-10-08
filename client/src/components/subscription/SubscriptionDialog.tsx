@@ -1,4 +1,5 @@
 import { Card, CardContent } from "../ui/card";
+import { isTauri, openExternal } from "@/lib/nativeUpdater";
 import { isStripeUrl } from "@/lib/validators";
 import {
   Dialog,
@@ -47,6 +48,12 @@ export default function SubscriptionDialog() {
 
     if (!res.success || !res.data || !isStripeUrl(res.data)) {
       toast.error(t("subscription.checkoutFailed"));
+      setLoading(false);
+      return;
+    }
+
+    if (isTauri) {
+      await openExternal(res.data);
       setLoading(false);
       return;
     }

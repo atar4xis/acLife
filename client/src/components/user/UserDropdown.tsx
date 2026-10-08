@@ -1,4 +1,5 @@
 import { useUser } from "@/context/UserContext";
+import { openExternal } from "@/lib/nativeUpdater";
 import { isStripeUrl } from "@/lib/validators";
 import {
   DropdownMenu,
@@ -40,7 +41,7 @@ export default function UserDropdown({
       return;
     }
 
-    window.open(res.data, "_blank", "noopener");
+    openExternal(res.data);
   };
 
   return (
