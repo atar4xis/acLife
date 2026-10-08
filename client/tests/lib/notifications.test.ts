@@ -328,6 +328,20 @@ describe("upcomingNotifications", () => {
 });
 
 describe("playNotificationSound", () => {
+  const urls = { create: vi.fn(), revoke: vi.fn() };
+
+  beforeEach(() => {
+    urls.create.mockReset().mockImplementation((b: Blob) =>
+      b.type.includes("sounds/") ? `blob:${b.type}` : "blob:custom",
+    );
+    urls.revoke.mockReset();
+    URL.createObjectURL = urls.create;
+    URL.revokeObjectURL = urls.revoke;
+    vi.stubGlobal("fetch", async (url: string) => ({
+      blob: async () => new Blob(["x"], { type: url }),
+    }));
+  });
+
   afterEach(() => vi.unstubAllGlobals());
 
   const stubAudio = () => {
@@ -353,7 +367,7 @@ describe("playNotificationSound", () => {
 
     await playNotificationSound(4, 35);
 
-    expect(players[0].src).toBe(`${import.meta.env.BASE_URL}sounds/notification_4.mp3`);
+    expect(players[0].src).toBe(`blob:${import.meta.env.BASE_URL}sounds/notification_4.mp3`);
     expect(players[0].volume).toBe(0.35);
     expect(players[0].play).toHaveBeenCalledTimes(1);
   });
@@ -368,7 +382,7 @@ describe("playNotificationSound", () => {
     expect(players[1].play).toHaveBeenCalledTimes(1);
   });
 
-  it("swallows a play the browser refuses", async () => {
+  it("logs a play the browser refuses", async () => {
     const swallow = vi.fn();
     vi.stubGlobal("Audio", function () {
       return { pause: vi.fn(), play: () => ({ catch: swallow }) };
@@ -376,7 +390,7 @@ describe("playNotificationSound", () => {
 
     await playNotificationSound(1, 50);
 
-    expect(swallow).toHaveBeenCalledTimes(1);
+    expect(swallow).toHaveBeenCalledWith(console.error);
   });
 
   describe("custom sound", () => {
@@ -389,15 +403,8 @@ describe("playNotificationSound", () => {
         }),
       });
     };
-    const urls = { create: vi.fn(), revoke: vi.fn() };
 
-    beforeEach(() => {
-      stubCache();
-      urls.create.mockReset().mockReturnValue("blob:custom");
-      urls.revoke.mockReset();
-      URL.createObjectURL = urls.create;
-      URL.revokeObjectURL = urls.revoke;
-    });
+    beforeEach(stubCache);
 
     it("plays the saved file", async () => {
       const players = stubAudio();
@@ -415,9 +422,8 @@ describe("playNotificationSound", () => {
       await playNotificationSound(CUSTOM_NOTIFICATION_SOUND, 50);
 
       expect(players[0].src).toBe(
-        `${import.meta.env.BASE_URL}sounds/notification_1.mp3`,
+        `blob:${import.meta.env.BASE_URL}sounds/notification_1.mp3`,
       );
-      expect(urls.create).not.toHaveBeenCalled();
     });
 
     it("releases the previous file when the next sound plays", async () => {
@@ -441,7 +447,7 @@ describe("playNotificationSound", () => {
 
       expect(players).toHaveLength(1);
       expect(players[0].src).toBe(
-        `${import.meta.env.BASE_URL}sounds/notification_2.mp3`,
+        `blob:${import.meta.env.BASE_URL}sounds/notification_2.mp3`,
       );
       expect(urls.revoke).toHaveBeenCalledWith("blob:custom");
     });

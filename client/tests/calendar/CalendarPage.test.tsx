@@ -59,6 +59,11 @@ const stubCache = () => {
 
 const stubAudio = () => {
   const players: { src: string; volume: number }[] = [];
+  vi.stubGlobal("fetch", async (url: string) => ({
+    blob: async () => new Blob(["x"], { type: url }),
+  }));
+  URL.createObjectURL = (b: Blob) => `blob:${b.type}`;
+  URL.revokeObjectURL = () => {};
   vi.stubGlobal("Audio", function (src: string) {
     const player = {
       src,
@@ -152,7 +157,7 @@ describe("CalendarPage", () => {
     expect(readSettings().notificationSound).toBe(3);
     await waitFor(() => expect(players).toHaveLength(1));
     expect(players).toEqual([
-      expect.objectContaining({ src: `${import.meta.env.BASE_URL}sounds/notification_3.mp3`, volume: 0.8 }),
+      expect.objectContaining({ src: `blob:${import.meta.env.BASE_URL}sounds/notification_3.mp3`, volume: 0.8 }),
     ]);
   });
 
@@ -167,7 +172,7 @@ describe("CalendarPage", () => {
     expect(readSettings().notificationVolume).toBe(79);
     await waitFor(() => expect(players).toHaveLength(1));
     expect(players).toEqual([
-      expect.objectContaining({ src: `${import.meta.env.BASE_URL}sounds/notification_1.mp3`, volume: 0.79 }),
+      expect.objectContaining({ src: `blob:${import.meta.env.BASE_URL}sounds/notification_1.mp3`, volume: 0.79 }),
     ]);
   });
 
@@ -202,7 +207,7 @@ describe("CalendarPage", () => {
       await user.upload(screen.getByTestId("custom-sound-input"), file);
 
       await waitFor(() => expect(players).toHaveLength(1));
-      expect(put).toHaveBeenCalledWith("/custom", expect.any(Response));
+      expect(put).toHaveBeenCalledWith("https://acl.invalid/custom", expect.any(Response));
       expect(readSettings().notificationSound).toBe(0);
       expect(players[0].src).toBe("blob:custom");
       expect(
@@ -228,7 +233,7 @@ describe("CalendarPage", () => {
       expect(mocks.toastError).toHaveBeenCalledWith(
         "Choose an audio file smaller than 1 MB.",
       );
-      expect(put).not.toHaveBeenCalledWith("/custom", expect.anything());
+      expect(put).not.toHaveBeenCalledWith("https://acl.invalid/custom", expect.anything());
       expect(
         screen.getByRole("combobox", { name: "Notification sound" }),
       ).toHaveTextContent("Sound 1");

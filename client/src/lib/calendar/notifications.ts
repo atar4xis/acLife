@@ -17,7 +17,7 @@ export const NOTIFY_WHEN: NotifyWhen[] = ["start", "minutes", "hours", "days"];
 export const NOTIFY_METHODS: NotifyMethod[] = ["sound", "device", "all"];
 
 const CUSTOM_SOUND_CACHE = "acl-sound";
-const CUSTOM_SOUND_KEY = "/custom";
+const CUSTOM_SOUND_KEY = "https://acl.invalid/custom";
 export const MAX_CUSTOM_SOUND_BYTES = 1 << 20;
 
 export const saveCustomSound = async (file: File) => {
@@ -33,27 +33,33 @@ async function customSoundUrl() {
 }
 
 let sound: HTMLAudioElement | undefined;
-let customUrl: string | undefined;
+let soundUrl: string | undefined;
 let latestPlay = 0;
 
 export async function playNotificationSound(number: number, volume: number) {
   const play = ++latestPlay;
   sound?.pause();
-  const custom =
-    number === CUSTOM_NOTIFICATION_SOUND ? await customSoundUrl() : undefined;
+  const url =
+    (number === CUSTOM_NOTIFICATION_SOUND
+      ? await customSoundUrl()
+      : undefined) ??
+    URL.createObjectURL(
+      await (
+        await fetch(
+          `${import.meta.env.BASE_URL}sounds/notification_${number || 1}.mp3`,
+        )
+      ).blob(),
+    );
   if (play !== latestPlay) {
-    if (custom) URL.revokeObjectURL(custom);
+    URL.revokeObjectURL(url);
     return;
   }
 
-  if (customUrl) URL.revokeObjectURL(customUrl);
-  customUrl = custom;
-  sound = new Audio(
-    custom ??
-      `${import.meta.env.BASE_URL}sounds/notification_${number || 1}.mp3`,
-  );
+  if (soundUrl) URL.revokeObjectURL(soundUrl);
+  soundUrl = url;
+  sound = new Audio(url);
   sound.volume = volume / 100;
-  void sound.play().catch(() => {});
+  void sound.play().catch(console.error);
 }
 
 export type DueNotification = {
