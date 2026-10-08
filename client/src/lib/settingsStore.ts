@@ -10,7 +10,6 @@ import {
   type StoreKey,
   type StoreSettings,
 } from "@/lib/settingsDefaults";
-import { readLegacySettings, removeLegacySettings } from "@/lib/legacySettings";
 import {
   syncByDefault,
   type SyncableKey,
@@ -225,30 +224,24 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
 const plainObjectOr = <T extends object>(value: unknown): T =>
   (isPlainObject(value) ? value : {}) as T;
 
-function load(): { persisted: PersistedSettings; migrated: boolean } {
+function load(): PersistedSettings {
   const stored = readJSON<Partial<PersistedSettings> | null>(
     SETTINGS_STORAGE_KEY,
     null,
   );
 
-  // TODO: remove this before v1
-  const legacy = stored ? null : readLegacySettings();
-
   return {
-    migrated: legacy !== null,
-    persisted: {
-      version: SCHEMA_VERSION,
-      values: plainObjectOr(stored?.values ?? legacy),
-      updatedAt: plainObjectOr(stored?.updatedAt),
-      syncOverrides: plainObjectOr(stored?.syncOverrides),
-      syncEnabled:
-        typeof stored?.syncEnabled === "boolean" ? stored.syncEnabled : true,
-    },
+    version: SCHEMA_VERSION,
+    values: plainObjectOr(stored?.values),
+    updatedAt: plainObjectOr(stored?.updatedAt),
+    syncOverrides: plainObjectOr(stored?.syncOverrides),
+    syncEnabled:
+      typeof stored?.syncEnabled === "boolean" ? stored.syncEnabled : true,
   };
 }
 
 export function createSettingsStore(): SettingsStore {
-  const { persisted, migrated } = load();
+  const persisted = load();
   let values = normalizeSettings(persisted.values);
   let meta: SettingsMeta = {
     updatedAt: persisted.updatedAt,
@@ -270,12 +263,6 @@ export function createSettingsStore(): SettingsStore {
       SETTINGS_STORAGE_KEY,
       JSON.stringify({ version: SCHEMA_VERSION, values, ...meta }),
     );
-
-  // TODO: remove this before v1
-  if (migrated) {
-    persist();
-    removeLegacySettings();
-  }
 
   const commit = () => {
     persist();
