@@ -513,10 +513,12 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 
 	// events whose buckets fall in the requested range
 	rows, err := database.Query(r.Context(), `
-		SELECT DISTINCT ce.id, ce.data, ce.updated_at
+		SELECT ce.id, ce.data, ce.updated_at
 		FROM calendar_events ce
-		JOIN calendar_event_buckets ceb ON ceb.event_id = ce.id
-		WHERE ce.owner = ? AND ceb.bucket_id IN (`+strings.Join(placeholders, ",")+`)
+		WHERE ce.owner = ? AND EXISTS (
+			SELECT 1 FROM calendar_event_buckets ceb
+			WHERE ceb.event_id = ce.id AND ceb.bucket_id IN (`+strings.Join(placeholders, ",")+`)
+		)
 	`, args...)
 	if err != nil {
 		utils.LogError("SyncCalendarEvents", "RangeQuery", err)
