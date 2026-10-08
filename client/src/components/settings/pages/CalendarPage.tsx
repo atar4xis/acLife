@@ -1,5 +1,5 @@
 import { memo, useRef, useState } from "react";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
   EVENT_COLOR_FALLBACK,
@@ -509,30 +509,31 @@ export default function CalendarPage({
               setSetting("notificationSound", Number(value));
               void playNotificationSound(Number(value), notificationVolume);
             }}
+            action={
+              notificationSound === CUSTOM_NOTIFICATION_SOUND && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={t("settings.calendar.customSoundReplace")}
+                  onClick={() => soundInput.current?.click()}
+                >
+                  <Upload />
+                </Button>
+              )
+            }
             footer={
-              <>
-                <input
-                  ref={soundInput}
-                  type="file"
-                  accept="audio/*"
-                  hidden
-                  data-testid="custom-sound-input"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = "";
-                    if (file) void chooseCustomSound(file);
-                  }}
-                />
-                {notificationSound === CUSTOM_NOTIFICATION_SOUND && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => soundInput.current?.click()}
-                  >
-                    {t("settings.calendar.customSoundReplace")}
-                  </Button>
-                )}
-              </>
+              <input
+                ref={soundInput}
+                type="file"
+                accept="audio/*"
+                hidden
+                data-testid="custom-sound-input"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void chooseCustomSound(file);
+                }}
+              />
             }
           >
             {NOTIFICATION_SOUNDS.map((number) => (
