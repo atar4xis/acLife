@@ -226,16 +226,15 @@ export default function ApplicationPage({
             />
             <span className="font-medium">acLife</span>
           </div>
-          <Button variant="ghost" size="icon" className="size-11" asChild>
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={t("settings.about.repository")}
-            >
-              <GithubMark />
-            </a>
-          </Button>
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={t("settings.about.repository")}
+            className="flex size-11 items-center justify-center opacity-80 hover:opacity-100"
+          >
+            <GithubMark />
+          </a>
         </Field>
 
         <Field orientation="responsive">
