@@ -34,37 +34,22 @@ func GetLoggedInUser(r *http.Request, refetch ...bool) *types.User {
 		return nil
 	}
 
-	// Find matching session in account_sessions
-	var ownerUUID string
-	var expiresAt time.Time
-	if err := database.QueryRow(
-		r.Context(),
-		`SELECT owner, expires_at FROM account_sessions WHERE access_token = ?`,
-		token,
-	).Scan(&ownerUUID, &expiresAt); err != nil {
-		if err != sql.ErrNoRows {
-			utils.LogError("GetLoggedInUser", "QueryRow account_sessions", err)
-		}
-		return nil
-	}
-
-	// Check if token expired
-	if time.Now().After(expiresAt) {
-		return nil
-	}
-
-	// Fetch user from database
+	// Find the matching session and its user
 	user := &types.User{}
+	var expiresAt time.Time
 	if err := database.QueryRow(
 		r.Context(),
 		`
 			SELECT
-				id, uuid, email, srp_salt, verifier,
-				stripe_customer_id, stripe_subscription_id, subscription_status, email_verified
-			FROM users
-			WHERE uuid = ?`,
-		ownerUUID,
+				s.expires_at,
+				u.id, u.uuid, u.email, u.srp_salt, u.verifier,
+				u.stripe_customer_id, u.stripe_subscription_id, u.subscription_status, u.email_verified
+			FROM account_sessions s
+			JOIN users u ON u.uuid = s.owner
+			WHERE s.access_token = ?`,
+		token,
 	).Scan(
+		&expiresAt,
 		&user.ID,
 		&user.UUID,
 		&user.Email,
@@ -78,7 +63,11 @@ func GetLoggedInUser(r *http.Request, refetch ...bool) *types.User {
 		if err != sql.ErrNoRows {
 			utils.LogError("GetLoggedInUser", "QueryRow", err)
 		}
+		return nil
+	}
 
+	// Check if token expired
+	if time.Now().After(expiresAt) {
 		return nil
 	}
 
