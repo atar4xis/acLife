@@ -33,7 +33,9 @@ describe("ApplicationPage", () => {
     expect(
       screen.getByRole("link", { name: "GitHub repository" }),
     ).toBeTruthy();
-    expect(screen.getByText(window.location.origin)).toBeTruthy();
+    expect(
+      screen.getByText(window.location.origin + import.meta.env.BASE_URL),
+    ).toBeTruthy();
   });
 
   it("checks for updates on click", () => {
