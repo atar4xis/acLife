@@ -36,7 +36,11 @@ export const settingsCategories: SettingsCategory[] = [
       },
       {
         id: "about",
-        items: [{ id: "about-version" }, { id: "about-website" }],
+        items: [
+          { id: "about-version" },
+          { id: "about-website" },
+          { id: "about-server" },
+        ],
       },
     ],
   },

@@ -392,7 +392,8 @@
       "updates-channel": "更新通道",
       "updates-changelog": "更新日志",
       "about-version": "版本",
-      "about-website": "客户端网址"
+      "about-website": "客户端网址",
+      "about-server": "服务器网址"
     },
     "colors": {
       "background": "背景",

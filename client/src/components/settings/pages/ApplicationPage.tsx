@@ -11,6 +11,7 @@ import {
 import { SelectItem } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useApi } from "@/context/ApiContext";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useUpdater } from "@/context/UpdaterContext";
 import { fmt } from "@/i18n";
@@ -51,6 +52,8 @@ export default function ApplicationPage({
   const { t } = useTranslation();
   const updater = useUpdater();
   const settings = useCalendarSettings();
+  const { url: serverUrl } = useApi();
+  const clientUrl = window.location.origin + import.meta.env.BASE_URL;
 
   const format = (date: DateTime, key: string) => date.toFormat(fmt(key));
 
@@ -245,14 +248,16 @@ export default function ApplicationPage({
         {!isTauri && (
           <Field orientation="responsive">
             <FieldTitle>{settingLabel("about-website")}</FieldTitle>
-            <a
-              href={window.location.origin}
-              className="text-sm hover:underline"
-            >
-              {window.location.origin}
+            <a href={clientUrl} className="text-sm hover:underline">
+              {clientUrl}
             </a>
           </Field>
         )}
+
+        <Field orientation="responsive">
+          <FieldTitle>{settingLabel("about-server")}</FieldTitle>
+          <span className="text-sm">{serverUrl}</span>
+        </Field>
       </Section>
     </FieldGroup>
   );

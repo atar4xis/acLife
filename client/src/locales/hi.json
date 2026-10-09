@@ -404,7 +404,8 @@
       "updates-channel": "अपडेट चैनल",
       "updates-changelog": "बदलावों की सूची",
       "about-version": "संस्करण",
-      "about-website": "क्लाइंट URL"
+      "about-website": "क्लाइंट URL",
+      "about-server": "सर्वर URL"
     },
     "colors": {
       "background": "पृष्ठभूमि",

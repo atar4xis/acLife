@@ -412,7 +412,8 @@
       "updates-channel": "Kanał aktualizacji",
       "updates-changelog": "Lista zmian",
       "about-version": "Wersja",
-      "about-website": "Adres URL klienta"
+      "about-website": "Adres URL klienta",
+      "about-server": "Adres URL serwera"
     },
     "colors": {
       "background": "Tło",

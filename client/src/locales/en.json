@@ -402,7 +402,8 @@
       "updates-channel": "Update channel",
       "updates-changelog": "Changelog",
       "about-version": "Version",
-      "about-website": "Client URL"
+      "about-website": "Client URL",
+      "about-server": "Server URL"
     },
     "colors": {
       "background": "Background",

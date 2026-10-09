@@ -396,7 +396,8 @@
       "updates-channel": "Canal de actualización",
       "updates-changelog": "Registro de cambios",
       "about-version": "Versión",
-      "about-website": "URL del cliente"
+      "about-website": "URL del cliente",
+      "about-server": "URL del servidor"
     },
     "colors": {
       "background": "Fondo",

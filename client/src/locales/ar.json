@@ -423,7 +423,8 @@
       "updates-channel": "قناة التحديث",
       "updates-changelog": "سجل التغييرات",
       "about-version": "الإصدار",
-      "about-website": "عنوان URL للعميل"
+      "about-website": "عنوان URL للعميل",
+      "about-server": "عنوان URL للخادم"
     },
     "colors": {
       "background": "الخلفية",

@@ -392,7 +392,8 @@
       "updates-channel": "アップデートチャンネル",
       "updates-changelog": "変更履歴",
       "about-version": "バージョン",
-      "about-website": "クライアントURL"
+      "about-website": "クライアントURL",
+      "about-server": "サーバーURL"
     },
     "colors": {
       "background": "背景",

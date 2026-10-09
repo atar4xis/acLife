@@ -398,7 +398,8 @@
       "updates-channel": "Canal de mise à jour",
       "updates-changelog": "Journal des modifications",
       "about-version": "Version",
-      "about-website": "URL du client"
+      "about-website": "URL du client",
+      "about-server": "URL du serveur"
     },
     "colors": {
       "background": "Arrière-plan",
