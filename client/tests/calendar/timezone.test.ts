@@ -119,6 +119,15 @@ describe("getTimezoneWeekStart", () => {
     expect(getTimezoneWeekStart("America/New_York")).toBe(7);
   });
 
+  it("uses Monday for the UAE", () => {
+    expect(getTimezoneWeekStart("Asia/Dubai")).toBe(1);
+  });
+
+  it("uses Saturday for countries that start the week on Saturday", () => {
+    expect(getTimezoneWeekStart("Asia/Qatar")).toBe(6);
+    expect(getTimezoneWeekStart("Africa/Cairo")).toBe(6);
+  });
+
   it("falls back to Monday for zones without a country", () => {
     expect(getTimezoneWeekStart("Etc/UTC")).toBe(1);
   });

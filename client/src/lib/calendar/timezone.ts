@@ -164,19 +164,25 @@ export const getTimezoneHourLabel = (
     .setZone(tz)
     .toFormat(fmt("timeHour"));
 
-interface WeekInfoLocale {
-  getWeekInfo?: () => { firstDay: number };
-  weekInfo?: { firstDay: number };
-}
+const WEEK_START_COUNTRIES: string[][] = [
+  [], // monday
+  [],
+  [],
+  [],
+  ["MV"], // friday
+  "AF BH DJ DZ EG IQ IR JO KW LY OM QA SD SY".split(" "),
+  "AG AS BD BR BS BT BW BZ CA CO DM DO ET GT GU HK HN ID IL IN IS JM JP KE KH KR LA MH MM MO MT MX MZ NI NP PA PE PH PK PR PT PY SA SG SV TH TT TW UM US VE VI WS YE ZA ZW".split(
+    " ",
+  ),
+];
 
-// week start conventions from the browser's CLDR data, keyed by the zone's primary country
+// week data keyed by the zone's primary country
 export const getTimezoneWeekStart = (tz: string): Weekday => {
   const country = getTimezone(tz)?.countries[0];
-  if (!country) return 1;
-
-  const locale = new Intl.Locale(`und-${country}`) as unknown as WeekInfoLocale;
-  const firstDay = (locale.getWeekInfo?.() ?? locale.weekInfo)?.firstDay;
-  return firstDay && firstDay >= 1 && firstDay <= 7 ? (firstDay as Weekday) : 1;
+  const index = WEEK_START_COUNTRIES.findIndex(
+    (countries) => country && countries.includes(country),
+  );
+  return (index === -1 ? 1 : index + 1) as Weekday;
 };
 
 export const resolveWeekStart = (
