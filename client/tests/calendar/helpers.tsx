@@ -430,7 +430,8 @@ export const setupCalendarTests = () => {
 
           const dayIndex = Number(dayCell.getAttribute("data-day-index"));
           const style = (this as HTMLElement).style;
-          const percent = (value: string) => (parseFloat(value) || 0) / 100;
+          const percent = (value: string) =>
+            (parseFloat(value.replace("calc(", "")) || 0) / 100;
 
           return makeRect(
             TIME_GUTTER_WIDTH +

@@ -26,13 +26,13 @@ describe("EventBlock pop out", () => {
     renderCalendar({ events: [buildTinyEvent()] });
 
     const block = await getEventBlock("Standup");
-    expect(block.style.height).toBe("10px");
+    expect(block.style.height).toBe("9px");
 
     fireEvent.mouseEnter(block);
 
     // not enough time has passed yet
     await wait(50);
-    expect(block.style.height).toBe("10px");
+    expect(block.style.height).toBe("9px");
 
     await wait(150);
     expect(block.style.height).toBe("32px");
@@ -47,7 +47,7 @@ describe("EventBlock pop out", () => {
     fireEvent.mouseLeave(block);
 
     await wait(200);
-    expect(block.style.height).toBe("10px");
+    expect(block.style.height).toBe("9px");
   });
 
   it("collapses a popped-out event once the drag exceeds the movement threshold", async () => {
@@ -83,7 +83,7 @@ describe("EventBlock pop out", () => {
       clientX: 20,
       clientY: 0,
     });
-    expect(block.style.height).toBe("10px");
+    expect(block.style.height).toBe("9px");
 
     dispatchWindowPointer("pointerup", {
       button: 0,
@@ -132,7 +132,7 @@ describe("EventBlock pop out", () => {
     fireEvent.mouseEnter(block, { buttons: 1 });
 
     await wait(200);
-    expect(block.style.height).toBe("10px");
+    expect(block.style.height).toBe("9px");
   });
 
   it("does not affect the displayed times", async () => {

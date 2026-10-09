@@ -20,6 +20,16 @@ export const getTimezoneColWidth = (timezones: string[], dayCount: number) => {
   return `min(${fitsLabel}, calc(100cqw / ${timezones.length + dayCount}))`;
 };
 
+export const timezoneStickyStyle = (
+  i: number,
+  count: number,
+  labelsRight: boolean,
+  colWidth: string,
+) =>
+  labelsRight
+    ? { right: `calc(${colWidth} * ${count - 1 - i})` }
+    : { left: `calc(${colWidth} * ${i})` };
+
 const gridRows = (h: number, headerBottom: boolean, strip: number) => {
   const stripRow = strip ? `${strip}px` : "";
   return headerBottom

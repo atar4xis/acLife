@@ -1,7 +1,11 @@
-import { memo, useMemo, useState, type CSSProperties } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { DateTime } from "luxon";
 import EventBlock from "@/components/calendar/EventBlock";
 import EventEditor from "@/components/calendar/EventEditor";
+import GridLayout from "@/components/calendar/GridLayout";
+import { useCalendarSettings } from "@/context/CalendarSettingsContext";
+import { getDay } from "@/lib/calendar/date";
+import { getTimezoneColWidth } from "@/lib/calendar/gridLayout";
 import { createGridFocusStore } from "@/lib/calendar/gridFocus";
 import { createSelectionStore } from "@/lib/calendar/selection";
 import type { CalendarEvent } from "@/types/calendar/Event";
@@ -15,7 +19,18 @@ const PREVIEW_EVENT: Omit<CalendarEvent, "title" | "description"> = {
   timestamp: 0,
 };
 
-const PREVIEW_BLOCK_STYLE = { top: 0, left: 0, width: 100, height: 80 };
+const PREVIEW_DAYS = getDay(PREVIEW_EVENT.start);
+const PREVIEW_HOUR_HEIGHT = 80;
+const PREVIEW_BLOCK_STYLE = {
+  top: 9 * PREVIEW_HOUR_HEIGHT,
+  left: 0,
+  width: 100,
+  height: PREVIEW_HOUR_HEIGHT,
+};
+
+const scrollToMorning = (el: HTMLDivElement | null) => {
+  if (el) el.scrollTop = 8 * PREVIEW_HOUR_HEIGHT;
+};
 
 const noop = () => {};
 
@@ -30,7 +45,7 @@ export default memo(function EventEditorPreview({
   radius: number;
   lineOpacity: number;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const previewEvent = useMemo<CalendarEvent>(
     () => ({
       ...PREVIEW_EVENT,
@@ -41,45 +56,73 @@ export default memo(function EventEditorPreview({
   );
   const [focusStore] = useState(createGridFocusStore);
   const [selection] = useState(createSelectionStore);
+  const settings = useCalendarSettings((s) => ({
+    timezones: s.timezones,
+    dayHeaderPosition: s.dayHeaderPosition,
+    timeLabelPosition: s.timeLabelPosition,
+  }));
+  const timezones = useMemo(
+    () => settings.timezones.slice(0, 1),
+    [settings.timezones],
+  );
+  const tzColWidth = useMemo(
+    () => getTimezoneColWidth(timezones, PREVIEW_DAYS.length),
+    [timezones],
+  );
+  const rtl = i18n.dir() === "rtl";
+  const labelsRight =
+    settings.timeLabelPosition === "auto"
+      ? rtl
+      : settings.timeLabelPosition === "right";
+  const renderDay = useCallback(
+    (day: number, date: DateTime) => (
+      <EventBlock
+        event={previewEvent}
+        day={day}
+        date={date}
+        style={PREVIEW_BLOCK_STYLE}
+        editing={false}
+        viewing={false}
+        selection={selection}
+        focusStore={focusStore}
+        restoreFocus={noop}
+        onPointerDown={noop}
+        onEventEdit={noop}
+        onEventMove={noop}
+        onEventDelete={noop}
+        onDuplicate={noop}
+        onDetach={noop}
+        onReset={noop}
+        setEditingEvent={noop}
+        setViewingEvent={noop}
+      />
+    ),
+    [previewEvent, selection, focusStore],
+  );
 
   return (
     <div
       aria-hidden="true"
       inert
       className="pointer-events-none select-none relative isolate flex justify-center py-1 overflow-hidden"
-      style={{ "--line-opacity": lineOpacity } as CSSProperties}
     >
-      <div className="absolute left-1/2 top-[calc(50%-120px)] -translate-x-1/2 grid auto-rows-20 w-64 border-s border-t border-[color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)]">
-        {[0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="relative bg-background shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)]"
-          >
-            {i === 1 && (
-              <EventBlock
-                event={previewEvent}
-                day={0}
-                date={previewEvent.start}
-                style={PREVIEW_BLOCK_STYLE}
-                editing={false}
-                viewing={false}
-                selection={selection}
-                focusStore={focusStore}
-                restoreFocus={noop}
-                onPointerDown={noop}
-                onEventEdit={noop}
-                onEventMove={noop}
-                onEventDelete={noop}
-                onDuplicate={noop}
-                onDetach={noop}
-                onReset={noop}
-                setEditingEvent={noop}
-                setViewingEvent={noop}
-              />
-            )}
-          </div>
-        ))}
-      </div>
+      <GridLayout
+        ref={scrollToMorning}
+        dir="ltr"
+        className="@container absolute left-1/2 top-[calc(50%-120px)] -translate-x-1/2 grid h-72 w-64 overflow-hidden"
+        mode="day"
+        days={PREVIEW_DAYS}
+        timezones={timezones}
+        tzColWidth={tzColWidth}
+        headerBottom={settings.dayHeaderPosition === "bottom"}
+        labelsRight={labelsRight}
+        hourHeight={PREVIEW_HOUR_HEIGHT}
+        lineOpacity={lineOpacity}
+        now={PREVIEW_EVENT.start}
+        onHeaderClick={noop}
+        onCellTap={noop}
+        renderDay={renderDay}
+      />
       <div className="relative z-10">
         <EventEditor
           preview={{ opacity, blur, radius }}

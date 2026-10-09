@@ -6,7 +6,6 @@ import {
   useEffect,
   useCallback,
   useEffectEvent,
-  type CSSProperties,
 } from "react";
 import { DateTime } from "luxon";
 import {
@@ -74,8 +73,8 @@ import {
   BOTTOM_BORDER_ONLY,
   ALL_DAY_CELL,
   getTimezoneColWidth,
-  GRID_CONFIG,
-  HOURS,
+  timezoneStickyStyle,
+  type GRID_CONFIG,
 } from "@/lib/calendar/gridLayout";
 import {
   SELECT_DRAG_THRESHOLD,
@@ -94,15 +93,14 @@ import {
   applyDragWithResize,
 } from "@/lib/calendar/drag";
 
-import { describeFullDay } from "@/lib/calendar/a11y";
 import { shortcutsApply } from "@/lib/calendar/shortcutScope";
 import { ALL_DAY_SLOT, createGridFocusStore } from "@/lib/calendar/gridFocus";
 import useGridKeyboard from "@/hooks/useGridKeyboard";
 import { useKeyboardMode } from "@/hooks/useGridFocus";
 import { SpokenMessage, SlotIndicator } from "./GridFocus";
+import GridLayout from "./GridLayout";
 import ScrollThumb from "./ScrollThumb";
 import UndoRedoButtons from "./UndoRedoButtons";
-import { getTimezoneHourLabel } from "@/lib/calendar/timezone";
 import { useWeekStart } from "@/hooks/useWeekStart";
 import {
   MAX_CLIPBOARD_EVENTS,
@@ -118,9 +116,6 @@ import {
 import { weekLabel } from "@/lib/calendar/buckets";
 import { useUser } from "@/context/UserContext";
 import { toast } from "sonner";
-import HeaderCell from "./HeaderCell";
-import TimezoneHeaderCell from "./TimezoneHeaderCell";
-import GridCell from "./GridCell";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ModeSwitcher from "./ModeSwitcher";
 import type { GridSelectionRef, GridTouchRef } from "@/types/calendar/Cell";
@@ -364,7 +359,6 @@ export default memo(function AppCalendar({
     [setCurrentDate],
   );
 
-  const { cols, rows } = GRID_CONFIG[mode as keyof typeof GRID_CONFIG];
   const headerBottom = settings.dayHeaderPosition === "bottom";
   const labelsRight =
     settings.timeLabelPosition === "auto"
@@ -2736,57 +2730,9 @@ export default memo(function AppCalendar({
     ],
   );
 
-  // headers in day/week view, one for every visibleDay
-  const dayWeekHeaders = useMemo(() => {
-    const cells = visibleDays.map((d, dayIndex) => (
-      <HeaderCell
-        key={dayIndex}
-        onClick={(e) => createAllDayEvent(e, dayIndex)}
-        className={cn(
-          "select-none",
-          headerBottom && "top-auto bottom-0",
-          stripHeight > 0 && !headerBottom && NO_BOTTOM_BORDER,
-          isSameDate(d.date, now) && "bg-card font-bold",
-        )}
-        aria-label={
-          describeFullDay(d.date) +
-          (isSameDate(d.date, now) ? `, ${t("a11y.today")}` : "")
-        }
-      >
-        {d.label}
-      </HeaderCell>
-    ));
-    return rtl ? cells.toReversed() : cells;
-  }, [visibleDays, now, headerBottom, t, rtl, createAllDayEvent, stripHeight]);
-
   const tzColWidth = useMemo(
     () => getTimezoneColWidth(settings.timezones, visibleDays.length),
     [settings.timezones, visibleDays.length],
-  );
-
-  const tzStickyStyle = useCallback(
-    (i: number) =>
-      labelsRight
-        ? {
-            right: `calc(${tzColWidth} * ${settings.timezones.length - 1 - i})`,
-          }
-        : { left: `calc(${tzColWidth} * ${i})` },
-    [labelsRight, tzColWidth, settings.timezones.length],
-  );
-
-  const timezoneHeaderCells = useMemo(
-    () =>
-      settings.timezones.map((tz, i) => (
-        <TimezoneHeaderCell
-          key={tz}
-          tz={tz}
-          multi={settings.timezones.length > 1}
-          headerBottom={headerBottom}
-          labelsRight={labelsRight}
-          style={tzStickyStyle(i)}
-        />
-      )),
-    [settings.timezones, headerBottom, labelsRight, tzStickyStyle],
   );
 
   const allDayRow = useMemo(() => {
@@ -2890,7 +2836,10 @@ export default memo(function AppCalendar({
             (labelsRight ? "justify-start ps-2" : "justify-end pe-2"),
           i < tzCount - 1 && BOTTOM_BORDER_ONLY,
         )}
-        style={{ ...edge, ...tzStickyStyle(i) }}
+        style={{
+          ...edge,
+          ...timezoneStickyStyle(i, tzCount, labelsRight, tzColWidth),
+        }}
       >
         {i === labelIndex && (
           <span className="truncate">{t("editor.allDay")}</span>
@@ -2922,60 +2871,11 @@ export default memo(function AppCalendar({
     settings.snapMinutes,
     renderEvent,
     settings.timezones,
-    tzStickyStyle,
+    tzColWidth,
     labelsRight,
     rtl,
     t,
   ]);
-
-  const headerRow = labelsRight ? (
-    <div role="row" className="contents">
-      {dayWeekHeaders}
-      {timezoneHeaderCells}
-    </div>
-  ) : (
-    <div role="row" className="contents">
-      {timezoneHeaderCells}
-      {dayWeekHeaders}
-    </div>
-  );
-
-  // hour labels don't depend on events, so event changes reuse these elements
-  const hourLabels = useMemo(
-    () =>
-      HOURS.map((_label, hour) => (
-        <>
-          {settings.timezones.map((tz, i) => (
-            <div
-              key={tz}
-              role="rowheader"
-              dir={i18n.dir()}
-              className={cn(
-                "select-none sticky z-5 shadow-[inset_-1px_-1px_0_0_color-mix(in_srgb,var(--foreground)_calc(var(--line-opacity)*1%),transparent)] flex text-sm items-center justify-center",
-                tz === settings.timezones[0] && hour == now.hour
-                  ? "bg-card font-bold"
-                  : "bg-background",
-              )}
-              style={tzStickyStyle(i)}
-            >
-              {getTimezoneHourLabel(
-                visibleDays[0]?.date ?? currentDate,
-                hour,
-                tz,
-              )}
-            </div>
-          ))}
-        </>
-      )),
-    [
-      settings.timezones,
-      now.hour,
-      tzStickyStyle,
-      visibleDays,
-      currentDate,
-      i18n,
-    ],
-  );
 
   const dateRange = useMemo(
     () => getDateRangeString(mode, currentDate, weekStartsOn),
@@ -2983,95 +2883,61 @@ export default memo(function AppCalendar({
     [mode, currentDate, weekStartsOn, t],
   );
 
-  // grid in day/week view
-  const timeGrid = useMemo(
-    () =>
-      HOURS.map((_label, hour) => {
-        const timeLabels = hourLabels[hour];
+  const renderDay = useCallback(
+    (dayIndex: number, date: DateTime) => {
+      const key = date.toISODate()!;
+      const dayEvents = timedMap.get(key) || [];
+      const styles = stylesMap.get(key) || {};
 
-        return (
-          <div key={hour} role="row" className="contents">
-            {!labelsRight && timeLabels}
+      return (
+        <>
+          {isSameDate(date, now) && (
+            <div
+              aria-hidden="true"
+              className={cn(
+                "pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-foreground before:absolute before:top-1/2 before:h-2 before:w-2 before:-translate-y-1/2 before:rounded-full before:bg-foreground",
+                // eslint-disable-next-line
+                rtl ? "before:-right-1" : "before:-left-1",
+              )}
+              style={{
+                top: getNowY(),
+                height: 2,
+              }}
+            />
+          )}
 
-            {(rtl ? visibleDays.toReversed() : visibleDays).map((d) => {
-              const dayIndex = visibleDays.indexOf(d);
-              const key = d.date.toISODate()!;
-              const dayEvents = timedMap.get(key) || [];
-              const styles = stylesMap.get(key) || {};
+          <SpokenMessage store={focusStore} day={dayIndex} />
 
-              return (
-                <GridCell
-                  key={`${dayIndex}-${hour}`}
-                  day={dayIndex}
-                  onCellTap={startNewEvent}
-                >
-                  {hour === 0 && (
-                    <div className="pointer-events-none relative h-full">
-                      <div
-                        className="pointer-events-none"
-                        style={{ height: hourHeight * 24 }}
-                      />
+          <SlotIndicator
+            store={focusStore}
+            day={dayIndex}
+            date={date}
+            isToday={isSameDate(date, now)}
+            events={dayEvents}
+            hourHeight={hourHeight}
+            snapMins={settings.snapMinutes}
+          />
 
-                      {/* current time indicator line */}
-                      {isSameDate(d.date, now) && (
-                        <div
-                          aria-hidden="true"
-                          className={cn(
-                            "pointer-events-none absolute left-0 right-0 z-15 shadow-xl bg-foreground before:absolute before:top-1/2 before:h-2 before:w-2 before:-translate-y-1/2 before:rounded-full before:bg-foreground",
-                            // eslint-disable-next-line
-                            rtl ? "before:-right-1" : "before:-left-1",
-                          )}
-                          style={{
-                            top: getNowY(),
-                            height: 2,
-                          }}
-                        />
-                      )}
-
-                      <SpokenMessage store={focusStore} day={dayIndex} />
-
-                      <SlotIndicator
-                        store={focusStore}
-                        day={dayIndex}
-                        date={d.date}
-                        isToday={isSameDate(d.date, now)}
-                        events={dayEvents}
-                        hourHeight={hourHeight}
-                        snapMins={settings.snapMinutes}
-                      />
-
-                      {/* today's events */}
-                      {dayEvents.map((event) =>
-                        renderEvent(
-                          event,
-                          dayIndex,
-                          d.date,
-                          styles[eventKey(event)] ?? styles[event.id],
-                        ),
-                      )}
-                    </div>
-                  )}
-                </GridCell>
-              );
-            })}
-
-            {labelsRight && timeLabels}
-          </div>
-        );
-      }),
+          {dayEvents.map((event) =>
+            renderEvent(
+              event,
+              dayIndex,
+              date,
+              styles[eventKey(event)] ?? styles[event.id],
+            ),
+          )}
+        </>
+      );
+    },
     [
       timedMap,
       stylesMap,
-      visibleDays,
       now,
       getNowY,
       hourHeight,
       renderEvent,
-      startNewEvent,
       focusStore,
       settings.snapMinutes,
-      hourLabels,
-      labelsRight,
       rtl,
     ],
   );
@@ -3264,22 +3130,27 @@ export default memo(function AppCalendar({
       </nav>
 
       <div dir="ltr" className="@container flex-1 overflow-hidden relative">
-        <div
+        <GridLayout
           ref={gridRef}
           role="grid"
           aria-label={t("calendar.grid")}
           {...gridKeyboardProps}
           data-keyboard-mode={keyboardMode ? "" : undefined}
           className="group/grid outline-none touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
-          style={{
-            ...({ "--line-opacity": settings.lineOpacity } as CSSProperties),
-            gridTemplateColumns: cols(
-              settings.timezones.length,
-              tzColWidth,
-              labelsRight,
-            ),
-            gridTemplateRows: rows(hourHeight, headerBottom, stripHeight),
-          }}
+          mode={mode as keyof typeof GRID_CONFIG}
+          days={visibleDays}
+          timezones={settings.timezones}
+          tzColWidth={tzColWidth}
+          headerBottom={headerBottom}
+          labelsRight={labelsRight}
+          hourHeight={hourHeight}
+          stripHeight={stripHeight}
+          lineOpacity={settings.lineOpacity}
+          now={now}
+          allDayRow={allDayRow}
+          onHeaderClick={createAllDayEvent}
+          onCellTap={startNewEvent}
+          renderDay={renderDay}
           onTouchStart={gridTouchStart}
           onTouchMove={gridTouchMove}
           onTouchEnd={gridTouchEnd}
@@ -3287,12 +3158,6 @@ export default memo(function AppCalendar({
             gridPointerRef.current = { x: e.clientX, y: e.clientY };
           }}
         >
-          {!headerBottom && headerRow}
-          {!headerBottom && allDayRow}
-          {timeGrid}
-          {headerBottom && allDayRow}
-          {headerBottom && headerRow}
-
           {isDragging && (
             <DragOverlay
               move={move}
@@ -3308,7 +3173,7 @@ export default memo(function AppCalendar({
               style={selectionBox}
             />
           )}
-        </div>
+        </GridLayout>
 
         <ScrollThumb
           gridRef={gridRef}

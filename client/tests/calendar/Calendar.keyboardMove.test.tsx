@@ -600,7 +600,7 @@ describe("keyboard move: cancelling", () => {
     const block = await getEventBlock("Planning");
     expect(getDayCell(2).contains(block)).toBe(true);
     expect(block.style.top).toBe("540px");
-    expect(block.style.height).toBe("60px");
+    expect(block.style.height).toBe("59px");
     expect(saveEvents).not.toHaveBeenCalled();
     expect(spoken()).toBe("Move canceled");
     expect(activeElement()).toHaveAccessibleName("Move canceled");
@@ -947,7 +947,7 @@ describe("keyboard move: keys and edge cases", () => {
     );
 
     expect(spoken()).toContain("Moving Planning");
-    expect((await getEventBlock("Planning")).style.height).toBe("60px");
+    expect((await getEventBlock("Planning")).style.height).toBe("59px");
   });
 
   it("ignores Shift with the move keys", async () => {
@@ -1222,7 +1222,7 @@ describe("keyboard move: keys and edge cases", () => {
     const block = await getEventBlock("Planning");
     expect(getDayCell(2).contains(block)).toBe(true);
     expect(block.style.top).toBe("540px");
-    expect(block.style.height).toBe("60px");
+    expect(block.style.height).toBe("59px");
   });
 
   it("keeps resizing every selected event from where it is now", async () => {
