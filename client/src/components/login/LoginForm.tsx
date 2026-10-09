@@ -36,7 +36,7 @@ export function LoginForm({
   newAccount,
   onNewAccountChange,
 }: {
-  serverMeta: ServerMetadata;
+  serverMeta: ServerMetadata | null;
   handleOfflineClick: (e: React.MouseEvent) => void;
   onNeedsVerification: (email: string) => void;
   registerLink: RegisterLink | null;
@@ -51,12 +51,12 @@ export function LoginForm({
   const [prefillEmail, setPrefillEmail] = useState("");
   const storage = useStorage();
   const { checkLogin } = useUser();
-  const { post } = useApi();
+  const { post, metaError } = useApi();
 
   if (!storage) return null;
 
   const creating = newAccount || registerLink !== null;
-  const emailFirst = serverMeta.registration.email?.verificationRequired;
+  const emailFirst = serverMeta?.registration.email?.verificationRequired;
   const startingRegistration = creating && emailFirst && !registerLink;
 
   const handleCreateAccountClick = (e: React.MouseEvent) => {
@@ -213,7 +213,9 @@ export function LoginForm({
     }
   };
 
-  const canRegister = serverMeta.registration.enabled !== false;
+  const disabled = !serverMeta;
+  const shownError = error ?? metaError;
+  const canRegister = serverMeta?.registration.enabled !== false;
 
   return (
     <div className="flex flex-col gap-6 text-center">
@@ -231,6 +233,7 @@ export function LoginForm({
                   defaultValue={registerLink?.email ?? prefillEmail}
                   readOnly={registerLink !== null}
                   placeholder={t("login.emailPlaceholder")}
+                  disabled={disabled}
                   required
                 />
               </Field>
@@ -245,6 +248,7 @@ export function LoginForm({
                     type="password"
                     maxLength={MAX_PASSWORD_LENGTH}
                     placeholder={t("login.passwordPlaceholder")}
+                    disabled={disabled}
                     required
                   />
                 </Field>
@@ -263,6 +267,7 @@ export function LoginForm({
                         type="password"
                         maxLength={MAX_PASSWORD_LENGTH}
                         placeholder={t("login.confirmPasswordPlaceholder")}
+                        disabled={disabled}
                         required
                       />
                     </Field>
@@ -291,16 +296,21 @@ export function LoginForm({
                     </Field>
                   )}
                   {!registerLink &&
-                  (serverMeta.policies.terms || serverMeta.policies.privacy) ? (
+                  (serverMeta?.policies.terms ||
+                    serverMeta?.policies.privacy) ? (
                     <div className="flex items-center gap-2">
-                      <Checkbox id="accept-terms" required />
+                      <Checkbox
+                        id="accept-terms"
+                        disabled={disabled}
+                        required
+                      />
                       <Label htmlFor="accept-terms">
                         <Trans
                           i18nKey={
-                            serverMeta.policies.terms &&
-                            serverMeta.policies.privacy
+                            serverMeta?.policies.terms &&
+                            serverMeta?.policies.privacy
                               ? "login.acceptBoth"
-                              : serverMeta.policies.terms
+                              : serverMeta?.policies.terms
                                 ? "login.acceptTerms"
                                 : "login.acceptPrivacy"
                           }
@@ -308,7 +318,7 @@ export function LoginForm({
                             terms: (
                               // eslint-disable-next-line
                               <a
-                                href={serverMeta.policies.terms}
+                                href={serverMeta?.policies.terms}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="underline"
@@ -317,7 +327,7 @@ export function LoginForm({
                             privacy: (
                               // eslint-disable-next-line
                               <a
-                                href={serverMeta.policies.privacy}
+                                href={serverMeta?.policies.privacy}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="underline"
@@ -330,22 +340,26 @@ export function LoginForm({
                   ) : null}
                 </>
               ) : null}
-              {error && (
+              {shownError && (
                 <span className="text-sm text-destructive text-start">
-                  {error}
+                  {shownError}
                 </span>
               )}
-              {success && !error && (
+              {success && !shownError && (
                 <span className="text-sm text-success text-start">
                   {success}
                 </span>
               )}
               <Field>
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading || disabled}>
                   {loading ? <Spinner /> : t("common.continue")}
                 </Button>
                 {canRegister ? (
-                  <Button variant="outline" onClick={handleCreateAccountClick}>
+                  <Button
+                    variant="outline"
+                    disabled={disabled}
+                    onClick={handleCreateAccountClick}
+                  >
                     {creating
                       ? t("login.haveAccount")
                       : t("login.createAccount")}

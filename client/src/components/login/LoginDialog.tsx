@@ -323,7 +323,7 @@ export default function LoginDialog() {
                   className="border-b border-dashed border-muted-foreground hover:border-foreground hover:border-solid hover:cursor-pointer"
                   onClick={() => setServerSwitcherOpen(true)}
                 >
-                  {serverMeta ? domainName(serverMeta.url) : "..."}
+                  {serverMeta ? domainName(serverMeta.url) : url || "..."}
                 </button>
               </DialogDescription>
             </DialogHeader>
@@ -338,7 +338,7 @@ export default function LoginDialog() {
                 onBack={handleBackFromVerification}
                 initialCooldown={verificationCooldown}
               />
-            ) : serverMeta ? (
+            ) : (
               <LoginForm
                 handleOfflineClick={handleOfflineClick}
                 serverMeta={serverMeta}
@@ -348,10 +348,6 @@ export default function LoginDialog() {
                 onNewAccountChange={setNewAccount}
                 onRegisterLinkDone={() => setRegisterLink(null)}
               />
-            ) : (
-              <Button variant="outline" onClick={handleOfflineClick}>
-                {t("login.offlineMode")}
-              </Button>
             )}
           </>
         )}

@@ -9,6 +9,7 @@ const apiMock = vi.hoisted(() => ({
   setUrl: vi.fn(),
   post: vi.fn(),
   serverMeta: null as ServerMetadata | null,
+  metaError: null as string | null,
   pendingVerificationEmail: null as string | null,
   setPendingVerificationEmail: vi.fn(),
 }));
@@ -53,6 +54,7 @@ vi.mock("../../src/context/ApiContext.tsx", () => ({
     post: apiMock.post,
     query: vi.fn(),
     serverMeta: apiMock.serverMeta,
+    metaError: apiMock.metaError,
     setServerMeta: vi.fn(),
     pendingLogout: false,
     setPendingLogout: vi.fn(),
@@ -131,6 +133,7 @@ const openRegistrationForm = async (user: ReturnType<typeof userEvent.setup>) =>
 beforeEach(() => {
   apiMock.url = "https://mock.example/api/";
   apiMock.serverMeta = null;
+  apiMock.metaError = null;
   apiMock.setUrl.mockReset();
   apiMock.post.mockReset();
   apiMock.pendingVerificationEmail = null;
@@ -183,7 +186,9 @@ describe("LoginDialog", () => {
     expect(
       screen.getByRole("button", { name: /use in offline mode/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText("...")).toBeInTheDocument();
+    expect(screen.getByText("https://mock.example/api/")).toBeInTheDocument();
+    expect(screen.getByLabelText(/email address/i)).toBeDisabled();
+    expect(screen.getByLabelText(/^password$/i)).toBeDisabled();
 
     await waitFor(() => {
       expect(apiMock.setUrl).toHaveBeenCalledWith(
@@ -214,7 +219,7 @@ describe("LoginDialog", () => {
 
     renderLoginDialog();
 
-    await user.click(screen.getByText("..."));
+    await user.click(screen.getByText("https://mock.example/api/"));
     expect(screen.getByText("Change server")).toBeInTheDocument();
 
     const input = await screen.findByLabelText("Server URL");
@@ -262,6 +267,14 @@ describe("LoginDialog", () => {
       3,
       "https://next.example/api/metadata",
     );
+  });
+
+  it("shows the metadata error when metadata fails to load", () => {
+    apiMock.metaError = "Failed to fetch server metadata.";
+
+    renderLoginDialog();
+
+    expect(screen.getByText("Failed to fetch server metadata.")).toBeInTheDocument();
   });
 
   it("renders login form when server metadata exists", () => {
@@ -792,7 +805,7 @@ describe("LoginDialog email first registration", () => {
 
 describe("LoginDialog server switcher", () => {
   const openSwitcher = async (user: ReturnType<typeof userEvent.setup>) => {
-    await user.click(screen.getByText("..."));
+    await user.click(screen.getByText("https://mock.example/api/"));
     return screen.findByLabelText("Server URL");
   };
 
@@ -951,18 +964,6 @@ describe("LoginDialog offline mode", () => {
     expect(storageMock.get).toHaveBeenCalledWith("offlineMasterKey");
     expect(cryptMock.deriveMasterKey).not.toHaveBeenCalled();
     expect(storageMock.set).not.toHaveBeenCalled();
-  });
-
-  it("does nothing without storage", () => {
-    storageMock.missing = true;
-    renderLoginDialog();
-
-    const defaultAllowed = fireEvent.click(
-      screen.getByRole("button", { name: /use in offline mode/i }),
-    );
-
-    expect(defaultAllowed).toBe(true);
-    expect(userMock.setUser).not.toHaveBeenCalled();
   });
 });
 

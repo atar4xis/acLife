@@ -23,6 +23,7 @@ interface ApiContextType {
   del: <T>(endpoint: string) => Promise<APIResponse<T>>;
   query: <T>(endpoint: string) => Promise<T>;
   serverMeta: ServerMetadata | null;
+  metaError: string | null;
   setServerMeta: (meta: ServerMetadata) => void;
   pendingLogout: boolean;
   setPendingLogout: (val: boolean) => void;
@@ -48,6 +49,7 @@ export const ApiProvider = ({
 }: WithChildren & { initialUrl?: string }) => {
   const [url, setUrl] = useState(initialUrl);
   const [serverMeta, setServerMeta] = useState<ServerMetadata | null>(null);
+  const [metaError, setMetaError] = useState<string | null>(null);
   const [pendingLogout, setPendingLogout] = useState(false);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<
     string | null
@@ -227,6 +229,8 @@ export const ApiProvider = ({
   useEffect(() => {
     if (!url) return;
 
+    setMetaError(null);
+
     (async () => {
       try {
         const req = await fetch(joinUrl(url, "/metadata"), {
@@ -236,12 +240,14 @@ export const ApiProvider = ({
 
         if (!res || !res.success || !res.data) {
           setServerMeta(null);
+          setMetaError(t("api.metadataFetchFailed"));
           toast.error(t("api.metadataFetchFailed"));
           return;
         }
 
         if (!validateServerMeta(res.data)) {
           setServerMeta(null);
+          setMetaError(t("api.metadataInvalid"));
           toast.error(t("api.metadataInvalid"));
           return;
         }
@@ -249,6 +255,7 @@ export const ApiProvider = ({
         setServerMeta(res.data);
       } catch {
         setServerMeta(null);
+        setMetaError(t("api.connectFailed"));
         toast.error(t("api.connectFailed"));
       }
     })();
@@ -265,6 +272,7 @@ export const ApiProvider = ({
         del,
         query,
         serverMeta,
+        metaError,
         setServerMeta,
         pendingLogout,
         setPendingLogout,
