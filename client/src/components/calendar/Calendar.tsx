@@ -42,6 +42,7 @@ import {
   useEditing,
   useViewing,
   useEventList,
+  useDragging,
 } from "@/context/CalendarContext";
 import {
   EVENT_COLOR_FALLBACK,
@@ -281,6 +282,7 @@ export default memo(function AppCalendar({
     selection,
     setEventHandlers,
     pendingChanges,
+    setDragging,
   } = useCalendarActions();
   const currentDate = useCurrentDate();
   const calendarEvents = useEventList();
@@ -291,7 +293,7 @@ export default memo(function AppCalendar({
     select: selectEvents,
     clear: clearSelection,
   } = selection;
-  const [isDragging, setIsDragging] = useState(false);
+  const isDragging = useDragging();
   const [allDayExpanded, setAllDayExpanded] = useState(false);
   const autoExpanded = useRef(false);
   const [hourHeight, setHourHeight] = useState(60);
@@ -793,14 +795,14 @@ export default memo(function AppCalendar({
     (e: PointerEvent) => {
       if (dragRef.current?.pointerId !== e.pointerId) return;
       dragRef.current = null;
-      setIsDragging(false);
+      setDragging(false);
       forceRender((tick) => tick + 1);
       window.removeEventListener("pointermove", onGlobalPointerMove);
       window.removeEventListener("pointerup", pointerUpRef.current!);
       window.removeEventListener("pointercancel", pointerCancelRef.current!);
       releaseTouchBlock();
     },
-    [onGlobalPointerMove],
+    [onGlobalPointerMove, setDragging],
   );
   const pointerCancelRef = useRef(onGlobalPointerCancel);
   pointerCancelRef.current = onGlobalPointerCancel;
@@ -931,14 +933,14 @@ export default memo(function AppCalendar({
       if (dragRef.current?.pointerId === e.pointerId) {
         commitDrag(dragRef.current);
 
-        setIsDragging(false);
+        setDragging(false);
         window.removeEventListener("pointermove", onGlobalPointerMove);
         window.removeEventListener("pointerup", onGlobalPointerUp);
         window.removeEventListener("pointercancel", onGlobalPointerCancel);
         releaseTouchBlock();
       }
     },
-    [commitDrag, onGlobalPointerMove, onGlobalPointerCancel],
+    [commitDrag, onGlobalPointerMove, onGlobalPointerCancel, setDragging],
   );
 
   pointerUpRef.current = onGlobalPointerUp;
@@ -1099,7 +1101,7 @@ export default memo(function AppCalendar({
 
       const selection = getDragSelection(selected, key);
 
-      setIsDragging(true);
+      setDragging(true);
 
       dragRef.current = {
         pointerId: e.pointerId,
@@ -1193,11 +1195,11 @@ export default memo(function AppCalendar({
         moved: false,
         selection,
       };
-      setIsDragging(true);
+      setDragging(true);
 
       return 1 + (selection?.length ?? 0);
     },
-    [clearSelection, getDragSelection],
+    [clearSelection, getDragSelection, setDragging],
   );
 
   const stepKeyboardMove = useCallback(
@@ -1260,8 +1262,8 @@ export default memo(function AppCalendar({
   const cancelKeyboardMove = useCallback(() => {
     if (dragRef.current?.pointerId !== KEYBOARD_DRAG_ID) return;
     dragRef.current = null;
-    setIsDragging(false);
-  }, []);
+    setDragging(false);
+  }, [setDragging]);
 
   const confirmKeyboardMove = useCallback(() => {
     const state = dragRef.current;
@@ -1279,9 +1281,9 @@ export default memo(function AppCalendar({
     }
 
     commitDrag(state);
-    setIsDragging(false);
+    setDragging(false);
     return dragRef.current ? "pending" : "moved";
-  }, [commitDrag, cancelKeyboardMove]);
+  }, [commitDrag, cancelKeyboardMove, setDragging]);
 
   const getBatch = useCallback((event: CalendarEvent) => {
     const selected = selectedEventsRef.current;
@@ -1910,7 +1912,7 @@ export default memo(function AppCalendar({
         window.addEventListener("pointermove", onGlobalPointerMove);
         window.addEventListener("pointerup", onGlobalPointerUp);
         window.addEventListener("pointercancel", onGlobalPointerCancel);
-        setIsDragging(true);
+        setDragging(true);
 
         dragRef.current = {
           pointerId: e.pointerId,
@@ -1931,6 +1933,7 @@ export default memo(function AppCalendar({
       }
     },
     [
+      setDragging,
       hourHeight,
       getGridHeaderOffset,
       settings.snapMinutes,

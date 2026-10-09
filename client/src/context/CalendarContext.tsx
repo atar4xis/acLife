@@ -48,6 +48,7 @@ type CalendarActions = {
   setViewingEvent: (event: CalendarEvent | null, day?: number | null) => void;
   selection: SelectionStore;
   pendingChanges: Map<string, EventChange[]>;
+  setDragging: Dispatch<SetStateAction<boolean>>;
   eventHandlers: EventHandlers;
   setEventHandlers: (handlers: EventHandlers) => void;
 };
@@ -57,6 +58,7 @@ const DateContext = createContext<DateTime | null>(null);
 const EventsContext = createContext<CalendarEvent[] | null>(null);
 const EditingContext = createContext<BlockTarget | null>(null);
 const ViewingContext = createContext<BlockTarget | null>(null);
+const DraggingContext = createContext<boolean | null>(null);
 
 const retarget =
   (event: CalendarEvent | null, day: number | null = null) =>
@@ -79,6 +81,7 @@ export function CalendarProvider({ children }: WithChildren) {
     event: null,
     day: null,
   });
+  const [dragging, setDragging] = useState(false);
   const [selection] = useState(createSelectionStore);
   const [pendingChanges] = useState(() => new Map<string, EventChange[]>());
 
@@ -130,6 +133,7 @@ export function CalendarProvider({ children }: WithChildren) {
       setViewingEvent,
       selection,
       pendingChanges,
+      setDragging,
       eventHandlers,
       setEventHandlers,
     }),
@@ -141,6 +145,7 @@ export function CalendarProvider({ children }: WithChildren) {
       setViewingEvent,
       selection,
       pendingChanges,
+      setDragging,
       eventHandlers,
       setEventHandlers,
     ],
@@ -152,7 +157,9 @@ export function CalendarProvider({ children }: WithChildren) {
         <EventsContext.Provider value={calendarEvents}>
           <EditingContext.Provider value={editing}>
             <ViewingContext.Provider value={viewing}>
-              {children}
+              <DraggingContext.Provider value={dragging}>
+                {children}
+              </DraggingContext.Provider>
             </ViewingContext.Provider>
           </EditingContext.Provider>
         </EventsContext.Provider>
@@ -190,4 +197,9 @@ export function useEditing() {
 // eslint-disable-next-line
 export function useViewing() {
   return useRequired(useContext(ViewingContext), "useViewing");
+}
+
+// eslint-disable-next-line
+export function useDragging() {
+  return useRequired(useContext(DraggingContext), "useDragging");
 }

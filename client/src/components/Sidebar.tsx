@@ -12,6 +12,7 @@ import {
 import {
   useCalendarActions,
   useCurrentDate,
+  useDragging,
   useEventList,
 } from "@/context/CalendarContext";
 import { Settings } from "lucide-react";
@@ -112,8 +113,12 @@ function DayBarsProvider({
   adaptive: boolean;
   children: React.ReactNode;
 }) {
+  const events = useEventList();
+  const dragging = useDragging();
+  const [settled, setSettled] = useState(events);
+  if (!dragging && settled !== events) setSettled(events);
   // deferred so the grid paints before the bars are recomputed
-  const calendarEvents = useDeferredValue(useEventList());
+  const calendarEvents = useDeferredValue(settled);
   const barsRef = useRef<ReturnType<typeof layoutBars> | null>(null);
 
   const bars = useMemo(() => {

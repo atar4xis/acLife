@@ -47,14 +47,19 @@ export function layoutBars(
   const grid: BarSlots[] = dateKeys.map(() =>
     new Array(slotCount).fill(undefined),
   );
-  const ordered = Array.from(spans).toSorted(
-    ([ka, a], [kb, b]) =>
-      Number(isMultiDay(b[0].event)) - Number(isMultiDay(a[0].event)) ||
-      a[0].event.start.toMillis() - b[0].event.start.toMillis() ||
-      Number(ka > kb) - Number(ka < kb),
+  const ordered = Array.from(spans, ([key, days]) => ({
+    key,
+    days,
+    multiDay: Number(isMultiDay(days[0].event)),
+    start: days[0].event.start.toMillis(),
+  })).toSorted(
+    (a, b) =>
+      b.multiDay - a.multiDay ||
+      a.start - b.start ||
+      Number(a.key > b.key) - Number(a.key < b.key),
   );
 
-  for (const [, days] of ordered) {
+  for (const { days } of ordered) {
     const fits = (row: number) => days.every(({ day }) => !grid[day][row]);
     let row = 0;
     while (row < slotCount && !fits(row)) row++;
