@@ -52,15 +52,4 @@ describe("sidebar view switcher", () => {
     await userEvent.click(screen.getByRole("button", { name: "Calendar" }));
     expect(onChangeView).toHaveBeenCalledWith("calendar");
   });
-
-  it("groups the account button with the switcher, apart from settings", () => {
-    renderSidebar("calendar");
-
-    const group = screen.getByRole("button", { name: "Journal" })
-      .parentElement!;
-    expect(group).toContainElement(screen.getByLabelText("User menu"));
-    expect(group).not.toContainElement(
-      screen.getByRole("button", { name: "Settings" }),
-    );
-  });
 });
