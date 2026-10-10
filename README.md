@@ -1,8 +1,8 @@
 # acLife
 
-acLife is a personal organizer with end-to-end encryption. It currently includes a calendar with tasks, available as a web app and as a desktop app. A journal is planned.
+acLife is a personal organizer with end-to-end encryption. It includes a calendar with tasks and a markdown journal, available as a web app and as a desktop app.
 
-Events and settings are encrypted on your device before they are uploaded, so the server only stores encrypted data.
+Events, notes and settings are encrypted on your device before they are uploaded, so the server only stores encrypted data.
 
 <p align="center">
   <img src="screenshots/hero.png" alt="acLife calendar, week view" width="900">
@@ -10,11 +10,11 @@ Events and settings are encrypted on your device before they are uploaded, so th
 
 ## Project status
 
-acLife is at version 0.1.0 and is in early development. Expect bugs and breaking changes between versions.
+acLife is at version 1.0.0-alpha.1 and is in early development. Expect bugs and breaking changes between major versions.
 
 The app has been in active use for several months without data loss or major issues, but that can't be guaranteed. Back up your data every now and then.
 
-The calendar and tasks are implemented. The journal is not built yet.
+The calendar, tasks and journal are implemented. The journal was recently added, so it has had the least real-world use.
 
 ## Try acLife
 
@@ -35,9 +35,17 @@ acLife is fully open source. Offline mode and self-hosting are free and include 
 - Search across the whole calendar
 - Event notifications by sound, device notification, or both
 
+### Journal
+
+- Notes and folders in a tree, with search and sorting by name, modified or created date
+- Split panes and tabs, with drag and drop (including touch) to move notes and arrange panes
+- Markdown editor with live preview, and a per-pane reading mode
+- Keyboard navigation for the tree, tabs and panes
+- Notes sync between your devices. The pane layout, sort order and open folders stay on the device.
+
 ### Privacy and security
 
-- Events and settings are encrypted with AES-GCM using a random master key. The master key is protected by your password with Argon2id.
+- Events, notes and settings are encrypted with AES-GCM using a random master key. The master key is protected by your password with Argon2id.
 - Login uses SRP, so your password is never sent to the server.
 - Events are filed under hashed week buckets, so the server can return the weeks you are viewing without knowing which dates they are.
 - You can unlock with your password, a PIN, or stay unlocked on a device. The desktop app protects PINs with the operating system keychain.
@@ -46,7 +54,7 @@ acLife is fully open source. Offline mode and self-hosting are free and include 
 
 ### Sync and devices
 
-- Changes sync live between your devices.
+- Calendar and journal changes sync live between your devices.
 - Settings sync too, and you choose which settings are synced and which stay on the device.
 - A web app, and a desktop app for Windows, Linux and macOS with native notifications and automatic updates.
 
@@ -61,7 +69,7 @@ acLife is highly customizable. See the settings pages for the full list.
 - Keyboard navigation and screen reader support, checked by automated accessibility tests
 
 <p align="center">
-  <img src="screenshots/week-view.png" alt="Week view with events" width="900">
+  <img src="screenshots/settings.png" alt="Week view with events" width="900">
 </p>
 
 ## Technology

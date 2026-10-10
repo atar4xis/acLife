@@ -2,13 +2,13 @@
 
 The backend for [acLife](../README.md). A single Go binary that provides the REST API, a server-sent event stream for live sync, session management, subscriptions and push notifications.
 
-The server stores only ciphertext. It never sees event contents or passwords, so it can be run by anyone without being trusted with your data. See the [main README](../README.md#how-it-works) for the security model.
+The server stores only ciphertext. It never sees event or note contents or passwords, so it can be run by anyone without being trusted with your data.
 
 ## What it does
 
 - **Accounts**: SRP login (the password never reaches the server), email verification, session management, lockout after repeated failed logins
-- **Storage**: encrypted events and settings, with per-user storage quotas
-- **Sync**: incremental sync by hashed week buckets, plus a live `/stream` (SSE) so devices see changes immediately
+- **Storage**: encrypted events, journal notes and settings, with per-user storage quotas
+- **Sync**: incremental sync of events by hashed week buckets and of journal notes by hash comparison, plus a live `/stream` (SSE) so devices see changes immediately
 - **Notifications**: schedules event notifications and delivers them by Web Push, or through the stream to the desktop app
 - **Subscriptions**: optional Stripe integration (checkout, customer portal, webhooks)
 - **Email**: queued, rate-limited SMTP delivery for verification mails
@@ -90,7 +90,7 @@ Web Push needs a VAPID key pair. Generate one with any VAPID tool and set `VAPID
 
 ### Subscriptions (Stripe)
 
-Stripe is optional. Without `STRIPE_API_KEY` the server runs with no subscription requirement and every account has full access. When it is set, a subscription is required for calendar and settings sync.
+Stripe is optional. Without `STRIPE_API_KEY` the server runs with no subscription requirement and every account has full access. When it is set, a subscription is required for calendar, journal and settings sync.
 
 | Variable | Description |
 |---|---|

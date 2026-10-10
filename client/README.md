@@ -2,7 +2,7 @@
 
 The web and desktop app for [acLife](../README.md). One React codebase runs in the browser and, wrapped in Tauri, as a native app on Windows, Linux and macOS.
 
-All encryption happens here. Events, settings and keys are encrypted and decrypted on your device, and the [server](../server/README.md) only ever stores ciphertext. See the [main README](../README.md#how-it-works) for how it works.
+All encryption happens here. Events, notes, settings and keys are encrypted and decrypted on your device, and the [server](../server/README.md) only ever stores ciphertext.
 
 ## Getting the app
 
@@ -17,6 +17,7 @@ On first launch, enter the address of the server you want to use, or choose offl
 - Tailwind CSS 4 with shadcn/ui components on Radix
 - Tauri 2 (Rust) for the desktop app
 - Web Crypto, Argon2id (`argon2-browser`) and SRP for the cryptography
+- CodeMirror 6 and react-markdown for the journal
 - i18next for translations, luxon for dates
 - Vitest and Testing Library for tests
 
@@ -68,12 +69,12 @@ Tests include accessibility checks (jest-axe). Tests run in UTC.
 
 | Path | Contents |
 |---|---|
-| `src/App.tsx` | Provider tree: settings, theme, API, storage, user, calendar |
-| `src/components/` | UI. `calendar/` is the calendar grid, editor and agenda, `settings/` the settings dialog, `ui/` the shared primitives |
+| `src/App.tsx` | Provider tree: settings, theme, API, storage, user, calendar, journal |
+| `src/components/` | UI. `calendar/` is the calendar grid, editor and agenda, `journal/` the journal tree, tabs, panes and editor, `settings/` the settings dialog, `ui/` the shared primitives |
 | `src/context/` | React providers for the API, user and keys, storage and settings |
-| `src/hooks/` | Hooks, including calendar loading, saving and sync |
-| `src/lib/` | Pure logic: encryption (`crypt.ts`), recurrence, buckets, the event cache |
-| `src/reducers/` | Calendar state |
+| `src/hooks/` | Hooks, including calendar and journal loading, saving and sync |
+| `src/lib/` | Pure logic: encryption (`crypt.ts`), recurrence, buckets, the event cache, journal items, layout and live preview (`journal/`) |
+| `src/reducers/` | Calendar and journal state |
 | `src/locales/` | One JSON bundle per language |
 | `public/themes/` | Built-in themes |
 | `public/sw.js` | Service worker for push notifications |
