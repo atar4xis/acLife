@@ -98,7 +98,7 @@ describe("syncBuckets", () => {
     ]);
     const body = apiMock.post.mock.calls[1][1];
     expect(body.buckets).toEqual([bucket]);
-    expect(body.events).toHaveLength(1);
+    expect(body.records).toHaveLength(1);
   });
 
   it("re-saves events of mismatched buckets when the server has nothing to apply", async () => {
@@ -187,7 +187,7 @@ describe("syncBuckets", () => {
     await result.current.syncBuckets([bucket], otherKey, bucketKey);
 
     expect(apiMock.post).toHaveBeenCalledTimes(1);
-    expect(apiMock.post.mock.calls[0][1].events).toEqual([]);
+    expect(apiMock.post.mock.calls[0][1].records).toEqual([]);
     expect(toast.warning).toHaveBeenCalled();
     expect(await cachedEvents(masterKey)).toEqual([]);
   });

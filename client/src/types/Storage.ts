@@ -1,3 +1,4 @@
+import type { AppView } from "./AppView";
 import type { Encrypted, KDFCost } from "./Crypt";
 
 type MaybePromise<T> = T | Promise<T>;
@@ -34,6 +35,10 @@ export interface StorageData {
   offlineEvents: Encrypted | null;
   offlineMasterKey: string;
   cachedEvents: Encrypted | null;
+  journal: Encrypted | null;
+  offlineJournal: Encrypted | null;
+  journalLayout: Encrypted | null;
+  appView: AppView;
   pushSubscription: string | null;
   pushDismissed: boolean;
   sidebarOpen: boolean;

@@ -872,5 +872,69 @@
     "too_many_attempts_minutes_few": "Zbyt wiele prób. Spróbuj ponownie za {{count}} minuty.",
     "too_many_attempts_minutes_many": "Zbyt wiele prób. Spróbuj ponownie za {{count}} minut.",
     "too_many_attempts_minutes_other": "Zbyt wiele prób. Spróbuj ponownie za {{count}} minuty."
+  },
+  "views": {
+    "calendar": "Kalendarz",
+    "journal": "Dziennik"
+  },
+  "journal": {
+    "newNote": "Nowa notatka",
+    "newFolder": "Nowy folder",
+    "sortOrder": "Zmień kolejność sortowania",
+    "collapseAll": "Zwiń wszystko",
+    "expandAll": "Rozwiń wszystko",
+    "search": "Szukaj notatek",
+    "searchPlaceholder": "Szukaj notatek...",
+    "clearSearch": "Wyczyść wyszukiwanie",
+    "untitledNote": "Bez tytułu",
+    "untitledFolder": "Nowy folder",
+    "notes": "Notatki",
+    "empty": "Brak notatek.",
+    "noMatches": "Brak wyników",
+    "rename": "Zmień nazwę",
+    "delete": "Usuń",
+    "deleteFolderTitle": "Usunąć „{{name}}”?",
+    "deleteFolderDescription": "Ten folder i cała jego zawartość zostaną usunięte na wszystkich Twoich urządzeniach.",
+    "tabs": "Otwarte notatki",
+    "closeTab": "Zamknij {{name}}",
+    "selectNote": "Wybierz lub <create>utwórz</create> notatkę, aby zacząć pisać.",
+    "placeholder": "Zacznij pisać...",
+    "loadFailed": "Nie udało się odszyfrować dziennika.",
+    "saveFailed": "Nie udało się zapisać dziennika.",
+    "storageFull": "Brak miejsca na dane, więc nie udało się zsynchronizować dziennika.",
+    "cacheDecryptFailed": "Nie udało się odszyfrować danych dziennika z pamięci podręcznej; zostaną odrzucone.",
+    "tooLarge": "Nie można zsynchronizować „{{name}}”: rozmiar jest zbyt duży.",
+    "sort": {
+      "name": {
+        "asc": "Nazwa (od A do Z)",
+        "desc": "Nazwa (od Z do A)"
+      },
+      "modified": {
+        "desc": "Zmodyfikowano (od najnowszych)",
+        "asc": "Zmodyfikowano (od najstarszych)"
+      },
+      "created": {
+        "desc": "Utworzono (od najnowszych)",
+        "asc": "Utworzono (od najstarszych)"
+      }
+    },
+    "title": "Tytuł",
+    "editor": "Treść notatki",
+    "newTab": "Nowa karta",
+    "more": "Więcej akcji",
+    "readingMode": "Tryb czytania",
+    "editMode": "Tryb edycji",
+    "moveTo": "Przenieś do",
+    "root": "Katalog główny",
+    "openInSplit": "Otwórz w nowym panelu",
+    "split": {
+      "left": "Przenieś do nowego panelu po lewej",
+      "right": "Przenieś do nowego panelu po prawej",
+      "top": "Przenieś do nowego panelu powyżej",
+      "bottom": "Przenieś do nowego panelu poniżej"
+    },
+    "movePane": "Przenieś do panelu {{n}}",
+    "resize": "Zmień rozmiar paneli",
+    "tabMenu": "Akcje karty"
   }
 }

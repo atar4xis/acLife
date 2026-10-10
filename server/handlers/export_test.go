@@ -48,3 +48,5 @@ func FillRegistrationSlots() (release func()) {
 		}
 	}
 }
+
+func SetJournalSyncBytes(n int64) { journalSyncBytes = n }

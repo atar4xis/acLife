@@ -2,6 +2,7 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import "@testing-library/jest-dom/vitest";
 import "@testing-library/jest-dom";
+import { configure } from "@testing-library/react";
 import "../src/i18n";
 import { afterEach, beforeEach, vi } from "vitest";
 
@@ -87,13 +88,15 @@ beforeEach(() => {
     },
   );
 
-  vi.stubGlobal("matchMedia", () => ({
+  window.matchMedia = (() => ({
     matches: false,
     addEventListener: () => {},
     removeEventListener: () => {},
-  }));
+  })) as unknown as typeof window.matchMedia;
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
+
+configure({ asyncUtilTimeout: 4000 });

@@ -21,6 +21,7 @@ const renderWithSidebar = () => {
           <AgendaList />
         </SidebarProvider>
         <AppCalendar
+          active
           events={[buildSecondEvent()]}
           mode="day"
           setMode={vi.fn()}

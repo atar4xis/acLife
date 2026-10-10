@@ -9,15 +9,9 @@ type CalendarEvent struct {
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
-// CachedEvent represents a cached event received from the client.
-type CachedEvent struct {
-	ID        string `json:"id"`
-	Timestamp int64  `json:"ts"`
-}
-
 // EventSyncRequest is the structure of an event sync request.
 type EventSyncRequest struct {
-	Events  []CachedEvent     `json:"events"`
+	Records []CachedRecord    `json:"records"`
 	Buckets []string          `json:"buckets"`
 	Hashes  map[string]string `json:"hashes"` // bucket id -> client's hash of cached events in that bucket
 }
@@ -28,15 +22,10 @@ type EventHashResponse struct {
 }
 
 // EventSyncResponse is the structure of the response to an event sync request.
-type EventSyncResponse struct {
-	Updated []EncryptedEvent `json:"updated"`
-	Deleted []string         `json:"deleted"`
-	Added   []EncryptedEvent `json:"added"`
-}
+type EventSyncResponse = SyncDiff[EncryptedEvent]
 
+// EncryptedEvent is an encrypted calendar event plus the buckets it belongs to.
 type EncryptedEvent struct {
-	ID        string   `json:"id"`
-	Data      string   `json:"data"`
-	UpdatedAt int64    `json:"updatedAt"`
-	Buckets   []string `json:"buckets,omitempty"`
+	EncryptedRecord
+	Buckets []string `json:"buckets,omitempty"`
 }

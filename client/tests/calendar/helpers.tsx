@@ -124,6 +124,7 @@ export const renderCalendar = ({
       <StoreSpy onStore={(s) => (store = s)} />
       <CalendarProvider>
         <AppCalendar
+          active
           events={events}
           mode={mode}
           setMode={setMode}

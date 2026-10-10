@@ -802,5 +802,69 @@
     "registration_busy": "現在、登録が混み合っています。しばらくしてからもう一度お試しください。",
     "too_many_attempts_seconds_other": "試行回数が多すぎます。{{count}}秒後にもう一度お試しください。",
     "too_many_attempts_minutes_other": "試行回数が多すぎます。{{count}}分後にもう一度お試しください。"
+  },
+  "views": {
+    "calendar": "カレンダー",
+    "journal": "ジャーナル"
+  },
+  "journal": {
+    "newNote": "新規ノート",
+    "newFolder": "新規フォルダ",
+    "sortOrder": "並び順を変更",
+    "collapseAll": "すべて折りたたむ",
+    "expandAll": "すべて展開",
+    "search": "ノートを検索",
+    "searchPlaceholder": "ノートを検索...",
+    "clearSearch": "検索をクリア",
+    "untitledNote": "無題",
+    "untitledFolder": "新規フォルダ",
+    "notes": "ノート",
+    "empty": "ノートはまだありません。",
+    "noMatches": "一致するノートがありません",
+    "rename": "名前を変更",
+    "delete": "削除",
+    "deleteFolderTitle": "「{{name}}」を削除しますか？",
+    "deleteFolderDescription": "このフォルダとその中身は、すべてのデバイスから削除されます。",
+    "tabs": "開いているノート",
+    "closeTab": "{{name}}を閉じる",
+    "selectNote": "ノートを選択するか、<create>作成</create>して書き始めましょう。",
+    "placeholder": "書き始めましょう...",
+    "loadFailed": "ジャーナルを復号できませんでした。",
+    "saveFailed": "ジャーナルを保存できませんでした。",
+    "storageFull": "ストレージがいっぱいのため、ジャーナルを同期できませんでした。",
+    "cacheDecryptFailed": "ジャーナルのキャッシュを復号できませんでした。破棄されます。",
+    "tooLarge": "「{{name}}」は大きすぎて同期できません。",
+    "sort": {
+      "name": {
+        "asc": "名前(A→Z)",
+        "desc": "名前(Z→A)"
+      },
+      "modified": {
+        "desc": "更新日時(新しい順)",
+        "asc": "更新日時(古い順)"
+      },
+      "created": {
+        "desc": "作成日時(新しい順)",
+        "asc": "作成日時(古い順)"
+      }
+    },
+    "title": "タイトル",
+    "editor": "ノートの内容",
+    "newTab": "新しいタブ",
+    "more": "その他の操作",
+    "readingMode": "閲覧モード",
+    "editMode": "編集モード",
+    "moveTo": "移動先",
+    "root": "ルート",
+    "openInSplit": "新しいペインで開く",
+    "split": {
+      "left": "左側の新しいペインに移動",
+      "right": "右側の新しいペインに移動",
+      "top": "上側の新しいペインに移動",
+      "bottom": "下側の新しいペインに移動"
+    },
+    "movePane": "ペイン{{n}}に移動",
+    "resize": "ペインのサイズを変更",
+    "tabMenu": "タブの操作"
   }
 }

@@ -153,3 +153,77 @@
 .css-editor .token.punctuation {
   color: var(--ring);
 }
+
+:root {
+  --journal-h1-size: 1.875rem;
+  --journal-h2-size: 1.5rem;
+  --journal-h3-size: 1.25rem;
+  --journal-h4-size: 1.125rem;
+}
+
+@layer components {
+  .journal-prose {
+    @apply wrap-break-word;
+
+    & a {
+      @apply text-primary underline;
+    }
+    & blockquote {
+      @apply border-s-4 ps-4 text-muted-foreground;
+    }
+    & code {
+      @apply rounded bg-muted px-1 font-mono;
+    }
+    & h1 {
+      @apply mt-6 mb-3 font-bold;
+      font-size: var(--journal-h1-size);
+      line-height: calc(2.25 / 1.875);
+    }
+    & h2 {
+      @apply mt-5 mb-2 font-bold;
+      font-size: var(--journal-h2-size);
+      line-height: calc(2 / 1.5);
+    }
+    & h3 {
+      @apply mt-4 mb-2 font-semibold;
+      font-size: var(--journal-h3-size);
+      line-height: calc(1.75 / 1.25);
+    }
+    & h4 {
+      @apply mt-3 mb-1 font-semibold;
+      font-size: var(--journal-h4-size);
+      line-height: calc(1.75 / 1.125);
+    }
+    & hr {
+      @apply my-4;
+    }
+    & input[type="checkbox"] {
+      @apply accent-primary;
+    }
+    & li {
+      @apply my-1;
+    }
+    & ol {
+      @apply ms-6 list-decimal;
+    }
+    & p {
+      @apply my-3;
+    }
+    & pre {
+      @apply my-3 overflow-x-auto rounded-md bg-muted p-3;
+    }
+    & pre code {
+      @apply p-0;
+    }
+    & table {
+      @apply my-3;
+    }
+    & td,
+    & th {
+      @apply border px-2 py-1;
+    }
+    & ul {
+      @apply ms-6 list-disc;
+    }
+  }
+}

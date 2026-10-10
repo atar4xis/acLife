@@ -233,6 +233,7 @@ describe("Event editor focus: opened from the keyboard", () => {
             <AgendaList />
           </SidebarProvider>
           <AppCalendar
+            active
             events={[
               buildEvent({
                 id: "later",
@@ -272,6 +273,7 @@ describe("Event editor focus: opened from the keyboard", () => {
             <AgendaList />
           </SidebarProvider>
           <AppCalendar
+            active
             events={[
               buildEvent({
                 id: "later",

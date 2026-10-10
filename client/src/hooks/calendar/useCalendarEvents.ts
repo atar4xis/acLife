@@ -1,16 +1,16 @@
+import { decryptJson, encryptJson } from "@/lib/crypt";
 import { useApi } from "@/context/ApiContext";
 import { useStorage } from "@/context/StorageContext";
 import { deleteDescriptionSizes } from "@/lib/calendar/descriptionSize";
 import {
-  decryptOfflineEvents,
+  cookEvent,
   decryptEvents,
   encryptEvents,
-  encryptOfflineEvents,
   MAX_ENCRYPTED_EVENT_BYTES,
 } from "@/lib/calendar/crypt";
+import { computeBucketHash } from "@/lib/bucketHash";
 import { createEventCache } from "@/lib/calendar/eventCache";
 import {
-  computeBucketHash,
   computeEventBuckets,
   computeSyncRangeBuckets,
 } from "@/lib/calendar/buckets";
@@ -23,6 +23,7 @@ import type {
   EventSyncRequest,
   EventSyncResponse,
   EventChange,
+  RawCalendarEvent,
   RejectedEvent,
   WithoutPrivateKeys,
 } from "@/types/calendar/Event";
@@ -32,7 +33,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CLIENT_ID } from "@/lib/clientId";
 import { createSerialQueue } from "@/lib/serialQueue";
-import type { CalendarChange } from "@/lib/stream";
+import type { StreamChange } from "@/lib/stream";
 import { t } from "@/i18n";
 
 const withoutPrivateKeys = (event: CalendarEvent) =>
@@ -159,7 +160,7 @@ export const useCalendarEvents = (
       );
 
       const request: EventSyncRequest = {
-        events: Array.from(known, ([id, ts]) => ({
+        records: Array.from(known, ([id, ts]) => ({
           id: uuidToBase64(id),
           ts,
         })),
@@ -207,7 +208,7 @@ export const useCalendarEvents = (
             .then((encrypted) =>
               post(
                 "calendar/events/save",
-                encrypted.map((event) => ({ type: "updated", event })),
+                encrypted.map((record) => ({ type: "updated", record })),
               ),
             )
             .catch(() => {});
@@ -233,7 +234,7 @@ export const useCalendarEvents = (
   );
 
   const applyChanges = useCallback(
-    (changes: CalendarChange[], masterKey: CryptoKey, bucketKey: CryptoKey) =>
+    (changes: StreamChange[], masterKey: CryptoKey, bucketKey: CryptoKey) =>
       cacheQueue(async () => {
         const deleted = changes.flatMap((c) =>
           c.type === "deleted" ? [c.id] : [],
@@ -307,7 +308,11 @@ export const useCalendarEvents = (
       // for offline users, we just decrypt from storage
       try {
         const events = getStored("offlineEvents");
-        return events ? await decryptOfflineEvents(events, masterKey) : [];
+        return events
+          ? (await decryptJson<RawCalendarEvent[]>(events, masterKey)).map(
+              cookEvent,
+            )
+          : [];
       } catch {
         toast.error(t("events.decryptFailed"));
         return [];
@@ -388,7 +393,7 @@ export const useCalendarEvents = (
             if (c.type === "deleted") return { type: "deleted", id: c.id };
             if (c.type === "added" || c.type === "updated") {
               const enc = encryptedMap.get(c.event!.id)!;
-              return { type: c.type, event: enc };
+              return { type: c.type, record: enc };
             }
           });
 
@@ -416,7 +421,7 @@ export const useCalendarEvents = (
         } else {
           // for offline users just encrypt and store all events locally
           const allEvents = changes as CalendarEvent[];
-          const encrypted = await encryptOfflineEvents(allEvents, masterKey);
+          const encrypted = await encryptJson(allEvents, masterKey);
 
           setStored("offlineEvents", encrypted);
 

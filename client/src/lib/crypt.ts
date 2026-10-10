@@ -13,6 +13,7 @@ import {
   generateSalt,
   type Params,
 } from "@mzattahri/srp";
+import { compress, decompress } from "./gzip";
 import { arrayBufferToBase64, uint8ArrayFromBase64 } from "./utils";
 import { t } from "@/i18n";
 
@@ -583,3 +584,19 @@ export async function solveProofOfWork(
     }
   }
 }
+
+export const encryptJson = async (
+  value: unknown,
+  key: CryptoKey,
+): Promise<Encrypted> => {
+  const payload = new TextEncoder().encode(JSON.stringify(value));
+  return encrypt(await compress(payload), key);
+};
+
+export const decryptJson = async <T>(
+  data: Encrypted | Uint8Array,
+  key: CryptoKey,
+): Promise<T> => {
+  const decompressed = await decompress(await decrypt(data, key));
+  return JSON.parse(new TextDecoder().decode(decompressed));
+};

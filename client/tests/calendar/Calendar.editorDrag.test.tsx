@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import {
   buildPlainEvent,
@@ -7,6 +7,7 @@ import {
   renderCalendar,
   setupCalendarTests,
 } from "./helpers";
+import { stubMobile } from "../mobile.ts";
 
 setupCalendarTests();
 
@@ -36,11 +37,6 @@ const moveTo = (clientX: number, clientY: number) =>
 const release = () => dispatchWindowPointer("pointerup", {});
 
 describe("Event editor dragging", () => {
-  const innerWidth = window.innerWidth;
-  afterEach(() => {
-    window.innerWidth = innerWidth;
-  });
-
   it("follows the pointer when grabbed by the header", async () => {
     await openEditor();
     const start = placement();
@@ -126,7 +122,7 @@ describe("Event editor dragging", () => {
   });
 
   it("cannot be dragged on mobile", async () => {
-    window.innerWidth = 500;
+    stubMobile();
     await openEditor();
     const start = placement();
 

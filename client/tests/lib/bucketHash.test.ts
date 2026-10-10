@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeBucketHash } from "../../src/lib/calendar/buckets.ts";
+import { computeBucketHash } from "../../src/lib/bucketHash.ts";
 
 const a = { id: "00000000-0000-4000-8000-000000000001", ts: 1790000000001 };
 const b = { id: "00000000-0000-4000-8000-000000000002", ts: 1790000000002 };

@@ -25,7 +25,7 @@ func counter(t *testing.T, owner string) int64 {
 	t.Helper()
 
 	var used int64
-	if err := database.DB.QueryRow("SELECT event_bytes FROM user_storage WHERE owner = ?", owner).Scan(&used); err != nil {
+	if err := database.DB.QueryRow("SELECT used_bytes FROM user_storage WHERE owner = ?", owner).Scan(&used); err != nil {
 		t.Fatalf("read counter: %v", err)
 	}
 	return used
@@ -41,7 +41,7 @@ func stored(t *testing.T, owner string) int64 {
 	if err := database.DB.QueryRow("SELECT COUNT(*) FROM calendar_event_buckets ceb JOIN calendar_events ce ON ce.id = ceb.event_id WHERE ce.owner = ?", owner).Scan(&bucketRows); err != nil {
 		t.Fatalf("count bucket rows: %v", err)
 	}
-	return data + bucketRows*constants.BucketRowBytes
+	return data + bucketRows*constants.BucketRowBytes + jstored(t, owner)
 }
 
 func fp(sizes ...int) int64 {
@@ -333,7 +333,7 @@ func seedStorage(t *testing.T, events int) testutil.User {
 func setCounter(t *testing.T, owner string, used int64) {
 	t.Helper()
 
-	if _, err := database.DB.Exec("UPDATE user_storage SET event_bytes = ? WHERE owner = ?", used, owner); err != nil {
+	if _, err := database.DB.Exec("UPDATE user_storage SET used_bytes = ? WHERE owner = ?", used, owner); err != nil {
 		t.Fatal(err)
 	}
 }

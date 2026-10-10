@@ -42,6 +42,7 @@ func New() *mux.Router {
 	User(csrfRouter)
 	Stripe(tr)
 	Calendar(csrfRouter)
+	Journal(csrfRouter)
 
 	return r
 }

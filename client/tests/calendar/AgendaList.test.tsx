@@ -53,6 +53,7 @@ const renderAgendaAndCalendar = (events: ReturnType<typeof buildEvent>[]) => {
           <AgendaList />
         </SidebarProvider>
         <AppCalendar
+          active
           events={events}
           mode="week"
           setMode={vi.fn()}

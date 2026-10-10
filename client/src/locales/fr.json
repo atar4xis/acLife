@@ -824,5 +824,69 @@
     "too_many_attempts_seconds_other": "Trop de tentatives. Réessayez dans {{count}} secondes.",
     "too_many_attempts_minutes_one": "Trop de tentatives. Réessayez dans {{count}} minute.",
     "too_many_attempts_minutes_other": "Trop de tentatives. Réessayez dans {{count}} minutes."
+  },
+  "views": {
+    "calendar": "Calendrier",
+    "journal": "Journal"
+  },
+  "journal": {
+    "newNote": "Nouvelle note",
+    "newFolder": "Nouveau dossier",
+    "sortOrder": "Changer l'ordre de tri",
+    "collapseAll": "Tout réduire",
+    "expandAll": "Tout développer",
+    "search": "Rechercher des notes",
+    "searchPlaceholder": "Rechercher des notes...",
+    "clearSearch": "Effacer la recherche",
+    "untitledNote": "Sans titre",
+    "untitledFolder": "Nouveau dossier",
+    "notes": "Notes",
+    "empty": "Aucune note pour le moment.",
+    "noMatches": "Aucun résultat",
+    "rename": "Renommer",
+    "delete": "Supprimer",
+    "deleteFolderTitle": "Supprimer « {{name}} » ?",
+    "deleteFolderDescription": "Ce dossier et tout son contenu seront supprimés sur tous vos appareils.",
+    "tabs": "Notes ouvertes",
+    "closeTab": "Fermer {{name}}",
+    "selectNote": "Sélectionnez ou <create>créez</create> une note pour commencer à écrire.",
+    "placeholder": "Commencez à écrire...",
+    "loadFailed": "Impossible de déchiffrer le journal.",
+    "saveFailed": "Impossible d'enregistrer le journal.",
+    "storageFull": "Votre espace de stockage est plein, le journal n'a donc pas pu être synchronisé.",
+    "cacheDecryptFailed": "Impossible de déchiffrer le cache du journal ; il sera supprimé.",
+    "tooLarge": "Impossible de synchroniser « {{name}} » : taille trop importante.",
+    "sort": {
+      "name": {
+        "asc": "Nom (A à Z)",
+        "desc": "Nom (Z à A)"
+      },
+      "modified": {
+        "desc": "Date de modification (les plus récentes d'abord)",
+        "asc": "Date de modification (les plus anciennes d'abord)"
+      },
+      "created": {
+        "desc": "Date de création (les plus récentes d'abord)",
+        "asc": "Date de création (les plus anciennes d'abord)"
+      }
+    },
+    "title": "Titre",
+    "editor": "Contenu de la note",
+    "newTab": "Nouvel onglet",
+    "more": "Plus d'actions",
+    "readingMode": "Mode lecture",
+    "editMode": "Mode édition",
+    "moveTo": "Déplacer vers",
+    "root": "Racine",
+    "openInSplit": "Ouvrir dans un volet séparé",
+    "split": {
+      "left": "Déplacer vers un nouveau volet à gauche",
+      "right": "Déplacer vers un nouveau volet à droite",
+      "top": "Déplacer vers un nouveau volet au-dessus",
+      "bottom": "Déplacer vers un nouveau volet en dessous"
+    },
+    "movePane": "Déplacer vers le volet {{n}}",
+    "resize": "Redimensionner les volets",
+    "tabMenu": "Actions de l'onglet"
   }
 }

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, renderHook } from "@testing-library/react";
 import useAnchoredPosition from "../../src/hooks/useAnchoredPosition";
+import { stubMobile } from "../mobile.ts";
 
 const rect = (left: number, top: number, width: number, height: number) =>
   ({
@@ -101,6 +102,7 @@ describe("useAnchoredPosition", () => {
   });
 
   it("goes full width at the top on mobile", () => {
+    stubMobile();
     vi.stubGlobal("innerWidth", 400);
     const { result } = setup({ anchor: rect(250, 200, 100, 50) });
 
@@ -154,7 +156,7 @@ describe("useAnchoredPosition", () => {
 
     expect(result.current.pos).toEqual(start);
 
-    vi.stubGlobal("innerWidth", 400);
+    stubMobile();
     const mobile = setup({ anchor: rect(500, 200, 100, 50) });
     const mobileStart = mobile.result.current.pos;
     act(() => mobile.result.current.startDrag(press()));

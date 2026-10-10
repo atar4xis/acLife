@@ -1134,6 +1134,7 @@ describe("Calendar grid keyboard: views", () => {
       <SettingsStoreProvider>
         <CalendarProvider>
           <AppCalendar
+            active
             events={[]}
             mode={mode}
             setMode={vi.fn()}

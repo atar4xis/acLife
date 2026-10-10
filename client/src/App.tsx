@@ -15,6 +15,7 @@ import { Direction } from "radix-ui";
 import { useTranslation } from "react-i18next";
 import { UpdaterProvider } from "./context/UpdaterContext";
 import LanguageSync from "@/components/LanguageSync";
+import { JournalProvider } from "./context/JournalContext";
 
 function AuthWrapper({ children }: WithChildren) {
   const { user, isUnlocking, checkLogin, setUser } = useUser();
@@ -67,12 +68,14 @@ export default function App() {
               <StorageProvider>
                 <UserProvider>
                   <CalendarProvider>
-                    <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
-                      <Toaster position="bottom-center" />
-                      <AuthWrapper>
-                        <AppShell />
-                      </AuthWrapper>
-                    </SidebarProvider>
+                    <JournalProvider>
+                      <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
+                        <Toaster position="bottom-center" />
+                        <AuthWrapper>
+                          <AppShell />
+                        </AuthWrapper>
+                      </SidebarProvider>
+                    </JournalProvider>
                   </CalendarProvider>
                 </UserProvider>
               </StorageProvider>

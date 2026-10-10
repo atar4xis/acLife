@@ -7,7 +7,7 @@ import type { CalendarEvent } from "../../src/types/calendar/Event.ts";
 import type { User } from "../../src/types/User.ts";
 
 const server = vi.hoisted(() => ({
-  posted: [] as { event?: { id: string }; id?: string; type: string }[][],
+  posted: [] as { record?: { id: string }; id?: string; type: string }[][],
   post: null as unknown as (e: string, b: unknown) => Promise<unknown>,
 }));
 
@@ -91,12 +91,12 @@ describe("saving an oversized event", () => {
     await act(async () => {
       await result.current.saveEvents([{ type: "updated", event: saved }], () => {});
     });
-    const { event } = server.posted[0][0] as unknown as {
-      event: { id: string; data: string; updatedAt: number };
+    const { record } = server.posted[0][0] as unknown as {
+      record: { id: string; data: string; updatedAt: number };
     };
     await act(async () => {
       await result.current.applyChanges(
-        [{ type: "updated", id: event.id, data: event.data, updatedAt: event.updatedAt }],
+        [{ type: "updated", id: record.id, data: record.data, updatedAt: record.updatedAt }],
         masterKey,
         bucketKey,
       );
@@ -138,7 +138,7 @@ describe("saving an oversized event", () => {
     });
 
     expect(server.posted).toHaveLength(1);
-    expect(server.posted[0].map((c) => c.event?.id)).toHaveLength(1);
+    expect(server.posted[0].map((c) => c.record?.id)).toHaveLength(1);
     expect(onRejected.mock.calls[0][0][0]).toMatchObject({
       id: A,
       wasAdded: true,

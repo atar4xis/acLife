@@ -21,7 +21,7 @@ describe("Sidebar a11y", () => {
       <SettingsStoreProvider>
         <CalendarProvider>
           <SidebarProvider>
-            <AppSidebar onOpenSettings={vi.fn()} />
+            <AppSidebar view="calendar" onChangeView={vi.fn()} onOpenSettings={vi.fn()} />
           </SidebarProvider>
         </CalendarProvider>
       </SettingsStoreProvider>,

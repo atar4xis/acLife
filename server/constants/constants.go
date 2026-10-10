@@ -56,14 +56,14 @@ const (
 	EmailQueueStaleThreshold = 1 * time.Minute
 	EmailQueueMaxAttempts    = 5
 
-	MaxEmailLen      = 260
-	MaxSaltLen       = 16
-	MaxVerifierLen   = 520
-	MaxEventLen      = 10000
-	MaxRequestEvents = 50000                        // events in one save or sync request
-	MaxSyncBodyBytes = MaxRequestEvents*80 + 64<<10 // about 80 bytes per cached event entry
-	MaxPowTokenLen   = 512
-	MaxPowNonceLen   = 32
+	MaxEmailLen       = 260
+	MaxSaltLen        = 16
+	MaxVerifierLen    = 520
+	MaxEventLen       = 10000
+	MaxRequestRecords = 50000                         // records in one save or sync request
+	MaxSyncBodyBytes  = MaxRequestRecords*80 + 64<<10 // about 80 bytes per cached record entry
+	MaxPowTokenLen    = 512
+	MaxPowNonceLen    = 32
 
 	MaxEnvelopeSaltLen = 64
 	MaxEnvelopeDataLen = 256
@@ -82,6 +82,13 @@ const (
 	MaxEventBuckets = 60               // caps the number of weeks a single event may span
 	MaxSyncBuckets  = 100              // caps the number of buckets requested in a single sync
 
+	MaxJournalLen         = 256 << 10
+	MaxJournalSyncBytes   = 2 << 20
+	MaxJournalSyncBuckets = 16
+	JournalBucketChars    = 2
+	JournalHashChars      = 11
+	JournalFetchChunk     = 16
+
 	MaxSettingsBytes = 128 << 10 // caps the encrypted settings blob
 
 	MaxNotificationEvents = 200              // events per notifications sync request
@@ -92,8 +99,8 @@ const (
 	NotificationTickEvery = 5 * time.Second
 
 	// MySQL TIMESTAMP range + 1 day
-	MinEventTimestampMs = int64(Day / time.Millisecond)
-	MaxEventTimestampMs = 2147483647000 - MinEventTimestampMs
+	MinRecordTimestampMs = int64(Day / time.Millisecond)
+	MaxRecordTimestampMs = 2147483647000 - MinRecordTimestampMs
 
 	UnusedAccountTTL                 = 7 * Day
 	EmailVerificationTTL             = 1 * Day

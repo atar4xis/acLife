@@ -1,18 +1,11 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"maps"
 	"net/http"
-	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -24,6 +17,9 @@ import (
 	"acLife/utils"
 )
 
+// EventChange is one entry of a calendar/events/save request body.
+type EventChange = types.RecordChange[types.EncryptedEvent]
+
 // upsertEvent pairs a decoded calendar event with its decoded bucket ids.
 type upsertEvent struct {
 	types.CalendarEvent
@@ -31,210 +27,67 @@ type upsertEvent struct {
 	Change  stream.Change
 }
 
-// EventChange is one entry of a calendar/events/save request body.
-type EventChange struct {
-	Type  string               `json:"type"`
-	ID    string               `json:"id,omitempty"`
-	Event types.EncryptedEvent `json:"event"`
-}
-
-// eventChanges decodes at most constants.MaxRequestEvents changes, so a huge array of tiny entries is rejected instead of expanded in memory.
-type eventChanges []EventChange
-
-func (c *eventChanges) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
-		return nil
-	}
-
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
-	if tok, err := dec.Token(); err != nil || tok != json.Delim('[') {
-		return errBadEventChanges
-	}
-
-	changes := eventChanges{}
-	for dec.More() {
-		if len(changes) == constants.MaxRequestEvents {
-			return errBadEventChanges
-		}
-
-		var change EventChange
-		if err := dec.Decode(&change); err != nil {
-			return err
-		}
-		changes = append(changes, change)
-	}
-
-	*c = changes
-	return nil
-}
-
-var (
-	errBadEventChanges = errors.New("invalid event changes")
-	errStorageLimit    = errors.New("storage limit reached")
-)
-
-// replyEventChangesError answers a failed applyCalendarChanges.
-func replyEventChangesError(w http.ResponseWriter, function string, err error) {
-	switch {
-	case errors.Is(err, errBadEventChanges):
-		utils.SendBadRequest(w)
-	case errors.Is(err, errStorageLimit):
-		utils.SendJSON(w, http.StatusRequestEntityTooLarge, types.Reply[any]{
-			Success: false,
-			Message: "Storage limit reached.",
-			Code:    "storage_limit_reached",
-		})
-	default:
-		utils.LogError(function, "applyCalendarChanges", err)
-		utils.SendInternalError(w)
-	}
-}
-
 func SaveCalendarEvents(w http.ResponseWriter, r *http.Request) {
-	user := session.GetLoggedInUser(r)
-	utils.Assert(user != nil) // ensured by AuthMiddleware
-
-	var changes eventChanges
-	if err := utils.ParseJSON(r.Body, &changes); err != nil {
-		utils.SendBadRequest(w)
-		return
-	}
-
-	if len(changes) == 0 {
-		utils.SendJSON(w, http.StatusOK, types.Reply[any]{
-			Success: true,
-		})
-		return
-	}
-
-	ctx := r.Context()
-	err := database.RunTx(ctx, func(tx *sql.Tx) error {
-		applied, err := applyCalendarChanges(ctx, tx, user.UUID, changes)
-		if err != nil {
-			return err
-		}
-
-		// commit and publish together so other clients see changes in commit order
-		unlock := stream.SerializeCommits(user.UUID)
-		defer unlock()
-		if err := tx.Commit(); err != nil {
-			return err
-		}
-
-		originClientID := r.URL.Query().Get("c")
-		if len(originClientID) != 6 {
-			originClientID = ""
-		}
-		stream.Publish(user.UUID, stream.CalendarChanged(originClientID, applied))
-		return nil
-	})
-	if err != nil {
-		replyEventChangesError(w, "SaveCalendarEvents", err)
-		return
-	}
-
-	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
-		Success: true,
+	saveChanges(w, r, "SaveCalendarEvents", applyCalendarChanges, func(originClientID string, applied []stream.Change) stream.Message {
+		return stream.Changed("calendar", originClientID, applied)
 	})
 }
 
 // applyCalendarChanges validates and applies a batch of event changes within tx, without committing.
-// The last change listed for an event decides its fate. It returns the changes that were applied, one per event.
 func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes []EventChange) ([]stream.Change, error) {
-	deleted := make(map[string]struct{})
-	upsertsByID := make(map[string]upsertEvent)
-
-	// Process each change
-	for _, c := range changes {
-		switch c.Type {
-		case "deleted":
-			if !utils.IsUUID(c.ID) {
-				return nil, errBadEventChanges
-			}
-
-			delete(upsertsByID, c.ID)
-			deleted[c.ID] = struct{}{}
-
-		case "added", "updated":
-			if !utils.IsUUID(c.Event.ID) || c.Event.UpdatedAt < constants.MinEventTimestampMs || c.Event.UpdatedAt > constants.MaxEventTimestampMs {
-				return nil, errBadEventChanges
-			}
-
-			decoded, err := base64.StdEncoding.DecodeString(c.Event.Data) // decode event payload
-			if err != nil || len(decoded) > constants.MaxEventLen {
-				return nil, errBadEventChanges
-			}
-
-			if len(c.Event.Buckets) == 0 || len(c.Event.Buckets) > constants.MaxEventBuckets {
-				return nil, errBadEventChanges
-			}
-
-			buckets := make([][]byte, 0, len(c.Event.Buckets))
-			for _, b := range c.Event.Buckets {
-				bucketID, err := base64.StdEncoding.DecodeString(b)
-				if err != nil || len(bucketID) != constants.BucketIDLen {
-					return nil, errBadEventChanges
-				}
-				buckets = append(buckets, bucketID)
-			}
-
-			ev := upsertEvent{
-				CalendarEvent: types.CalendarEvent{
-					ID:        c.Event.ID,
-					Data:      decoded,
-					UpdatedAt: time.UnixMilli(c.Event.UpdatedAt), // convert ms to time.Time
-				},
-				Buckets: buckets,
-				Change:  stream.Change{Type: c.Type, ID: c.Event.ID, Data: c.Event.Data, UpdatedAt: c.Event.UpdatedAt},
-			}
-
-			delete(deleted, ev.ID)
-			upsertsByID[ev.ID] = ev
-
-		default:
-			return nil, errBadEventChanges
+	collected, err := collectChanges(changes, identity, func(c EventChange, id string) (upsertEvent, error) {
+		decoded, err := base64.StdEncoding.DecodeString(c.Record.Data) // decode event payload
+		if err != nil || len(decoded) > constants.MaxEventLen {
+			return upsertEvent{}, errBadChanges
 		}
-	}
 
-	deletedIDs := slices.Sorted(maps.Keys(deleted))
-	upserts := make([]upsertEvent, 0, len(upsertsByID))
-	for _, id := range slices.Sorted(maps.Keys(upsertsByID)) {
-		upserts = append(upserts, upsertsByID[id])
-	}
+		if len(c.Record.Buckets) == 0 || len(c.Record.Buckets) > constants.MaxEventBuckets {
+			return upsertEvent{}, errBadChanges
+		}
 
-	used, limit, err := lockStorage(ctx, tx, owner)
+		buckets := make([][]byte, 0, len(c.Record.Buckets))
+		for _, b := range c.Record.Buckets {
+			bucketID, err := base64.StdEncoding.DecodeString(b)
+			if err != nil || len(bucketID) != constants.BucketIDLen {
+				return upsertEvent{}, errBadChanges
+			}
+			buckets = append(buckets, bucketID)
+		}
+
+		return upsertEvent{
+			CalendarEvent: types.CalendarEvent{
+				ID:        id,
+				Data:      decoded,
+				UpdatedAt: time.UnixMilli(c.Record.UpdatedAt), // convert ms to time.Time
+			},
+			Buckets: buckets,
+			Change:  stream.Change{Type: c.Type, ID: id, Data: c.Record.Data, UpdatedAt: c.Record.UpdatedAt},
+		}, nil
+	})
 	if err != nil {
 		return nil, err
 	}
+	deletedIDs, upserts := collected.deleted, collected.upserts
 
-	touched := make([]any, 0, len(deletedIDs)+len(upserts))
-	for _, id := range deletedIDs {
-		touched = append(touched, id)
-	}
-	for _, ev := range upserts {
-		touched = append(touched, ev.ID)
-	}
-	before, err := measureEvents(ctx, tx, owner, touched)
-	if err != nil {
-		return nil, err
-	}
-
-	// Batch delete
-	if len(deletedIDs) > 0 {
-		query := `DELETE FROM calendar_events WHERE owner = ? AND id IN (?` + strings.Repeat(",?", len(deletedIDs)-1) + `)`
-		args := make([]any, 0, len(deletedIDs)+1)
-		args = append(args, owner)
-		for _, id := range deletedIDs {
-			args = append(args, id)
+	err = withQuota(ctx, tx, owner, collected.touched, measureEvents, func() error {
+		// Batch delete
+		if len(deletedIDs) > 0 {
+			query := `DELETE FROM calendar_events WHERE owner = ? AND id IN (?` + strings.Repeat(",?", len(deletedIDs)-1) + `)`
+			args := make([]any, 0, len(deletedIDs)+1)
+			args = append(args, owner)
+			for _, id := range deletedIDs {
+				args = append(args, id)
+			}
+			if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+				return err
+			}
 		}
-		if _, err := tx.ExecContext(ctx, query, args...); err != nil {
-			return nil, err
-		}
-	}
 
-	// Batch upsert
-	if len(upserts) > 0 {
+		// Batch upsert
+		if len(upserts) == 0 {
+			return nil
+		}
+
 		valueStrings := make([]string, 0, len(upserts))
 		valueArgs := make([]any, 0, len(upserts)*4)
 
@@ -252,24 +105,12 @@ func applyCalendarChanges(ctx context.Context, tx *sql.Tx, owner string, changes
 		`
 
 		if _, err := tx.ExecContext(ctx, query, valueArgs...); err != nil {
-			return nil, err
+			return err
 		}
 
-		if err := replaceEventBuckets(ctx, tx, owner, upserts); err != nil {
-			return nil, err
-		}
-	}
-
-	after, err := measureEvents(ctx, tx, owner, touched)
+		return replaceEventBuckets(ctx, tx, owner, upserts)
+	})
 	if err != nil {
-		return nil, err
-	}
-	used += after - before
-
-	if len(upserts) > 0 && used > limit && after > before {
-		return nil, errStorageLimit
-	}
-	if err := saveStorage(ctx, tx, owner, used); err != nil {
 		return nil, err
 	}
 
@@ -377,14 +218,6 @@ func scanCalendarEvents(rows *sql.Rows) ([]types.CalendarEvent, error) {
 	return events, nil
 }
 
-// bucketHash hashes the "uuid:updatedAtMillis" lines of a bucket, line order does not matter.
-func bucketHash(lines []string) string {
-	sorted := append([]string(nil), lines...)
-	sort.Strings(sorted)
-	sum := sha256.Sum256([]byte(strings.Join(sorted, "\n")))
-	return base64.StdEncoding.EncodeToString(sum[:])
-}
-
 // syncHashes replies with the requested buckets whose server-side hash differs from the client's.
 func syncHashes(w http.ResponseWriter, r *http.Request, owner string, hashes map[string]string) {
 	if len(hashes) == 0 || len(hashes) > constants.MaxSyncBuckets {
@@ -431,7 +264,7 @@ func syncHashes(w http.ResponseWriter, r *http.Request, owner string, hashes map
 			return
 		}
 		key := keys[string(bucketID)]
-		lines[key] = append(lines[key], fmt.Sprintf("%s:%d", strings.ToLower(id), updatedAt.UnixMilli()))
+		lines[key] = append(lines[key], hashLine(id, updatedAt))
 	}
 	if err := rows.Err(); err != nil {
 		utils.LogError("syncHashes", "Rows", err)
@@ -467,8 +300,8 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cached := req.Events
-	if len(cached) > constants.MaxRequestEvents {
+	cached := req.Records
+	if len(cached) > constants.MaxRequestRecords {
 		utils.SendBadRequest(w)
 		return
 	}
@@ -539,18 +372,18 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 		seenIDs[ev.ID] = struct{}{}
 		if last, ok := idToMillis[ev.ID]; ok {
 			if ev.UpdatedAt.UnixMilli() > last { // updated since last sync
-				updatedEvents = append(updatedEvents, types.EncryptedEvent{
+				updatedEvents = append(updatedEvents, types.EncryptedEvent{EncryptedRecord: types.EncryptedRecord{
 					ID:        ev.ID,
 					Data:      base64.StdEncoding.EncodeToString(ev.Data),
 					UpdatedAt: ev.UpdatedAt.UnixMilli(),
-				})
+				}})
 			}
 		} else { // new event
-			addedEvents = append(addedEvents, types.EncryptedEvent{
+			addedEvents = append(addedEvents, types.EncryptedEvent{EncryptedRecord: types.EncryptedRecord{
 				ID:        ev.ID,
 				Data:      base64.StdEncoding.EncodeToString(ev.Data),
 				UpdatedAt: ev.UpdatedAt.UnixMilli(),
-			})
+			}})
 		}
 	}
 
@@ -569,4 +402,14 @@ func SyncCalendarEvents(w http.ResponseWriter, r *http.Request) {
 			Added:   addedEvents,
 		},
 	})
+}
+
+// measureEvents returns the quota bytes of the owner's events among ids.
+func measureEvents(ctx context.Context, tx *sql.Tx, owner string, ids []any) (int64, error) {
+	var used int64
+	err := tx.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(`+storedBytesSQL+`), 0) FROM calendar_events ce WHERE ce.owner = ? AND ce.id IN (?`+strings.Repeat(",?", len(ids)-1)+`)`,
+		append([]any{constants.BucketRowBytes, owner}, ids...)...,
+	).Scan(&used)
+	return used, err
 }

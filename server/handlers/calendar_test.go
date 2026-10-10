@@ -20,19 +20,21 @@ const baseTS = int64(1790000000000)
 
 func ev(id string, ts int64, buckets ...string) types.EncryptedEvent {
 	return types.EncryptedEvent{
-		ID:        id,
-		Data:      base64.StdEncoding.EncodeToString([]byte("data-" + id)),
-		UpdatedAt: ts,
-		Buckets:   buckets,
+		EncryptedRecord: types.EncryptedRecord{
+			ID:        id,
+			Data:      base64.StdEncoding.EncodeToString([]byte("data-" + id)),
+			UpdatedAt: ts,
+		},
+		Buckets: buckets,
 	}
 }
 
 func added(e types.EncryptedEvent) handlers.EventChange {
-	return handlers.EventChange{Type: "added", Event: e}
+	return handlers.EventChange{Type: "added", Record: e}
 }
 
 func updated(e types.EncryptedEvent) handlers.EventChange {
-	return handlers.EventChange{Type: "updated", Event: e}
+	return handlers.EventChange{Type: "updated", Record: e}
 }
 
 func deleted(id string) handlers.EventChange {
@@ -66,8 +68,8 @@ func syncHashes(c *testutil.Client, hashes map[string]string) (int, []string) {
 	return status, reply.Data.Mismatched
 }
 
-func cached(id string, ts int64) types.CachedEvent {
-	return types.CachedEvent{ID: testutil.UUIDToBase64(id), Timestamp: ts}
+func cached(id string, ts int64) types.CachedRecord {
+	return types.CachedRecord{ID: testutil.UUIDToBase64(id), Timestamp: ts}
 }
 
 func eventIDs(events []types.EncryptedEvent) []string {
@@ -278,9 +280,9 @@ func TestSaveRejectsInvalidEvents(t *testing.T) {
 		"one bad bucket":                      ev("", baseTS, testutil.BucketID(1), short),
 		"oversized event":                     oversized,
 		"data not base64":                     badData,
-		"timestamp below 1970-01-01 00:00:01": ev("", constants.MinEventTimestampMs-1, testutil.BucketID(1)),
+		"timestamp below 1970-01-01 00:00:01": ev("", constants.MinRecordTimestampMs-1, testutil.BucketID(1)),
 		"negative timestamp":                  ev("", -5, testutil.BucketID(1)),
-		"timestamp past 2038":                 ev("", constants.MaxEventTimestampMs+1, testutil.BucketID(1)),
+		"timestamp past 2038":                 ev("", constants.MaxRecordTimestampMs+1, testutil.BucketID(1)),
 		"huge timestamp":                      ev("", 1<<60, testutil.BucketID(1)),
 		"id not a uuid":                       ev("hello", baseTS, testutil.BucketID(1)),
 		"id too long":                         ev(strings.Repeat("a", 40), baseTS, testutil.BucketID(1)),
@@ -297,7 +299,7 @@ func TestSaveRejectsInvalidEvents(t *testing.T) {
 					bad.ID = testutil.NewUUID()
 				}
 
-				if status := save(c, handlers.EventChange{Type: typ, Event: bad}); status != http.StatusBadRequest {
+				if status := save(c, handlers.EventChange{Type: typ, Record: bad}); status != http.StatusBadRequest {
 					t.Fatalf("got %d", status)
 				}
 				if n := count(t, "SELECT COUNT(*) FROM calendar_events WHERE owner = ?", user.UUID); n != 0 {
@@ -313,7 +315,7 @@ func TestSaveRejectsUnknownChangeType(t *testing.T) {
 	user := testutil.NewUser(t)
 	c := testutil.NewClient(t).As(user)
 
-	status := save(c, handlers.EventChange{Type: "bogus", Event: ev(testutil.NewUUID(), baseTS, testutil.BucketID(1))})
+	status := save(c, handlers.EventChange{Type: "bogus", Record: ev(testutil.NewUUID(), baseTS, testutil.BucketID(1))})
 	if status != http.StatusBadRequest {
 		t.Fatalf("got %d", status)
 	}
@@ -331,7 +333,7 @@ func TestSaveAcceptsTimestampsAtTheLimits(t *testing.T) {
 	c := testutil.NewClient(t).As(testutil.NewUser(t))
 	bucket := testutil.BucketID(1)
 
-	mustSave(t, c, added(ev(testutil.NewUUID(), constants.MinEventTimestampMs, bucket)), added(ev(testutil.NewUUID(), constants.MaxEventTimestampMs, bucket)))
+	mustSave(t, c, added(ev(testutil.NewUUID(), constants.MinRecordTimestampMs, bucket)), added(ev(testutil.NewUUID(), constants.MaxRecordTimestampMs, bucket)))
 }
 
 func TestSaveReaddedEventReplacesBuckets(t *testing.T) {
@@ -452,7 +454,7 @@ func TestSyncNeverReturnsOtherUsersEvents(t *testing.T) {
 	})
 
 	t.Run("does not report other users events as deleted", func(t *testing.T) {
-		got := syncDiff(t, srv.As(owner), types.EventSyncRequest{Events: []types.CachedEvent{cached(id, baseTS)}, Buckets: []string{bucket}})
+		got := syncDiff(t, srv.As(owner), types.EventSyncRequest{Records: []types.CachedRecord{cached(id, baseTS)}, Buckets: []string{bucket}})
 		if len(got.Deleted) != 0 {
 			t.Fatalf("got %+v", got)
 		}
@@ -472,7 +474,7 @@ func TestSyncDiffFull(t *testing.T) {
 	)
 
 	got := syncDiff(t, c, types.EventSyncRequest{
-		Events: []types.CachedEvent{
+		Records: []types.CachedRecord{
 			cached(unchanged, baseTS),
 			cached(stale, baseTS),
 			cached(gone, baseTS),
@@ -504,7 +506,7 @@ func TestSyncDiffDoesNotReturnEventsOlderOnServerAsUpdated(t *testing.T) {
 
 	mustSave(t, c, added(ev(id, baseTS, testutil.BucketID(1))))
 
-	got := syncDiff(t, c, types.EventSyncRequest{Events: []types.CachedEvent{cached(id, baseTS+100)}, Buckets: []string{testutil.BucketID(1)}})
+	got := syncDiff(t, c, types.EventSyncRequest{Records: []types.CachedRecord{cached(id, baseTS+100)}, Buckets: []string{testutil.BucketID(1)}})
 	if len(got.Updated)+len(got.Added)+len(got.Deleted) != 0 {
 		t.Fatalf("got %+v", got)
 	}
@@ -540,7 +542,7 @@ func TestSyncDiffReportsCachedEventsOutsideBucketsAsDeleted(t *testing.T) {
 	mustSave(t, c, added(ev(outside, baseTS, testutil.BucketID(3))))
 
 	got := syncDiff(t, c, types.EventSyncRequest{
-		Events:  []types.CachedEvent{cached(outside, baseTS)},
+		Records: []types.CachedRecord{cached(outside, baseTS)},
 		Buckets: []string{testutil.BucketID(1)},
 	})
 	if !slices.Equal(got.Deleted, []string{outside}) {

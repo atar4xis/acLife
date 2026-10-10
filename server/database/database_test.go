@@ -68,19 +68,19 @@ func TestRunTx(t *testing.T) {
 
 	t.Run("runs in READ COMMITTED", func(t *testing.T) {
 		user := testutil.NewUser(t)
-		if _, err := database.DB.Exec("INSERT INTO user_storage (owner, event_bytes) VALUES (?, 1)", user.UUID); err != nil {
+		if _, err := database.DB.Exec("INSERT INTO user_storage (owner, used_bytes) VALUES (?, 1)", user.UUID); err != nil {
 			t.Fatal(err)
 		}
 
 		var before, after int
 		err := database.RunTx(ctx, func(tx *sql.Tx) error {
-			if err := tx.QueryRowContext(ctx, "SELECT event_bytes FROM user_storage WHERE owner = ?", user.UUID).Scan(&before); err != nil {
+			if err := tx.QueryRowContext(ctx, "SELECT used_bytes FROM user_storage WHERE owner = ?", user.UUID).Scan(&before); err != nil {
 				return err
 			}
-			if _, err := database.DB.Exec("UPDATE user_storage SET event_bytes = 2 WHERE owner = ?", user.UUID); err != nil {
+			if _, err := database.DB.Exec("UPDATE user_storage SET used_bytes = 2 WHERE owner = ?", user.UUID); err != nil {
 				return err
 			}
-			if err := tx.QueryRowContext(ctx, "SELECT event_bytes FROM user_storage WHERE owner = ?", user.UUID).Scan(&after); err != nil {
+			if err := tx.QueryRowContext(ctx, "SELECT used_bytes FROM user_storage WHERE owner = ?", user.UUID).Scan(&after); err != nil {
 				return err
 			}
 			return tx.Commit()
@@ -136,7 +136,7 @@ func TestRunTx(t *testing.T) {
 			runs := 0
 			err := database.RunTx(ctx, func(tx *sql.Tx) error {
 				runs++
-				if _, err := tx.ExecContext(ctx, "INSERT INTO user_storage (owner, event_bytes) VALUES (?, ?)", user.UUID, runs); err != nil {
+				if _, err := tx.ExecContext(ctx, "INSERT INTO user_storage (owner, used_bytes) VALUES (?, ?)", user.UUID, runs); err != nil {
 					return err
 				}
 				if runs < 3 {
@@ -148,8 +148,8 @@ func TestRunTx(t *testing.T) {
 				t.Fatalf("runs %d, err %v", runs, err)
 			}
 			var stored int
-			if err := database.DB.QueryRow("SELECT event_bytes FROM user_storage WHERE owner = ?", user.UUID).Scan(&stored); err != nil || stored != 3 {
-				t.Fatalf("event_bytes %d, err %v: earlier attempts were not rolled back", stored, err)
+			if err := database.DB.QueryRow("SELECT used_bytes FROM user_storage WHERE owner = ?", user.UUID).Scan(&stored); err != nil || stored != 3 {
+				t.Fatalf("used_bytes %d, err %v: earlier attempts were not rolled back", stored, err)
 			}
 		})
 	}

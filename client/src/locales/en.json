@@ -828,5 +828,69 @@
     "too_many_attempts_seconds_other": "Too many attempts. Try again in {{count}} seconds.",
     "too_many_attempts_minutes_one": "Too many attempts. Try again in {{count}} minute.",
     "too_many_attempts_minutes_other": "Too many attempts. Try again in {{count}} minutes."
+  },
+  "views": {
+    "calendar": "Calendar",
+    "journal": "Journal"
+  },
+  "journal": {
+    "newNote": "New note",
+    "newFolder": "New folder",
+    "sortOrder": "Change sort order",
+    "collapseAll": "Collapse all",
+    "expandAll": "Expand all",
+    "search": "Search notes",
+    "searchPlaceholder": "Search notes...",
+    "clearSearch": "Clear search",
+    "untitledNote": "Untitled",
+    "untitledFolder": "New folder",
+    "notes": "Notes",
+    "empty": "No notes yet.",
+    "noMatches": "No matches",
+    "rename": "Rename",
+    "delete": "Delete",
+    "deleteFolderTitle": "Delete \"{{name}}\"?",
+    "deleteFolderDescription": "This folder and everything in it will be deleted on all your devices.",
+    "tabs": "Open notes",
+    "closeTab": "Close {{name}}",
+    "selectNote": "Select or <create>create</create> a note to start writing.",
+    "placeholder": "Start writing...",
+    "loadFailed": "Could not decrypt the journal.",
+    "saveFailed": "Could not save the journal.",
+    "storageFull": "Your storage is full, so the journal could not be synced.",
+    "cacheDecryptFailed": "Failed to decrypt the journal cache; it will be discarded.",
+    "tooLarge": "\"{{name}}\" is too large to sync.",
+    "sort": {
+      "name": {
+        "asc": "Name (A to Z)",
+        "desc": "Name (Z to A)"
+      },
+      "modified": {
+        "desc": "Modified (newest first)",
+        "asc": "Modified (oldest first)"
+      },
+      "created": {
+        "desc": "Created (newest first)",
+        "asc": "Created (oldest first)"
+      }
+    },
+    "title": "Title",
+    "editor": "Note content",
+    "newTab": "New tab",
+    "more": "More actions",
+    "readingMode": "Reading mode",
+    "editMode": "Edit mode",
+    "moveTo": "Move to",
+    "root": "Root",
+    "openInSplit": "Open in new pane",
+    "split": {
+      "left": "Move to a new pane on the left",
+      "right": "Move to a new pane on the right",
+      "top": "Move to a new pane above",
+      "bottom": "Move to a new pane below"
+    },
+    "movePane": "Move to pane {{n}}",
+    "resize": "Resize panes",
+    "tabMenu": "Tab actions"
   }
 }

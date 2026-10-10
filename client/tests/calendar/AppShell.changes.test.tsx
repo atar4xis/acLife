@@ -4,7 +4,7 @@ import { CLIENT_ID } from "../../src/lib/clientId";
 import {
   emitStream,
   onStream,
-  type CalendarChange,
+  type StreamChange,
 } from "../../src/lib/stream";
 
 const masterKey = {} as CryptoKey;
@@ -65,8 +65,8 @@ vi.mock("../../src/components/subscription/SubscriptionDialog.tsx", () => ({ def
 
 const { default: AppShell } = await import("../../src/components/AppShell");
 
-const change: CalendarChange = { type: "deleted", id: "a" };
-const upsert: CalendarChange = {
+const change: StreamChange = { type: "deleted", id: "a" };
+const upsert: StreamChange = {
   type: "updated",
   id: "kept",
   data: "",

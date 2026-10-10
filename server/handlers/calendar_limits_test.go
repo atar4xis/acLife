@@ -25,8 +25,8 @@ func TestSaveCapsTheNumberOfChanges(t *testing.T) {
 		n      int
 		status int
 	}{
-		"at the cap":   {constants.MaxRequestEvents, http.StatusOK},
-		"over the cap": {constants.MaxRequestEvents + 1, http.StatusBadRequest},
+		"at the cap":   {constants.MaxRequestRecords, http.StatusOK},
+		"over the cap": {constants.MaxRequestRecords + 1, http.StatusBadRequest},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if resp, _ := c.Do("POST", "/calendar/events/save", deletesBody(tc.n)); resp.StatusCode != tc.status {
@@ -85,19 +85,19 @@ func TestSyncCapsTheRequest(t *testing.T) {
 	buckets := `,"buckets":["` + testutil.BucketID(1) + `"]`
 
 	t.Run("accepts a full cache", func(t *testing.T) {
-		body := []byte(`{"events":[` + entries(constants.MaxRequestEvents) + `]` + buckets + `}`)
+		body := []byte(`{"records":[` + entries(constants.MaxRequestRecords) + `]` + buckets + `}`)
 		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusOK {
 			t.Fatalf("got %d", resp.StatusCode)
 		}
 	})
 	t.Run("rejects more events than a user may own", func(t *testing.T) {
-		body := []byte(`{"events":[` + entries(constants.MaxRequestEvents+1) + `]` + buckets + `}`)
+		body := []byte(`{"records":[` + entries(constants.MaxRequestRecords+1) + `]` + buckets + `}`)
 		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusBadRequest {
 			t.Fatalf("got %d", resp.StatusCode)
 		}
 	})
 	t.Run("rejects a body over 4 MB", func(t *testing.T) {
-		body := []byte(`{"events":[]` + strings.Repeat(" ", 4<<20) + `}`)
+		body := []byte(`{"records":[]` + strings.Repeat(" ", 4<<20) + `}`)
 		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusBadRequest {
 			t.Fatalf("got %d", resp.StatusCode)
 		}
@@ -114,7 +114,7 @@ func TestSyncLogsInvalidIDsOnce(t *testing.T) {
 	t.Cleanup(func() { log.SetOutput(original) })
 
 	entries := strings.TrimSuffix(strings.Repeat(`{"id":"bad\nforged line","ts":1},`, 500), ",")
-	if resp, _ := c.Do("POST", "/calendar/events/sync", []byte(`{"events":[`+entries+`],"buckets":["`+testutil.BucketID(1)+`"]}`)); resp.StatusCode != http.StatusOK {
+	if resp, _ := c.Do("POST", "/calendar/events/sync", []byte(`{"records":[`+entries+`],"buckets":["`+testutil.BucketID(1)+`"]}`)); resp.StatusCode != http.StatusOK {
 		t.Fatalf("got %d", resp.StatusCode)
 	}
 

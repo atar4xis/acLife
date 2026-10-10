@@ -802,5 +802,69 @@
     "registration_busy": "目前注册人数较多，请稍后再试。",
     "too_many_attempts_seconds_other": "尝试次数过多，请在{{count}}秒后重试。",
     "too_many_attempts_minutes_other": "尝试次数过多，请在{{count}}分钟后重试。"
+  },
+  "views": {
+    "calendar": "日历",
+    "journal": "日记"
+  },
+  "journal": {
+    "newNote": "新建笔记",
+    "newFolder": "新建文件夹",
+    "sortOrder": "更改排序方式",
+    "collapseAll": "全部折叠",
+    "expandAll": "全部展开",
+    "search": "搜索笔记",
+    "searchPlaceholder": "搜索笔记...",
+    "clearSearch": "清除搜索",
+    "untitledNote": "无标题",
+    "untitledFolder": "新建文件夹",
+    "notes": "笔记",
+    "empty": "还没有笔记。",
+    "noMatches": "没有匹配项",
+    "rename": "重命名",
+    "delete": "删除",
+    "deleteFolderTitle": "删除“{{name}}”？",
+    "deleteFolderDescription": "此文件夹及其所有内容将在你的所有设备上被删除。",
+    "tabs": "已打开的笔记",
+    "closeTab": "关闭 {{name}}",
+    "selectNote": "选择或<create>新建</create>一条笔记，开始记录。",
+    "placeholder": "开始记录...",
+    "loadFailed": "无法解密日记。",
+    "saveFailed": "无法保存日记。",
+    "storageFull": "存储空间已满，无法同步日记。",
+    "cacheDecryptFailed": "无法解密日记缓存，将丢弃该缓存。",
+    "tooLarge": "“{{name}}”太大，无法同步。",
+    "sort": {
+      "name": {
+        "asc": "名称(A 到 Z)",
+        "desc": "名称(Z 到 A)"
+      },
+      "modified": {
+        "desc": "修改时间(新到旧)",
+        "asc": "修改时间(旧到新)"
+      },
+      "created": {
+        "desc": "创建时间(新到旧)",
+        "asc": "创建时间(旧到新)"
+      }
+    },
+    "title": "标题",
+    "editor": "笔记内容",
+    "newTab": "新标签页",
+    "more": "更多操作",
+    "readingMode": "阅读模式",
+    "editMode": "编辑模式",
+    "moveTo": "移动到",
+    "root": "根目录",
+    "openInSplit": "在新窗格中打开",
+    "split": {
+      "left": "移动到左侧的新窗格",
+      "right": "移动到右侧的新窗格",
+      "top": "移动到上方的新窗格",
+      "bottom": "移动到下方的新窗格"
+    },
+    "movePane": "移动到窗格 {{n}}",
+    "resize": "调整窗格大小",
+    "tabMenu": "标签页操作"
   }
 }

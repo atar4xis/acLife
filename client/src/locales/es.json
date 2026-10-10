@@ -822,5 +822,69 @@
     "too_many_attempts_seconds_other": "Demasiados intentos. Inténtalo de nuevo en {{count}} segundos.",
     "too_many_attempts_minutes_one": "Demasiados intentos. Inténtalo de nuevo en {{count}} minuto.",
     "too_many_attempts_minutes_other": "Demasiados intentos. Inténtalo de nuevo en {{count}} minutos."
+  },
+  "views": {
+    "calendar": "Calendario",
+    "journal": "Diario"
+  },
+  "journal": {
+    "newNote": "Nueva nota",
+    "newFolder": "Nueva carpeta",
+    "sortOrder": "Cambiar orden",
+    "collapseAll": "Contraer todo",
+    "expandAll": "Expandir todo",
+    "search": "Buscar notas",
+    "searchPlaceholder": "Buscar notas...",
+    "clearSearch": "Borrar búsqueda",
+    "untitledNote": "Sin título",
+    "untitledFolder": "Nueva carpeta",
+    "notes": "Notas",
+    "empty": "Aún no hay notas.",
+    "noMatches": "Sin resultados",
+    "rename": "Renombrar",
+    "delete": "Eliminar",
+    "deleteFolderTitle": "¿Eliminar \"{{name}}\"?",
+    "deleteFolderDescription": "Esta carpeta y todo su contenido se eliminarán en todos tus dispositivos.",
+    "tabs": "Notas abiertas",
+    "closeTab": "Cerrar {{name}}",
+    "selectNote": "Selecciona o <create>crea</create> una nota para empezar a escribir.",
+    "placeholder": "Empieza a escribir...",
+    "loadFailed": "No se pudo descifrar el diario.",
+    "saveFailed": "No se pudo guardar el diario.",
+    "storageFull": "Tu almacenamiento está lleno, por lo que no se pudo sincronizar el diario.",
+    "cacheDecryptFailed": "No se pudo descifrar la caché del diario; se descartará.",
+    "tooLarge": "\"{{name}}\" es demasiado grande para sincronizarse.",
+    "sort": {
+      "name": {
+        "asc": "Nombre (A a Z)",
+        "desc": "Nombre (Z a A)"
+      },
+      "modified": {
+        "desc": "Fecha de modificación (más recientes primero)",
+        "asc": "Fecha de modificación (más antiguas primero)"
+      },
+      "created": {
+        "desc": "Fecha de creación (más recientes primero)",
+        "asc": "Fecha de creación (más antiguas primero)"
+      }
+    },
+    "title": "Título",
+    "editor": "Contenido de la nota",
+    "newTab": "Nueva pestaña",
+    "more": "Más acciones",
+    "readingMode": "Modo de lectura",
+    "editMode": "Modo de edición",
+    "moveTo": "Mover a",
+    "root": "Raíz",
+    "openInSplit": "Abrir en un nuevo panel",
+    "split": {
+      "left": "Mover a un nuevo panel a la izquierda",
+      "right": "Mover a un nuevo panel a la derecha",
+      "top": "Mover a un nuevo panel arriba",
+      "bottom": "Mover a un nuevo panel abajo"
+    },
+    "movePane": "Mover al panel {{n}}",
+    "resize": "Cambiar el tamaño de los paneles",
+    "tabMenu": "Acciones de la pestaña"
   }
 }

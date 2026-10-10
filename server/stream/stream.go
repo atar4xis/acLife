@@ -37,11 +37,14 @@ func Push(ev types.PushEvent) Message {
 	return Message{Type: "push", Push: &ev}
 }
 
-// CalendarChanged replicates the changes, or falls back to a sync message when they are too large to push.
-func CalendarChanged(originClientID string, changes []Change) Message {
-	ev := Message{Type: "calendar", OriginClientID: originClientID, Changes: changes}
+// Changed replicates the changes of the given kind (calendar or journal), or falls back to a message without changes when they are too large to push.
+func Changed(kind, originClientID string, changes []Change) Message {
+	ev := Message{Type: kind, OriginClientID: originClientID, Changes: changes}
 	if raw, err := json.Marshal(ev); err != nil || len(raw) > constants.MaxStreamPayloadBytes {
-		return Sync(originClientID)
+		if kind == "calendar" {
+			return Sync(originClientID)
+		}
+		return Message{Type: kind, OriginClientID: originClientID}
 	}
 	return ev
 }

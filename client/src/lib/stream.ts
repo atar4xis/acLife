@@ -1,11 +1,12 @@
 import { CLIENT_ID } from "@/lib/clientId";
-import type { EncryptedEvent } from "@/types/calendar/Event";
+import type { EncryptedRecord } from "@/types/Sync";
 
-export type StreamMessageType = "sync" | "settings" | "calendar" | "push";
+export type StreamMessageType =
+  "sync" | "settings" | "calendar" | "journal" | "push";
 
-export type CalendarChange =
+export type StreamChange =
   | { type: "deleted"; id: string }
-  | ({ type: "added" | "updated" } & Omit<EncryptedEvent, "buckets">);
+  | ({ type: "added" | "updated" } & EncryptedRecord);
 
 export type PushEvent = {
   type: "notification" | "event-start";
@@ -16,7 +17,7 @@ export type PushEvent = {
 export type StreamMessage = {
   type: StreamMessageType;
   originClientId?: string;
-  changes?: CalendarChange[];
+  changes?: StreamChange[];
   push?: PushEvent;
 };
 

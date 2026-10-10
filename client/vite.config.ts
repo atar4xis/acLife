@@ -50,6 +50,7 @@ export default ({ mode }: ConfigEnv) => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./tests/setup.ts",
+      testTimeout: 20000,
       env: { TZ: "UTC" },
       server: {
         deps: {

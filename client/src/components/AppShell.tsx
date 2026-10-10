@@ -3,6 +3,8 @@ import type { ViewMode } from "@/types/calendar/ViewMode";
 import { useCallback, useEffect, useState } from "react";
 import AppCalendar from "@/components/calendar/Calendar";
 import AppSidebar from "@/components/Sidebar";
+import JournalView from "@/components/journal/JournalView";
+import { useAppView } from "@/hooks/useAppView";
 import { useStorage } from "@/context/StorageContext";
 import { useUser } from "@/context/UserContext";
 import { useCalendarActions } from "@/context/CalendarContext";
@@ -46,6 +48,7 @@ export default function AppShell() {
     useCalendarActions();
   const { serverMeta } = useApi();
   const storage = useStorage();
+  const { view, changeView } = useAppView();
   const {
     saving,
     loadEvents,
@@ -180,7 +183,11 @@ export default function AppShell() {
 
   return (
     <>
-      <AppSidebar onOpenSettings={openSettings} />
+      <AppSidebar
+        view={view}
+        onChangeView={changeView}
+        onOpenSettings={openSettings}
+      />
       <SettingsDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
@@ -201,16 +208,20 @@ export default function AppShell() {
       <NotificationService />
       <AutoLockService />
       <TimezoneChangeDialog />
-      {calEvents !== null && (
-        <AppCalendar
-          events={calEvents}
-          mode={viewMode}
-          setMode={setViewMode}
-          saveEvents={saveEvents}
-          syncEvents={syncEvents}
-          syncBuckets={syncBuckets}
-        />
-      )}
+      <div className={view === "calendar" ? "contents" : "hidden"}>
+        {calEvents !== null && (
+          <AppCalendar
+            active={view === "calendar"}
+            events={calEvents}
+            mode={viewMode}
+            setMode={setViewMode}
+            saveEvents={saveEvents}
+            syncEvents={syncEvents}
+            syncBuckets={syncBuckets}
+          />
+        )}
+      </div>
+      {view === "journal" && <JournalView />}
     </>
   );
 }

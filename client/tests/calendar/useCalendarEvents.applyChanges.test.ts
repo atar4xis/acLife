@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { DateTime } from "luxon";
 import type { User } from "../../src/types/User.ts";
 import type { CalendarEvent } from "../../src/types/calendar/Event.ts";
-import type { CalendarChange } from "../../src/lib/stream.ts";
+import type { StreamChange } from "../../src/lib/stream.ts";
 
 const postMock = vi.hoisted(() => vi.fn());
 
@@ -49,7 +49,7 @@ const eventWith = (n: number, title: string, timestamp: number) => ({
 const upsert = async (
   type: "added" | "updated",
   event: CalendarEvent,
-): Promise<CalendarChange> => {
+): Promise<StreamChange> => {
   const [encrypted] = await encryptEvents([event], masterKey, bucketKey);
   return {
     type,

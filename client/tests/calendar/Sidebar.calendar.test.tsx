@@ -56,7 +56,7 @@ const renderSidebar = (
       <CalendarProvider>
         <SidebarProvider>
           <Seed events={events} />
-          <AppSidebar onOpenSettings={vi.fn()} />
+          <AppSidebar view="calendar" onChangeView={vi.fn()} onOpenSettings={vi.fn()} />
           <CurrentDate />
         </SidebarProvider>
       </CalendarProvider>
@@ -145,7 +145,7 @@ describe("mini calendar settings", () => {
         <CalendarProvider>
           <SidebarProvider>
             <Seed events={events} />
-            <AppSidebar onOpenSettings={vi.fn()} />
+            <AppSidebar view="calendar" onChangeView={vi.fn()} onOpenSettings={vi.fn()} />
           </SidebarProvider>
         </CalendarProvider>
       </SettingsStoreProvider>,

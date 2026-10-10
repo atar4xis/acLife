@@ -38,7 +38,7 @@ func GetQuota(w http.ResponseWriter, r *http.Request) {
 	used := int64(-1)
 	var override sql.NullInt64
 	if err := database.QueryRow(r.Context(),
-		"SELECT event_bytes, max_bytes FROM user_storage WHERE owner = ?",
+		"SELECT used_bytes, max_bytes FROM user_storage WHERE owner = ?",
 		user.UUID,
 	).Scan(&used, &override); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		utils.LogError("GetQuota", "QueryRow(user_storage)", err)
@@ -72,7 +72,7 @@ func lockStorage(ctx context.Context, tx *sql.Tx, owner string) (used, limit int
 
 	var override sql.NullInt64
 	if err := tx.QueryRowContext(ctx,
-		"SELECT event_bytes, max_bytes FROM user_storage WHERE owner = ? FOR UPDATE",
+		"SELECT used_bytes, max_bytes FROM user_storage WHERE owner = ? FOR UPDATE",
 		owner,
 	).Scan(&used, &override); err != nil {
 		return 0, 0, err
@@ -88,24 +88,42 @@ func lockStorage(ctx context.Context, tx *sql.Tx, owner string) (used, limit int
 func countStorage(ctx context.Context, q rowQuerier, owner string) (int64, error) {
 	var used int64
 	err := q.QueryRowContext(ctx,
-		`SELECT COALESCE(SUM(`+storedBytesSQL+`), 0) FROM calendar_events ce WHERE ce.owner = ?`,
-		constants.BucketRowBytes, owner,
+		`SELECT (SELECT COALESCE(SUM(`+storedBytesSQL+`), 0) FROM calendar_events ce WHERE ce.owner = ?)
+			+ (SELECT COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM journal_items WHERE owner = ?)`,
+		constants.BucketRowBytes, owner, owner,
 	).Scan(&used)
 	return used, err
 }
 
-// measureEvents returns the quota bytes of the owner's events among ids.
-func measureEvents(ctx context.Context, tx *sql.Tx, owner string, ids []any) (int64, error) {
-	var used int64
-	err := tx.QueryRowContext(ctx,
-		`SELECT COALESCE(SUM(`+storedBytesSQL+`), 0) FROM calendar_events ce WHERE ce.owner = ? AND ce.id IN (?`+strings.Repeat(",?", len(ids)-1)+`)`,
-		append([]any{constants.BucketRowBytes, owner}, ids...)...,
-	).Scan(&used)
-	return used, err
+func withQuota(ctx context.Context, tx *sql.Tx, owner string, touched []any, measure func(ctx context.Context, tx *sql.Tx, owner string, ids []any) (int64, error), write func() error) error {
+	used, limit, err := lockStorage(ctx, tx, owner)
+	if err != nil {
+		return err
+	}
+
+	before, err := measure(ctx, tx, owner, touched)
+	if err != nil {
+		return err
+	}
+
+	if err := write(); err != nil {
+		return err
+	}
+
+	after, err := measure(ctx, tx, owner, touched)
+	if err != nil {
+		return err
+	}
+	used += after - before
+
+	if used > limit && after > before {
+		return errStorageLimit
+	}
+	return saveStorage(ctx, tx, owner, used)
 }
 
 func saveStorage(ctx context.Context, tx *sql.Tx, owner string, used int64) error {
-	_, err := tx.ExecContext(ctx, "UPDATE user_storage SET event_bytes = ? WHERE owner = ?", used, owner)
+	_, err := tx.ExecContext(ctx, "UPDATE user_storage SET used_bytes = ? WHERE owner = ?", used, owner)
 	return err
 }
 
@@ -150,7 +168,7 @@ func reconcileStorage(ctx context.Context) int {
 // storageSuspects returns the owners of the next batch after the given one whose counter looks wrong, and the last owner of the batch.
 func storageSuspects(ctx context.Context, after string) (suspects []string, last string, err error) {
 	rows, err := database.Query(ctx,
-		"SELECT owner, event_bytes FROM user_storage WHERE owner > ? ORDER BY owner LIMIT ?",
+		"SELECT owner, used_bytes FROM user_storage WHERE owner > ? ORDER BY owner LIMIT ?",
 		after, constants.StorageReconcileBatch,
 	)
 	if err != nil {
@@ -176,9 +194,14 @@ func storageSuspects(ctx context.Context, after string) (suspects []string, last
 		return nil, "", err
 	}
 
+	inList := "?" + strings.Repeat(",?", len(owners)-1)
 	rows, err = database.Query(ctx,
-		`SELECT ce.owner, SUM(`+storedBytesSQL+`) FROM calendar_events ce WHERE ce.owner IN (?`+strings.Repeat(",?", len(owners)-1)+`) GROUP BY ce.owner`,
-		append([]any{constants.BucketRowBytes}, owners...)...,
+		`SELECT owner, SUM(bytes) FROM (
+			SELECT ce.owner AS owner, `+storedBytesSQL+` AS bytes FROM calendar_events ce WHERE ce.owner IN (`+inList+`)
+			UNION ALL
+			SELECT owner, OCTET_LENGTH(data) FROM journal_items WHERE owner IN (`+inList+`)
+		) stored GROUP BY owner`,
+		append(append([]any{constants.BucketRowBytes}, owners...), owners...)...,
 	)
 	if err != nil {
 		return nil, "", err
@@ -212,7 +235,7 @@ func fixStorage(ctx context.Context, owner string) (bool, error) {
 	fixed := false
 	err := database.RunTx(ctx, func(tx *sql.Tx) error {
 		if err := tx.QueryRowContext(ctx,
-			"SELECT event_bytes FROM user_storage WHERE owner = ? FOR UPDATE",
+			"SELECT used_bytes FROM user_storage WHERE owner = ? FOR UPDATE",
 			owner,
 		).Scan(&counted); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {

@@ -168,12 +168,16 @@ func TestCloseUserKeepsTheNamedSession(t *testing.T) {
 
 func TestChangedFallsBackToSyncWhenTooLarge(t *testing.T) {
 	small := []stream.Change{{Type: "updated", ID: "a", Data: "x", UpdatedAt: 1}}
-	if got := stream.CalendarChanged("origin", small); got.Type != "calendar" || len(got.Changes) != 1 || got.OriginClientID != "origin" {
+	if got := stream.Changed("calendar", "origin", small); got.Type != "calendar" || len(got.Changes) != 1 || got.OriginClientID != "origin" {
 		t.Fatalf("got %+v", got)
 	}
 
 	big := []stream.Change{{Type: "updated", ID: "a", Data: strings.Repeat("x", constants.MaxStreamPayloadBytes), UpdatedAt: 1}}
-	if got := stream.CalendarChanged("origin", big); got.Type != "sync" || got.OriginClientID != "origin" || got.Changes != nil {
+	if got := stream.Changed("calendar", "origin", big); got.Type != "sync" || got.OriginClientID != "origin" || got.Changes != nil {
+		t.Fatalf("got %+v", got)
+	}
+
+	if got := stream.Changed("journal", "origin", big); got.Type != "journal" || got.OriginClientID != "origin" || got.Changes != nil {
 		t.Fatalf("got %+v", got)
 	}
 }

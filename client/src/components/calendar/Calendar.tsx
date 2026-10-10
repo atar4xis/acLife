@@ -259,6 +259,7 @@ const NO_DRAG = { exclude: EMPTY_ARRAY, append: EMPTY_ARRAY };
 
 // TODO: clean this up, separate into smaller components and hooks
 export default memo(function AppCalendar({
+  active,
   events,
   mode,
   setMode,
@@ -2167,6 +2168,8 @@ export default memo(function AppCalendar({
 
   // keyboard shortcuts: arrows, escape, delete, undo/redo, cut/copy/paste
   useEffect(() => {
+    if (!active) return;
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (!shortcutsApply(e.target)) return;
 
@@ -2216,6 +2219,7 @@ export default memo(function AppCalendar({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
+    active,
     move,
     rtl,
     editingEvent,
@@ -2231,7 +2235,7 @@ export default memo(function AppCalendar({
   // zoom in with ctrl + mouse wheel
   useEffect(() => {
     const container = gridRef.current;
-    if (!container) return;
+    if (!container || !active) return;
 
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
@@ -2255,7 +2259,7 @@ export default memo(function AppCalendar({
 
     window.addEventListener("wheel", onWheel, { passive: false });
     return () => window.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [active]);
 
   // update now every minute
   useEffect(() => {

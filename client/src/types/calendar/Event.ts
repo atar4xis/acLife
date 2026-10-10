@@ -1,4 +1,5 @@
 import type { DateTime } from "luxon";
+import type { CachedRecord, EncryptedRecord, SyncDiff } from "@/types/Sync";
 
 export type RepeatIntervalUnit = "day" | "week" | "month" | "year";
 
@@ -64,10 +65,7 @@ export type RejectedEvent = {
   previous?: CalendarEvent; // last saved version, to restore
 };
 
-export type EncryptedEvent = {
-  id: string;
-  data: string;
-  updatedAt: number;
+export type EncryptedEvent = EncryptedRecord & {
   buckets?: string[]; // base64-encoded bucket ids, only client -> server
 };
 
@@ -131,7 +129,7 @@ export type CachedEvent = {
 };
 
 export type EventSyncRequest = {
-  events: { id: string; ts: number }[];
+  records: CachedRecord[];
   buckets: string[];
 };
 
@@ -143,11 +141,7 @@ export type EventHashResponse = {
   mismatched: string[];
 };
 
-export type EventSyncResponse = {
-  updated: EncryptedEvent[];
-  deleted: string[];
-  added: EncryptedEvent[];
-};
+export type EventSyncResponse = SyncDiff<EncryptedEvent>;
 
 export type EventChange = {
   type: "added" | "updated" | "deleted";

@@ -50,8 +50,8 @@ const toUuid = (b64: string) => {
 
 server.post = async (endpoint, body) => {
   if (endpoint.startsWith("calendar/events/save")) {
-    for (const change of body as { event: Row }[]) {
-      server.rows.set(change.event.id, change.event);
+    for (const change of body as { record: Row }[]) {
+      server.rows.set(change.record.id, change.record);
     }
     return { success: true };
   }
@@ -62,7 +62,7 @@ server.post = async (endpoint, body) => {
   }
 
   const known = new Set(
-    (body as { events: { id: string }[] }).events.map((e) => toUuid(e.id)),
+    (body as { records: { id: string }[] }).records.map((e) => toUuid(e.id)),
   );
   const added = [...server.rows.values()].filter((r) => !known.has(r.id));
   return {

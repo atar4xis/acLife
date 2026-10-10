@@ -15,7 +15,7 @@ import {
   useDragging,
   useEventList,
 } from "@/context/CalendarContext";
-import { Settings } from "lucide-react";
+import { BookText, CalendarDays, Settings } from "lucide-react";
 import { DateTime } from "luxon";
 import UserDropdown from "./user/UserDropdown";
 import { useStorage } from "@/context/StorageContext";
@@ -50,6 +50,8 @@ import {
 } from "@/lib/calendar/eventBars";
 import { EMPTY_ARRAY } from "@/lib/constants";
 import { useTranslation } from "react-i18next";
+import JournalSidebar from "./journal/JournalSidebar";
+import type { AppView } from "@/types/AppView";
 
 const START_MONTH = new Date(1900, 0);
 const END_MONTH = new Date(2100, 11);
@@ -221,8 +223,12 @@ const MiniCalendar = memo(function MiniCalendar({
 });
 
 export default memo(function AppSidebar({
+  view,
+  onChangeView,
   onOpenSettings,
 }: {
+  view: AppView;
+  onChangeView: (view: AppView) => void;
   onOpenSettings: (categoryId?: string) => void;
 }) {
   const settings = useCalendarSettings((s) => ({
@@ -268,16 +274,22 @@ export default memo(function AppSidebar({
     // eslint-disable-next-line
   }, [width, isMobile, restored]);
 
+  const switcherView = view === "calendar" ? "journal" : "calendar";
+
   return (
     <Sidebar collapsible="offcanvas" side={side}>
-      <SidebarContent>
-        {settings.miniCalendarEnabled && (
-          <SidebarGroup>
-            <MiniCalendar onPick={closeMobile} />
-          </SidebarGroup>
-        )}
-        {settings.agendaEnabled && <AgendaList />}
-      </SidebarContent>
+      {view === "journal" ? (
+        <JournalSidebar />
+      ) : (
+        <SidebarContent>
+          {settings.miniCalendarEnabled && (
+            <SidebarGroup>
+              <MiniCalendar onPick={closeMobile} />
+            </SidebarGroup>
+          )}
+          {settings.agendaEnabled && <AgendaList />}
+        </SidebarContent>
+      )}
       <SidebarRail enableDrag={true} side={side} />
       <SidebarFooter>
         <div className="flex justify-between">
@@ -290,11 +302,19 @@ export default memo(function AppSidebar({
             >
               <Settings />
             </Button>
+            <UserDropdown
+              onOpenAccountSettings={() => onOpenSettings("security")}
+            />
           </div>
 
-          <UserDropdown
-            onOpenAccountSettings={() => onOpenSettings("security")}
-          />
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label={t(`views.${switcherView}`)}
+            onClick={() => onChangeView(switcherView)}
+          >
+            {view === "calendar" ? <BookText /> : <CalendarDays />}
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>

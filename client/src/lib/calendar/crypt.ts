@@ -4,25 +4,14 @@ import type {
   EncryptedEvent,
   RawCalendarEvent,
 } from "@/types/calendar/Event";
-import type { Encrypted } from "@/types/Crypt";
 import type { APIResponse } from "@/types/API";
 import { DateTime } from "luxon";
 import { encrypt, decrypt } from "../crypt";
-import { compress, decompress } from "../gzip";
 import { arrayBufferToBase64, uint8ArrayFromBase64 } from "../utils";
 import { computeEventBuckets } from "./buckets";
 
 // mirrors the server's constants.MaxEventLen (bytes of ciphertext)
 export const MAX_ENCRYPTED_EVENT_BYTES = 10000;
-
-export const encryptOfflineEvents = async (
-  events: CalendarEvent[],
-  masterKey: CryptoKey,
-): Promise<Encrypted> => {
-  const payload = new TextEncoder().encode(JSON.stringify(events));
-  const compressed = await compress(payload);
-  return encrypt(compressed, masterKey);
-};
 
 export const decryptEvents = async (
   events: EncryptedEvent[],
@@ -76,21 +65,7 @@ export const encryptEvents = async (
   );
 };
 
-export const decryptOfflineEvents = async (
-  data: Encrypted,
-  masterKey: CryptoKey,
-): Promise<CalendarEvent[]> => {
-  const payload = await decrypt(data, masterKey);
-  const decompressed = await decompress(payload);
-
-  const rawEvents = JSON.parse(
-    new TextDecoder().decode(decompressed),
-  ) as RawCalendarEvent[];
-
-  return rawEvents.map(cookEvent);
-};
-
-const cookEvent = (event: RawCalendarEvent): CalendarEvent =>
+export const cookEvent = (event: RawCalendarEvent): CalendarEvent =>
   ({
     ...event,
     start: DateTime.fromISO(event.start),

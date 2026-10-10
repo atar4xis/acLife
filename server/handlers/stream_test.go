@@ -221,6 +221,20 @@ func TestStreamReplicatesOnlyTheFinalStateOfEachEvent(t *testing.T) {
 	}
 }
 
+func TestStreamReplicatesCalendarIDsAsSent(t *testing.T) {
+	testutil.RequireDB(t)
+	user := testutil.NewUser(t)
+	c := testutil.NewClient(t).As(user)
+	conn, _ := openStream(t, c)
+	id := strings.ToUpper(testutil.NewUUID())
+
+	mustSave(t, c, added(ev(id, baseTS, testutil.BucketID(1))))
+	got := readMessage(t, conn)
+	if len(got.Changes) != 1 || got.Changes[0].ID != id {
+		t.Fatalf("got %+v, want id %s", got.Changes, id)
+	}
+}
+
 func TestStreamReplicatesSaveWithoutValidOriginAsAnonymous(t *testing.T) {
 	testutil.RequireDB(t)
 	user := testutil.NewUser(t)

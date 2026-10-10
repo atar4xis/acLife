@@ -11,6 +11,7 @@ import type { GridFocusStore } from "@/lib/calendar/gridFocus";
 import type { SelectionStore } from "@/lib/calendar/selection";
 
 export interface CalendarProps {
+  active: boolean;
   events: CalendarEvent[];
   mode: ViewMode;
   setMode: (mode: ViewMode) => void;
