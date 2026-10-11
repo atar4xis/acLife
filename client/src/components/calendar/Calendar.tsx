@@ -99,7 +99,7 @@ import useGridKeyboard from "@/hooks/useGridKeyboard";
 import { useKeyboardMode } from "@/hooks/useGridFocus";
 import { SpokenMessage, SlotIndicator } from "./GridFocus";
 import GridLayout from "./GridLayout";
-import ScrollThumb from "./ScrollThumb";
+import ScrollThumb from "@/components/ui/scroll-thumb";
 import UndoRedoButtons from "./UndoRedoButtons";
 import { useWeekStart } from "@/hooks/useWeekStart";
 import {
@@ -3140,7 +3140,7 @@ export default memo(function AppCalendar({
           aria-label={t("calendar.grid")}
           {...gridKeyboardProps}
           data-keyboard-mode={keyboardMode ? "" : undefined}
-          className="group/grid outline-none touch-pan-y grid h-full overflow-auto calendar-grid-scroll"
+          className="group/grid outline-none touch-pan-y grid h-full overflow-auto hide-scrollbar"
           mode={mode as keyof typeof GRID_CONFIG}
           days={visibleDays}
           timezones={settings.timezones}
@@ -3179,12 +3179,7 @@ export default memo(function AppCalendar({
           )}
         </GridLayout>
 
-        <ScrollThumb
-          gridRef={gridRef}
-          hourHeight={hourHeight}
-          mode={mode}
-          visibleDays={visibleDays}
-        />
+        <ScrollThumb gridRef={gridRef} />
       </div>
 
       {isMobile && (

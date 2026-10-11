@@ -3,6 +3,7 @@ import JournalEditor from "@/components/journal/JournalEditor";
 import JournalMarkdown from "@/components/journal/JournalMarkdown";
 import JournalTabs from "@/components/journal/JournalTabs";
 import NoteTitle from "@/components/journal/NoteTitle";
+import ScrollThumb from "@/components/ui/scroll-thumb";
 import { useJournalActions, useJournalItems } from "@/context/JournalContext";
 import type { PaneNode } from "@/types/Journal";
 import { useCallback, useRef } from "react";
@@ -13,6 +14,7 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
   const journal = useJournalActions();
   const items = useJournalItems();
   const editor = useRef<{ focus: () => void }>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const note = items.find((item) => item.id === pane.active);
   const focusEditor = useCallback(() => editor.current?.focus(), []);
 
@@ -24,7 +26,10 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
     >
       <JournalTabs pane={pane} />
       <div className="relative min-h-0 flex-1">
-        <div className="flex size-full flex-col overflow-auto">
+        <div
+          ref={scroller}
+          className="hide-scrollbar flex size-full flex-col overflow-auto"
+        >
           {note ? (
             <>
               <NoteTitle id={note.id} name={note.name} onEnter={focusEditor} />
@@ -62,6 +67,7 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
             </p>
           )}
         </div>
+        <ScrollThumb gridRef={scroller} />
         <DropOverlay pane={pane} />
       </div>
     </section>

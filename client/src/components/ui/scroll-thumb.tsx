@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import type { ViewMode } from "@/types/calendar/ViewMode";
 import {
   memo,
   useCallback,
@@ -13,14 +12,8 @@ const HIDE_DELAY_MS = 1500;
 
 export default memo(function ScrollThumb({
   gridRef,
-  hourHeight,
-  mode,
-  visibleDays,
 }: {
   gridRef: RefObject<HTMLDivElement | null>;
-  hourHeight: number;
-  mode: ViewMode;
-  visibleDays: readonly unknown[];
 }) {
   const [thumb, setThumb] = useState<{ top: number; height: number } | null>(
     null,
@@ -69,20 +62,25 @@ export default memo(function ScrollThumb({
   }, [gridRef, show]);
 
   useEffect(() => {
-    update();
-  }, [update, hourHeight, mode, visibleDays]);
-
-  useEffect(() => {
     const container = gridRef.current;
     if (!container) return;
     container.addEventListener("scroll", update);
     container.addEventListener("pointermove", show);
-    const observer = new ResizeObserver(update);
-    observer.observe(container);
+    const resizes = new ResizeObserver(update);
+    const watch = () => {
+      resizes.disconnect();
+      resizes.observe(container);
+      for (const child of container.children) resizes.observe(child);
+      update();
+    };
+    const mutations = new MutationObserver(watch);
+    mutations.observe(container, { childList: true });
+    watch();
     return () => {
       container.removeEventListener("scroll", update);
       container.removeEventListener("pointermove", show);
-      observer.disconnect();
+      resizes.disconnect();
+      mutations.disconnect();
     };
   }, [gridRef, update, show]);
 
@@ -137,7 +135,7 @@ export default memo(function ScrollThumb({
     <div
       data-testid="scroll-thumb"
       className={cn(
-        "absolute right-0.5 w-1 rounded-full bg-foreground/20 hover:bg-foreground/40 z-40",
+        "absolute inset-e-0.5 w-1 rounded-full bg-foreground/20 hover:bg-foreground/40 z-40",
         visible ? "opacity-100" : "opacity-0 pointer-events-none",
       )}
       style={{ top: thumb.top, height: thumb.height }}

@@ -124,11 +124,11 @@
   }
 }
 
-.calendar-grid-scroll {
+.hide-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.calendar-grid-scroll::-webkit-scrollbar {
+.hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
