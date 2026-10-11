@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import Markdown, { type Components, type Options } from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import { highlightCode } from "@/lib/journal/highlight";
 import { splitNote } from "@/lib/journal/readerBlocks";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +101,7 @@ const tagBlocks = () => (tree: MdNode) => {
 
 type HastNode = {
   type?: string;
+  tagName?: string;
   value?: string;
   properties?: Record<string, unknown>;
   children?: HastNode[];
@@ -133,6 +135,37 @@ function footnoteNumbers(numbers: Record<string, number>) {
   };
 }
 
+// replaces the text of `pre > code.language-x` with token spans
+function highlightBlocks() {
+  return (tree: HastNode) => {
+    const visit = (node: HastNode) => {
+      const code = node.children?.[0];
+      const language = ([code?.properties?.className ?? []].flat() as string[])
+        .find((name) => name.startsWith("language-"))
+        ?.slice("language-".length);
+
+      if (node.tagName === "pre" && language && code?.children?.length === 1) {
+        code.children = highlightCode(
+          code.children[0].value ?? "",
+          language,
+        ).map(({ text, className }) =>
+          className
+            ? {
+                type: "element",
+                tagName: "span",
+                properties: { className: className.split(" ") },
+                children: [{ type: "text", value: text }],
+              }
+            : { type: "text", value: text },
+        );
+      }
+
+      node.children?.forEach(visit);
+    };
+    visit(tree);
+  };
+}
+
 const REMARK_PLUGINS = [remarkGfm, remarkBreaks, tagBlocks];
 
 const Block = memo(function Block({
@@ -143,9 +176,10 @@ const Block = memo(function Block({
   numbers: string;
 }) {
   const labels = JSON.parse(numbers) as Record<string, number>;
-  const rehype = (
-    Object.keys(labels).length ? [[footnoteNumbers, labels]] : []
-  ) as Options["rehypePlugins"];
+  const rehype = [
+    highlightBlocks,
+    ...(Object.keys(labels).length ? [[footnoteNumbers, labels]] : []),
+  ] as Options["rehypePlugins"];
 
   return (
     <Markdown
@@ -169,7 +203,11 @@ const Footnote = memo(function Footnote({
     <li id={`${FOOTNOTE_PREFIX}${label}`}>
       <span className="footnote-label">{label}.</span>
       <div>
-        <Markdown remarkPlugins={REMARK_PLUGINS} components={COMPONENTS}>
+        <Markdown
+          remarkPlugins={REMARK_PLUGINS}
+          rehypePlugins={[highlightBlocks]}
+          components={COMPONENTS}
+        >
           {body}
         </Markdown>
       </div>

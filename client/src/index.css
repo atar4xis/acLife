@@ -340,3 +340,56 @@
     }
   }
 }
+
+.journal-prose,
+.cm-codeblock {
+  & .tok-comment,
+  & .tok-prolog,
+  & .tok-doctype,
+  & .tok-cdata {
+    color: var(--muted-foreground);
+    font-style: italic;
+  }
+  & .tok-keyword,
+  & .tok-atrule,
+  & .tok-selector,
+  & .tok-tag,
+  & .tok-important {
+    color: var(--primary);
+  }
+  & .tok-string,
+  & .tok-char,
+  & .tok-regex,
+  & .tok-attr-value,
+  & .tok-url,
+  & .tok-inserted {
+    color: var(--success);
+  }
+  & .tok-number,
+  & .tok-boolean,
+  & .tok-constant,
+  & .tok-symbol,
+  & .tok-unit {
+    color: var(--warning);
+  }
+  & .tok-function,
+  & .tok-class-name,
+  & .tok-builtin,
+  & .tok-attr-name,
+  & .tok-property {
+    color: color-mix(in oklch, var(--ring) 70%, var(--foreground));
+  }
+  & .tok-deleted {
+    color: var(--destructive);
+  }
+  & .tok-operator,
+  & .tok-punctuation {
+    color: color-mix(in oklch, var(--foreground) 70%, transparent);
+  }
+  & .tok-bold {
+    font-weight: bold;
+  }
+  & .tok-italic {
+    font-style: italic;
+  }
+}

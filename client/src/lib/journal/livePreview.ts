@@ -13,6 +13,7 @@ import {
   type ViewUpdate,
   keymap,
 } from "@codemirror/view";
+import { highlightCode } from "@/lib/journal/highlight";
 import {
   FOOTNOTE_REFERENCE,
   isDefinition,
@@ -43,6 +44,54 @@ type SyntaxNode = ReturnType<typeof syntaxTree>["topNode"];
 const line = (name: string) => Decoration.line({ class: name });
 const mark = (name: string) => Decoration.mark({ class: name });
 const markup = mark("cm-markup");
+
+// tokenizes the whole fence at once, then maps segments back onto its `CodeText` lines
+const highlightFence = (
+  state: EditorState,
+  fence: SyntaxNode,
+  from: number,
+  to: number,
+) => {
+  const info = fence.getChild("CodeInfo");
+  const pieces = fence.getChildren("CodeText");
+  if (!info || !pieces.length) return [];
+  const language = state.sliceDoc(info.from, info.to).trim().split(/\s/)[0];
+  const code = pieces.map((p) => state.sliceDoc(p.from, p.to)).join("\n");
+
+  // offset of each piece within `code` (pieces are joined by one newline)
+  let total = 0;
+  const starts = pieces.map((p) => {
+    const start = total;
+    total += p.to - p.from + 1;
+    return start;
+  });
+
+  const out: Range<Decoration>[] = [];
+  let offset = 0;
+  let first = 0;
+  for (const { text, className } of highlightCode(code, language)) {
+    const end = offset + text.length;
+
+    // skip pieces entirely before this segment so the scan stays linear
+    while (first < pieces.length - 1 && starts[first + 1] <= offset) first++;
+
+    // a segment can span several pieces (multi-line comments or strings)
+    for (
+      let i = first;
+      className && i < pieces.length && starts[i] < end;
+      i++
+    ) {
+      const a = Math.max(offset, starts[i]);
+      const b = Math.min(end, starts[i] + pieces[i].to - pieces[i].from);
+      const shift = pieces[i].from - starts[i];
+      const [x, y] = [Math.max(a + shift, from), Math.min(b + shift, to)];
+      if (x < y) out.push(mark(className).range(x, y));
+    }
+    offset = end;
+  }
+
+  return out;
+};
 
 const MARKED: Record<string, string> = {
   StrongEmphasis: "cm-strong",
@@ -255,6 +304,7 @@ const build = (
           const quote = inBlockquote(node.node);
           const lists = quote ? 0 : listDepth(node.node);
           const column = node.from - state.doc.lineAt(node.from).from;
+          out.push(...highlightFence(state, node.node, from, to));
           eachLine(node.from, node.to, (start, i, last) => {
             if (quote) quotedCode.add(start);
             if (lists > 0 && !raw) {

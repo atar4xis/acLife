@@ -26,6 +26,17 @@ describe("journal reading mode", () => {
     expect(code.textContent).toBe("<div>\n  <b>x</b>\n</div>\n");
   });
 
+  it("highlights fenced code by language and leaves unknown languages plain", () => {
+    const container = reader(
+      "```js\nconst a = 1;\n```\n\n```nope\nconst a = 1;\n```",
+    );
+    const [known, unknown] = Array.from(container.querySelectorAll("pre code"));
+    expect(known.querySelector(".tok-keyword")!.textContent).toBe("const");
+    expect(known.querySelector(".tok-number")!.textContent).toBe("1");
+    expect(known.textContent).toBe("const a = 1;\n");
+    expect(unknown.querySelector("span")).toBeNull();
+  });
+
   it("adds a link icon and tooltip to links but not to footnote references", () => {
     const container = reader("[web](https://x.test) and a note.[^1]\n\n[^1]: n");
     const [link, ref] = Array.from(container.querySelectorAll("a"));

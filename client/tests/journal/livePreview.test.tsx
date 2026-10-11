@@ -26,6 +26,29 @@ const cursor = (editor: ReturnType<typeof editorView>, anchor: number) =>
 const styleOf = (el: Element) =>
   (el.getAttribute("style") ?? "").replace(/\s*:\s*/g, ":");
 
+describe("live preview code highlighting", () => {
+  const tokens = (content: HTMLElement, name: string) =>
+    Array.from(content.querySelectorAll(`.${name}`)).map((el) => el.textContent);
+
+  it("marks tokens of fenced code with a known language", () => {
+    const { content } = mount("```js\nconst a = 1;\n```\n\nend");
+    expect(tokens(content, "tok-keyword")).toEqual(["const"]);
+    expect(tokens(content, "tok-number")).toEqual(["1"]);
+  });
+
+  it("keeps tokens aligned inside a blockquote and across lines", () => {
+    const { content } = mount("> ```js\n> let a = 'x';\n> let b = 2;\n> ```\n\nend");
+    expect(tokens(content, "tok-keyword")).toEqual(["let", "let"]);
+    expect(tokens(content, "tok-string")).toEqual(["'x'"]);
+    expect(tokens(content, "tok-number")).toEqual(["2"]);
+  });
+
+  it("does not mark code without a known language", () => {
+    const { content } = mount("```nope\nconst a = 1;\n```\n\nend");
+    expect(content.querySelector("[class*=tok-]")).toBeNull();
+  });
+});
+
 describe("live preview headings", () => {
   it("styles ATX headings 1 to 6 and hides the marks away from the cursor", () => {
     const text = [1, 2, 3, 4, 5, 6]
