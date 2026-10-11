@@ -1,89 +1,54 @@
 import { syntaxTree } from "@codemirror/language";
-import type { EditorState, Range } from "@codemirror/state";
+import {
+  type EditorState,
+  type Range,
+  Prec,
+  StateField,
+} from "@codemirror/state";
 import {
   Decoration,
   type DecorationSet,
   EditorView,
   ViewPlugin,
   type ViewUpdate,
-  WidgetType,
+  keymap,
 } from "@codemirror/view";
+import {
+  FOOTNOTE_REFERENCE,
+  isDefinition,
+  isHeading,
+  isList,
+  numberFootnotes,
+} from "@/lib/journal/markdownParser";
+import {
+  BULLET_GAP,
+  BULLETS,
+  CheckboxWidget,
+  FootnoteLabelWidget,
+  FootnoteRefWidget,
+  LinkIconWidget,
+  ListMarkerWidget,
+  NUMBER_GAP,
+  RuleWidget,
+  TableWidget,
+} from "@/lib/journal/previewWidgets";
 import { cn } from "@/lib/utils";
 import { openExternal } from "@/lib/nativeUpdater";
 import { isValidUrl } from "@/lib/validators";
 
 const hide = Decoration.replace({});
 
-class BulletWidget extends WidgetType {
-  eq() {
-    return true;
-  }
-
-  toDOM() {
-    const bullet = document.createElement("span");
-    bullet.className = "cm-bullet";
-    bullet.textContent = "•";
-    return bullet;
-  }
-}
-
-class RuleWidget extends WidgetType {
-  eq() {
-    return true;
-  }
-
-  toDOM() {
-    const rule = document.createElement("span");
-    rule.className = "cm-rule";
-    return rule;
-  }
-}
-
-class CheckboxWidget extends WidgetType {
-  constructor(
-    readonly checked: boolean,
-    readonly from: number,
-  ) {
-    super();
-  }
-
-  eq(other: CheckboxWidget) {
-    return other.checked === this.checked && other.from === this.from;
-  }
-
-  toDOM(view: EditorView) {
-    const box = document.createElement("input");
-    box.type = "checkbox";
-    box.className = "cm-task";
-    box.checked = this.checked;
-    box.addEventListener("mousedown", (e) => e.preventDefault());
-    box.addEventListener("click", () =>
-      view.dispatch({
-        changes: {
-          from: this.from,
-          to: this.from + 3,
-          insert: this.checked ? "[ ]" : "[x]",
-        },
-      }),
-    );
-    return box;
-  }
-
-  ignoreEvent() {
-    return false;
-  }
-}
+type SyntaxNode = ReturnType<typeof syntaxTree>["topNode"];
 
 const line = (name: string) => Decoration.line({ class: name });
 const mark = (name: string) => Decoration.mark({ class: name });
+const markup = mark("cm-markup");
 
 const MARKED: Record<string, string> = {
   StrongEmphasis: "cm-strong",
   Emphasis: "cm-em",
   Strikethrough: "cm-strike",
   InlineCode: "cm-code",
-  Link: "cm-link",
-  ListMark: "cm-list-mark",
 };
 
 const MARKUP = new Set([
@@ -91,6 +56,7 @@ const MARKUP = new Set([
   "StrikethroughMark",
   "CodeMark",
   "LinkMark",
+  "LinkLabel",
   "URL",
   "LinkTitle",
 ]);
@@ -101,7 +67,82 @@ const MARKUP_PARENTS = new Set([
   "Strikethrough",
   "InlineCode",
   "Link",
+  "Image",
 ]);
+
+const countAncestors = (node: SyntaxNode, names: string[]) => {
+  let count = 0;
+  for (let p = node.parent; p; p = p.parent)
+    if (names.includes(p.name)) count++;
+  return count;
+};
+
+const LISTS = ["BulletList", "OrderedList"];
+const listDepth = (item: SyntaxNode) => countAncestors(item, LISTS);
+const bulletDepth = (item: SyntaxNode) => countAncestors(item, ["BulletList"]);
+const inBlockquote = (node: SyntaxNode) =>
+  countAncestors(node, ["Blockquote"]) > 0;
+
+const quoteStyle = (depth: number, listDepth = 0, code = false) => {
+  const step = "(var(--journal-quote-bar) + var(--journal-quote-pad))";
+  if (code)
+    return `--quote-offset:calc(${depth} * ${step});margin-inline-start:var(--quote-offset);position:relative`;
+  const indent = `${listDepth} * var(--journal-indent)`;
+  const bars = Array.from({ length: depth }, (_, i) => i);
+  const css = (value: (i: number) => string) => bars.map(value).join(",");
+  return [
+    `padding-inline-start:calc(${depth} * ${step} + ${indent})`,
+    `text-indent:calc(-1 * ${indent})`,
+    `background-image:${css(() => "linear-gradient(var(--border),var(--border))")}`,
+    `background-repeat:no-repeat`,
+    `background-size:${css(() => "var(--journal-quote-bar) 100%")}`,
+    `background-position:${css((i) => `calc(${i} * ${step}) 0`)}`,
+  ].join(";");
+};
+
+const normalizeLabel = (label: string) =>
+  label.trim().replace(/\s+/g, " ").toLowerCase();
+
+const linkDefinitions = (state: EditorState) => {
+  const defs = new Map<string, string>();
+  for (let n = syntaxTree(state).topNode.firstChild; n; n = n.nextSibling) {
+    const label = n.name === "LinkReference" && n.getChild("LinkLabel");
+    const url = label && n.getChild("URL");
+    if (label && url)
+      defs.set(
+        normalizeLabel(state.sliceDoc(label.from + 1, label.to - 1)),
+        state.sliceDoc(url.from, url.to),
+      );
+  }
+  return defs;
+};
+
+const linkHref = (
+  state: EditorState,
+  link: SyntaxNode,
+  defs: Map<string, string>,
+) => {
+  const url = link.getChild("URL");
+  if (url) return state.sliceDoc(url.from, url.to);
+  const label = link.getChild("LinkLabel");
+  const [open, close] = link.getChildren("LinkMark");
+  const key =
+    label && label.to - label.from > 2
+      ? state.sliceDoc(label.from + 1, label.to - 1)
+      : state.sliceDoc(open.to, close.from);
+  return defs.get(normalizeLabel(key)) ?? null;
+};
+
+const linkIcon = (href: string, at: number) =>
+  Decoration.widget({ widget: new LinkIconWidget(href), side: 1 }).range(at);
+
+const orderedNumber = (state: EditorState, item: SyntaxNode) => {
+  const first = item.parent!.firstChild!.getChild("ListMark")!;
+  let index = 0;
+  for (let p = item.prevSibling; p; p = p.prevSibling)
+    if (p.name === "ListItem") index++;
+  return parseInt(state.sliceDoc(first.from, first.to), 10) + index;
+};
 
 const build = (
   state: EditorState,
@@ -115,6 +156,25 @@ const build = (
     touches(state.doc.lineAt(from).from, state.doc.lineAt(to).to);
   const withSpace = (to: number) =>
     state.sliceDoc(to, to + 1) === " " ? to + 1 : to;
+  const quoted = new Map<number, number>();
+  const defs = linkDefinitions(state);
+  let footnoteNumbers: Map<string, number> | undefined;
+  const footnoteNumber = (label: string) => {
+    footnoteNumbers ??= numberFootnotes(syntaxTree(state), (from, to) =>
+      state.sliceDoc(from, to),
+    );
+    return footnoteNumbers.get(label);
+  };
+  const quotedLists = new Map<number, number>();
+  const quotedCode = new Set<number>();
+  const itemStart = (markFrom: number) => {
+    const lineFrom = state.doc.lineAt(markFrom).from;
+    const prefix = state.sliceDoc(lineFrom, markFrom);
+    if (!/^[\s>]*$/.test(prefix)) return null;
+    const quote = prefix.lastIndexOf(">");
+    if (quote === -1) return lineFrom;
+    return lineFrom + quote + (prefix[quote + 1] === " " ? 2 : 1);
+  };
 
   for (const { from, to } of ranges) {
     const eachLine = (
@@ -137,41 +197,154 @@ const build = (
         const { name } = node;
         const parent = node.node.parent;
 
-        const heading = /^ATXHeading(\d)$/.exec(name);
+        if (parent?.name === "Document" && !isDefinition(name)) {
+          const next = node.node.nextSibling;
+          if (
+            next &&
+            !isDefinition(next.name) &&
+            !(isHeading(name) && isHeading(next.name)) &&
+            !(isList(name) && isList(next.name)) &&
+            state.doc.lineAt(next.from).number ===
+              state.doc.lineAt(node.to).number + 1
+          )
+            out.push(
+              line("cm-block-gap").range(state.doc.lineAt(node.to).from),
+            );
+        }
+
+        const heading = /^(?:ATX|Setext)Heading(\d)$/.exec(name);
         if (heading) {
-          out.push(
-            line(`cm-h cm-h${heading[1]}`).range(
-              state.doc.lineAt(node.from).from,
-            ),
-          );
+          const underline = node.node.getChild("HeaderMark");
+          const setext = name.startsWith("Setext");
+          const rule = setext ? state.doc.lineAt(underline!.from) : null;
+          const raw = touches(node.from, node.to);
+          eachLine(node.from, node.to, (start) => {
+            if (start !== rule?.from)
+              out.push(line(`cm-h cm-h${heading[1]}`).range(start));
+            else if (!raw) {
+              out.push(line("cm-collapsed").range(start));
+              out.push(hide.range(rule.from, rule.to));
+            } else if (rule.to > rule.from) {
+              out.push(markup.range(rule.from, rule.to));
+            }
+          });
+
+          const next = node.node.nextSibling;
+          if (next && isHeading(next.name)) {
+            const last = state.doc.lineAt(node.to);
+            const nextLine = state.doc.lineAt(next.from);
+            out.push(line("cm-h-tight").range(last.from));
+            if (!touches(node.from, next.to))
+              for (let n = last.number + 1; n < nextLine.number; n++)
+                out.push(line("cm-collapsed").range(state.doc.line(n).from));
+          }
         } else if (name === "HeaderMark" && parent?.name.startsWith("ATX")) {
           if (!lineTouches(node.from, node.to))
             out.push(hide.range(node.from, withSpace(node.to)));
+          else out.push(markup.range(node.from, node.to));
         } else if (name === "Blockquote") {
           eachLine(node.from, node.to, (start) =>
-            out.push(line("cm-quote").range(start)),
+            quoted.set(start, (quoted.get(start) ?? 0) + 1),
           );
         } else if (name === "QuoteMark") {
           if (!lineTouches(node.from, node.to))
             out.push(hide.range(node.from, withSpace(node.to)));
+          else out.push(markup.range(node.from, node.to));
         } else if (name === "FencedCode") {
-          eachLine(node.from, node.to, (start, i, last) =>
+          const raw = touches(node.from, node.to);
+          const quote = inBlockquote(node.node);
+          const lists = quote ? 0 : listDepth(node.node);
+          const column = node.from - state.doc.lineAt(node.from).from;
+          eachLine(node.from, node.to, (start, i, last) => {
+            if (quote) quotedCode.add(start);
+            if (lists > 0 && !raw) {
+              out.push(
+                Decoration.line({
+                  attributes: {
+                    style: `margin-inline-start:calc(${lists} * var(--journal-indent))`,
+                  },
+                }).range(start),
+              );
+              const lead = state.doc.lineAt(start).text.slice(0, column);
+              if (lead.length === column && /^\s+$/.test(lead))
+                out.push(hide.range(start, start + column));
+            }
+            const fence =
+              (i === 0 || last) &&
+              /^[\s>]*(```|~~~)/.test(state.doc.lineAt(start).text);
             out.push(
               line(
                 cn(
                   "cm-codeblock",
                   i === 0 && "cm-codefence cm-code-first",
                   last && "cm-codefence cm-code-last",
+                  fence && !raw && "cm-collapsed",
                 ),
               ).range(start),
-            ),
-          );
+            );
+          });
+        } else if (name === "CodeBlock") {
+          const raw = touches(node.from, node.to);
+          const quote = inBlockquote(node.node);
+          eachLine(node.from, node.to, (start, i, last) => {
+            if (quote) quotedCode.add(start);
+            out.push(
+              line(
+                cn(
+                  "cm-codeblock",
+                  i === 0 && "cm-code-first",
+                  last && "cm-code-last",
+                ),
+              ).range(start),
+            );
+            const indent = /^( {4}|\t)/.exec(state.sliceDoc(start, start + 4));
+            if (indent && !raw)
+              out.push(hide.range(start, start + indent[0].length));
+          });
+        } else if (name === "Paragraph" && parent?.name === "ListItem") {
+          const firstLine = state.doc.lineAt(node.from);
+          const column = node.from - firstLine.from;
+          const raw = touches(node.from, node.to);
+          const indent = `calc(${listDepth(parent)} * var(--journal-indent))`;
+          if (/^\s*$/.test(state.sliceDoc(firstLine.from, node.from)))
+            eachLine(node.from, node.to, (start) => {
+              if (start === state.doc.lineAt(parent.from).from) return;
+              const text = state.doc.lineAt(start).text;
+              const lead = Math.min(/^\s*/.exec(text)![0].length, column);
+              out.push(
+                Decoration.line({
+                  attributes: {
+                    style: `padding-inline-start:${indent}${raw && lead > 0 ? `;text-indent:calc(-1 * ${indent})` : ""}`,
+                  },
+                }).range(start),
+              );
+              if (lead === 0) return;
+              if (raw)
+                out.push(
+                  Decoration.mark({
+                    class: "cm-list-prefix",
+                    attributes: { style: `min-width:${indent}` },
+                  }).range(start, start + lead),
+                );
+              else out.push(hide.range(start, start + lead));
+            });
+        } else if (name === "Table") {
+          if (touches(node.from, node.to))
+            eachLine(node.from, node.to, (start) =>
+              out.push(line("cm-table-raw").range(start)),
+            );
+        } else if (name === "Escape") {
+          if (!lineTouches(node.from, node.to))
+            out.push(hide.range(node.from, node.from + 1));
+          else out.push(markup.range(node.from, node.from + 1));
         } else if (name === "CodeMark" && parent?.name === "FencedCode") {
           if (!touches(parent.from, parent.to))
             out.push(hide.range(node.from, node.to));
+          else out.push(markup.range(node.from, node.to));
         } else if (name === "CodeInfo") {
           if (!touches(parent!.from, parent!.to))
             out.push(hide.range(node.from, node.to));
+          else out.push(markup.range(node.from, node.to));
         } else if (name === "HorizontalRule") {
           if (!lineTouches(node.from, node.to))
             out.push(
@@ -180,27 +353,93 @@ const build = (
                 node.to,
               ),
             );
+          else out.push(markup.range(node.from, node.to));
         } else if (name === "TaskMarker") {
-          if (!touches(node.from, node.to)) {
+          const item = parent!.parent!;
+          if (
+            itemStart(item.from) !== null &&
+            !lineTouches(node.from, node.to)
+          ) {
             const checked = state.sliceDoc(node.from, node.to) !== "[ ]";
             out.push(
               Decoration.replace({
-                widget: new CheckboxWidget(checked, node.from),
-              }).range(node.from, node.to),
+                widget: new CheckboxWidget(checked, listDepth(item)),
+              }).range(node.from, withSpace(node.to)),
             );
+          } else if (lineTouches(node.from, node.to)) {
+            out.push(markup.range(node.from, node.to));
           }
         } else if (name === "ListMark") {
-          const bullet = parent?.parent?.name === "BulletList";
-          if (bullet && !lineTouches(node.from, node.to)) {
-            out.push(
-              Decoration.replace({ widget: new BulletWidget() }).range(
-                node.from,
-                node.to,
-              ),
-            );
-          } else {
-            out.push(mark(MARKED[name]).range(node.from, node.to));
+          const item = parent!;
+          const lineFrom = state.doc.lineAt(node.from).from;
+          const start = itemStart(node.from);
+          if (start !== null) {
+            const depth = listDepth(item);
+            const indent = `calc(${depth} * var(--journal-indent))`;
+            if (quoted.has(lineFrom)) quotedLists.set(lineFrom, depth);
+            else
+              out.push(
+                Decoration.line({
+                  attributes: {
+                    style: `padding-inline-start:${indent};text-indent:calc(-1 * ${indent})`,
+                  },
+                }).range(lineFrom),
+              );
+            const end = withSpace(node.to);
+            const gap =
+              item.parent?.name === "BulletList" ? BULLET_GAP : NUMBER_GAP;
+            if (lineTouches(node.from, node.to)) {
+              out.push(
+                Decoration.mark({
+                  class: "cm-list-prefix",
+                  attributes: {
+                    style: `min-width:calc(${indent} - ${gap})`,
+                  },
+                }).range(start, node.to),
+              );
+              if (end > node.to)
+                out.push(
+                  Decoration.mark({
+                    class: "cm-list-gap",
+                    attributes: { style: `width:${gap}` },
+                  }).range(node.to, end),
+                );
+            } else if (item.getChild("Task")) {
+              out.push(hide.range(start, end));
+            } else {
+              const bullet = item.parent?.name === "BulletList";
+              out.push(
+                Decoration.replace({
+                  widget: new ListMarkerWidget(
+                    bullet
+                      ? BULLETS[Math.min(bulletDepth(item), BULLETS.length) - 1]
+                      : `${orderedNumber(state, item)}.`,
+                    depth,
+                    bullet,
+                  ),
+                }).range(start, end),
+              );
+            }
           }
+        } else if (name === "Link") {
+          const href = linkHref(state, node.node, defs);
+          if (href !== null) {
+            out.push(mark("cm-link").range(node.from, node.to));
+            if (!touches(node.from, node.to)) out.push(linkIcon(href, node.to));
+          }
+        } else if (
+          name === "URL" &&
+          parent &&
+          parent.name !== "LinkReference" &&
+          !MARKUP_PARENTS.has(parent.name)
+        ) {
+          out.push(mark("cm-link").range(node.from, node.to));
+          if (!touches(node.from, node.to))
+            out.push(linkIcon(state.sliceDoc(node.from, node.to), node.to));
+        } else if (name === "LinkMark" && parent?.name === "Autolink") {
+          if (!touches(parent.from, parent.to))
+            out.push(hide.range(node.from, node.to));
+          else out.push(markup.range(node.from, node.to));
         } else if (name in MARKED) {
           out.push(mark(MARKED[name]).range(node.from, node.to));
         } else if (
@@ -211,12 +450,63 @@ const build = (
           const singleLine =
             state.doc.lineAt(node.from).number ===
             state.doc.lineAt(node.to).number;
+          const resolved =
+            parent.name !== "Link" || linkHref(state, parent, defs) !== null;
+          if (!resolved) return;
           if (singleLine && !touches(parent.from, parent.to))
             out.push(hide.range(node.from, node.to));
+          else out.push(markup.range(node.from, node.to));
+        } else if (name === "FootnoteReference") {
+          const number = footnoteNumber(
+            FOOTNOTE_REFERENCE.exec(state.sliceDoc(node.from, node.to))![1],
+          );
+          if (number === undefined) return;
+          if (!touches(node.from, node.to))
+            out.push(
+              Decoration.replace({
+                widget: new FootnoteRefWidget(number),
+              }).range(node.from, node.to),
+            );
+          else out.push(markup.range(node.from, node.to));
+        } else if (name === "FootnoteDefinition") {
+          eachLine(node.from, node.to, (start) =>
+            out.push(line("cm-footnote").range(start)),
+          );
+        } else if (name === "FootnoteLabel") {
+          if (!touches(parent!.from, parent!.to)) {
+            const label = state.sliceDoc(node.from + 2, node.to - 2);
+            out.push(
+              Decoration.replace({
+                widget: new FootnoteLabelWidget(label),
+              }).range(node.from, withSpace(node.to)),
+            );
+          } else {
+            out.push(markup.range(node.from, node.to));
+          }
+        } else if (name === "TableDelimiter") {
+          out.push(markup.range(node.from, node.to));
+        } else if (name === "LinkReference") {
+          eachLine(node.from, node.to, (start) =>
+            out.push(line("cm-link-definition").range(start)),
+          );
         }
       },
     });
   }
+
+  for (const [start, depth] of quoted)
+    out.push(
+      Decoration.line({
+        class: cn("cm-quote", quotedCode.has(start) && "cm-quote-code"),
+        attributes: {
+          style: quoteStyle(
+            depth,
+            quotedLists.get(start),
+            quotedCode.has(start),
+          ),
+        },
+      }).range(start),
+    );
 
   return Decoration.set(out, true);
 };
@@ -255,6 +545,51 @@ const plugin = ViewPlugin.fromClass(
   },
 );
 
+const buildTables = (state: EditorState) => {
+  const selection = state.selection.ranges;
+  const references: string[] = [];
+  const found: SyntaxNode[] = [];
+  for (
+    let node = syntaxTree(state).topNode.firstChild;
+    node;
+    node = node.nextSibling
+  ) {
+    if (node.name === "LinkReference")
+      references.push(state.sliceDoc(node.from, node.to));
+    else if (node.name === "Table") found.push(node);
+  }
+
+  const out: Range<Decoration>[] = [];
+  for (const node of found) {
+    const atLineStart = state.doc.lineAt(node.from).from === node.from;
+    const atLineEnd = state.doc.lineAt(node.to).to === node.to;
+    const touched = selection.some(
+      (r) => r.from <= node.to && r.to >= node.from,
+    );
+    if (atLineStart && atLineEnd && !touched)
+      out.push(
+        Decoration.replace({
+          widget: new TableWidget(
+            [state.sliceDoc(node.from, node.to), ...references].join("\n\n"),
+          ),
+          block: true,
+        }).range(node.from, node.to),
+      );
+  }
+  return Decoration.set(out);
+};
+
+const tables = StateField.define<DecorationSet>({
+  create: buildTables,
+  update: (value, tr) =>
+    tr.docChanged ||
+    tr.selection ||
+    syntaxTree(tr.state) !== syntaxTree(tr.startState)
+      ? buildTables(tr.state)
+      : value,
+  provide: (field) => EditorView.decorations.from(field),
+});
+
 const openLinks = EditorView.domEventHandlers({
   click(event, view) {
     if (!event.ctrlKey && !event.metaKey) return false;
@@ -265,85 +600,69 @@ const openLinks = EditorView.domEventHandlers({
       view.state,
     ).resolveInner(pos);
     while (node && node.name !== "Link") node = node.parent;
-    const url = node?.getChild("URL");
-    if (!url) return false;
+    if (!node) return false;
+    const href = linkHref(view.state, node, linkDefinitions(view.state));
+    if (href === null) return false;
 
-    const href = view.state.sliceDoc(url.from, url.to);
     if (isValidUrl(href)) openExternal(href);
     return true;
   },
 });
 
-export const livePreview = [plugin, openLinks];
+const enterTable = (down: boolean) => (view: EditorView) => {
+  const { doc, selection } = view.state;
+  const head = selection.main.head;
+  const line = doc.lineAt(head);
+  const edge = down ? line.to + 1 : line.from - 1;
+  const found: { from: number; to: number }[] = [];
+  view.state.field(tables).between(edge, edge, (from, to) => {
+    if (down ? from === edge : to === edge) found.push({ from, to });
+  });
+  if (!found.length || !selection.main.empty) return false;
 
-export const journalTheme = EditorView.theme({
-  "&": { backgroundColor: "transparent", color: "inherit", flex: "1" },
-  "&.cm-focused": { outline: "none" },
-  ".cm-scroller": {
-    fontFamily: "inherit",
-    lineHeight: "1.7",
-    overflow: "visible",
-  },
-  ".cm-content": {
-    maxWidth: "48rem",
-    margin: "0 auto",
-    padding: "0 1.5rem 3rem",
-    caretColor: "var(--foreground)",
-  },
-  ".cm-line": { padding: "0" },
-  ".cm-cursor": { borderLeftColor: "var(--foreground)" },
-  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground":
-    {
-      background: "color-mix(in oklab, var(--primary) 30%, transparent)",
-    },
-  ".cm-placeholder": { color: "var(--muted-foreground)" },
-  ".cm-h": { fontWeight: "700", lineHeight: "1.3" },
-  ".cm-h1": { fontSize: "var(--journal-h1-size)" },
-  ".cm-h2": { fontSize: "var(--journal-h2-size)" },
-  ".cm-h3": { fontSize: "var(--journal-h3-size)" },
-  ".cm-h4": { fontSize: "var(--journal-h4-size)" },
-  ".cm-strong": { fontWeight: "700" },
-  ".cm-em": { fontStyle: "italic" },
-  ".cm-strike": { textDecoration: "line-through" },
-  ".cm-code": {
-    fontFamily: "ui-monospace, monospace",
-    backgroundColor: "var(--muted)",
-    borderRadius: "0.25rem",
-  },
-  ".cm-link": { color: "var(--primary)", textDecoration: "underline" },
-  ".cm-list-mark": { color: "var(--muted-foreground)" },
-  ".cm-quote": {
-    borderInlineStart: "3px solid var(--border)",
-    paddingInlineStart: "1rem !important",
-    color: "var(--muted-foreground)",
-  },
-  ".cm-codeblock": {
-    fontFamily: "ui-monospace, monospace",
-    fontSize: "0.875rem",
-    backgroundColor: "var(--muted)",
-    paddingInline: "1rem !important",
-  },
-  ".cm-codefence": { color: "var(--muted-foreground)" },
-  ".cm-code-first": {
-    borderStartStartRadius: "0.5rem",
-    borderStartEndRadius: "0.5rem",
-    paddingTop: "0.5rem !important",
-  },
-  ".cm-code-last": {
-    borderEndStartRadius: "0.5rem",
-    borderEndEndRadius: "0.5rem",
-    paddingBottom: "0.5rem !important",
-  },
-  ".cm-bullet": { display: "inline-block", width: "1ch", textAlign: "center" },
-  ".cm-rule": {
-    display: "inline-block",
-    width: "100%",
-    borderTop: "1px solid var(--border)",
-    verticalAlign: "middle",
-  },
-  ".cm-task": {
-    accentColor: "var(--primary)",
-    marginInlineEnd: "0.5rem",
-    verticalAlign: "middle",
-  },
-});
+  const target = view.moveVertically(selection.main, down).head;
+  if (down ? target < edge : target > edge) return false;
+
+  const table = found[0];
+  const row = doc.lineAt(down ? table.from : table.to);
+  const anchor = row.from + Math.min(head - line.from, row.length);
+  view.dispatch({ selection: { anchor }, scrollIntoView: true });
+  return true;
+};
+
+const enterCollapsed = (down: boolean) => (view: EditorView) => {
+  const { doc, selection } = view.state;
+  const { main } = selection;
+  const line = doc.lineAt(main.head);
+  if (!main.empty || line.number === (down ? doc.lines : 1)) return false;
+
+  const moved = view.moveVertically(main, down).head;
+  if (down ? moved <= line.to : moved >= line.from) return false;
+
+  const target = doc.line(line.number + (down ? 1 : -1));
+  let collapsed = false;
+  view
+    .plugin(plugin)
+    ?.decorations.between(target.from, target.from, (_f, _t, value) => {
+      if (value.spec.class?.includes("cm-collapsed")) collapsed = true;
+    });
+  if (!collapsed) return false;
+
+  const anchor = target.from + Math.min(main.head - line.from, target.length);
+  view.dispatch({ selection: { anchor }, scrollIntoView: true });
+  return true;
+};
+
+export const livePreview = [
+  plugin,
+  tables,
+  Prec.high(
+    keymap.of([
+      { key: "ArrowDown", run: enterTable(true) },
+      { key: "ArrowUp", run: enterTable(false) },
+      { key: "ArrowDown", run: enterCollapsed(true) },
+      { key: "ArrowUp", run: enterCollapsed(false) },
+    ]),
+  ),
+  openLinks,
+];

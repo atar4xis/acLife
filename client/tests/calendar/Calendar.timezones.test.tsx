@@ -40,7 +40,7 @@ describe("Calendar with multiple time zones", () => {
     setCalendarSettings({ timezones: [DEVICE_TZ], defaultTimezone: DEVICE_TZ });
     renderCalendar({ mode: "day" });
 
-    const grid = document.querySelector(".calendar-grid-scroll") as HTMLElement;
+    const grid = screen.getByRole("grid", { name: "Calendar" });
     expect(grid.style.gridTemplateColumns).toBe("repeat(1, 3.5rem) 1fr");
     const headers = getHeaderCells();
     expect(headers).toHaveLength(1);

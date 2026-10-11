@@ -115,6 +115,7 @@ export default memo(function JournalTabs({ pane }: { pane: PaneNode }) {
           label={t(reading ? "journal.editMode" : "journal.readingMode")}
           size="icon-sm"
           className="ms-auto shrink-0"
+          data-reading-toggle
           onClick={() => journal.setReading(pane.id, !reading)}
         >
           {reading ? <Pencil /> : <BookOpen />}

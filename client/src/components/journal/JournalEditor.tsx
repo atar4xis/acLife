@@ -22,7 +22,10 @@ import {
   useRef,
 } from "react";
 import { MAX_JOURNAL_CONTENT_LENGTH } from "@/lib/journal/item";
-import { journalTheme, livePreview } from "@/lib/journal/livePreview";
+import type { JournalEditorHandle } from "@/lib/journal/scrollAnchor";
+import { livePreview } from "@/lib/journal/livePreview";
+import { footnotes, singleTilde } from "@/lib/journal/markdownParser";
+import { journalTheme } from "@/lib/journal/previewTheme";
 
 const external = Annotation.define<boolean>();
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
@@ -38,7 +41,7 @@ export default function JournalEditor({
   placeholder: string;
   label: string;
   onChange: (value: string) => void;
-  ref?: Ref<{ focus: () => void }>;
+  ref?: Ref<JournalEditorHandle>;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -46,7 +49,30 @@ export default function JournalEditor({
   const emit = useEffectEvent(onChange);
   const pending = useRef<string[]>([]);
 
-  useImperativeHandle(ref, () => ({ focus: () => view.current?.focus() }));
+  useImperativeHandle(ref, () => ({
+    focus: () => view.current?.focus(),
+    topLine: (top) => {
+      const editor = view.current!;
+      const y = Math.max(0, top - editor.documentTop);
+      const block = editor.lineBlockAtHeight(y);
+      return (
+        editor.state.doc.lineAt(block.from).number +
+        (y - block.top) / block.height
+      );
+    },
+    scrollToLine: (line) => {
+      const editor = view.current!;
+      const { doc } = editor.state;
+      const number = Math.min(Math.floor(line), doc.lines);
+      const pos = doc.line(number).from;
+      editor.dispatch({
+        effects: EditorView.scrollIntoView(pos, {
+          y: "start",
+          yMargin: -(line - number) * editor.lineBlockAt(pos).height,
+        }),
+      });
+    },
+  }));
 
   useEffect(() => {
     let tabReleased = false;
@@ -82,7 +108,7 @@ export default function JournalEditor({
             ...defaultKeymap,
             ...historyKeymap,
           ]),
-          markdown({ extensions: GFM }),
+          markdown({ extensions: [GFM, singleTilde, footnotes] }),
           livePreview,
           journalTheme,
           EditorView.lineWrapping,
@@ -118,10 +144,29 @@ export default function JournalEditor({
     pending.current = [];
 
     const editor = view.current!;
-    if (editor.state.doc.toString() === value) return;
+    const current = editor.state.doc.toString();
+    if (current === value) return;
+
+    let from = 0;
+    while (
+      from < current.length &&
+      from < value.length &&
+      current.charCodeAt(from) === value.charCodeAt(from)
+    )
+      from++;
+    let currentEnd = current.length;
+    let valueEnd = value.length;
+    while (
+      currentEnd > from &&
+      valueEnd > from &&
+      current.charCodeAt(currentEnd - 1) === value.charCodeAt(valueEnd - 1)
+    ) {
+      currentEnd--;
+      valueEnd--;
+    }
 
     editor.dispatch({
-      changes: { from: 0, to: editor.state.doc.length, insert: value },
+      changes: { from, to: currentEnd, insert: value.slice(from, valueEnd) },
       annotations: external.of(true),
     });
   }, [value]);

@@ -219,7 +219,8 @@ describe("journal editor and reading mode", () => {
       editorView().dispatch({
         changes: {
           from: 0,
-          insert: "# One\n\n## Two\n\n### Three\n\n#### Four",
+          insert:
+            "# One\n\n## Two\n\n### Three\n\n#### Four\n\n##### Five\n\n###### Six",
         },
         selection: { anchor: 0 },
       });
@@ -228,7 +229,7 @@ describe("journal editor and reading mode", () => {
     const rules = Array.from(document.styleSheets).flatMap((sheet) =>
       Array.from(sheet.cssRules).map((rule) => rule.cssText),
     );
-    for (const level of [1, 2, 3, 4]) {
+    for (const level of [1, 2, 3, 4, 5, 6]) {
       expect(
         editorView().contentDOM.querySelector(`.cm-h${level}`),
       ).toBeTruthy();
@@ -293,19 +294,24 @@ describe("journal editor and reading mode", () => {
     });
 
     const content = editorView().contentDOM;
-    expect(content.querySelectorAll(".cm-bullet")).toHaveLength(2);
+    expect(content.querySelectorAll(".cm-bullet")).toHaveLength(1);
     expect(content.querySelector(".cm-rule")).toBeTruthy();
-    const box = content.querySelector<HTMLInputElement>(".cm-task")!;
-    expect(box.checked).toBe(false);
+    const checkbox = () =>
+      waitFor(() => {
+        const box = content.querySelector<HTMLElement>('[role="checkbox"]');
+        expect(box).toBeTruthy();
+        return box!;
+      });
+    expect((await checkbox()).getAttribute("aria-checked")).toBe("false");
 
-    fireEvent.click(box);
+    fireEvent.click(await checkbox());
 
     expect(editorView().state.doc.toString()).toContain("- [x] todo");
-    expect(content.querySelector<HTMLInputElement>(".cm-task")!.checked).toBe(
-      true,
+    await waitFor(async () =>
+      expect((await checkbox()).getAttribute("aria-checked")).toBe("true"),
     );
 
-    fireEvent.click(content.querySelector(".cm-task")!);
+    fireEvent.click(await checkbox());
     expect(editorView().state.doc.toString()).toContain("- [ ] todo");
   });
 

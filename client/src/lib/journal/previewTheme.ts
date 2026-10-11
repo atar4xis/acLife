@@ -1,0 +1,130 @@
+import { EditorView } from "@codemirror/view";
+
+export const journalTheme = EditorView.theme({
+  "&": { backgroundColor: "transparent", color: "inherit", flex: "1" },
+  "&.cm-focused": { outline: "none" },
+  ".cm-scroller": {
+    fontFamily: "inherit",
+    lineHeight: "var(--journal-line-height)",
+    overflow: "visible",
+  },
+  ".cm-content": {
+    maxWidth: "48rem",
+    margin: "0 auto",
+    padding: "0 1.5rem 3rem",
+    caretColor: "var(--foreground)",
+  },
+  ".cm-line": { padding: "0" },
+  ".cm-cursor": { borderLeftColor: "var(--foreground)" },
+  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground":
+    {
+      background: "color-mix(in oklab, var(--primary) 30%, transparent)",
+    },
+  ".cm-selectionLayer": { zIndex: "1 !important", pointerEvents: "none" },
+  ".cm-placeholder": { color: "var(--muted-foreground)" },
+  ".cm-h": {
+    fontWeight: "600",
+    lineHeight: "var(--journal-heading-line-height)",
+  },
+  ".cm-footnote": { fontSize: "var(--journal-footnote-size)" },
+  ".cm-footnote-label": {
+    color: "var(--muted-foreground)",
+    marginInlineEnd: "0.5rem",
+  },
+  ".cm-footnote-ref a": {
+    color: "var(--primary)",
+    textDecoration: "underline",
+  },
+  ".cm-collapsed": {
+    height: "0",
+    overflow: "hidden",
+    fontSize: "0",
+    lineHeight: "0",
+  },
+  ".cm-h-tight": { paddingBottom: "var(--journal-heading-gap) !important" },
+  ".cm-h1": { fontSize: "var(--journal-h1-size)", fontWeight: "700" },
+  ".cm-h2": { fontSize: "var(--journal-h2-size)", fontWeight: "700" },
+  ".cm-h3": { fontSize: "var(--journal-h3-size)" },
+  ".cm-h4": { fontSize: "var(--journal-h4-size)" },
+  ".cm-h5": { fontSize: "var(--journal-h5-size)" },
+  ".cm-h6": {
+    fontSize: "var(--journal-h6-size)",
+    color: "var(--muted-foreground)",
+  },
+  ".cm-strong": { fontWeight: "700" },
+  ".cm-em": { fontStyle: "italic" },
+  ".cm-strike": { textDecoration: "line-through" },
+  ".cm-code": {
+    fontFamily: "var(--journal-font-mono)",
+    backgroundColor: "var(--muted)",
+    borderRadius: "0.25rem",
+    paddingInline: "0.25rem",
+  },
+  ".cm-link": { color: "var(--primary)", textDecoration: "underline" },
+  ".cm-link-icon": {
+    color: "var(--primary)",
+    cursor: "pointer",
+    marginInlineStart: "0.25rem",
+    verticalAlign: "top",
+    "& svg": { display: "inline", width: "0.875rem", height: "0.875rem" },
+  },
+  ".cm-list-prefix": {
+    display: "inline-block",
+    textIndent: "0",
+    textAlign: "end",
+    color: "var(--muted-foreground)",
+  },
+  ".cm-list-gap": {
+    display: "inline-block",
+    width: "0.5rem",
+    textIndent: "0",
+    overflow: "hidden",
+    verticalAlign: "bottom",
+  },
+  ".cm-list-marker": {
+    display: "inline-block",
+    boxSizing: "border-box",
+    textIndent: "0",
+    textAlign: "end",
+    paddingInlineEnd: "0.5rem",
+  },
+  ".cm-bullet": { verticalAlign: "top" },
+  ".cm-quote-code::before": {
+    content: '""',
+    position: "absolute",
+    top: "0",
+    bottom: "0",
+    insetInlineStart: "calc(-1 * var(--quote-offset))",
+    width: "var(--quote-offset)",
+    backgroundImage:
+      "repeating-linear-gradient(to right, var(--border) 0 var(--journal-quote-bar), transparent var(--journal-quote-bar) calc(var(--journal-quote-bar) + var(--journal-quote-pad)))",
+  },
+  ".cm-block-gap": {
+    borderBottom: "var(--journal-adjacent-gap) solid transparent",
+    backgroundClip: "padding-box",
+  },
+  ".cm-markup": { color: "var(--muted-foreground)" },
+  ".cm-link-definition": { color: "var(--muted-foreground)" },
+  ".cm-quote": { color: "var(--muted-foreground)" },
+  ".cm-codeblock": {
+    fontFamily: "var(--journal-font-mono)",
+    fontSize: "var(--journal-code-size)",
+    backgroundColor: "var(--muted)",
+    paddingInline: "var(--journal-code-pad-x) !important",
+  },
+  ".cm-codefence": { color: "var(--muted-foreground)" },
+  ".cm-code-first": {
+    paddingTop: "var(--journal-code-pad-y) !important",
+  },
+  ".cm-code-last": {
+    paddingBottom: "var(--journal-code-pad-y) !important",
+  },
+  ".cm-rule": {
+    display: "inline-block",
+    width: "100%",
+    borderTop: "var(--journal-rule) solid var(--border)",
+    verticalAlign: "middle",
+  },
+  ".cm-task": { verticalAlign: "middle" },
+  ".cm-table-raw": { fontFamily: "var(--journal-font-mono)" },
+});

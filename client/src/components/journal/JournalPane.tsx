@@ -6,22 +6,71 @@ import NoteTitle from "@/components/journal/NoteTitle";
 import ScrollThumb from "@/components/ui/scroll-thumb";
 import { useJournalActions, useJournalItems } from "@/context/JournalContext";
 import type { PaneNode } from "@/types/Journal";
-import { useCallback, useRef } from "react";
+import {
+  FOLLOW_MS,
+  type JournalEditorHandle,
+  MAX_DRIFT,
+  SCROLL_INTERRUPTS,
+  readerTopLine,
+  scrollReaderToLine,
+} from "@/lib/journal/scrollAnchor";
+import { useCallback, useEffect, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
 export default function JournalPane({ pane }: { pane: PaneNode }) {
   const { t } = useTranslation();
   const journal = useJournalActions();
   const items = useJournalItems();
-  const editor = useRef<{ focus: () => void }>(null);
+  const editor = useRef<JournalEditorHandle>(null);
+  const anchor = useRef(1);
+  const reading = !!pane.reading;
+  const mode = useRef(reading);
   const scroller = useRef<HTMLDivElement>(null);
   const note = items.find((item) => item.id === pane.active);
   const focusEditor = useCallback(() => editor.current?.focus(), []);
+
+  const captureAnchor = (e: React.SyntheticEvent) => {
+    const box = scroller.current;
+    if (!box || !(e.target as HTMLElement).closest("[data-reading-toggle]"))
+      return;
+    anchor.current = reading
+      ? readerTopLine(box)
+      : (editor.current?.topLine(box.getBoundingClientRect().top) ?? 1);
+  };
+
+  useEffect(() => {
+    if (mode.current === reading) return;
+    mode.current = reading;
+    const box = scroller.current!;
+    const apply = () => {
+      if (reading) return scrollReaderToLine(box, anchor.current);
+      const drift = editor.current?.topLine(box.getBoundingClientRect().top);
+      if (drift === undefined || Math.abs(drift - anchor.current) > MAX_DRIFT)
+        editor.current?.scrollToLine(anchor.current);
+    };
+
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(apply);
+    });
+    const stop = () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+      observer.disconnect();
+      SCROLL_INTERRUPTS.forEach((type) => box.removeEventListener(type, stop));
+    };
+    const timer = setTimeout(stop, FOLLOW_MS);
+    SCROLL_INTERRUPTS.forEach((type) => box.addEventListener(type, stop));
+    Array.from(box.children).forEach((child) => observer.observe(child));
+    return stop;
+  }, [reading]);
 
   return (
     <section
       className="relative flex size-full min-w-0 flex-col"
       onPointerDownCapture={() => journal.focusPane(pane.id)}
+      onClickCapture={captureAnchor}
       onFocusCapture={() => journal.focusPane(pane.id)}
     >
       <JournalTabs pane={pane} />
