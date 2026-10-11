@@ -66,9 +66,10 @@ const TreeRow = memo(function TreeRow({
   const row =
     renamingId === item.id ? (
       <div
-        className="min-w-0 flex-1"
-        style={{ paddingInlineStart: `${depth * 12}px` }}
+        className="bg-sidebar-accent flex w-full min-w-0 items-center gap-2 rounded-md py-1.5 pe-2 text-sm"
+        style={{ paddingInlineStart: `${depth * 12 + 8}px` }}
       >
+        <Icon className="size-4 shrink-0" />
         <RenameInput
           name={item.name}
           onDone={(name) => actions.onRenamed(item, name)}

@@ -1,4 +1,3 @@
-import { Input } from "@/components/ui/input";
 import { MAX_JOURNAL_NAME_LENGTH } from "@/lib/journal/item";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,9 +19,9 @@ export default function RenameInput({
   }, []);
 
   return (
-    <Input
+    <input
       ref={ref}
-      className="h-8 px-2"
+      className="min-w-0 flex-1 bg-transparent outline-none"
       aria-label={t("journal.rename")}
       defaultValue={name}
       maxLength={MAX_JOURNAL_NAME_LENGTH}
