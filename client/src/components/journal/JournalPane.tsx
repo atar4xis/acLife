@@ -83,7 +83,7 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
             <>
               <NoteTitle id={note.id} name={note.name} onEnter={focusEditor} />
               {pane.reading ? (
-                <article className="mx-auto w-full max-w-3xl px-6 pb-12">
+                <article className="relative mx-auto w-full max-w-3xl px-6 pb-12">
                   <JournalMarkdown>{note.content}</JournalMarkdown>
                 </article>
               ) : (
