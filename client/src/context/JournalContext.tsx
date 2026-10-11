@@ -32,6 +32,7 @@ type JournalContextValue = JournalState & {
 type JournalActions = {
   setSplitSizes: (key: string, sizes: number[]) => void;
   setReading: (paneId: string, reading: boolean) => void;
+  setSource: (paneId: string, source: boolean) => void;
   setSort: (sort: JournalSort) => void;
   addItem: (type: JournalItem["type"], parentId: string | null) => string;
   addTab: (paneId: string) => void;
@@ -96,6 +97,8 @@ export function JournalProvider({ children }: WithChildren) {
         dispatch({ type: "setSplitSizes", key, sizes }),
       setReading: (paneId, reading) =>
         dispatch({ type: "setReading", paneId, reading }),
+      setSource: (paneId, source) =>
+        dispatch({ type: "setSource", paneId, source }),
       addTab: (paneId) => dispatch({ type: "addTab", paneId }),
       renameItem: (id, name) =>
         dispatch({ type: "renameItem", id, name, now: Date.now() }),

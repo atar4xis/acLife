@@ -6,7 +6,7 @@ import {
   indentMore,
 } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
-import { Annotation, EditorState } from "@codemirror/state";
+import { Annotation, Compartment, EditorState } from "@codemirror/state";
 import {
   EditorView,
   drawSelection,
@@ -23,7 +23,7 @@ import {
 } from "react";
 import { MAX_JOURNAL_CONTENT_LENGTH } from "@/lib/journal/item";
 import type { JournalEditorHandle } from "@/lib/journal/scrollAnchor";
-import { livePreview } from "@/lib/journal/livePreview";
+import { livePreview, sourceMode } from "@/lib/journal/livePreview";
 import { footnotes, singleTilde } from "@/lib/journal/markdownParser";
 import { journalTheme } from "@/lib/journal/previewTheme";
 
@@ -32,12 +32,14 @@ const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
 
 export default function JournalEditor({
   value,
+  source = false,
   placeholder,
   label,
   onChange,
   ref,
 }: {
   value: string;
+  source?: boolean;
   placeholder: string;
   label: string;
   onChange: (value: string) => void;
@@ -48,6 +50,8 @@ export default function JournalEditor({
   const initialValue = useEffectEvent(() => value);
   const emit = useEffectEvent(onChange);
   const pending = useRef<string[]>([]);
+  const sourceSlot = useRef(new Compartment());
+  const initialSource = useEffectEvent(() => source);
 
   useImperativeHandle(ref, () => ({
     focus: () => view.current?.focus(),
@@ -110,6 +114,7 @@ export default function JournalEditor({
           ]),
           markdown({ extensions: [GFM, singleTilde, footnotes] }),
           livePreview,
+          sourceSlot.current.of(sourceMode.of(initialSource())),
           journalTheme,
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({ "aria-label": label }),
@@ -134,6 +139,12 @@ export default function JournalEditor({
       view.current = null;
     };
   }, [label, placeholder]);
+
+  useEffect(() => {
+    view.current!.dispatch({
+      effects: sourceSlot.current.reconfigure(sourceMode.of(source)),
+    });
+  }, [source]);
 
   useEffect(() => {
     const echo = pending.current.indexOf(value);

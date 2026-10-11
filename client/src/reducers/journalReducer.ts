@@ -9,6 +9,7 @@ import {
   dropOnTabs,
   openNote,
   setReading,
+  setSource,
 } from "@/lib/journal/layout";
 import type { JournalAction, JournalItem, JournalState } from "@/types/Journal";
 
@@ -137,6 +138,11 @@ export function journalReducer(
       return {
         ...state,
         workspace: setReading(state.workspace, action.paneId, action.reading),
+      };
+    case "setSource":
+      return {
+        ...state,
+        workspace: setSource(state.workspace, action.paneId, action.source),
       };
     case "addTab":
       return { ...state, workspace: addNewTab(state.workspace, action.paneId) };

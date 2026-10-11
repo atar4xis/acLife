@@ -1,6 +1,7 @@
 import { syntaxTree } from "@codemirror/language";
 import {
   type EditorState,
+  Facet,
   type Range,
   Prec,
   StateField,
@@ -193,14 +194,19 @@ const orderedNumber = (state: EditorState, item: SyntaxNode) => {
   return parseInt(state.sliceDoc(first.from, first.to), 10) + index;
 };
 
+export const sourceMode = Facet.define<boolean, boolean>({
+  combine: (values) => values.some(Boolean),
+});
+
 const build = (
   state: EditorState,
   ranges: readonly { from: number; to: number }[],
 ) => {
   const out: Range<Decoration>[] = [];
   const selection = state.selection.ranges;
+  const source = state.facet(sourceMode);
   const touches = (from: number, to: number) =>
-    selection.some((r) => r.from <= to && r.to >= from);
+    source || selection.some((r) => r.from <= to && r.to >= from);
   const lineTouches = (from: number, to: number) =>
     touches(state.doc.lineAt(from).from, state.doc.lineAt(to).to);
   const withSpace = (to: number) =>
@@ -579,6 +585,8 @@ const plugin = ViewPlugin.fromClass(
         update.docChanged ||
         update.selectionSet ||
         update.viewportChanged ||
+        update.startState.facet(sourceMode) !==
+          update.state.facet(sourceMode) ||
         syntaxTree(update.state) !== syntaxTree(update.startState)
       ) {
         this.decorations = build(update.state, update.view.visibleRanges);
@@ -613,9 +621,9 @@ const buildTables = (state: EditorState) => {
   for (const node of found) {
     const atLineStart = state.doc.lineAt(node.from).from === node.from;
     const atLineEnd = state.doc.lineAt(node.to).to === node.to;
-    const touched = selection.some(
-      (r) => r.from <= node.to && r.to >= node.from,
-    );
+    const touched =
+      state.facet(sourceMode) ||
+      selection.some((r) => r.from <= node.to && r.to >= node.from);
     if (atLineStart && atLineEnd && !touched)
       out.push(
         Decoration.replace({
@@ -634,6 +642,7 @@ const tables = StateField.define<DecorationSet>({
   update: (value, tr) =>
     tr.docChanged ||
     tr.selection ||
+    tr.startState.facet(sourceMode) !== tr.state.facet(sourceMode) ||
     syntaxTree(tr.state) !== syntaxTree(tr.startState)
       ? buildTables(tr.state)
       : value,

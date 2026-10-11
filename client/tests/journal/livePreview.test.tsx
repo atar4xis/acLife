@@ -49,6 +49,30 @@ describe("live preview code highlighting", () => {
   });
 });
 
+describe("live preview source mode", () => {
+  const text = "# Title\n\n**bold** and [a](https://x.y)\n\n| a |\n| - |\n| 1 |\n\nend";
+  const editorProps = { label: "Editor", placeholder: "", value: text, onChange: vi.fn() };
+
+  it("reveals all markup while keeping the styling, and hides it again", () => {
+    const view = render(<JournalEditor {...editorProps} />);
+    const editor = editorView();
+    act(() => editor.dispatch({ selection: { anchor: text.length } }));
+    const { contentDOM: content } = editor;
+    expect(content.querySelector(".cm-h1")!.textContent).toBe("Title");
+    expect(content.querySelector("table")).toBeTruthy();
+
+    view.rerender(<JournalEditor {...editorProps} source />);
+    expect(content.querySelector(".cm-h1")!.textContent).toBe("# Title");
+    expect(content.textContent).toContain("**bold**");
+    expect(content.textContent).toContain("(https://x.y)");
+    expect(content.querySelector("table")).toBeNull();
+
+    view.rerender(<JournalEditor {...editorProps} />);
+    expect(content.querySelector(".cm-h1")!.textContent).toBe("Title");
+    expect(content.querySelector("table")).toBeTruthy();
+  });
+});
+
 describe("live preview headings", () => {
   it("styles ATX headings 1 to 6 and hides the marks away from the cursor", () => {
     const text = [1, 2, 3, 4, 5, 6]

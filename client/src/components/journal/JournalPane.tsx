@@ -91,6 +91,7 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
                   key={note.id}
                   ref={editor}
                   value={note.content}
+                  source={!!pane.source}
                   label={t("journal.editor")}
                   placeholder={t("journal.placeholder")}
                   onChange={(content) => journal.setContent(note.id, content)}

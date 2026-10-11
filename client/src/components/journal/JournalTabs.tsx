@@ -11,7 +11,13 @@ import { useJournal } from "@/context/JournalContext";
 import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import { isNewTab, panesOf } from "@/lib/journal/layout";
 import type { PaneNode } from "@/types/Journal";
-import { BookOpen, EllipsisVertical, Pencil, Plus } from "lucide-react";
+import {
+  BookOpen,
+  CodeXml,
+  EllipsisVertical,
+  Pencil,
+  Plus,
+} from "lucide-react";
 import { memo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -111,15 +117,27 @@ export default memo(function JournalTabs({ pane }: { pane: PaneNode }) {
         </DropdownMenu>
       )}
       {pane.active && !isNewTab(pane.active) && (
-        <IconButton
-          label={t(reading ? "journal.editMode" : "journal.readingMode")}
-          size="icon-sm"
-          className="ms-auto shrink-0"
-          data-reading-toggle
-          onClick={() => journal.setReading(pane.id, !reading)}
-        >
-          {reading ? <Pencil /> : <BookOpen />}
-        </IconButton>
+        <div className="ms-auto flex shrink-0">
+          {!reading && (
+            <IconButton
+              variant={pane.source ? "secondary" : "ghost"}
+              label={t("journal.sourceMode")}
+              aria-pressed={!!pane.source}
+              size="icon-sm"
+              onClick={() => journal.setSource(pane.id, !pane.source)}
+            >
+              <CodeXml />
+            </IconButton>
+          )}
+          <IconButton
+            label={t(reading ? "journal.editMode" : "journal.readingMode")}
+            size="icon-sm"
+            data-reading-toggle
+            onClick={() => journal.setReading(pane.id, !reading)}
+          >
+            {reading ? <Pencil /> : <BookOpen />}
+          </IconButton>
+        </div>
       )}
     </div>
   );

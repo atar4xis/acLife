@@ -315,6 +315,35 @@ describe("journal editor and reading mode", () => {
     expect(editorView().state.doc.toString()).toContain("- [ ] todo");
   });
 
+  it("toggles source mode per pane and hides it while reading", async () => {
+    const user = userEvent.setup();
+    renderJournal();
+    await createNote(user, "Note");
+    act(() => {
+      editorView().dispatch({ changes: { from: 0, insert: "# Head\n\nend" } });
+      editorView().dispatch({ selection: { anchor: 11 } });
+    });
+    expect(editorView().contentDOM.querySelector(".cm-h1")!.textContent).toBe("Head");
+
+    const source = screen.getByRole("button", { name: "Source mode" });
+    await user.click(source);
+    expect(source.getAttribute("aria-pressed")).toBe("true");
+    expect(editorView().contentDOM.querySelector(".cm-h1")!.textContent).toBe("# Head");
+
+    await user.click(screen.getByRole("button", { name: "Reading mode" }));
+    expect(screen.queryByRole("button", { name: "Source mode" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Edit mode" }));
+    expect(
+      screen
+        .getByRole("button", { name: "Source mode" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      editorView().contentDOM.querySelector(".cm-h1")!.textContent,
+    ).toBe("# Head");
+  });
+
   it("switches each split between reading and edit mode", async () => {
     const user = userEvent.setup();
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(

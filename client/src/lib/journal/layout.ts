@@ -151,6 +151,15 @@ export const setReading = (
   layout: mapPane(workspace.layout, paneId, (pane) => ({ ...pane, reading })),
 });
 
+export const setSource = (
+  workspace: Workspace,
+  paneId: string,
+  source: boolean,
+): Workspace => ({
+  ...workspace,
+  layout: mapPane(workspace.layout, paneId, (pane) => ({ ...pane, source })),
+});
+
 export const restoreWorkspace = (
   workspace: Workspace,
   exists: (id: string) => boolean,

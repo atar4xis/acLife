@@ -34,6 +34,7 @@ export type PaneNode = {
   tabs: string[];
   active: string | null;
   reading?: boolean;
+  source?: boolean;
 };
 
 type SplitNode = {
@@ -89,6 +90,7 @@ export type JournalAction =
   | { type: "setAllExpanded"; expanded: boolean }
   | { type: "setSplitSizes"; key: string; sizes: number[] }
   | { type: "setReading"; paneId: string; reading: boolean }
+  | { type: "setSource"; paneId: string; source: boolean }
   | { type: "addTab"; paneId: string }
   | { type: "openNote"; id: string; newTab: boolean }
   | { type: "activateTab"; paneId: string; id: string }
