@@ -71,14 +71,26 @@ describe("journal reading mode", () => {
     expect(container.querySelector("p")!.textContent).toBe("alt text");
   });
 
-  it("renders read-only task items with the shadcn checkbox", () => {
+  it("renders task items with the shadcn checkbox", () => {
     const container = reader("- [x] done\n- [ ] todo");
     const boxes = container.querySelectorAll('[role="checkbox"]');
     expect(
       Array.from(boxes).map((box) => box.getAttribute("aria-checked")),
     ).toEqual(["true", "false"]);
     expect(container.querySelectorAll("li.task-list-item")).toHaveLength(2);
-    expect(boxes[0].hasAttribute("disabled")).toBe(true);
+  });
+
+  it("reports the source line of a clicked task checkbox", () => {
+    const onToggleTask = vi.fn();
+    const { container } = render(
+      <JournalMarkdown onToggleTask={onToggleTask}>
+        {"intro\n\n- [ ] a\n- [x] b\n\n> - [ ] c"}
+      </JournalMarkdown>,
+    );
+    const boxes = container.querySelectorAll('[role="checkbox"]');
+    fireEvent.click(boxes[1]);
+    fireEvent.click(boxes[2]);
+    expect(onToggleTask.mock.calls).toEqual([[4], [6]]);
   });
 
   it("wraps blocks with their first source line and spacing variants", () => {

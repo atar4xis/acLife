@@ -297,7 +297,14 @@
       }
 
       & > [role="checkbox"] {
-        margin-inline: calc(var(--journal-indent) * -1) 0.25rem;
+        margin-inline: calc(var(--journal-indent) * -1) calc(0.25rem + 0.25em);
+      }
+
+      &:has(
+        > [role="checkbox"][aria-checked="true"],
+        > p > [role="checkbox"][aria-checked="true"]
+      ) {
+        @apply text-muted-foreground line-through;
       }
     }
     & section[data-footnotes] {

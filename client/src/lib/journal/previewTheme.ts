@@ -126,5 +126,9 @@ export const journalTheme = EditorView.theme({
     verticalAlign: "middle",
   },
   ".cm-task": { verticalAlign: "middle" },
+  ".cm-task-done": {
+    color: "var(--muted-foreground)",
+    textDecoration: "line-through",
+  },
   ".cm-table-raw": { fontFamily: "var(--journal-font-mono)" },
 });

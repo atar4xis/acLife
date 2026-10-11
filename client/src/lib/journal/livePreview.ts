@@ -412,11 +412,18 @@ const build = (
           else out.push(markup.range(node.from, node.to));
         } else if (name === "TaskMarker") {
           const item = parent!.parent!;
+          const checked = state.sliceDoc(node.from, node.to) !== "[ ]";
+          if (checked && withSpace(node.to) < parent!.to)
+            out.push(
+              Decoration.mark({ class: "cm-task-done" }).range(
+                withSpace(node.to),
+                parent!.to,
+              ),
+            );
           if (
             itemStart(item.from) !== null &&
             !lineTouches(node.from, node.to)
           ) {
-            const checked = state.sliceDoc(node.from, node.to) !== "[ ]";
             out.push(
               Decoration.replace({
                 widget: new CheckboxWidget(checked, listDepth(item)),

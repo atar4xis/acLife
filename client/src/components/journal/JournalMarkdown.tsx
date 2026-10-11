@@ -36,9 +36,7 @@ const COMPONENTS: Components = {
     );
   },
   img: ({ alt }) => <span>{alt}</span>,
-  input: ({ checked }) => (
-    <Checkbox checked={!!checked} disabled className="disabled:opacity-100" />
-  ),
+  input: ({ checked }) => <Checkbox checked={!!checked} disabled />,
 };
 
 type MdNode = {
@@ -103,6 +101,7 @@ type HastNode = {
   type?: string;
   tagName?: string;
   value?: string;
+  position?: { start: { line: number } };
   properties?: Record<string, unknown>;
   children?: HastNode[];
 };
@@ -166,26 +165,60 @@ function highlightBlocks() {
   };
 }
 
+function trimTaskSpace() {
+  return (tree: HastNode) => {
+    const visit = (node: HastNode) => {
+      node.children?.forEach((child, i) => {
+        const next = node.children![i + 1];
+        if (child.tagName !== "input") return;
+        child.properties!.dataLine = node.position?.start.line;
+        if (next?.type === "text") next.value = next.value?.trimStart();
+      });
+      node.children?.forEach(visit);
+    };
+    visit(tree);
+  };
+}
+
 const REMARK_PLUGINS = [remarkGfm, remarkBreaks, tagBlocks];
 
 const Block = memo(function Block({
   source,
   numbers,
+  line,
+  onToggleTask,
 }: {
   source: string;
   numbers: string;
+  line: number;
+  onToggleTask?: (line: number) => void;
 }) {
   const labels = JSON.parse(numbers) as Record<string, number>;
   const rehype = [
     highlightBlocks,
+    trimTaskSpace,
     ...(Object.keys(labels).length ? [[footnoteNumbers, labels]] : []),
   ] as Options["rehypePlugins"];
+  const components = useMemo<Components>(
+    () => ({
+      ...COMPONENTS,
+      input: ({ node, checked }) => (
+        <Checkbox
+          checked={!!checked}
+          onCheckedChange={() =>
+            onToggleTask?.(line + Number(node?.properties.dataLine) - 1)
+          }
+        />
+      ),
+    }),
+    [line, onToggleTask],
+  );
 
   return (
     <Markdown
       remarkPlugins={REMARK_PLUGINS}
       rehypePlugins={rehype}
-      components={COMPONENTS}
+      components={components}
     >
       {source}
     </Markdown>
@@ -205,7 +238,7 @@ const Footnote = memo(function Footnote({
       <div>
         <Markdown
           remarkPlugins={REMARK_PLUGINS}
-          rehypePlugins={[highlightBlocks]}
+          rehypePlugins={[highlightBlocks, trimTaskSpace]}
           components={COMPONENTS}
         >
           {body}
@@ -215,7 +248,13 @@ const Footnote = memo(function Footnote({
   );
 });
 
-function JournalMarkdown({ children }: { children: string }) {
+function JournalMarkdown({
+  children,
+  onToggleTask,
+}: {
+  children: string;
+  onToggleTask?: (line: number) => void;
+}) {
   const { t } = useTranslation();
   const source = useDeferredValue(children);
   const note = useMemo(() => splitNote(source), [source]);
@@ -231,7 +270,12 @@ function JournalMarkdown({ children }: { children: string }) {
           )}
           data-block-start={block.line}
         >
-          <Block source={block.source} numbers={block.numbers} />
+          <Block
+            source={block.source}
+            numbers={block.numbers}
+            line={block.line}
+            onToggleTask={onToggleTask}
+          />
         </div>
       ))}
       {note.footnotes.length > 0 && (

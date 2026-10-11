@@ -31,7 +31,7 @@ export default function TabMenu({
       />
       <Item onSelect={() => closeTab(paneId, id)}>
         <X />
-        {t("journal.closeTab", { name })}
+        {t("common.close")}
       </Item>
     </>
   );

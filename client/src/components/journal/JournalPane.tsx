@@ -29,6 +29,17 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
   const note = items.find((item) => item.id === pane.active);
   const focusEditor = useCallback(() => editor.current?.focus(), []);
 
+  const toggleTask = useCallback(
+    (line: number) => {
+      const lines = note!.content.split("\n");
+      lines[line - 1] = lines[line - 1].replace(/\[[ xX]\]/, (marker) =>
+        marker === "[ ]" ? "[x]" : "[ ]",
+      );
+      journal.setContent(note!.id, lines.join("\n"));
+    },
+    [journal, note],
+  );
+
   const captureAnchor = (e: React.SyntheticEvent) => {
     const box = scroller.current;
     if (!box || !(e.target as HTMLElement).closest("[data-reading-toggle]"))
@@ -84,7 +95,9 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
               <NoteTitle id={note.id} name={note.name} onEnter={focusEditor} />
               {pane.reading ? (
                 <article className="relative mx-auto w-full max-w-3xl px-6 pb-12">
-                  <JournalMarkdown>{note.content}</JournalMarkdown>
+                  <JournalMarkdown onToggleTask={toggleTask}>
+                    {note.content}
+                  </JournalMarkdown>
                 </article>
               ) : (
                 <JournalEditor

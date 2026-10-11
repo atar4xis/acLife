@@ -150,7 +150,7 @@ describe("journal tab keyboard", () => {
       "Move to a new pane on the right",
       "Move to a new pane above",
       "Move to a new pane below",
-      "Close Two",
+      "Close",
     ]);
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
@@ -187,7 +187,7 @@ describe("journal tab keyboard", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Close Only"]);
+    ).toEqual(["Close"]);
   });
 
   it("moves a tab to a new split with M and focuses it there", async () => {
@@ -223,7 +223,7 @@ describe("journal tab keyboard", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Move to pane 1", "Close Three"]);
+    ).toEqual(["Move to pane 1", "Close"]);
     await user.keyboard("{Enter}");
 
     await waitFor(() => expect(lists()).toHaveLength(1));
