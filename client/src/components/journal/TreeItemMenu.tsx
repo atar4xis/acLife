@@ -10,6 +10,7 @@ import {
   Folder,
   FolderInput,
   FolderTree,
+  Palette,
   PencilLine,
   Trash2,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { useTranslation } from "react-i18next";
 
 export type TreeItemMenuActions = {
   onRename: (id: string) => void;
+  onCustomize: (item: JournalItem) => void;
   onDelete: (item: JournalItem) => void;
   onMove: (item: JournalItem, parentId: string | null) => void;
 };
@@ -44,6 +46,10 @@ export default function TreeItemMenu({
       <Item onSelect={() => actions.onRename(item.id)}>
         <PencilLine />
         {t("journal.rename")}
+      </Item>
+      <Item onSelect={() => actions.onCustomize(item)}>
+        <Palette />
+        {t("journal.customize")}
       </Item>
       <Item onSelect={() => navigator.clipboard.writeText(item.id)}>
         <Clipboard />

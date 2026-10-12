@@ -1,3 +1,4 @@
+import CustomizeDialog from "@/components/journal/CustomizeDialog";
 import JournalToolbar from "@/components/journal/JournalToolbar";
 import JournalTree from "@/components/journal/JournalTree";
 import type { TreeActions } from "@/components/journal/TreeNodes";
@@ -60,6 +61,7 @@ export default function JournalSidebar() {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [customizingId, setCustomizingId] = useState<string | null>(null);
   const [folderId, setFolderId] = useState<string | null>(null);
 
   const searching = query.trim().length > 0;
@@ -89,6 +91,7 @@ export default function JournalSidebar() {
           journal.renameItem(item.id, name.trim());
       },
       onRename: (id) => setTimeout(() => setRenamingId(id)),
+      onCustomize: (item) => setTimeout(() => setCustomizingId(item.id)),
       onOpen: (item, newTab) => {
         setFolderId(item.parentId);
         journal.openNote(item.id, newTab);
@@ -141,6 +144,13 @@ export default function JournalSidebar() {
           />
         )}
       </SidebarGroup>
+      {customizingId && journal.itemsById.has(customizingId) && (
+        <CustomizeDialog
+          key={customizingId}
+          item={journal.itemsById.get(customizingId)!}
+          onClose={() => setCustomizingId(null)}
+        />
+      )}
     </SidebarContent>
   );
 }

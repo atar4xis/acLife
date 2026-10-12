@@ -321,7 +321,8 @@
       "subscription": "Subskrypcja",
       "security": "Konto i bezpieczeństwo",
       "sync": "Synchronizacja",
-      "application": "Aplikacja"
+      "application": "Aplikacja",
+      "journal": "Dziennik"
     },
     "sections": {
       "theme": "Motyw",
@@ -346,7 +347,9 @@
       "push-service": "Usługa push",
       "resync": "Ponowna synchronizacja",
       "updates": "Aktualizacje",
-      "about": "O aplikacji"
+      "about": "O aplikacji",
+      "journal-editor": "Edytor",
+      "note-defaults": "Domyślne ustawienia notatek"
     },
     "items": {
       "theme-mode": "Tryb motywu",
@@ -413,7 +416,19 @@
       "updates-changelog": "Lista zmian",
       "about-version": "Wersja",
       "about-website": "Adres URL klienta",
-      "about-server": "Adres URL serwera"
+      "about-server": "Adres URL serwera",
+      "journal-show-title": "Pokaż tytuł notatki",
+      "journal-line-numbers": "Pokaż numery wierszy",
+      "journal-status-bar": "Pokaż pasek stanu",
+      "journal-note-name": "Nazwa",
+      "journal-note-folder": "Lokalizacja",
+      "journal-note-icon": "Ikona notatki",
+      "journal-folder-icons": "Ikona folderu",
+      "journal-foreground": "Kolor tekstu",
+      "journal-background": "Kolor tła",
+      "journal-color-icons": "Użyj koloru tekstu dla ikon",
+      "journal-foreground-value": "Wartość koloru tekstu",
+      "journal-background-value": "Wartość koloru tła"
     },
     "colors": {
       "background": "Tło",
@@ -937,6 +952,15 @@
     },
     "movePane": "Przenieś do panelu {{n}}",
     "resize": "Zmień rozmiar paneli",
-    "tabMenu": "Akcje karty"
+    "tabMenu": "Akcje karty",
+    "wordCount": "Słowa: {{n}}",
+    "charCount": "Znaki: {{n}}",
+    "line": "Wiersz: {{n}}",
+    "column": "Kolumna: {{n}}",
+    "customize": "Dostosuj"
+  },
+  "iconPicker": {
+    "search": "Szukaj ikon...",
+    "empty": "Nie znaleziono ikon"
   }
 }

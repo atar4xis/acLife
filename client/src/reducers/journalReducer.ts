@@ -48,27 +48,41 @@ export function journalReducer(
   switch (action.type) {
     case "hydrate":
       return { ...state, ...action.state };
-    case "addItem":
+    case "addItem": {
+      const parentId = state.items.some((item) => item.id === action.parentId)
+        ? action.parentId
+        : null;
       return {
         ...state,
         items: [
           ...state.items,
           {
             id: action.id,
-            parentId: action.parentId,
+            parentId,
             type: action.kind,
             name: action.name,
             content: "",
             createdAt: action.now,
             updatedAt: action.now,
+            ...action.style,
           },
         ],
-        expanded: expand(state, action.parentId),
+        expanded: expand(state, parentId),
       };
+    }
     case "renameItem":
       return updateItem(state, action.id, {
         name: action.name,
         updatedAt: action.now,
+      });
+    case "customizeItem":
+      return updateItem(state, action.id, {
+        name: action.name,
+        updatedAt: action.now,
+        icon: action.style.icon,
+        color: action.style.color,
+        background: action.style.background,
+        colorIcon: action.style.colorIcon,
       });
     case "setContent":
       return updateItem(state, action.id, {

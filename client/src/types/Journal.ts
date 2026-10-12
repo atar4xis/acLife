@@ -8,7 +8,31 @@ export type JournalItem = {
   content: string;
   createdAt: number;
   updatedAt: number;
+  icon?: string;
+  color?: string;
+  background?: string;
+  colorIcon?: boolean;
 };
+
+export type ItemStyle = Pick<
+  JournalItem,
+  "icon" | "color" | "background" | "colorIcon"
+>;
+
+export interface JournalSettings {
+  journalShowTitle: boolean;
+  journalLineNumbers: boolean;
+  journalStatusBar: boolean;
+  journalNoteName: string;
+  journalNoteFolder: string;
+  journalNoteIcon: string;
+  journalFolderIcon: string;
+  journalForegroundEnabled: boolean;
+  journalForeground: string;
+  journalBackgroundEnabled: boolean;
+  journalBackground: string;
+  journalColorIcons: boolean;
+}
 
 export type JournalSort =
   | "name-asc"
@@ -78,9 +102,17 @@ export type JournalAction =
       kind: JournalItem["type"];
       name: string;
       parentId: string | null;
+      style: ItemStyle;
       now: number;
     }
   | { type: "renameItem"; id: string; name: string; now: number }
+  | {
+      type: "customizeItem";
+      id: string;
+      name: string;
+      style: ItemStyle;
+      now: number;
+    }
   | { type: "setContent"; id: string; content: string; now: number }
   | { type: "moveItem"; id: string; parentId: string | null; now: number }
   | { type: "removeItem"; id: string }

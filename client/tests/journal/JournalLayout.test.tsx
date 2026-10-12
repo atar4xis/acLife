@@ -47,6 +47,7 @@ vi.mock("../../src/components/ui/resizable.tsx", () => ({
 }));
 
 import JournalLayout from "../../src/components/journal/JournalLayout.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import {
   JournalProvider,
   useJournal,
@@ -72,10 +73,12 @@ describe("split sizes", () => {
       new DOMRect(0, 0, 100, 100),
     );
     render(
-      <JournalProvider>
-        <Probe />
-        <JournalLayout />
-      </JournalProvider>,
+      <SettingsStoreProvider>
+        <JournalProvider>
+          <Probe />
+          <JournalLayout />
+        </JournalProvider>
+      </SettingsStoreProvider>,
     );
     await act(() => new Promise((resolve) => setTimeout(resolve)));
 
@@ -108,10 +111,12 @@ describe("split sizes", () => {
       new DOMRect(0, 0, 100, 100),
     );
     render(
-      <JournalProvider>
-        <Probe />
-        <JournalLayout />
-      </JournalProvider>,
+      <SettingsStoreProvider>
+        <JournalProvider>
+          <Probe />
+          <JournalLayout />
+        </JournalProvider>
+      </SettingsStoreProvider>,
     );
     await act(() => new Promise((resolve) => setTimeout(resolve)));
     act(() => {

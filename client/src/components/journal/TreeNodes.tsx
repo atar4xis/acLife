@@ -2,6 +2,7 @@ import TreeItemMenu, {
   type TreeItemMenuActions,
 } from "@/components/journal/TreeItemMenu";
 import { CONTEXT_PARTS, DROPDOWN_PARTS } from "@/components/journal/menuParts";
+import ItemIcon from "@/components/journal/ItemIcon";
 import RenameInput from "@/components/journal/RenameInput";
 import {
   ContextMenu,
@@ -18,7 +19,7 @@ import { isFolderOpen } from "@/lib/journal/item";
 import { focusRow } from "@/lib/journal/focus";
 import { cn } from "@/lib/utils";
 import type { JournalItem, JournalTreeNode } from "@/types/Journal";
-import { EllipsisVertical, FileText, Folder, FolderOpen } from "lucide-react";
+import { EllipsisVertical } from "lucide-react";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -56,8 +57,6 @@ const TreeRow = memo(function TreeRow({
   const isFolder = item.type === "folder";
   const open = isFolderOpen(item, view.expanded, searching);
   const active = item.id === view.activeId;
-  const FolderIcon = open ? FolderOpen : Folder;
-  const Icon = isFolder ? FolderIcon : FileText;
   const refocus = (e: Event) => {
     e.preventDefault();
     focusRow(item.id);
@@ -69,7 +68,7 @@ const TreeRow = memo(function TreeRow({
         className="bg-sidebar-accent flex w-full min-w-0 items-center gap-2 rounded-md py-1.5 pe-2 text-sm"
         style={{ paddingInlineStart: `${depth * 12 + 8}px` }}
       >
-        <Icon className="size-4 shrink-0" />
+        <ItemIcon item={item} open={open} className="size-4 shrink-0" />
         <RenameInput
           name={item.name}
           onDone={(name) => actions.onRenamed(item, name)}
@@ -86,11 +85,24 @@ const TreeRow = memo(function TreeRow({
         tabIndex={item.id === view.tabStopId ? 0 : -1}
         {...actions.dragProps(item)}
         className={cn(
-          "hover:bg-sidebar-accent flex w-full min-w-0 select-none items-center [-webkit-touch-callout:none] gap-2 rounded-md py-1.5 pe-2 text-start text-sm",
-          active && "bg-sidebar-accent",
+          "flex w-full min-w-0 select-none items-center [-webkit-touch-callout:none] gap-2 rounded-md py-1.5 pe-2 text-start text-sm",
+          !item.background && "hover:bg-sidebar-accent",
+          !item.background && active && "bg-sidebar-accent",
+          item.background && active && "bg-(--item-bg-strong)",
+          item.background &&
+            !active &&
+            "bg-(--item-bg) hover:bg-(--item-bg-strong)",
           dropTarget === item.id && "ring-primary ring-1",
         )}
-        style={{ paddingInlineStart: `${depth * 12 + 8}px` }}
+        style={
+          {
+            paddingInlineStart: `${depth * 12 + 8}px`,
+            ...(item.background && {
+              "--item-bg": `color-mix(in srgb, ${item.background} 25%, transparent)`,
+              "--item-bg-strong": `color-mix(in srgb, ${item.background} 50%, transparent)`,
+            }),
+          } as React.CSSProperties
+        }
         onFocus={() => view.onFocusRow(item.id)}
         onClick={(e) =>
           isFolder
@@ -103,8 +115,10 @@ const TreeRow = memo(function TreeRow({
           e.button === 1 && !isFolder && actions.onOpen(item, true)
         }
       >
-        <Icon className="size-4 shrink-0" />
-        <span className="truncate">{item.name}</span>
+        <ItemIcon item={item} open={open} className="size-4 shrink-0" />
+        <span className="truncate" style={{ color: item.color }}>
+          {item.name}
+        </span>
       </button>
     );
 

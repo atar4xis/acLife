@@ -307,7 +307,8 @@
       "subscription": "Abonnement",
       "security": "Compte et sécurité",
       "sync": "Synchronisation",
-      "application": "Application"
+      "application": "Application",
+      "journal": "Journal"
     },
     "sections": {
       "theme": "Thème",
@@ -332,7 +333,9 @@
       "push-service": "Service push",
       "resync": "Resynchronisation",
       "updates": "Mises à jour",
-      "about": "À propos"
+      "about": "À propos",
+      "journal-editor": "Éditeur",
+      "note-defaults": "Valeurs par défaut des notes"
     },
     "items": {
       "theme-mode": "Mode du thème",
@@ -399,7 +402,19 @@
       "updates-changelog": "Journal des modifications",
       "about-version": "Version",
       "about-website": "URL du client",
-      "about-server": "URL du serveur"
+      "about-server": "URL du serveur",
+      "journal-show-title": "Afficher le titre de la note",
+      "journal-line-numbers": "Afficher les numéros de ligne",
+      "journal-status-bar": "Afficher la barre d'état",
+      "journal-note-name": "Nom",
+      "journal-note-folder": "Emplacement",
+      "journal-note-icon": "Icône de note",
+      "journal-folder-icons": "Icône de dossier",
+      "journal-foreground": "Couleur de premier plan",
+      "journal-background": "Couleur d'arrière-plan",
+      "journal-color-icons": "Utiliser la couleur de premier plan pour les icônes",
+      "journal-foreground-value": "Valeur de la couleur de premier plan",
+      "journal-background-value": "Valeur de la couleur d'arrière-plan"
     },
     "colors": {
       "background": "Arrière-plan",
@@ -889,6 +904,15 @@
     },
     "movePane": "Déplacer vers le volet {{n}}",
     "resize": "Redimensionner les volets",
-    "tabMenu": "Actions de l'onglet"
+    "tabMenu": "Actions de l'onglet",
+    "wordCount": "Mots : {{n}}",
+    "charCount": "Caractères : {{n}}",
+    "line": "Ligne : {{n}}",
+    "column": "Colonne : {{n}}",
+    "customize": "Personnaliser"
+  },
+  "iconPicker": {
+    "search": "Rechercher des icônes...",
+    "empty": "Aucune icône trouvée"
   }
 }

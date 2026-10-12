@@ -19,6 +19,7 @@ import {
 } from "./helpers.tsx";
 import { encryptJson } from "../../src/lib/crypt.ts";
 import { decryptJournal } from "../../src/lib/journal/crypt.ts";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import {
   JournalProvider,
   useJournal,
@@ -131,9 +132,11 @@ describe("journal persistence", () => {
     };
     const mount = () =>
       render(
-        <JournalProvider>
-          <Probe />
-        </JournalProvider>,
+        <SettingsStoreProvider>
+          <JournalProvider>
+            <Probe />
+          </JournalProvider>
+        </SettingsStoreProvider>,
       );
     const user = userEvent.setup();
 

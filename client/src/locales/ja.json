@@ -301,7 +301,8 @@
       "subscription": "サブスクリプション",
       "security": "アカウントとセキュリティ",
       "sync": "同期",
-      "application": "アプリ"
+      "application": "アプリ",
+      "journal": "ジャーナル"
     },
     "sections": {
       "theme": "テーマ",
@@ -326,7 +327,9 @@
       "push-service": "プッシュサービス",
       "resync": "再同期",
       "updates": "アップデート",
-      "about": "このアプリについて"
+      "about": "このアプリについて",
+      "journal-editor": "エディタ",
+      "note-defaults": "ノートの初期設定"
     },
     "items": {
       "theme-mode": "テーマモード",
@@ -393,7 +396,19 @@
       "updates-changelog": "変更履歴",
       "about-version": "バージョン",
       "about-website": "クライアントURL",
-      "about-server": "サーバーURL"
+      "about-server": "サーバーURL",
+      "journal-show-title": "ノートのタイトルを表示",
+      "journal-line-numbers": "行番号を表示",
+      "journal-status-bar": "ステータスバーを表示",
+      "journal-note-name": "名前",
+      "journal-note-folder": "場所",
+      "journal-note-icon": "ノートのアイコン",
+      "journal-folder-icons": "フォルダのアイコン",
+      "journal-foreground": "文字色",
+      "journal-background": "背景色",
+      "journal-color-icons": "アイコンにも文字色を使う",
+      "journal-foreground-value": "文字色の値",
+      "journal-background-value": "背景色の値"
     },
     "colors": {
       "background": "背景",
@@ -867,6 +882,15 @@
     },
     "movePane": "ペイン{{n}}に移動",
     "resize": "ペインのサイズを変更",
-    "tabMenu": "タブの操作"
+    "tabMenu": "タブの操作",
+    "wordCount": "単語数: {{n}}",
+    "charCount": "文字数: {{n}}",
+    "line": "行: {{n}}",
+    "column": "列: {{n}}",
+    "customize": "カスタマイズ"
+  },
+  "iconPicker": {
+    "search": "アイコンを検索...",
+    "empty": "アイコンが見つかりません"
   }
 }

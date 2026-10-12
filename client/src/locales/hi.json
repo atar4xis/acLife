@@ -313,7 +313,8 @@
       "subscription": "सदस्यता",
       "security": "खाता और सुरक्षा",
       "sync": "सिंक",
-      "application": "एप्लिकेशन"
+      "application": "एप्लिकेशन",
+      "journal": "जर्नल"
     },
     "sections": {
       "theme": "थीम",
@@ -338,7 +339,9 @@
       "push-service": "पुश सेवा",
       "resync": "पुनः सिंक",
       "updates": "अपडेट",
-      "about": "ऐप के बारे में"
+      "about": "ऐप के बारे में",
+      "journal-editor": "संपादक",
+      "note-defaults": "नोट की डिफ़ॉल्ट सेटिंग्स"
     },
     "items": {
       "theme-mode": "थीम मोड",
@@ -405,7 +408,19 @@
       "updates-changelog": "बदलावों की सूची",
       "about-version": "संस्करण",
       "about-website": "क्लाइंट URL",
-      "about-server": "सर्वर URL"
+      "about-server": "सर्वर URL",
+      "journal-show-title": "नोट का शीर्षक दिखाएँ",
+      "journal-line-numbers": "पंक्ति संख्याएँ दिखाएँ",
+      "journal-status-bar": "स्टेटस बार दिखाएँ",
+      "journal-note-name": "नाम",
+      "journal-note-folder": "स्थान",
+      "journal-note-icon": "नोट आइकन",
+      "journal-folder-icons": "फ़ोल्डर आइकन",
+      "journal-foreground": "अग्रभूमि रंग",
+      "journal-background": "पृष्ठभूमि रंग",
+      "journal-color-icons": "आइकनों के लिए अग्रभूमि रंग का उपयोग करें",
+      "journal-foreground-value": "अग्रभूमि रंग का मान",
+      "journal-background-value": "पृष्ठभूमि रंग का मान"
     },
     "colors": {
       "background": "पृष्ठभूमि",
@@ -895,6 +910,15 @@
     },
     "movePane": "पैनल {{n}} में ले जाएँ",
     "resize": "पैनलों का आकार बदलें",
-    "tabMenu": "टैब की कार्रवाइयाँ"
+    "tabMenu": "टैब की कार्रवाइयाँ",
+    "wordCount": "शब्द: {{n}}",
+    "charCount": "वर्ण: {{n}}",
+    "line": "पंक्ति: {{n}}",
+    "column": "स्तंभ: {{n}}",
+    "customize": "अनुकूलित करें"
+  },
+  "iconPicker": {
+    "search": "आइकन खोजें...",
+    "empty": "कोई आइकन नहीं मिला"
   }
 }

@@ -1,13 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildTree,
+  colorChanged,
   canMoveItem,
   descendantIds,
   filterTree,
+  folderTargets,
+  itemIconName,
+  itemStyle,
   moveTargets,
+  noteName,
   toOutline,
   visibleRows,
 } from "../../src/lib/journal/item.ts";
+import { defaultJournalSettings } from "../../src/lib/settingsDefaults.ts";
 import type { JournalItem } from "../../src/types/Journal.ts";
 
 const item = (
@@ -202,6 +208,19 @@ describe("toOutline", () => {
     expect(next[1]).toBe(outline[1]);
   });
 
+  it.each([
+    ["icon", "Star"],
+    ["color", "#111111"],
+    ["background", "#222222"],
+    ["colorIcon", false],
+  ])("replaces the item when its %s changed", (key, value) => {
+    const outline = toOutline([], items, false);
+    const next = toOutline(outline, [{ ...items[0], [key]: value }, items[1]], false);
+
+    expect(next[0]).toMatchObject({ [key]: value });
+    expect(next[1]).toBe(outline[1]);
+  });
+
   it("tracks modified time only when sorting by it", () => {
     const outline = toOutline([], items, true);
     const touched = [{ ...items[0], updatedAt: 9 }, items[1]];
@@ -228,5 +247,68 @@ describe("toOutline", () => {
 
     expect(toOutline(outline, [items[0]], false)).toHaveLength(1);
     expect(toOutline(outline, [items[1], items[0]], false)[0]).toBe(outline[1]);
+  });
+});
+
+describe("note defaults", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("formats dates in braces", () => {
+    vi.useFakeTimers().setSystemTime(new Date("2026-03-04T10:00:00Z"));
+
+    expect(noteName(defaultJournalSettings.journalNoteName)).toBe("4 Mar 2026");
+    expect(noteName("Log {YYYY-MM-DD}")).toBe("Log 2026-03-04");
+    expect(noteName("Log [YYYY]")).toBe("Log [YYYY]");
+    expect(noteName("{DD}/{MM}/{YY} notes")).toBe("04/03/26 notes");
+    expect(noteName("   ")).toBe("Untitled");
+  });
+
+  it("stores only what differs from the built-in look", () => {
+    const base = defaultJournalSettings;
+
+    expect(itemStyle("note", base)).toEqual({});
+    expect(
+      itemStyle("folder", {
+        ...base,
+        journalFolderIcon: "Archive",
+        journalForegroundEnabled: true,
+        journalForeground: "#111111",
+        journalColorIcons: false,
+        journalBackgroundEnabled: true,
+        journalBackground: "#eeeeee",
+      }),
+    ).toEqual({
+      icon: "Archive",
+      color: "#111111",
+      colorIcon: false,
+      background: "#eeeeee",
+    });
+  });
+
+  it("lists the root and every folder with its depth", () => {
+    const targets = folderTargets(items, "name-asc");
+
+    expect(targets[0]).toEqual({ folder: null, depth: 0 });
+    expect(targets.every(({ folder }) => !folder || folder.type === "folder")).toBe(true);
+    expect(targets.length).toBeGreaterThan(1);
+  });
+
+  it("only the default folder icon has an open state", () => {
+    const plain = item("f", "folder", null);
+    const custom = item("g", "folder", null, { icon: "Archive" });
+
+    expect(itemIconName(plain, false)).toBe("Folder");
+    expect(itemIconName(plain, true)).toBe("FolderOpen");
+    expect(itemIconName(custom, false)).toBe("Archive");
+    expect(itemIconName(custom, true)).toBe("Archive");
+  });
+
+  it("ignores the color while its switch is off", () => {
+    expect(colorChanged(false, "#111111", false, "#222222")).toBe(false);
+    expect(colorChanged(true, "#111111", false, "#111111")).toBe(true);
+    expect(colorChanged(true, "#111111", true, "#222222")).toBe(true);
+    expect(colorChanged(true, "#111111", true, "#111111")).toBe(false);
   });
 });

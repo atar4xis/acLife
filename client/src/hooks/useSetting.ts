@@ -1,8 +1,10 @@
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
+import { useJournalSettings } from "@/context/JournalSettingsContext";
 import { useSecuritySettings } from "@/context/SecuritySettingsContext";
 import { useTheme } from "@/components/ThemeProvider";
 import {
   defaultCalendarSettings,
+  defaultJournalSettings,
   defaultSecuritySettings,
   defaultSettings,
   defaultThemeSettings,
@@ -19,6 +21,18 @@ export interface SettingBinding<K extends SettingKey> {
 
 function useCalendarSetting<K extends SettingKey>(key: K) {
   const settings = useCalendarSettings((s) => ({
+    value: s[key as keyof typeof s],
+    setSetting: s.setSetting,
+  }));
+
+  return {
+    value: settings.value,
+    set: (next: unknown) => settings.setSetting(key as never, next as never),
+  };
+}
+
+function useJournalSetting<K extends SettingKey>(key: K) {
+  const settings = useJournalSettings((s) => ({
     value: s[key as keyof typeof s],
     setSetting: s.setSetting,
   }));
@@ -51,14 +65,17 @@ function useSecuritySetting(key: keyof typeof defaultSecuritySettings) {
   return { value: security[key], set: setters[key] };
 }
 
+function pickDomainSetting(key: SettingKey) {
+  if (key in defaultCalendarSettings) return useCalendarSetting;
+  if (key in defaultJournalSettings) return useJournalSetting;
+  if (key in defaultThemeSettings) return useThemeSetting;
+
+  return useSecuritySetting;
+}
+
 // key is static per call site, so the same hook runs on every render
 export function useSetting<K extends SettingKey>(key: K): SettingBinding<K> {
-  const useDomainSetting =
-    key in defaultCalendarSettings
-      ? useCalendarSetting
-      : key in defaultThemeSettings
-        ? useThemeSetting
-        : useSecuritySetting;
+  const useDomainSetting = pickDomainSetting(key);
 
   const { value, set } = (
     useDomainSetting as (key: K) => {

@@ -305,7 +305,8 @@
       "subscription": "Suscripción",
       "security": "Cuenta y seguridad",
       "sync": "Sincronización",
-      "application": "Aplicación"
+      "application": "Aplicación",
+      "journal": "Diario"
     },
     "sections": {
       "theme": "Tema",
@@ -330,7 +331,9 @@
       "push-service": "Servicio push",
       "resync": "Resincronización",
       "updates": "Actualizaciones",
-      "about": "Acerca de"
+      "about": "Acerca de",
+      "journal-editor": "Editor",
+      "note-defaults": "Valores predeterminados de las notas"
     },
     "items": {
       "theme-mode": "Modo del tema",
@@ -397,7 +400,19 @@
       "updates-changelog": "Registro de cambios",
       "about-version": "Versión",
       "about-website": "URL del cliente",
-      "about-server": "URL del servidor"
+      "about-server": "URL del servidor",
+      "journal-show-title": "Mostrar el título de la nota",
+      "journal-line-numbers": "Mostrar números de línea",
+      "journal-status-bar": "Mostrar barra de estado",
+      "journal-note-name": "Nombre",
+      "journal-note-folder": "Ubicación",
+      "journal-note-icon": "Icono de nota",
+      "journal-folder-icons": "Icono de carpeta",
+      "journal-foreground": "Color de primer plano",
+      "journal-background": "Color de fondo",
+      "journal-color-icons": "Usar el color de primer plano para los iconos",
+      "journal-foreground-value": "Valor del color de primer plano",
+      "journal-background-value": "Valor del color de fondo"
     },
     "colors": {
       "background": "Fondo",
@@ -887,6 +902,15 @@
     },
     "movePane": "Mover al panel {{n}}",
     "resize": "Cambiar el tamaño de los paneles",
-    "tabMenu": "Acciones de la pestaña"
+    "tabMenu": "Acciones de la pestaña",
+    "wordCount": "Palabras: {{n}}",
+    "charCount": "Caracteres: {{n}}",
+    "line": "Línea: {{n}}",
+    "column": "Columna: {{n}}",
+    "customize": "Personalizar"
+  },
+  "iconPicker": {
+    "search": "Buscar iconos...",
+    "empty": "No se encontraron iconos"
   }
 }

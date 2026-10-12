@@ -11,6 +11,7 @@ import {
   EditorView,
   drawSelection,
   keymap,
+  lineNumbers as lineNumbersExtension,
   placeholder as placeholderExtension,
 } from "@codemirror/view";
 import { GFM } from "@lezer/markdown";
@@ -33,6 +34,8 @@ const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
 export default function JournalEditor({
   value,
   source = false,
+  lineNumbers = false,
+  onCursor,
   placeholder,
   label,
   onChange,
@@ -40,6 +43,8 @@ export default function JournalEditor({
 }: {
   value: string;
   source?: boolean;
+  lineNumbers?: boolean;
+  onCursor?: (line: number, column: number) => void;
   placeholder: string;
   label: string;
   onChange: (value: string) => void;
@@ -49,9 +54,16 @@ export default function JournalEditor({
   const view = useRef<EditorView | null>(null);
   const initialValue = useEffectEvent(() => value);
   const emit = useEffectEvent(onChange);
+  const emitCursor = useEffectEvent((state: EditorState) => {
+    const head = state.selection.main.head;
+    const line = state.doc.lineAt(head);
+    onCursor?.(line.number, head - line.from + 1);
+  });
   const pending = useRef<string[]>([]);
   const sourceSlot = useRef(new Compartment());
   const initialSource = useEffectEvent(() => source);
+  const lineNumbersSlot = useRef(new Compartment());
+  const initialLineNumbers = useEffectEvent(() => lineNumbers);
 
   useImperativeHandle(ref, () => ({
     focus: () => view.current?.focus(),
@@ -115,11 +127,16 @@ export default function JournalEditor({
           markdown({ extensions: [GFM, singleTilde, footnotes] }),
           livePreview,
           sourceSlot.current.of(sourceMode.of(initialSource())),
+          lineNumbersSlot.current.of(
+            initialLineNumbers() ? lineNumbersExtension() : [],
+          ),
           journalTheme,
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({ "aria-label": label }),
           placeholderExtension(placeholder),
           EditorView.updateListener.of((update) => {
+            if (update.selectionSet || update.docChanged)
+              emitCursor(update.state);
             if (
               update.docChanged &&
               !update.transactions.some((tr) => tr.annotation(external))
@@ -133,6 +150,7 @@ export default function JournalEditor({
       }),
     });
     view.current = editor;
+    emitCursor(editor.state);
 
     return () => {
       editor.destroy();
@@ -145,6 +163,14 @@ export default function JournalEditor({
       effects: sourceSlot.current.reconfigure(sourceMode.of(source)),
     });
   }, [source]);
+
+  useEffect(() => {
+    view.current!.dispatch({
+      effects: lineNumbersSlot.current.reconfigure(
+        lineNumbers ? lineNumbersExtension() : [],
+      ),
+    });
+  }, [lineNumbers]);
 
   useEffect(() => {
     const echo = pending.current.indexOf(value);

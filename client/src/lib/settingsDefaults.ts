@@ -1,4 +1,5 @@
 import type { CalendarSettings } from "@/types/calendar/Settings";
+import type { JournalSettings } from "@/types/Journal";
 import type { Theme, ThemeColors, ThemePreset } from "@/types/Theme";
 import type { AutoLockOption, UnlockMethod } from "@/types/Storage";
 import { getDeviceTimezone } from "@/lib/calendar/timezone";
@@ -64,6 +65,21 @@ export const defaultCalendarSettings: CalendarSettings = {
   lastSeenDeviceTimezone: deviceTimezone,
 };
 
+export const defaultJournalSettings: JournalSettings = {
+  journalShowTitle: true,
+  journalLineNumbers: false,
+  journalStatusBar: true,
+  journalNoteName: "{D MMM YYYY}",
+  journalNoteFolder: "",
+  journalNoteIcon: "FileText",
+  journalFolderIcon: "Folder",
+  journalForegroundEnabled: false,
+  journalForeground: "#2563eb",
+  journalBackgroundEnabled: false,
+  journalBackground: "#e5e5e5",
+  journalColorIcons: true,
+};
+
 export const defaultThemeSettings: {
   theme: Theme;
   fontFamily: string;
@@ -87,6 +103,7 @@ export const defaultSecuritySettings: {
 // everything persisted by the settings store
 export const defaultStoreSettings = {
   ...defaultCalendarSettings,
+  ...defaultJournalSettings,
   ...defaultThemeSettings,
   colors: {} as ThemeColors,
   presets: [] as ThemePreset[],
@@ -100,6 +117,7 @@ export type StoreKey = keyof StoreSettings;
 // everything that has a control in the settings dialog
 export const defaultSettings = {
   ...defaultCalendarSettings,
+  ...defaultJournalSettings,
   ...defaultThemeSettings,
   ...defaultSecuritySettings,
 };

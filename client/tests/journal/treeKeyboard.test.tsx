@@ -355,9 +355,16 @@ describe("journal tree keyboard", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Rename", "Copy ID", "Move to", "Open in new pane", "Delete"]);
+    ).toEqual([
+      "Rename",
+      "Customize",
+      "Copy ID",
+      "Move to",
+      "Open in new pane",
+      "Delete",
+    ]);
 
-    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowRight}");
+    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowRight}");
     const items = within(screen.getAllByRole("menu").at(-1)!).getAllByRole(
       "menuitem",
     );
@@ -407,7 +414,7 @@ describe("journal tree keyboard", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Rename", "Copy ID", "Open in new pane", "Delete"]);
+    ).toEqual(["Rename", "Customize", "Copy ID", "Open in new pane", "Delete"]);
   });
 
   it("moves through the Move to entry of the item menu", async () => {
@@ -419,7 +426,7 @@ describe("journal tree keyboard", () => {
 
     await user.keyboard("{Shift>}{F10}{/Shift}");
     await screen.findByRole("menu");
-    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowRight}");
+    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowRight}");
     await user.keyboard("{ArrowDown}{Enter}");
 
     await waitFor(() => expect(focused()).toBe(treeItem("Loose")));
@@ -437,7 +444,7 @@ describe("journal tree keyboard", () => {
 
     await user.keyboard("{Shift>}{F10}{/Shift}");
     await screen.findByRole("menu");
-    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowRight}");
+    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowRight}");
     expect(
       screen.getByRole("menuitem", { name: "Move to a new pane on the left" }),
     ).toBeTruthy();

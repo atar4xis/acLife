@@ -1,14 +1,21 @@
 import { t as translate } from "@/i18n";
 import { useJournalPersistence } from "@/hooks/journal/useJournalPersistence";
 import { useJournalSync } from "@/hooks/journal/useJournalSync";
+import { useSettingsStore } from "@/context/SettingsStoreContext";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { EMPTY_ARRAY } from "@/lib/constants";
-import { MODIFIED_SORT_SETTLE_MS, toOutline } from "@/lib/journal/item";
+import {
+  itemStyle,
+  MODIFIED_SORT_SETTLE_MS,
+  noteName,
+  toOutline,
+} from "@/lib/journal/item";
 import { isNewTab } from "@/lib/journal/layout";
 import { createJournalState, journalReducer } from "@/reducers/journalReducer";
 import type { WithChildren } from "@/types/Props";
 import type {
   DropZone,
+  ItemStyle,
   JournalDrag,
   JournalItem,
   JournalSort,
@@ -38,6 +45,7 @@ type JournalActions = {
   addItem: (type: JournalItem["type"], parentId: string | null) => string;
   addTab: (paneId: string) => void;
   renameItem: (id: string, name: string) => void;
+  customizeItem: (id: string, name: string, style: ItemStyle) => void;
   removeItem: (id: string) => void;
   setContent: (id: string, content: string) => void;
   moveItem: (id: string, parentId: string | null) => void;
@@ -63,6 +71,7 @@ export function JournalProvider({ children }: WithChildren) {
     undefined,
     createJournalState,
   );
+  const settingsStore = useSettingsStore();
   const [drag, setDrag] = useState<JournalDrag | null>(null);
   const dragRef = useRef<JournalDrag | null>(null);
 
@@ -81,15 +90,20 @@ export function JournalProvider({ children }: WithChildren) {
     return {
       setSort: (sort) => dispatch({ type: "setSort", sort }),
       addItem: (kind, parentId) => {
+        const settings = settingsStore.getSnapshot();
         const id = crypto.randomUUID();
         dispatch({
           type: "addItem",
           id,
           kind,
-          parentId,
-          name: translate(
-            kind === "note" ? "journal.untitledNote" : "journal.untitledFolder",
-          ),
+          parentId:
+            parentId ??
+            (kind === "note" ? settings.journalNoteFolder || null : null),
+          name:
+            kind === "note"
+              ? noteName(settings.journalNoteName)
+              : translate("journal.untitledFolder"),
+          style: itemStyle(kind, settings),
           now: Date.now(),
         });
         return id;
@@ -103,6 +117,8 @@ export function JournalProvider({ children }: WithChildren) {
       addTab: (paneId) => dispatch({ type: "addTab", paneId }),
       renameItem: (id, name) =>
         dispatch({ type: "renameItem", id, name, now: Date.now() }),
+      customizeItem: (id, name, style) =>
+        dispatch({ type: "customizeItem", id, name, style, now: Date.now() }),
       removeItem: (id) => dispatch({ type: "removeItem", id }),
       setContent: (id, content) =>
         dispatch({ type: "setContent", id, content, now: Date.now() }),
@@ -131,7 +147,7 @@ export function JournalProvider({ children }: WithChildren) {
       setAllExpanded: (expanded) =>
         dispatch({ type: "setAllExpanded", expanded }),
     };
-  }, []);
+  }, [settingsStore]);
 
   const { sort, workspace, expanded, splitSizes } = state;
   const [outline, setOutline] = useState<JournalItem[]>(EMPTY_ARRAY);

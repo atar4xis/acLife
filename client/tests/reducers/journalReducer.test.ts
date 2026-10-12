@@ -24,6 +24,7 @@ const add = (
   kind,
   name: id,
   parentId,
+  style: {},
   now,
 });
 
@@ -66,6 +67,53 @@ describe("journalReducer", () => {
       },
     ]);
     expect(state.expanded.size).toBe(0);
+  });
+
+  it("addItem puts an item with an unknown parent at the root", () => {
+    const state = journalReducer(createJournalState(), add("n", "note", "gone"));
+
+    expect(state.items[0].parentId).toBeNull();
+  });
+
+  it("addItem keeps the appearance it is given", () => {
+    const state = journalReducer(createJournalState(), {
+      type: "addItem",
+      id: "n",
+      kind: "note",
+      name: "n",
+      parentId: null,
+      style: { icon: "star", color: "#111111" },
+      now: 1,
+    });
+
+    expect(state.items[0]).toMatchObject({ icon: "star", color: "#111111" });
+  });
+
+  it("customizeItem renames and replaces the appearance, clearing what is absent", () => {
+    const base = journalReducer(createJournalState(), {
+      type: "addItem",
+      id: "n",
+      kind: "note",
+      name: "n",
+      parentId: null,
+      style: { icon: "star", color: "#111111" },
+      now: 1,
+    });
+    const state = journalReducer(base, {
+      type: "customizeItem",
+      id: "n",
+      name: "Renamed",
+      style: { background: "#222222" },
+      now: 5,
+    });
+
+    expect(state.items[0]).toMatchObject({
+      name: "Renamed",
+      background: "#222222",
+      updatedAt: 5,
+    });
+    expect(state.items[0].icon).toBeUndefined();
+    expect(state.items[0].color).toBeUndefined();
   });
 
   it("addItem expands the parent folder", () => {

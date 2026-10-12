@@ -332,7 +332,8 @@
       "subscription": "الاشتراك",
       "security": "الحساب والأمان",
       "sync": "المزامنة",
-      "application": "التطبيق"
+      "application": "التطبيق",
+      "journal": "اليوميات"
     },
     "sections": {
       "theme": "السمة",
@@ -357,7 +358,9 @@
       "push-service": "خدمة الإشعارات الفورية",
       "resync": "إعادة المزامنة",
       "updates": "التحديثات",
-      "about": "حول التطبيق"
+      "about": "حول التطبيق",
+      "journal-editor": "المحرر",
+      "note-defaults": "الإعدادات الافتراضية للملاحظات"
     },
     "items": {
       "theme-mode": "وضع السمة",
@@ -424,7 +427,19 @@
       "updates-changelog": "سجل التغييرات",
       "about-version": "الإصدار",
       "about-website": "عنوان URL للعميل",
-      "about-server": "عنوان URL للخادم"
+      "about-server": "عنوان URL للخادم",
+      "journal-show-title": "إظهار عنوان الملاحظة",
+      "journal-line-numbers": "إظهار أرقام الأسطر",
+      "journal-status-bar": "إظهار شريط الحالة",
+      "journal-note-name": "الاسم",
+      "journal-note-folder": "الموقع",
+      "journal-note-icon": "أيقونة الملاحظة",
+      "journal-folder-icons": "أيقونة المجلد",
+      "journal-foreground": "لون الخط",
+      "journal-background": "لون الخلفية",
+      "journal-color-icons": "استخدام لون الخط للأيقونات",
+      "journal-foreground-value": "قيمة لون الخط",
+      "journal-background-value": "قيمة لون الخلفية"
     },
     "colors": {
       "background": "الخلفية",
@@ -976,6 +991,15 @@
     },
     "movePane": "نقل إلى اللوحة {{n}}",
     "resize": "تغيير حجم اللوحات",
-    "tabMenu": "إجراءات علامة التبويب"
+    "tabMenu": "إجراءات علامة التبويب",
+    "wordCount": "الكلمات: {{n}}",
+    "charCount": "الأحرف: {{n}}",
+    "line": "السطر: {{n}}",
+    "column": "العمود: {{n}}",
+    "customize": "تخصيص"
+  },
+  "iconPicker": {
+    "search": "ابحث عن الأيقونات...",
+    "empty": "لم يتم العثور على أيقونات"
   }
 }

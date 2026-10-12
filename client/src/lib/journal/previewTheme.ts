@@ -1,7 +1,12 @@
 import { EditorView } from "@codemirror/view";
 
 export const journalTheme = EditorView.theme({
-  "&": { backgroundColor: "transparent", color: "inherit", flex: "1" },
+  "&": {
+    backgroundColor: "transparent",
+    color: "inherit",
+    flex: "1",
+    containerType: "inline-size",
+  },
   "&.cm-focused": { outline: "none" },
   ".cm-scroller": {
     fontFamily: "inherit",
@@ -14,6 +19,20 @@ export const journalTheme = EditorView.theme({
     padding: "0 1.5rem 3rem",
     caretColor: "var(--foreground)",
   },
+  ".cm-gutters": {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "var(--muted-foreground)",
+    display: "none !important",
+    position: "absolute !important",
+    left: "calc(50% - 24rem + 0.5rem)",
+    transform: "translateX(-100%)",
+    pointerEvents: "none",
+  },
+  "@container (min-width: 56rem)": {
+    ".cm-gutters": { display: "flex !important" },
+  },
+  ".cm-gutterElement": { overflow: "hidden" },
   ".cm-line": { padding: "0" },
   ".cm-cursor": { borderLeftColor: "var(--foreground)" },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground":

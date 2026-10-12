@@ -329,6 +329,39 @@ export const settingsCategories: SettingsCategory[] = [
     ],
   },
   {
+    id: "journal",
+    sections: [
+      {
+        id: "journal-editor",
+        items: [
+          { id: "journal-show-title", settingKey: "journalShowTitle" },
+          { id: "journal-line-numbers", settingKey: "journalLineNumbers" },
+          { id: "journal-status-bar", settingKey: "journalStatusBar" },
+        ],
+      },
+      {
+        id: "note-defaults",
+        items: [
+          { id: "journal-note-name", settingKey: "journalNoteName" },
+          { id: "journal-note-folder", settingKey: "journalNoteFolder" },
+          { id: "journal-note-icon", settingKey: "journalNoteIcon" },
+          { id: "journal-folder-icons", settingKey: "journalFolderIcon" },
+          {
+            id: "journal-foreground",
+            settingKey: "journalForegroundEnabled",
+          },
+          { id: "journal-foreground-value", settingKey: "journalForeground" },
+          {
+            id: "journal-background",
+            settingKey: "journalBackgroundEnabled",
+          },
+          { id: "journal-background-value", settingKey: "journalBackground" },
+          { id: "journal-color-icons", settingKey: "journalColorIcons" },
+        ],
+      },
+    ],
+  },
+  {
     id: "sync",
     hideOffline: true,
     sections: [

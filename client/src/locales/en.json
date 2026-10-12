@@ -311,7 +311,8 @@
       "subscription": "Subscription",
       "security": "Account and security",
       "sync": "Sync",
-      "application": "Application"
+      "application": "Application",
+      "journal": "Journal"
     },
     "sections": {
       "theme": "Theme",
@@ -336,7 +337,9 @@
       "push-service": "Push service",
       "resync": "Resync",
       "updates": "Updates",
-      "about": "About"
+      "about": "About",
+      "journal-editor": "Editor",
+      "note-defaults": "Note defaults"
     },
     "items": {
       "theme-mode": "Theme mode",
@@ -403,7 +406,19 @@
       "updates-changelog": "Changelog",
       "about-version": "Version",
       "about-website": "Client URL",
-      "about-server": "Server URL"
+      "about-server": "Server URL",
+      "journal-show-title": "Show note title",
+      "journal-line-numbers": "Show line numbers",
+      "journal-status-bar": "Show status bar",
+      "journal-note-name": "Name",
+      "journal-note-folder": "Location",
+      "journal-note-icon": "Note icon",
+      "journal-folder-icons": "Folder icon",
+      "journal-foreground": "Foreground color",
+      "journal-background": "Background color",
+      "journal-color-icons": "Use foreground color for icons",
+      "journal-foreground-value": "Foreground color value",
+      "journal-background-value": "Background color value"
     },
     "colors": {
       "background": "Background",
@@ -893,6 +908,15 @@
     },
     "movePane": "Move to pane {{n}}",
     "resize": "Resize panes",
-    "tabMenu": "Tab actions"
+    "tabMenu": "Tab actions",
+    "wordCount": "Words: {{n}}",
+    "charCount": "Characters: {{n}}",
+    "line": "Line: {{n}}",
+    "column": "Column: {{n}}",
+    "customize": "Customize"
+  },
+  "iconPicker": {
+    "search": "Search icons...",
+    "empty": "No icons found"
   }
 }

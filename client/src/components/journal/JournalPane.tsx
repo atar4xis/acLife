@@ -1,10 +1,15 @@
 import DropOverlay from "@/components/journal/DropOverlay";
 import JournalEditor from "@/components/journal/JournalEditor";
 import JournalMarkdown from "@/components/journal/JournalMarkdown";
+import StatusBar, {
+  type Cursor,
+  type StatusBarHandle,
+} from "@/components/journal/StatusBar";
 import JournalTabs from "@/components/journal/JournalTabs";
 import NoteTitle from "@/components/journal/NoteTitle";
 import ScrollThumb from "@/components/ui/scroll-thumb";
 import { useJournalActions, useJournalItems } from "@/context/JournalContext";
+import { useJournalSettings } from "@/context/JournalSettingsContext";
 import type { PaneNode } from "@/types/Journal";
 import {
   FOLLOW_MS,
@@ -14,6 +19,7 @@ import {
   readerTopLine,
   scrollReaderToLine,
 } from "@/lib/journal/scrollAnchor";
+import { cn } from "@/lib/utils";
 import { useCallback, useEffect, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
@@ -27,6 +33,13 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
   const mode = useRef(reading);
   const scroller = useRef<HTMLDivElement>(null);
   const note = items.find((item) => item.id === pane.active);
+  const settings = useJournalSettings((s) => ({
+    showTitle: s.journalShowTitle,
+    lineNumbers: s.journalLineNumbers,
+    statusBar: s.journalStatusBar,
+  }));
+  const cursor = useRef<Cursor>({ line: 1, column: 1 });
+  const statusBar = useRef<StatusBarHandle>(null);
   const focusEditor = useCallback(() => editor.current?.focus(), []);
 
   const noteRef = useRef(note);
@@ -92,11 +105,20 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
       <div className="relative min-h-0 flex-1">
         <div
           ref={scroller}
-          className="hide-scrollbar flex size-full flex-col overflow-auto"
+          className={cn(
+            "hide-scrollbar flex size-full flex-col overflow-auto",
+            !settings.showTitle && "pt-6",
+          )}
         >
           {note ? (
             <>
-              <NoteTitle id={note.id} name={note.name} onEnter={focusEditor} />
+              {settings.showTitle && (
+                <NoteTitle
+                  id={note.id}
+                  name={note.name}
+                  onEnter={focusEditor}
+                />
+              )}
               {pane.reading ? (
                 <article className="relative mx-auto w-full max-w-3xl px-6 pb-12">
                   <JournalMarkdown onToggleTask={toggleTask}>
@@ -109,6 +131,11 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
                   ref={editor}
                   value={note.content}
                   source={!!pane.source}
+                  lineNumbers={settings.lineNumbers}
+                  onCursor={(line, column) => {
+                    cursor.current = { line, column };
+                    statusBar.current?.setCursor(cursor.current);
+                  }}
                   label={t("journal.editor")}
                   placeholder={t("journal.placeholder")}
                   onChange={(content) => journal.setContent(note.id, content)}
@@ -137,6 +164,14 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
         <ScrollThumb gridRef={scroller} />
         <DropOverlay pane={pane} />
       </div>
+      {note && settings.statusBar && (
+        <StatusBar
+          ref={statusBar}
+          content={note.content}
+          initialCursor={cursor.current}
+          showCursor={!pane.reading}
+        />
+      )}
     </section>
   );
 }

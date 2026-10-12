@@ -299,6 +299,7 @@ describe("useJournalSync saving", () => {
         kind: "note",
         name: "Hidden",
         parentId: null,
+        style: {},
         now: 2000,
       }),
     );

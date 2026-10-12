@@ -1,6 +1,11 @@
+import { DateTime } from "luxon";
+import { t as translate } from "@/i18n";
+import { defaultJournalSettings } from "@/lib/settingsDefaults";
 import type {
+  ItemStyle,
   JournalData,
   JournalItem,
+  JournalSettings,
   JournalSort,
   JournalTreeNode,
 } from "@/types/Journal";
@@ -98,6 +103,10 @@ export const toOutline = (
       old.parentId === item.parentId &&
       old.type === item.type &&
       old.name === item.name &&
+      old.icon === item.icon &&
+      old.color === item.color &&
+      old.background === item.background &&
+      old.colorIcon === item.colorIcon &&
       old.createdAt === item.createdAt &&
       (!byModified || old.updatedAt === item.updatedAt);
     return same ? old : { ...item, content: "" };
@@ -129,10 +138,9 @@ export const canMoveItem = (
 
 export type MoveTarget = { folder: JournalItem | null; depth: number };
 
-export const moveTargets = (
+export const folderTargets = (
   items: JournalItem[],
   sort: JournalSort,
-  item: JournalItem,
 ): MoveTarget[] => {
   const folders = (nodes: JournalTreeNode[], depth: number): MoveTarget[] =>
     nodes.flatMap(({ item: folder, children }) =>
@@ -141,11 +149,17 @@ export const moveTargets = (
         : [],
     );
 
-  return [
-    { folder: null, depth: 0 },
-    ...folders(buildTree(items, sort), 1),
-  ].filter(({ folder }) => canMoveItem(items, item, folder?.id ?? null));
+  return [{ folder: null, depth: 0 }, ...folders(buildTree(items, sort), 1)];
 };
+
+export const moveTargets = (
+  items: JournalItem[],
+  sort: JournalSort,
+  item: JournalItem,
+): MoveTarget[] =>
+  folderTargets(items, sort).filter(({ folder }) =>
+    canMoveItem(items, item, folder?.id ?? null),
+  );
 
 export type TreeRow = { item: JournalItem; depth: number; open: boolean };
 
@@ -172,3 +186,63 @@ export const visibleRows = (
 export const MAX_JOURNAL_NAME_LENGTH = 100;
 export const MAX_JOURNAL_CONTENT_LENGTH = 128_000;
 export const MODIFIED_SORT_SETTLE_MS = 500;
+
+const LUXON_TOKENS: Record<string, string> = { Y: "y", D: "d", d: "c", A: "a" };
+
+export const noteName = (template: string) => {
+  const name = template
+    .replace(/\{([^}]+)\}/g, (_, format: string) =>
+      DateTime.now().toFormat(
+        format.replace(/[YDdA]/g, (token) => LUXON_TOKENS[token]),
+      ),
+    )
+    .trim();
+
+  return (name || translate("journal.untitledNote")).slice(
+    0,
+    MAX_JOURNAL_NAME_LENGTH,
+  );
+};
+
+export const itemStyle = (
+  kind: JournalItem["type"],
+  settings: JournalSettings,
+): ItemStyle => {
+  const defaults = defaultJournalSettings;
+  const style: ItemStyle = {};
+
+  if (kind === "note") {
+    if (settings.journalNoteIcon !== defaults.journalNoteIcon)
+      style.icon = settings.journalNoteIcon;
+  } else {
+    if (settings.journalFolderIcon !== defaults.journalFolderIcon)
+      style.icon = settings.journalFolderIcon;
+  }
+
+  if (settings.journalForegroundEnabled) {
+    style.color = settings.journalForeground;
+    style.colorIcon = settings.journalColorIcons;
+  }
+
+  if (settings.journalBackgroundEnabled) {
+    style.background = settings.journalBackground;
+  }
+
+  return style;
+};
+
+export const itemIconName = (item: JournalItem, open: boolean) => {
+  const defaults = defaultJournalSettings;
+
+  if (item.type === "note") return item.icon ?? defaults.journalNoteIcon;
+  if (item.icon) return item.icon;
+
+  return open ? "FolderOpen" : defaults.journalFolderIcon;
+};
+
+export const colorChanged = (
+  enabled: boolean,
+  color: string,
+  defaultEnabled: boolean,
+  defaultColor: string,
+) => enabled !== defaultEnabled || (enabled && color !== defaultColor);

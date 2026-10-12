@@ -17,6 +17,7 @@ import {
 } from "@/lib/settingsSync";
 import { isLanguage } from "@/i18n";
 import { MAX_CUSTOM_CSS_LENGTH, MAX_PRESETS } from "@/lib/constants";
+import { MAX_JOURNAL_NAME_LENGTH } from "@/lib/journal/item";
 import { fitsPresetLimit } from "@/lib/themePresets";
 import { readJSON, shallowEqual } from "@/lib/utils";
 
@@ -163,6 +164,10 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
   );
   if (!parsed.fontSize) parsed.fontSize = defaultStoreSettings.fontSize;
   parsed.customCss = parsed.customCss.slice(0, MAX_CUSTOM_CSS_LENGTH);
+  parsed.journalNoteName = parsed.journalNoteName.slice(
+    0,
+    MAX_JOURNAL_NAME_LENGTH,
+  );
 
   parsed.eventColorPresets = parsed.eventColorPresets.filter(
     (color) => typeof color === "string",

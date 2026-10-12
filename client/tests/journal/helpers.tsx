@@ -42,6 +42,7 @@ vi.mock("../../src/lib/nativeUpdater.ts", () => ({
 
 import JournalSidebar from "../../src/components/journal/JournalSidebar.tsx";
 import JournalView from "../../src/components/journal/JournalView.tsx";
+import { SettingsStoreProvider } from "../../src/context/SettingsStoreContext.tsx";
 import { Sidebar, SidebarProvider } from "../../src/components/ui/sidebar.tsx";
 import {
   JournalProvider,
@@ -91,15 +92,17 @@ function Probe() {
 }
 
 export const journalUi = () => (
-  <JournalProvider>
-    <Probe />
-    <SidebarProvider>
-      <Sidebar>
-        <JournalSidebar />
-      </Sidebar>
-      <JournalView />
-    </SidebarProvider>
-  </JournalProvider>
+  <SettingsStoreProvider>
+    <JournalProvider>
+      <Probe />
+      <SidebarProvider>
+        <Sidebar>
+          <JournalSidebar />
+        </Sidebar>
+        <JournalView />
+      </SidebarProvider>
+    </JournalProvider>
+  </SettingsStoreProvider>
 );
 
 export const renderJournal = () => render(journalUi());

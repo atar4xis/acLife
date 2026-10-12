@@ -301,7 +301,8 @@
       "subscription": "订阅",
       "security": "账户与安全",
       "sync": "同步",
-      "application": "应用"
+      "application": "应用",
+      "journal": "日记"
     },
     "sections": {
       "theme": "主题",
@@ -326,7 +327,9 @@
       "push-service": "推送服务",
       "resync": "重新同步",
       "updates": "更新",
-      "about": "关于"
+      "about": "关于",
+      "journal-editor": "编辑器",
+      "note-defaults": "笔记默认设置"
     },
     "items": {
       "theme-mode": "主题模式",
@@ -393,7 +396,19 @@
       "updates-changelog": "更新日志",
       "about-version": "版本",
       "about-website": "客户端网址",
-      "about-server": "服务器网址"
+      "about-server": "服务器网址",
+      "journal-show-title": "显示笔记标题",
+      "journal-line-numbers": "显示行号",
+      "journal-status-bar": "显示状态栏",
+      "journal-note-name": "名称",
+      "journal-note-folder": "位置",
+      "journal-note-icon": "笔记图标",
+      "journal-folder-icons": "文件夹图标",
+      "journal-foreground": "前景色",
+      "journal-background": "背景色",
+      "journal-color-icons": "图标使用前景色",
+      "journal-foreground-value": "前景色值",
+      "journal-background-value": "背景色值"
     },
     "colors": {
       "background": "背景",
@@ -867,6 +882,15 @@
     },
     "movePane": "移动到窗格 {{n}}",
     "resize": "调整窗格大小",
-    "tabMenu": "标签页操作"
+    "tabMenu": "标签页操作",
+    "wordCount": "字数: {{n}}",
+    "charCount": "字符数: {{n}}",
+    "line": "行: {{n}}",
+    "column": "列: {{n}}",
+    "customize": "自定义"
+  },
+  "iconPicker": {
+    "search": "搜索图标...",
+    "empty": "未找到图标"
   }
 }

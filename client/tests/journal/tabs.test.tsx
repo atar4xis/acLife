@@ -1,4 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { noteName } from "../../src/lib/journal/item.ts";
+import { defaultJournalSettings } from "../../src/lib/settingsDefaults.ts";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -181,14 +183,15 @@ describe("journal tabs and splits", () => {
     await user.click(plusButton());
     await user.click(screen.getByRole("button", { name: "create" }));
 
+    const name = noteName(defaultJournalSettings.journalNoteName);
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveProperty(
       "value",
-      "Untitled",
+      name,
     );
     expect(
       within(tabList()).queryByRole("tab", { name: "New tab" }),
     ).toBeNull();
-    expect(treeItem("Untitled")).toBeTruthy();
+    expect(treeItem(name)).toBeTruthy();
   });
   it("closes a tab with a middle click on its x and only shows the x on hover", async () => {
     const user = userEvent.setup();
