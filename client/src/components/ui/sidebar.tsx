@@ -259,6 +259,10 @@ const Sidebar = React.forwardRef<
               } as React.CSSProperties
             }
             side={side}
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              (event.target as HTMLElement).focus();
+            }}
           >
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
