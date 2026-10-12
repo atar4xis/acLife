@@ -116,6 +116,7 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
                 <NoteTitle
                   id={note.id}
                   name={note.name}
+                  lineNumbers={settings.lineNumbers}
                   onEnter={focusEditor}
                 />
               )}

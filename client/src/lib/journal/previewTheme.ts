@@ -32,6 +32,13 @@ export const journalTheme = EditorView.theme({
   "@container (min-width: 56rem)": {
     ".cm-gutters": { display: "flex !important" },
   },
+  "@media (max-width: 767px)": {
+    ".cm-gutters": {
+      display: "flex !important",
+      position: "static !important",
+      transform: "none",
+    },
+  },
   ".cm-gutterElement": { overflow: "hidden" },
   ".cm-line": { padding: "0" },
   ".cm-cursor": { borderLeftColor: "var(--foreground)" },

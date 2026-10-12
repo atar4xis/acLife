@@ -1,16 +1,19 @@
 import { useJournalActions } from "@/context/JournalContext";
 import { t as translate } from "@/i18n";
 import { MAX_JOURNAL_NAME_LENGTH } from "@/lib/journal/item";
+import { cn } from "@/lib/utils";
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export default memo(function NoteTitle({
   id,
   name,
+  lineNumbers,
   onEnter,
 }: {
   id: string;
   name: string;
+  lineNumbers: boolean;
   onEnter: () => void;
 }) {
   const { t } = useTranslation();
@@ -27,7 +30,10 @@ export default memo(function NoteTitle({
     <input
       aria-label={t("journal.title")}
       placeholder={t("journal.untitledNote")}
-      className="mx-auto mt-6 w-full max-w-3xl bg-transparent px-6 pb-2 text-3xl font-bold outline-none"
+      className={cn(
+        "mx-auto mt-6 w-full max-w-3xl bg-transparent px-6 pb-2 text-3xl font-bold outline-none",
+        lineNumbers && "max-md:ps-14",
+      )}
       maxLength={MAX_JOURNAL_NAME_LENGTH}
       value={draft}
       onChange={(e) => {
