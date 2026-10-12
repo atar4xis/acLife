@@ -44,6 +44,7 @@ export interface CalendarSettings {
   followCurrentTime: boolean;
   autoCheckUpdates: boolean;
   autoInstallUpdates: boolean;
+  developerMode: boolean;
   updateChannel: UpdateChannel;
   eventClickAction: EventClickAction;
   eventDoubleClickAction: EventClickAction;

@@ -403,6 +403,7 @@
       "about-version": "Version",
       "about-website": "URL du client",
       "about-server": "URL du serveur",
+      "about-developer-mode": "Mode développeur",
       "journal-show-title": "Afficher le titre de la note",
       "journal-line-numbers": "Afficher les numéros de ligne",
       "journal-status-bar": "Afficher la barre d'état",

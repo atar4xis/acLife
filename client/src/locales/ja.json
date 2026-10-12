@@ -397,6 +397,7 @@
       "about-version": "バージョン",
       "about-website": "クライアントURL",
       "about-server": "サーバーURL",
+      "about-developer-mode": "開発者モード",
       "journal-show-title": "ノートのタイトルを表示",
       "journal-line-numbers": "行番号を表示",
       "journal-status-bar": "ステータスバーを表示",

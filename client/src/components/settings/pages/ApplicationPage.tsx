@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +54,7 @@ export default function ApplicationPage({
   const updater = useUpdater();
   const settings = useCalendarSettings();
   const { url: serverUrl } = useApi();
+  const logoClicks = useRef<number[]>([]);
   const clientUrl = window.location.origin + import.meta.env.BASE_URL;
 
   const format = (date: DateTime, key: string) => date.toFormat(fmt(key));
@@ -221,7 +223,20 @@ export default function ApplicationPage({
         sectionRefs={sectionRefs}
       >
         <Field orientation="horizontal">
-          <div className="flex flex-auto items-center gap-2">
+          {/* eslint-disable-next-line -- accessibilitiy doesn't matter for dev mode */}
+          <div
+            className="flex flex-auto items-center gap-2"
+            onClick={() => {
+              const now = Date.now();
+              logoClicks.current.push(now);
+              logoClicks.current = logoClicks.current.filter(
+                (time) => now - time < 1000,
+              );
+              if (logoClicks.current.length >= 3) {
+                settings.setSetting("developerMode", true);
+              }
+            }}
+          >
             <img
               src={`${import.meta.env.BASE_URL}app-icon.png`}
               alt=""
@@ -258,6 +273,21 @@ export default function ApplicationPage({
           <FieldTitle>{settingLabel("about-server")}</FieldTitle>
           <span className="text-sm">{serverUrl}</span>
         </Field>
+
+        {settings.developerMode && (
+          <Field orientation="responsive">
+            <FieldTitle id={settingLabelId("developerMode")}>
+              {settingLabel("about-developer-mode")}
+            </FieldTitle>
+            <Switch
+              aria-labelledby={settingLabelId("developerMode")}
+              checked
+              onCheckedChange={() =>
+                settings.setSetting("developerMode", false)
+              }
+            />
+          </Field>
+        )}
       </Section>
     </FieldGroup>
   );

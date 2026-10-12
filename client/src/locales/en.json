@@ -407,6 +407,7 @@
       "about-version": "Version",
       "about-website": "Client URL",
       "about-server": "Server URL",
+      "about-developer-mode": "Developer mode",
       "journal-show-title": "Show note title",
       "journal-line-numbers": "Show line numbers",
       "journal-status-bar": "Show status bar",

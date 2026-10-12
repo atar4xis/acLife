@@ -6,7 +6,8 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { seedSettings } from "../settingsStorage.ts";
 import { expectNoViolations } from "../a11y/axe.ts";
 import {
   journal,
@@ -43,6 +44,8 @@ const seedTree = () => {
 };
 
 describe("journal tree keyboard", () => {
+  beforeEach(() => seedSettings({ developerMode: true }));
+
   it("is a tree of treeitems with levels, expanded and selected state", async () => {
     const user = userEvent.setup();
     await renderLoadedJournal();

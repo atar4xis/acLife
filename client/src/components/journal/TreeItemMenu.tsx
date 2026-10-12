@@ -1,6 +1,7 @@
 import ItemIcon from "@/components/journal/ItemIcon";
 import type { MenuParts } from "@/components/journal/menuParts";
 import SplitMenu from "@/components/journal/SplitMenu";
+import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useJournal } from "@/context/JournalContext";
 import { moveOptions } from "@/lib/journal/layout";
 import { moveTargets } from "@/lib/journal/item";
@@ -33,6 +34,7 @@ export default function TreeItemMenu({
   actions: TreeItemMenuActions;
 }) {
   const { t } = useTranslation();
+  const developerMode = useCalendarSettings((s) => s.developerMode);
   const { items, sort, workspace, expanded } = useJournal();
   const targets = moveTargets(items, sort, item);
   const drag = { id: item.id };
@@ -51,10 +53,12 @@ export default function TreeItemMenu({
         <Palette />
         {t("journal.customize")}
       </Item>
-      <Item onSelect={() => navigator.clipboard.writeText(item.id)}>
-        <Clipboard />
-        {t("block.copyId")}
-      </Item>
+      {developerMode && (
+        <Item onSelect={() => navigator.clipboard.writeText(item.id)}>
+          <Clipboard />
+          {t("block.copyId")}
+        </Item>
+      )}
       {targets.length > 0 && (
         <Sub>
           <SubTrigger>

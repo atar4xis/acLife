@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { MoveMenuItems } from "./MoveMenuItems";
 import { useTranslation } from "react-i18next";
+import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 
 type EventMenuItemsProps = {
   event: CalendarEvent;
@@ -38,6 +39,7 @@ export function EventMenuItems({
   onReset,
 }: EventMenuItemsProps) {
   const { t } = useTranslation();
+  const developerMode = useCalendarSettings((s) => s.developerMode);
 
   return (
     <>
@@ -50,12 +52,16 @@ export function EventMenuItems({
         {t("block.edit")}
       </ContextMenuItem>
 
-      <ContextMenuItem
-        onClick={() => navigator.clipboard.writeText(event._parent || event.id)}
-      >
-        <Clipboard />
-        {event._parent ? t("block.copyParentId") : t("block.copyId")}
-      </ContextMenuItem>
+      {developerMode && (
+        <ContextMenuItem
+          onClick={() =>
+            navigator.clipboard.writeText(event._parent || event.id)
+          }
+        >
+          <Clipboard />
+          {event._parent ? t("block.copyParentId") : t("block.copyId")}
+        </ContextMenuItem>
+      )}
 
       <ContextMenuItem onClick={() => onDuplicate(event)}>
         <CopyIcon />

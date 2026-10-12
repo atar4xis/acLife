@@ -140,6 +140,7 @@ export default function EventEditor({
     blur: s.eventEditorBlur,
     radius: s.eventEditorRadius,
     detachRecurring: s.detachRecurringOnEdit,
+    developerMode: s.developerMode,
   }));
   const opacity = preview?.opacity ?? settings.opacity;
   const blur = preview?.blur ?? settings.blur;
@@ -429,10 +430,12 @@ export default function EventEditor({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={copyID}>
-                <Clipboard />
-                {event._parent ? t("block.copyParentId") : t("block.copyId")}
-              </DropdownMenuItem>
+              {settings.developerMode && (
+                <DropdownMenuItem onClick={copyID}>
+                  <Clipboard />
+                  {event._parent ? t("block.copyParentId") : t("block.copyId")}
+                </DropdownMenuItem>
+              )}
 
               {event._parent && (
                 <DropdownMenuItem onClick={onDetach}>

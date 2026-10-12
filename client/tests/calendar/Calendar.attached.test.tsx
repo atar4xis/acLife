@@ -889,6 +889,7 @@ describe("attached instance menus", () => {
   });
 
   it("hides editor detach on the parent", async () => {
+    seedSettings({ developerMode: true });
     const { user } = renderCalendar({
       mode: "week",
       events: [buildRecurringEvent()],

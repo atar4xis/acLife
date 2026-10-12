@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { seedSettings } from "../settingsStorage.ts";
 import {
   createNote,
   dataTransfer,
@@ -208,7 +209,17 @@ describe("journal tree", () => {
       }),
     ).toBeNull();
   });
+  it("hides Copy ID from the context menu without developer mode", async () => {
+    const user = userEvent.setup();
+    renderJournal();
+    await createNote(user, "Menu note");
+
+    fireEvent.contextMenu(treeItem("Menu note"));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).queryByRole("menuitem", { name: "Copy ID" })).toBeNull();
+  });
   it("titles the context menu with the note name and copies its id", async () => {
+    seedSettings({ developerMode: true });
     const user = userEvent.setup();
     const writeText = vi.fn();
     vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
