@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import IconButton from "@/components/ui/icon-button";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import {
   Sidebar,
@@ -307,14 +308,13 @@ export default memo(function AppSidebar({
             />
           </div>
 
-          <Button
+          <IconButton
             variant="outline"
-            size="icon"
-            aria-label={t(`views.${switcherView}`)}
+            label={t(`views.${switcherView}`)}
             onClick={() => onChangeView(switcherView)}
           >
             {view === "calendar" ? <BookText /> : <CalendarDays />}
-          </Button>
+          </IconButton>
         </div>
       </SidebarFooter>
     </Sidebar>
