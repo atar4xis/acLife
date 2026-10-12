@@ -112,7 +112,7 @@ const ColorPresetsField = memo(function ColorPresetsField() {
 
   return (
     <FieldGroup className="mb-2 gap-4">
-      <Field orientation="responsive">
+      <Field orientation="responsive" className="min-h-9">
         <FieldContent>
           <div className="flex items-center gap-1.5">
             <FieldTitle>
@@ -236,7 +236,7 @@ const DefaultEventNameField = memo(function DefaultEventNameField() {
   );
 
   return (
-    <Field orientation="responsive">
+    <Field orientation="responsive" className="min-h-9">
       <SettingsLabel settingKey="defaultEventName" onReset={field.cancel} />
       <Input
         aria-labelledby={settingLabelId("defaultEventName")}
@@ -257,7 +257,7 @@ const DefaultTaskNameField = memo(function DefaultTaskNameField() {
   );
 
   return (
-    <Field orientation="responsive">
+    <Field orientation="responsive" className="min-h-9">
       <SettingsLabel settingKey="defaultTaskName" onReset={field.cancel} />
       <Input
         aria-labelledby={settingLabelId("defaultTaskName")}
@@ -370,7 +370,7 @@ export default function CalendarPage({
         label={sectionLabel("behavior")}
         sectionRefs={sectionRefs}
       >
-        <Field orientation="responsive">
+        <Field orientation="responsive" className="min-h-9">
           <SettingsLabel settingKey="detachRecurringOnEdit" />
           <Switch
             aria-labelledby={settingLabelId("detachRecurringOnEdit")}
@@ -381,7 +381,7 @@ export default function CalendarPage({
           />
         </Field>
 
-        <Field orientation="responsive" className="mb-2">
+        <Field orientation="responsive" className="min-h-9">
           <SettingsLabel settingKey="followCurrentTime" />
           <Switch
             aria-labelledby={settingLabelId("followCurrentTime")}
@@ -424,7 +424,7 @@ export default function CalendarPage({
       <Separator />
 
       <Section id="grid" label={sectionLabel("grid")} sectionRefs={sectionRefs}>
-        <Field orientation="responsive">
+        <Field orientation="responsive" className="min-h-9">
           <SettingsLabel settingKey="defaultView" />
           <SettingsSelect
             labelledBy={settingLabelId("defaultView")}
@@ -438,7 +438,7 @@ export default function CalendarPage({
           </SettingsSelect>
         </Field>
 
-        <Field orientation="responsive">
+        <Field orientation="responsive" className="min-h-9">
           <SettingsLabel settingKey="dayHeaderPosition" />
           <SettingsSelect
             labelledBy={settingLabelId("dayHeaderPosition")}
@@ -454,7 +454,7 @@ export default function CalendarPage({
           </SettingsSelect>
         </Field>
 
-        <Field orientation="responsive">
+        <Field orientation="responsive" className="min-h-9">
           <SettingsLabel settingKey="timeLabelPosition" />
           <SettingsSelect
             labelledBy={settingLabelId("timeLabelPosition")}
@@ -496,7 +496,7 @@ export default function CalendarPage({
       >
         <DefaultNotificationsField />
 
-        <Field orientation="responsive">
+        <Field orientation="responsive" className="min-h-9">
           <SettingsLabel settingKey="notificationSound" />
           <SettingsSelect
             labelledBy={settingLabelId("notificationSound")}
@@ -587,7 +587,7 @@ export default function CalendarPage({
         <DeferredContent skeletonClassName="h-96">
           <ColorPresetsField />
 
-          <Field orientation="responsive">
+          <Field orientation="responsive" className="min-h-9">
             <SettingsLabel settingKey="addColorsAutomatically" />
             <Switch
               aria-labelledby={settingLabelId("addColorsAutomatically")}
@@ -642,7 +642,7 @@ export default function CalendarPage({
         sectionRefs={sectionRefs}
       >
         <DeferredContent skeletonClassName="h-60">
-          <Field orientation="responsive">
+          <Field orientation="responsive" className="min-h-9">
             <SettingsLabel settingKey="miniCalendarEnabled" />
             <Switch
               aria-labelledby={settingLabelId("miniCalendarEnabled")}
@@ -653,7 +653,7 @@ export default function CalendarPage({
             />
           </Field>
 
-          <Field orientation="responsive">
+          <Field orientation="responsive" className="min-h-9">
             <SettingsLabel settingKey="miniCalendarEventBars" />
             <Switch
               aria-labelledby={settingLabelId("miniCalendarEventBars")}
@@ -666,7 +666,7 @@ export default function CalendarPage({
           </Field>
 
           {miniCalendarEventBars && (
-            <Field orientation="responsive">
+            <Field orientation="responsive" className="min-h-9">
               <SettingsLabel settingKey="miniCalendarAdaptiveNumbers" />
               <Switch
                 aria-labelledby={settingLabelId("miniCalendarAdaptiveNumbers")}
@@ -679,7 +679,7 @@ export default function CalendarPage({
             </Field>
           )}
 
-          <Field orientation="responsive">
+          <Field orientation="responsive" className="min-h-9">
             <SettingsLabel settingKey="miniCalendarWeekNumbers" />
             <Switch
               aria-labelledby={settingLabelId("miniCalendarWeekNumbers")}
@@ -691,7 +691,7 @@ export default function CalendarPage({
             />
           </Field>
 
-          <Field orientation="responsive">
+          <Field orientation="responsive" className="min-h-9">
             <SettingsLabel settingKey="miniCalendarBoldDayNumbers" />
             <Switch
               aria-labelledby={settingLabelId("miniCalendarBoldDayNumbers")}
@@ -703,7 +703,7 @@ export default function CalendarPage({
             />
           </Field>
 
-          <Field orientation="responsive">
+          <Field orientation="responsive" className="min-h-9">
             <SettingsLabel settingKey="miniCalendarDropdowns" />
             <Switch
               aria-labelledby={settingLabelId("miniCalendarDropdowns")}
@@ -725,7 +725,7 @@ export default function CalendarPage({
         sectionRefs={sectionRefs}
       >
         <DeferredContent skeletonClassName="h-24">
-          <Field orientation="responsive">
+          <Field orientation="responsive" className="min-h-9">
             <SettingsLabel settingKey="agendaEnabled" />
             <Switch
               aria-labelledby={settingLabelId("agendaEnabled")}
@@ -744,7 +744,7 @@ export default function CalendarPage({
             disabled={!agendaEnabled}
           />
 
-          <Field orientation="responsive" className="mt-2">
+          <Field orientation="responsive" className="min-h-9">
             <SettingsLabel settingKey="showOverdueTasks" />
             <Switch
               aria-labelledby={settingLabelId("showOverdueTasks")}
