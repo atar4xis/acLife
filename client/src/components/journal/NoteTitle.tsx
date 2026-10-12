@@ -8,12 +8,10 @@ import { useTranslation } from "react-i18next";
 export default memo(function NoteTitle({
   id,
   name,
-  lineNumbers,
   onEnter,
 }: {
   id: string;
   name: string;
-  lineNumbers: boolean;
   onEnter: () => void;
 }) {
   const { t } = useTranslation();
@@ -32,7 +30,6 @@ export default memo(function NoteTitle({
       placeholder={t("journal.untitledNote")}
       className={cn(
         "mx-auto mt-6 w-full max-w-3xl bg-transparent px-6 pb-2 text-3xl font-bold outline-none",
-        lineNumbers && "max-md:ps-14",
       )}
       maxLength={MAX_JOURNAL_NAME_LENGTH}
       value={draft}
