@@ -1,4 +1,4 @@
-import ItemIcon from "@/components/journal/ItemIcon";
+import FolderTargetLabel from "@/components/journal/FolderTargetLabel";
 import type { MenuParts } from "@/components/journal/menuParts";
 import SplitMenu from "@/components/journal/SplitMenu";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
@@ -10,7 +10,6 @@ import {
   Clipboard,
   Columns2,
   FolderInput,
-  FolderTree,
   Palette,
   PencilLine,
   Trash2,
@@ -72,12 +71,10 @@ export default function TreeItemMenu({
                 style={{ paddingInlineStart: `${depth * 12 + 8}px` }}
                 onSelect={() => actions.onMove(item, folder?.id ?? null)}
               >
-                {folder ? (
-                  <ItemIcon item={folder} open={expanded.has(folder.id)} />
-                ) : (
-                  <FolderTree />
-                )}
-                {folder?.name ?? t("journal.root")}
+                <FolderTargetLabel
+                  folder={folder}
+                  open={folder ? expanded.has(folder.id) : false}
+                />
               </Item>
             ))}
           </SubContent>

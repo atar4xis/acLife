@@ -1,4 +1,5 @@
 import { memo } from "react";
+import FolderTargetLabel from "@/components/journal/FolderTargetLabel";
 import { useJournal } from "@/context/JournalContext";
 import { useJournalSettings } from "@/context/JournalSettingsContext";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
@@ -49,7 +50,6 @@ const NoteNameField = memo(function NoteNameField() {
 });
 
 function NoteFolderField() {
-  const { t } = useTranslation();
   const { items, sort } = useJournal();
   const { journalNoteFolder, setSetting } = useJournalSettings();
   const targets = folderTargets(items, sort);
@@ -78,7 +78,7 @@ function NoteFolderField() {
             value={f?.id ?? "root"}
             style={{ paddingInlineStart: `${depth * 12 + 8}px` }}
           >
-            {f?.name ?? t("journal.root")}
+            <FolderTargetLabel folder={f} />
           </SelectItem>
         ))}
       </SettingsSelect>
