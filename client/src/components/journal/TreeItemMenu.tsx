@@ -1,3 +1,4 @@
+import ItemIcon from "@/components/journal/ItemIcon";
 import type { MenuParts } from "@/components/journal/menuParts";
 import SplitMenu from "@/components/journal/SplitMenu";
 import { useJournal } from "@/context/JournalContext";
@@ -7,7 +8,6 @@ import type { JournalItem } from "@/types/Journal";
 import {
   Clipboard,
   Columns2,
-  Folder,
   FolderInput,
   FolderTree,
   Palette,
@@ -33,7 +33,7 @@ export default function TreeItemMenu({
   actions: TreeItemMenuActions;
 }) {
   const { t } = useTranslation();
-  const { items, sort, workspace } = useJournal();
+  const { items, sort, workspace, expanded } = useJournal();
   const targets = moveTargets(items, sort, item);
   const drag = { id: item.id };
   const options = moveOptions(workspace, drag, workspace.focused);
@@ -68,7 +68,11 @@ export default function TreeItemMenu({
                 style={{ paddingInlineStart: `${depth * 12 + 8}px` }}
                 onSelect={() => actions.onMove(item, folder?.id ?? null)}
               >
-                {folder ? <Folder /> : <FolderTree />}
+                {folder ? (
+                  <ItemIcon item={folder} open={expanded.has(folder.id)} />
+                ) : (
+                  <FolderTree />
+                )}
                 {folder?.name ?? t("journal.root")}
               </Item>
             ))}
