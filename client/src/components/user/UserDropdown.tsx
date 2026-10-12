@@ -1,5 +1,6 @@
 import { useUser } from "@/context/UserContext";
 import { openExternal } from "@/lib/nativeUpdater";
+import { canManageSubscription } from "@/lib/subscription";
 import { isStripeUrl } from "@/lib/validators";
 import {
   DropdownMenu,
@@ -29,7 +30,7 @@ export default function UserDropdown({
 }) {
   const { t } = useTranslation();
   const { user, setUser, logout } = useUser();
-  const { get } = useApi();
+  const { get, serverMeta } = useApi();
 
   if (!user) return null;
 
@@ -63,7 +64,7 @@ export default function UserDropdown({
                 <SettingsIcon />
                 {t("user.accountSettings")}
               </DropdownMenuItem>
-              {user.subscription_status && (
+              {canManageSubscription(user, serverMeta) && (
                 <DropdownMenuItem onClick={manageSubscription}>
                   <CreditCardIcon />
                   {t("user.manageSubscription")}

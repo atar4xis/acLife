@@ -22,7 +22,10 @@ import NotificationService from "./NotificationService";
 import AutoLockService from "./AutoLockService";
 import SettingsDialog from "./settings/SettingsDialog";
 import TimezoneChangeDialog from "./calendar/TimezoneChangeDialog";
-import { isSubscriptionMissing } from "@/lib/subscription";
+import {
+  canManageSubscription,
+  isSubscriptionMissing,
+} from "@/lib/subscription";
 import { useSettingsSync } from "@/hooks/useSettingsSync";
 import { useTranslation } from "react-i18next";
 import { t as translate } from "@/i18n";
@@ -192,7 +195,7 @@ export default function AppShell() {
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         offlineUser={user.type === "offline"}
-        subscriptionEnabled={!!serverMeta?.registration.subscriptionRequired}
+        subscriptionEnabled={canManageSubscription(user, serverMeta)}
         initialCategoryId={settingsCategory}
       />
       {user.type === "online" && offline && (

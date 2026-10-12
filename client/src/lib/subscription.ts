@@ -14,3 +14,11 @@ export const isSubscriptionMissing = (
   user?.type === "online" &&
   !!serverMeta?.registration.subscriptionRequired &&
   !hasActiveSubscription(user);
+
+export const canManageSubscription = (
+  user: User | null,
+  serverMeta: ServerMetadata | null,
+) =>
+  user?.type === "online" &&
+  !!serverMeta?.registration.subscriptionRequired &&
+  !!user.subscription_status;
