@@ -7,7 +7,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import IconButton from "@/components/ui/icon-button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useJournal } from "@/context/JournalContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import { isNewTab, panesOf } from "@/lib/journal/layout";
 import type { PaneNode } from "@/types/Journal";
@@ -30,6 +32,7 @@ export default memo(function JournalTabs({ pane }: { pane: PaneNode }) {
 
   const panes = panesOf(journal.workspace.layout);
   const coarse = useCoarsePointer();
+  const isMobile = useIsMobile();
 
   const indexAt = (x: number) => {
     const tabs = Array.from(list.current!.children);
@@ -56,6 +59,7 @@ export default memo(function JournalTabs({ pane }: { pane: PaneNode }) {
         journal.dropOnTabs(pane.id, indexAt(e.clientX));
       }}
     >
+      {isMobile && pane.id === panes[0].id && <SidebarTrigger />}
       {panes.length > 1 && (
         <span className="text-muted-foreground shrink-0 ps-1.5 pe-2 text-sm tabular-nums">
           {panes.findIndex(({ id }) => id === pane.id) + 1}
