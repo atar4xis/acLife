@@ -10,6 +10,7 @@ export default function IconButton({
   label,
   variant = "ghost",
   size = "icon",
+  onClick,
   ...props
 }: ComponentProps<typeof Button> & { label: string }) {
   return (
@@ -20,6 +21,10 @@ export default function IconButton({
           variant={variant}
           size={size}
           aria-label={label}
+          onClick={(event) => {
+            if (event.detail > 0) event.currentTarget.blur();
+            onClick?.(event);
+          }}
           {...props}
         />
       </TooltipTrigger>
