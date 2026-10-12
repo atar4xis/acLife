@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSidebarSwipe } from "@/hooks/use-sidebar-swipe";
 import { useSidebarResize } from "@/hooks/use-sidebar-resize";
 import { mergeButtonRefs } from "@/lib/merge-button-refs";
 import { cn } from "@/lib/utils";
@@ -25,7 +26,7 @@ import { useTranslation } from "react-i18next";
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
-const SIDEBAR_WIDTH_MOBILE = "18rem";
+const SIDEBAR_WIDTH_MOBILE_REM = 18;
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
@@ -228,6 +229,13 @@ const Sidebar = React.forwardRef<
       //* new property for tracking is dragging rail
       isDraggingRail,
     } = useSidebar();
+    const swipeStyle = useSidebarSwipe(
+      side,
+      openMobile,
+      setOpenMobile,
+      SIDEBAR_WIDTH_MOBILE_REM,
+      isMobile && collapsible !== "none",
+    );
 
     if (collapsible === "none") {
       return (
@@ -255,7 +263,8 @@ const Sidebar = React.forwardRef<
             className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
             style={
               {
-                "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+                "--sidebar-width": `${SIDEBAR_WIDTH_MOBILE_REM}rem`,
+                ...swipeStyle,
               } as React.CSSProperties
             }
             side={side}
