@@ -13,7 +13,7 @@ const HIDE_DELAY_MS = 1500;
 export default memo(function ScrollThumb({
   gridRef,
 }: {
-  gridRef: RefObject<HTMLDivElement | null>;
+  gridRef: RefObject<HTMLElement | null>;
 }) {
   const [thumb, setThumb] = useState<{ top: number; height: number } | null>(
     null,

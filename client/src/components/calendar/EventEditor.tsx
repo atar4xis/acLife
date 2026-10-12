@@ -35,6 +35,7 @@ import {
   useCalendarSettings,
 } from "@/context/CalendarSettingsContext";
 import { cn } from "@/lib/utils";
+import ScrollThumb from "@/components/ui/scroll-thumb";
 import {
   DEFAULT_DESCRIPTION_SIZE,
   getDescriptionSize,
@@ -117,6 +118,7 @@ export default function EventEditor({
   const { t } = useTranslation();
 
   const originalEvent = useRef(event);
+  const formRef = useRef<HTMLFormElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const repeatRef = useRef<HTMLButtonElement>(null);
@@ -384,7 +386,7 @@ export default function EventEditor({
       className={
         preview
           ? "event-editor relative pointer-events-none select-none p-3 px-3 shadow-lg border rounded-(--editor-radius)"
-          : "pointer-events-auto event-editor fixed z-20 left-0 top-0 flex flex-col justify-center md:block p-3 px-5 md:px-3 shadow-lg border md:rounded-(--editor-radius) w-full h-full md:w-auto md:h-auto"
+          : "pointer-events-auto event-editor fixed z-20 left-0 top-0 flex flex-col justify-center md:justify-start max-h-dvh p-3 px-5 md:px-3 shadow-lg border md:rounded-(--editor-radius) w-full h-full md:w-auto md:h-auto"
       }
       style={
         {
@@ -470,174 +472,180 @@ export default function EventEditor({
           </Button>
         </div>
       </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSave();
-        }}
-        className="flex flex-col gap-5 my-3"
-      >
-        <Field>
-          <FieldLabel>{t("editor.titleColor")}</FieldLabel>
-          <div className="flex">
-            <Input
-              ref={titleRef}
-              type="text"
-              className="me-2"
-              maxLength={MAX_EVENT_TITLE_LENGTH}
-              placeholder={originalEvent.current.title}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-            <ColorPicker
-              aria-label={t("editor.eventColor")}
-              presetColors={settings.colorPresets}
-              onChange={(v) => {
-                setColor(v as string);
-              }}
-              value={color}
-            />
-          </div>
-        </Field>
+      <div className="relative flex flex-col min-h-0 my-3">
+        <form
+          ref={formRef}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          className="flex flex-col gap-5 min-h-0 overflow-y-auto hide-scrollbar"
+        >
+          <Field>
+            <FieldLabel>{t("editor.titleColor")}</FieldLabel>
+            <div className="flex">
+              <Input
+                ref={titleRef}
+                type="text"
+                className="me-2"
+                maxLength={MAX_EVENT_TITLE_LENGTH}
+                placeholder={originalEvent.current.title}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              <ColorPicker
+                aria-label={t("editor.eventColor")}
+                presetColors={settings.colorPresets}
+                onChange={(v) => {
+                  setColor(v as string);
+                }}
+                value={color}
+              />
+            </div>
+          </Field>
 
-        <Field>
-          <FieldLabel>{t("editor.startEnd")}</FieldLabel>
-          <DateTimePicker
-            label={t("editor.start")}
-            value={start}
-            onChange={setStart}
-            dateOnly={allDay}
-          />
-          <DateTimePicker
-            label={t("editor.end")}
-            value={end}
-            onChange={setEnd}
-            dateOnly={allDay}
-          />
+          <Field>
+            <FieldLabel>{t("editor.startEnd")}</FieldLabel>
+            <DateTimePicker
+              label={t("editor.start")}
+              value={start}
+              onChange={setStart}
+              dateOnly={allDay}
+            />
+            <DateTimePicker
+              label={t("editor.end")}
+              value={end}
+              onChange={setEnd}
+              dateOnly={allDay}
+            />
 
-          <div className="flex gap-2">
-            <Select
-              value={repeat ? parseRepeatValue(repeat) : "never"}
-              onValueChange={handleSelectRepeat}
-            >
-              <SelectTrigger
-                ref={repeatRef}
-                className="flex-1"
-                aria-label={t("editor.repeat")}
+            <div className="flex gap-2">
+              <Select
+                value={repeat ? parseRepeatValue(repeat) : "never"}
+                onValueChange={handleSelectRepeat}
               >
-                <SelectValue placeholder={t("editor.repeat")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="never">{t("editor.never")}</SelectItem>
-                <SelectItem value="daily">{t("editor.daily")}</SelectItem>
-                <SelectItem value="workdays">{t("editor.workdays")}</SelectItem>
-                <SelectItem value="weekly">{t("editor.weekly")}</SelectItem>
-                {monthlyOptions(startTime, repeat?.monthly === "last").map(
-                  (o) => (
-                    <SelectItem key={o.value} value={`monthly-${o.value}`}>
-                      {t("editor.monthly", { option: o.label })}
-                    </SelectItem>
-                  ),
-                )}
-                <SelectItem value="yearly">{t("editor.yearly")}</SelectItem>
-                <SelectItem value="custom">{t("editor.custom")}</SelectItem>
-              </SelectContent>
-            </Select>
-            {repeat && parseRepeatValue(repeat) === "custom" && (
-              <Button
-                variant="outline"
-                size="icon"
-                type="button"
-                aria-label={t("editor.editCustom")}
-                onClick={() => setRepeatDialogOpen(true)}
-              >
-                <PencilIcon />
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2 px-1 mb-1">
-            <Checkbox
-              id="allDay"
-              checked={allDay}
-              onCheckedChange={(c) => setAllDay(!!c)}
-            />
-            <Label htmlFor="allDay">{t("editor.allDay")}</Label>
-          </div>
-          {event._parent &&
-            !settings.detachRecurring &&
-            repeatChanged(repeat, event.repeat) && (
-              <p className="flex items-center gap-1.5 text-xs text-warning">
-                <TriangleAlert className="size-3.5 shrink-0" />
-                {t("editor.detachWarning")}
-              </p>
-            )}
-        </Field>
+                <SelectTrigger
+                  ref={repeatRef}
+                  className="flex-1"
+                  aria-label={t("editor.repeat")}
+                >
+                  <SelectValue placeholder={t("editor.repeat")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="never">{t("editor.never")}</SelectItem>
+                  <SelectItem value="daily">{t("editor.daily")}</SelectItem>
+                  <SelectItem value="workdays">
+                    {t("editor.workdays")}
+                  </SelectItem>
+                  <SelectItem value="weekly">{t("editor.weekly")}</SelectItem>
+                  {monthlyOptions(startTime, repeat?.monthly === "last").map(
+                    (o) => (
+                      <SelectItem key={o.value} value={`monthly-${o.value}`}>
+                        {t("editor.monthly", { option: o.label })}
+                      </SelectItem>
+                    ),
+                  )}
+                  <SelectItem value="yearly">{t("editor.yearly")}</SelectItem>
+                  <SelectItem value="custom">{t("editor.custom")}</SelectItem>
+                </SelectContent>
+              </Select>
+              {repeat && parseRepeatValue(repeat) === "custom" && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  type="button"
+                  aria-label={t("editor.editCustom")}
+                  onClick={() => setRepeatDialogOpen(true)}
+                >
+                  <PencilIcon />
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 px-1 mb-1">
+              <Checkbox
+                id="allDay"
+                checked={allDay}
+                onCheckedChange={(c) => setAllDay(!!c)}
+              />
+              <Label htmlFor="allDay">{t("editor.allDay")}</Label>
+            </div>
+            {event._parent &&
+              !settings.detachRecurring &&
+              repeatChanged(repeat, event.repeat) && (
+                <p className="flex items-center gap-1.5 text-xs text-warning">
+                  <TriangleAlert className="size-3.5 shrink-0" />
+                  {t("editor.detachWarning")}
+                </p>
+              )}
+          </Field>
 
-        <Field>
-          <div className="flex items-center gap-1.5">
-            <FieldLabel>{t("editor.notifications")}</FieldLabel>
-            <AddNotificationButton
+          <Field>
+            <div className="flex items-center gap-1.5">
+              <FieldLabel>{t("editor.notifications")}</FieldLabel>
+              <AddNotificationButton
+                value={notifications}
+                onChange={setNotifications}
+              />
+            </div>
+            <NotificationsField
               value={notifications}
               onChange={setNotifications}
             />
-          </div>
-          <NotificationsField
-            value={notifications}
-            onChange={setNotifications}
-          />
-        </Field>
+          </Field>
 
-        <Field>
-          <FieldLabel>{t("editor.description")}</FieldLabel>
-          <Textarea
-            placeholder={originalEvent.current.description}
-            value={description}
-            style={
-              isMobile
-                ? undefined
-                : { ...DEFAULT_DESCRIPTION_SIZE, ...savedSize }
-            }
-            className="field-sizing-fixed resize-none md:resize h-30 md:min-w-80"
-            onPointerDown={(e) => {
-              pressedSize.current = readSize(e.currentTarget);
-            }}
-            onPointerUp={(e) => {
-              const size = readSize(e.currentTarget);
-              if (
-                size.width === pressedSize.current?.width &&
-                size.height === pressedSize.current.height
-              )
-                return;
-              setSavedSize(size);
-              saveDescriptionSize(sizeKey, size);
-            }}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </Field>
+          <Field>
+            <FieldLabel>{t("editor.description")}</FieldLabel>
+            <Textarea
+              placeholder={originalEvent.current.description}
+              value={description}
+              style={
+                isMobile
+                  ? undefined
+                  : { ...DEFAULT_DESCRIPTION_SIZE, ...savedSize }
+              }
+              className="field-sizing-fixed resize-none md:resize h-30 md:min-w-80"
+              onPointerDown={(e) => {
+                pressedSize.current = readSize(e.currentTarget);
+              }}
+              onPointerUp={(e) => {
+                const size = readSize(e.currentTarget);
+                if (
+                  size.width === pressedSize.current?.width &&
+                  size.height === pressedSize.current.height
+                )
+                  return;
+                setSavedSize(size);
+                saveDescriptionSize(sizeKey, size);
+              }}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </Field>
 
-        <Field className="-mt-1">
-          <div className="flex items-start justify-between px-1">
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="isTask"
-                checked={isTask}
-                onCheckedChange={(c) => setIsTask(!!c)}
-              />
-              <Label htmlFor="isTask">{t("editor.task")}</Label>
-            </div>
-            {isTask && (
+          <Field className="-mt-1">
+            <div className="flex items-start justify-between px-1">
               <div className="flex items-start gap-2">
-                <Label htmlFor="completed">{t("editor.completed")}</Label>
                 <Checkbox
-                  id="completed"
-                  checked={completed}
-                  onCheckedChange={(c) => setCompleted(!!c)}
+                  id="isTask"
+                  checked={isTask}
+                  onCheckedChange={(c) => setIsTask(!!c)}
                 />
+                <Label htmlFor="isTask">{t("editor.task")}</Label>
               </div>
-            )}
-          </div>
-        </Field>
-      </form>
+              {isTask && (
+                <div className="flex items-start gap-2">
+                  <Label htmlFor="completed">{t("editor.completed")}</Label>
+                  <Checkbox
+                    id="completed"
+                    checked={completed}
+                    onCheckedChange={(c) => setCompleted(!!c)}
+                  />
+                </div>
+              )}
+            </div>
+          </Field>
+        </form>
+        <ScrollThumb gridRef={formRef} />
+      </div>
       <RepeatDialog
         open={repeatDialogOpen}
         onOpenChange={setRepeatDialogOpen}
