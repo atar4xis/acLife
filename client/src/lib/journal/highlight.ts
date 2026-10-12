@@ -51,3 +51,22 @@ export function highlightCode(code: string, language: string): Segment[] {
   flatten(Prism.tokenize(code, grammar), undefined, out);
   return out;
 }
+
+export type HighlightedLine = { segments: Segment[]; signature: string };
+
+export function highlightLines(code: string, language: string) {
+  const lines: Segment[][] = [[]];
+  for (const { text, className } of highlightCode(code, language)) {
+    text.split("\n").forEach((part, i) => {
+      if (i > 0) lines.push([]);
+      if (part) lines[lines.length - 1].push({ text: part, className });
+    });
+  }
+
+  return lines.map((segments): HighlightedLine => ({
+    segments,
+    signature: segments
+      .map(({ text, className }) => `${className ?? ""}\0${text}`)
+      .join("\0\0"),
+  }));
+}

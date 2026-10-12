@@ -26,6 +26,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.14
         version: 6.43.14
+      '@lezer/common':
+        specifier: ^1.5.3
+        version: 1.5.3
       '@lezer/markdown':
         specifier: ^1.8.0
         version: 1.8.0

@@ -171,3 +171,4 @@ export const visibleRows = (
 
 export const MAX_JOURNAL_NAME_LENGTH = 100;
 export const MAX_JOURNAL_CONTENT_LENGTH = 128_000;
+export const MODIFIED_SORT_SETTLE_MS = 500;

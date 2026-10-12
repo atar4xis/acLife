@@ -29,15 +29,19 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
   const note = items.find((item) => item.id === pane.active);
   const focusEditor = useCallback(() => editor.current?.focus(), []);
 
+  const noteRef = useRef(note);
+  noteRef.current = note;
+
   const toggleTask = useCallback(
     (line: number) => {
-      const lines = note!.content.split("\n");
+      const current = noteRef.current!;
+      const lines = current.content.split("\n");
       lines[line - 1] = lines[line - 1].replace(/\[[ xX]\]/, (marker) =>
         marker === "[ ]" ? "[x]" : "[ ]",
       );
-      journal.setContent(note!.id, lines.join("\n"));
+      journal.setContent(current.id, lines.join("\n"));
     },
-    [journal, note],
+    [journal],
   );
 
   const captureAnchor = (e: React.SyntheticEvent) => {

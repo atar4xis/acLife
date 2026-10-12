@@ -5,6 +5,25 @@ import JournalMarkdown from "../../src/components/journal/JournalMarkdown.tsx";
 import { openExternal } from "../../src/lib/nativeUpdater.ts";
 
 vi.mock("../../src/lib/nativeUpdater.ts", () => ({ openExternal: vi.fn() }));
+const renderedLines = vi.hoisted(() => ({ count: 0 }));
+
+vi.mock("../../src/lib/journal/highlight.ts", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/lib/journal/highlight.ts")>();
+  return {
+    ...actual,
+    highlightLines: (code: string, language: string) =>
+      actual.highlightLines(code, language).map((line) => {
+        const segments = [...line.segments];
+        segments.map = ((...args: Parameters<typeof segments.map>) => {
+          renderedLines.count++;
+          return Array.prototype.map.apply(segments, args);
+        }) as typeof segments.map;
+        return { ...line, segments };
+      }),
+  };
+});
+
 vi.mock("react-markdown", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-markdown")>();
   return { ...actual, default: vi.fn(actual.default) };
@@ -170,5 +189,108 @@ describe("journal reading mode", () => {
 
     expect(vi.mocked(Markdown)).toHaveBeenCalledTimes(1);
     expect(screen.getByText("second!")).toBeTruthy();
+  });
+
+  it("only re-renders the edited item of a long list", async () => {
+    const list = (edit: string) =>
+      Array.from({ length: 30 }, (_, i) => `- item ${i}${i === 7 ? edit : ""}`).join("\n");
+    const { rerender } = render(<JournalMarkdown>{list("")}</JournalMarkdown>);
+    vi.mocked(Markdown).mockClear();
+
+    await act(async () => rerender(<JournalMarkdown>{list("!")}</JournalMarkdown>));
+
+    expect(vi.mocked(Markdown)).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("item 7!")).toBeTruthy();
+  });
+
+  it("does not re-render the blocks below an inserted line", async () => {
+    const { rerender } = render(
+      <JournalMarkdown>{"first\n\nsecond\n\nthird"}</JournalMarkdown>,
+    );
+    vi.mocked(Markdown).mockClear();
+
+    await act(async () =>
+      rerender(<JournalMarkdown>{"\nfirst\n\nsecond\n\nthird"}</JournalMarkdown>),
+    );
+
+    expect(vi.mocked(Markdown)).not.toHaveBeenCalled();
+    const starts = Array.from(document.querySelectorAll("[data-block-start]"));
+    expect(starts.map((el) => el.getAttribute("data-block-start"))).toEqual(["2", "4", "6"]);
+  });
+
+  it("toggles a task by its source line after lines were inserted above", async () => {
+    const onToggleTask = vi.fn();
+    const { rerender } = render(
+      <JournalMarkdown onToggleTask={onToggleTask}>{"a\n\n- [ ] one\n- [ ] two"}</JournalMarkdown>,
+    );
+    await act(async () =>
+      rerender(
+        <JournalMarkdown onToggleTask={onToggleTask}>{"x\ny\na\n\n- [ ] one\n- [ ] two"}</JournalMarkdown>,
+      ),
+    );
+
+    fireEvent.click(screen.getAllByRole("checkbox")[1]);
+
+    expect(onToggleTask).toHaveBeenCalledWith(6);
+  });
+
+  it("calls the latest task handler", async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = render(
+      <JournalMarkdown onToggleTask={first}>{"- [ ] one"}</JournalMarkdown>,
+    );
+    await act(async () =>
+      rerender(
+        <JournalMarkdown onToggleTask={second}>{"- [ ] one"}</JournalMarkdown>,
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("checkbox"));
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith(1);
+  });
+
+  it("only re-renders the edited line of a code block", async () => {
+    const code = (second: string) =>
+      "```js\nlet a = 1;\n" + second + "\nlet c = 3;\n```";
+    const { rerender } = render(<JournalMarkdown>{code("let b = 2;")}</JournalMarkdown>);
+    renderedLines.count = 0;
+
+    await act(async () =>
+      rerender(<JournalMarkdown>{code("let b = 22;")}</JournalMarkdown>),
+    );
+
+    expect(renderedLines.count).toBe(1);
+    expect(screen.getByText("22")).toBeTruthy();
+  });
+
+  it("keeps the code text and line markers when a token spans lines", () => {
+    const container = reader("```js\n/* a\nb */\nlet c\n```");
+    const code = container.querySelector("pre code")!;
+    expect(code.textContent).toBe("/* a\nb */\nlet c\n");
+    expect(code.getAttribute("data-line")).toBe("2");
+    expect(code.getAttribute("data-end-line")).toBe("4");
+    expect(code.querySelectorAll(".tok-comment")).toHaveLength(2);
+  });
+
+  it("renders inline code and code without a language as plain text", () => {
+    const container = reader("a `x` b\n\n```\nplain\n```");
+    expect(container.querySelector("p code")!.textContent).toBe("x");
+    expect(container.querySelector("pre code")!.textContent).toBe("plain\n");
+    expect(container.querySelector("pre code span")).toBeNull();
+  });
+
+  it("shows a blank line added at the end of a code block", async () => {
+    const { container, rerender } = render(
+      <JournalMarkdown>{"```js\nlet a;\n```"}</JournalMarkdown>,
+    );
+
+    await act(async () =>
+      rerender(<JournalMarkdown>{"```js\nlet a;\n\n```"}</JournalMarkdown>),
+    );
+
+    expect(container.querySelector("pre code")!.textContent).toBe("let a;\n\n");
   });
 });

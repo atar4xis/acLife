@@ -1,8 +1,9 @@
 import { t as translate } from "@/i18n";
 import { useJournalPersistence } from "@/hooks/journal/useJournalPersistence";
 import { useJournalSync } from "@/hooks/journal/useJournalSync";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { EMPTY_ARRAY } from "@/lib/constants";
-import { toOutline } from "@/lib/journal/item";
+import { MODIFIED_SORT_SETTLE_MS, toOutline } from "@/lib/journal/item";
 import { isNewTab } from "@/lib/journal/layout";
 import { createJournalState, journalReducer } from "@/reducers/journalReducer";
 import type { WithChildren } from "@/types/Props";
@@ -134,10 +135,11 @@ export function JournalProvider({ children }: WithChildren) {
 
   const { sort, workspace, expanded, splitSizes } = state;
   const [outline, setOutline] = useState<JournalItem[]>(EMPTY_ARRAY);
+  const settledItems = useDebouncedValue(state.items, MODIFIED_SORT_SETTLE_MS);
   const outlineItems = toOutline(
     outline,
     state.items,
-    sort.startsWith("modified-"),
+    sort.startsWith("modified-") && settledItems === state.items,
   );
   if (outlineItems !== outline) setOutline(outlineItems);
 

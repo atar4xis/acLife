@@ -11,14 +11,50 @@ import { useTreeDrag } from "@/hooks/journal/useTreeDrag";
 import { buildTree, filterTree } from "@/lib/journal/item";
 import { focusRow } from "@/lib/journal/focus";
 import { cn } from "@/lib/utils";
-import type { JournalItem } from "@/types/Journal";
+import type { JournalItem, JournalTreeNode } from "@/types/Journal";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-export default function JournalSidebar() {
+type TreePaneProps = {
+  searching: boolean;
+  renamingId: string | null;
+  dropTarget: string | null | undefined;
+  actions: TreeActions;
+};
+
+function TreePane({
+  nodes,
+  ...props
+}: TreePaneProps & { nodes: JournalTreeNode[] }) {
   const { t } = useTranslation();
-  const journal = useJournal();
+
+  if (nodes.length === 0)
+    return (
+      <p className="text-muted-foreground p-2 text-sm">
+        {t(props.searching ? "journal.noMatches" : "journal.empty")}
+      </p>
+    );
+
+  return (
+    <nav aria-label={t("journal.notes")}>
+      <JournalTree nodes={nodes} {...props} />
+    </nav>
+  );
+}
+
+function SearchResults({ query, ...props }: TreePaneProps & { query: string }) {
   const items = useJournalItems();
+  const { sort } = useJournal();
+  const nodes = useMemo(
+    () => filterTree(buildTree(items, sort), query),
+    [items, sort, query],
+  );
+
+  return <TreePane nodes={nodes} {...props} />;
+}
+
+export default function JournalSidebar() {
+  const journal = useJournal();
   const { isMobile, setOpenMobile } = useSidebar();
   const { dropTarget, dragProps, rootProps } = useTreeDrag();
   const [query, setQuery] = useState("");
@@ -27,10 +63,9 @@ export default function JournalSidebar() {
   const [folderId, setFolderId] = useState<string | null>(null);
 
   const searching = query.trim().length > 0;
-  const source = searching ? items : journal.items;
   const tree = useMemo(
-    () => filterTree(buildTree(source, journal.sort), query),
-    [source, journal.sort, query],
+    () => buildTree(journal.items, journal.sort),
+    [journal.items, journal.sort],
   );
 
   const create = useCallback(
@@ -88,20 +123,22 @@ export default function JournalSidebar() {
         className={cn("flex-1", dropTarget === null && "ring-primary ring-1")}
         {...rootProps}
       >
-        {tree.length === 0 ? (
-          <p className="text-muted-foreground p-2 text-sm">
-            {t(searching ? "journal.noMatches" : "journal.empty")}
-          </p>
+        {searching ? (
+          <SearchResults
+            query={query}
+            searching
+            renamingId={renamingId}
+            dropTarget={dropTarget}
+            actions={treeActions}
+          />
         ) : (
-          <nav aria-label={t("journal.notes")}>
-            <JournalTree
-              nodes={tree}
-              searching={searching}
-              renamingId={renamingId}
-              dropTarget={dropTarget}
-              actions={treeActions}
-            />
-          </nav>
+          <TreePane
+            nodes={tree}
+            searching={false}
+            renamingId={renamingId}
+            dropTarget={dropTarget}
+            actions={treeActions}
+          />
         )}
       </SidebarGroup>
     </SidebarContent>
