@@ -42,7 +42,7 @@ const NoteNameField = memo(function NoteNameField() {
         value={field.value}
         onChange={(e) => field.onChange(e.target.value)}
         onBlur={field.flush}
-        className="w-55"
+        className="@md/field-group:w-55!"
       />
     </Field>
   );
