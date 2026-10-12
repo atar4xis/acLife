@@ -541,7 +541,7 @@
       "auto": "स्वचालित",
       "customSound": "कस्टम",
       "customSoundReplace": "दूसरी फ़ाइल चुनें",
-      "customSoundInvalid": "1 MB से छोटी ऑडियो फ़ाइल चुनें।",
+      "customSoundInvalid": "64 KB से छोटी ऑडियो फ़ाइल चुनें।",
       "notificationSound": "ध्वनि {{number}}"
     },
     "security": {

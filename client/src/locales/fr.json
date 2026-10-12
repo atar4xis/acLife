@@ -535,7 +535,7 @@
       "auto": "Automatique",
       "customSound": "Personnalisé",
       "customSoundReplace": "Choisir un autre fichier",
-      "customSoundInvalid": "Choisissez un fichier audio de moins de 1 Mo.",
+      "customSoundInvalid": "Choisissez un fichier audio de moins de 64 Ko.",
       "notificationSound": "Son {{number}}"
     },
     "security": {

@@ -8,7 +8,7 @@ import type {
 import { eventKey, makeOccurrence } from "@/lib/calendar/event";
 import { occurrences } from "@/lib/calendar/occurrences";
 import { overrideOccurrences } from "@/lib/calendar/recurrence";
-import { CUSTOM_NOTIFICATION_SOUND } from "@/lib/settingsDefaults";
+import { uint8ArrayFromBase64 } from "@/lib/utils";
 
 export const MAX_EVENT_NOTIFICATIONS = 3;
 export const MAX_NOTIFY_AMOUNT = 99;
@@ -16,25 +16,28 @@ export const NOTIFY_WINDOW_DAYS = 14;
 export const NOTIFY_WHEN: NotifyWhen[] = ["start", "minutes", "hours", "days"];
 export const NOTIFY_METHODS: NotifyMethod[] = ["sound", "device", "all"];
 
-const CUSTOM_SOUND_CACHE = "acl-sound";
-const CUSTOM_SOUND_KEY = "https://acl.invalid/custom";
-export const MAX_CUSTOM_SOUND_BYTES = 1 << 20;
+export const MAX_CUSTOM_SOUND_BYTES = 64 << 10;
 
-export const saveCustomSound = async (file: File) => {
-  const cache = await caches.open(CUSTOM_SOUND_CACHE);
-  await cache.put(CUSTOM_SOUND_KEY, new Response(file));
-};
-
-async function customSoundUrl() {
-  if (!("caches" in window)) return;
-  const cache = await caches.open(CUSTOM_SOUND_CACHE);
-  const res = await cache.match(CUSTOM_SOUND_KEY);
-  return res && URL.createObjectURL(await res.blob());
-}
+export const readCustomSound = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 
 let sound: HTMLAudioElement | undefined;
 let soundUrl: string | undefined;
 let latestPlay = 0;
+
+const customSoundUrl = (dataUrl: string) => {
+  const [header, base64] = dataUrl.split(",");
+  return URL.createObjectURL(
+    new Blob([uint8ArrayFromBase64(base64)], {
+      type: header.slice("data:".length, header.indexOf(";")),
+    }),
+  );
+};
 
 const bundledSoundUrl = async (name: string) =>
   URL.createObjectURL(
@@ -55,13 +58,16 @@ export async function isSoundBlocked() {
   }
 }
 
-export async function playNotificationSound(number: number, volume: number) {
+export async function playNotificationSound(
+  number: number | string,
+  volume: number,
+) {
   const play = ++latestPlay;
   sound?.pause();
   const url =
-    (number === CUSTOM_NOTIFICATION_SOUND
-      ? await customSoundUrl()
-      : undefined) ?? (await bundledSoundUrl(`notification_${number || 1}`));
+    typeof number === "string"
+      ? customSoundUrl(number)
+      : await bundledSoundUrl(`notification_${number || 1}`);
   if (play !== latestPlay) {
     URL.revokeObjectURL(url);
     return;

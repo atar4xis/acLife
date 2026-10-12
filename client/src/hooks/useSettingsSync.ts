@@ -7,6 +7,7 @@ import {
 } from "@/context/SettingsStoreContext";
 import { useUser } from "@/context/UserContext";
 import { decrypt, encrypt } from "@/lib/crypt";
+import { compress, decompress, isGzip } from "@/lib/gzip";
 import type { SettingsStore } from "@/lib/settingsStore";
 import {
   collectSynced,
@@ -49,9 +50,8 @@ const readRemote = async (
   let reason: unknown = "payload is not an object";
   try {
     const plain = await decrypt(uint8ArrayFromBase64(cipherText), masterKey);
-    const parsed = parseSyncPayload(
-      JSON.parse(new TextDecoder().decode(plain)),
-    );
+    const json = isGzip(plain) ? await decompress(plain) : plain;
+    const parsed = parseSyncPayload(JSON.parse(new TextDecoder().decode(json)));
     if (parsed) return parsed;
   } catch (error) {
     reason = error;
@@ -126,7 +126,7 @@ export function useSettingsSync() {
         const merged = mergePayloads(remote, local);
 
         const cipher = await encrypt(
-          new TextEncoder().encode(JSON.stringify(merged)),
+          await compress(new TextEncoder().encode(JSON.stringify(merged))),
           masterKey,
         );
         if (cancelled()) return;

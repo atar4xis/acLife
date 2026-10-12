@@ -525,7 +525,7 @@
       "auto": "自動",
       "customSound": "カスタム",
       "customSoundReplace": "別のファイルを選択",
-      "customSoundInvalid": "1 MB未満のオーディオファイルを選択してください。",
+      "customSoundInvalid": "64 KB未満のオーディオファイルを選択してください。",
       "notificationSound": "サウンド {{number}}"
     },
     "security": {

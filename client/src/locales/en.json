@@ -539,7 +539,7 @@
       "auto": "Automatic",
       "customSound": "Custom",
       "customSoundReplace": "Choose another file",
-      "customSoundInvalid": "Choose an audio file smaller than 1 MB.",
+      "customSoundInvalid": "Choose an audio file smaller than 64 KB.",
       "notificationSound": "Sound {{number}}"
     },
     "security": {

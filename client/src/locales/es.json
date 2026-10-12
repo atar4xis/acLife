@@ -533,7 +533,7 @@
       "auto": "Automático",
       "customSound": "Personalizado",
       "customSoundReplace": "Elegir otro archivo",
-      "customSoundInvalid": "Elige un archivo de audio de menos de 1 MB.",
+      "customSoundInvalid": "Elige un archivo de audio de menos de 64 KB.",
       "notificationSound": "Sonido {{number}}"
     },
     "security": {

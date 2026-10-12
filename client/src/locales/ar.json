@@ -576,7 +576,7 @@
       "auto": "تلقائي",
       "customSound": "مخصص",
       "customSoundReplace": "اختيار ملف آخر",
-      "customSoundInvalid": "اختر ملفًا صوتيًا أصغر من 1 ميغابايت.",
+      "customSoundInvalid": "اختر ملفًا صوتيًا أصغر من 64 كيلوبايت.",
       "notificationSound": "الصوت {{number}}"
     },
     "security": {

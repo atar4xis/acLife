@@ -7,7 +7,7 @@ import {
   useSettingsStore,
 } from "@/context/SettingsStoreContext";
 import { SETTINGS_STORAGE_KEY } from "@/lib/settingsStore";
-import { arrayBufferToBase64 } from "@/lib/utils";
+import { arrayBufferToBase64, uint8ArrayFromBase64 } from "@/lib/utils";
 import { CLIENT_ID } from "@/lib/clientId";
 import { emitStream } from "@/lib/stream";
 
@@ -27,6 +27,13 @@ const session = {
   masterKey: {} as CryptoKey,
 };
 vi.mock("@/context/UserContext", () => ({ useUser: () => session }));
+const gzipMagic = [0x1f, 0x8b];
+vi.mock("@/lib/gzip", () => ({
+  compress: async (input: Uint8Array) =>
+    new Uint8Array([...gzipMagic, ...input]),
+  decompress: async (input: Uint8Array) => input.slice(2),
+  isGzip: (data: Uint8Array) => data[0] === 0x1f && data[1] === 0x8b,
+}));
 vi.mock("@/lib/crypt", () => ({
   encrypt: async (data: Uint8Array) => data.buffer,
   decrypt: async (data: Uint8Array) => data,
@@ -123,6 +130,46 @@ describe("useSettingsSync", () => {
       timeout: 4000,
     });
     expect(post.mock.calls[1][1]).toMatchObject({ baseVersion: 1 });
+  });
+
+  it("uploads the settings gzipped", async () => {
+    get.mockResolvedValue({
+      success: true,
+      data: { version: 1, data: blob({}) },
+    });
+    post.mockResolvedValue({ success: true });
+
+    const { result } = setup();
+    result.current.setSetting("defaultView", "day");
+
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    const sent = uint8ArrayFromBase64(post.mock.calls[0][1].data);
+    expect(sent.slice(0, 2)).toEqual(new Uint8Array([0x1f, 0x8b]));
+    expect(JSON.parse(new TextDecoder().decode(sent.slice(2)))).toMatchObject({
+      defaultView: { value: "day" },
+    });
+  });
+
+  it("applies a gzipped remote blob", async () => {
+    const payload = { defaultView: { value: "day", updatedAt: Date.now() } };
+    get.mockResolvedValue({
+      success: true,
+      data: {
+        version: 1,
+        data: arrayBufferToBase64(
+          new Uint8Array([
+            ...gzipMagic,
+            ...new TextEncoder().encode(JSON.stringify(payload)),
+          ]).buffer,
+        ),
+      },
+    });
+
+    const { result } = setup();
+
+    await waitFor(() =>
+      expect(result.current.getSnapshot().defaultView).toBe("day"),
+    );
   });
 
   it("reuses the settings sent back with a conflict instead of fetching again", async () => {

@@ -525,7 +525,7 @@
       "auto": "自动",
       "customSound": "自定义",
       "customSoundReplace": "选择其他文件",
-      "customSoundInvalid": "请选择小于 1 MB 的音频文件。",
+      "customSoundInvalid": "请选择小于 64 KB 的音频文件。",
       "notificationSound": "声音 {{number}}"
     },
     "security": {

@@ -1,10 +1,12 @@
 import { Settings } from "luxon";
 import { isValidTimezone } from "@/lib/calendar/timezone";
-import { sanitizeNotifications } from "@/lib/calendar/notifications";
+import {
+  MAX_CUSTOM_SOUND_BYTES,
+  sanitizeNotifications,
+} from "@/lib/calendar/notifications";
 import {
   defaultCalendarSettings,
   defaultStoreSettings,
-  CUSTOM_NOTIFICATION_SOUND,
   NOTIFICATION_SOUNDS,
   RESYNC_INTERVAL_OPTIONS,
   type StoreKey,
@@ -62,7 +64,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 function hasValidType(key: StoreKey, value: unknown): boolean {
   const fallback = defaultStoreSettings[key];
 
-  if (key === "weekStartsOn") return true; // checked separately
+  if (key === "weekStartsOn" || key === "notificationSound") return true; // checked separately
   if (key === "activePresetId") {
     return value === null || typeof value === "string";
   }
@@ -143,9 +145,13 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
     parsed.resyncIntervalMinutes =
       defaultCalendarSettings.resyncIntervalMinutes;
   }
+  const isCustomSound =
+    typeof parsed.notificationSound === "string" &&
+    parsed.notificationSound.startsWith("data:audio/") &&
+    parsed.notificationSound.length <= MAX_CUSTOM_SOUND_BYTES * 2;
   if (
-    parsed.notificationSound !== CUSTOM_NOTIFICATION_SOUND &&
-    !NOTIFICATION_SOUNDS.includes(parsed.notificationSound)
+    !isCustomSound &&
+    !NOTIFICATION_SOUNDS.some((n) => n === parsed.notificationSound)
   ) {
     parsed.notificationSound = defaultCalendarSettings.notificationSound;
   }

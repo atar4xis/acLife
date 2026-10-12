@@ -25,7 +25,7 @@ export interface CalendarSettings {
   defaultTaskName: string;
   defaultEventDuration: number;
   defaultEventNotifications: EventNotification[];
-  notificationSound: number;
+  notificationSound: number | string;
   notificationVolume: number;
   resyncIntervalMinutes: number;
   agendaEnabled: boolean;

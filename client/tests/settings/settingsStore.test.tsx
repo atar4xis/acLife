@@ -227,10 +227,12 @@ describe("settings store", () => {
 
   it.each([
     [3, 3],
-    [0, 0],
+    [0, 1],
     [-1, 1],
     [6, 1],
     ["x", 1],
+    ["data:audio/mpeg;base64,eA==", "data:audio/mpeg;base64,eA=="],
+    [`data:audio/mpeg;base64,${"A".repeat(128 << 10)}`, 1],
   ])("normalizes a stored notificationSound of %s to %s", (stored, expected) => {
     seedSettings({ notificationSound: stored });
 

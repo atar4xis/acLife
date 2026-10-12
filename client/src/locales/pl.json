@@ -557,7 +557,7 @@
       "auto": "Automatycznie",
       "customSound": "Własny",
       "customSoundReplace": "Wybierz inny plik",
-      "customSoundInvalid": "Wybierz plik audio mniejszy niż 1 MB.",
+      "customSoundInvalid": "Wybierz plik audio mniejszy niż 64 KB.",
       "notificationSound": "Dźwięk {{number}}"
     },
     "security": {

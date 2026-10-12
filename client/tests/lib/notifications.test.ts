@@ -5,11 +5,10 @@ import {
   NOTIFY_WINDOW_DAYS,
   notificationTime,
   playNotificationSound,
-  saveCustomSound,
+  readCustomSound,
   sanitizeNotifications,
   upcomingNotifications,
 } from "@/lib/calendar/notifications";
-import { CUSTOM_NOTIFICATION_SOUND } from "@/lib/settingsDefaults";
 import type {
   CalendarEvent,
   EventNotification,
@@ -394,62 +393,24 @@ describe("playNotificationSound", () => {
   });
 
   describe("custom sound", () => {
-    const stubCache = () => {
-      const store = new Map<string, Response>();
-      vi.stubGlobal("caches", {
-        open: async () => ({
-          put: async (key: string, res: Response) => void store.set(key, res),
-          match: async (key: string) => store.get(key),
-        }),
-      });
-    };
+    const custom = "data:audio/mpeg;base64,eA==";
 
-    beforeEach(stubCache);
+    it("reads a file as a data url", async () => {
+      expect(
+        await readCustomSound(new File(["x"], "a.mp3", { type: "audio/mpeg" })),
+      ).toBe(custom);
+    });
 
-    it("plays the saved file", async () => {
+    it("plays the custom sound", async () => {
       const players = stubAudio();
-      await saveCustomSound(new File(["x"], "a.mp3", { type: "audio/mpeg" }));
 
-      await playNotificationSound(CUSTOM_NOTIFICATION_SOUND, 50);
+      await playNotificationSound(custom, 50);
 
       expect(players[0].src).toBe("blob:custom");
+      const blob: Blob = urls.create.mock.calls[0][0];
+      expect(blob.type).toBe("audio/mpeg");
+      expect(blob.size).toBe(1);
       expect(players[0].volume).toBe(0.5);
-    });
-
-    it("falls back to the first built-in sound without a saved file", async () => {
-      const players = stubAudio();
-
-      await playNotificationSound(CUSTOM_NOTIFICATION_SOUND, 50);
-
-      expect(players[0].src).toBe(
-        `blob:${import.meta.env.BASE_URL}sounds/notification_1.mp3`,
-      );
-    });
-
-    it("releases the previous file when the next sound plays", async () => {
-      stubAudio();
-      await saveCustomSound(new File(["x"], "a.mp3", { type: "audio/mpeg" }));
-
-      await playNotificationSound(CUSTOM_NOTIFICATION_SOUND, 50);
-      await playNotificationSound(2, 50);
-
-      expect(urls.revoke).toHaveBeenCalledWith("blob:custom");
-    });
-
-    it("only plays the latest request when plays overlap", async () => {
-      const players = stubAudio();
-      await saveCustomSound(new File(["x"], "a.mp3", { type: "audio/mpeg" }));
-
-      await Promise.all([
-        playNotificationSound(CUSTOM_NOTIFICATION_SOUND, 50),
-        playNotificationSound(2, 50),
-      ]);
-
-      expect(players).toHaveLength(1);
-      expect(players[0].src).toBe(
-        `blob:${import.meta.env.BASE_URL}sounds/notification_2.mp3`,
-      );
-      expect(urls.revoke).toHaveBeenCalledWith("blob:custom");
     });
   });
 });

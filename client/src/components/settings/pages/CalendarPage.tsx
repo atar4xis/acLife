@@ -15,7 +15,7 @@ import {
 import {
   MAX_CUSTOM_SOUND_BYTES,
   playNotificationSound,
-  saveCustomSound,
+  readCustomSound,
 } from "@/lib/calendar/notifications";
 import { DARK_COLORS, LIGHT_COLORS } from "@/lib/themeColors";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
@@ -339,20 +339,13 @@ export default function CalendarPage({
   });
   const soundInput = useRef<HTMLInputElement>(null);
   const chooseCustomSound = async (file: File) => {
-    const valid =
-      file.type.startsWith("audio/") && file.size <= MAX_CUSTOM_SOUND_BYTES;
-    if (
-      !valid ||
-      !(await saveCustomSound(file).then(
-        () => true,
-        () => false,
-      ))
-    ) {
+    if (!file.type.startsWith("audio/") || file.size > MAX_CUSTOM_SOUND_BYTES) {
       toast.error(t("settings.calendar.customSoundInvalid"));
       return;
     }
-    setSetting("notificationSound", CUSTOM_NOTIFICATION_SOUND);
-    void playNotificationSound(CUSTOM_NOTIFICATION_SOUND, notificationVolume);
+    const dataUrl = await readCustomSound(file);
+    setSetting("notificationSound", dataUrl);
+    void playNotificationSound(dataUrl, notificationVolume);
   };
   const trackPreview = (key: keyof typeof preview) => (value: number) =>
     setPreview((prev) =>
@@ -500,7 +493,11 @@ export default function CalendarPage({
           <SettingsLabel settingKey="notificationSound" />
           <SettingsSelect
             labelledBy={settingLabelId("notificationSound")}
-            value={String(notificationSound)}
+            value={String(
+              typeof notificationSound === "string"
+                ? CUSTOM_NOTIFICATION_SOUND
+                : notificationSound,
+            )}
             onValueChange={(value) => {
               if (Number(value) === CUSTOM_NOTIFICATION_SOUND) {
                 soundInput.current?.click();
@@ -510,7 +507,7 @@ export default function CalendarPage({
               void playNotificationSound(Number(value), notificationVolume);
             }}
             action={
-              notificationSound === CUSTOM_NOTIFICATION_SOUND && (
+              typeof notificationSound === "string" && (
                 <Button
                   variant="outline"
                   size="icon"

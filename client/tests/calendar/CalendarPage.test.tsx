@@ -47,16 +47,6 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: mocks.toastError },
 }));
 
-const stubCache = () => {
-  const put = vi.fn();
-  vi.stubGlobal("caches", {
-    open: async () => ({ put, match: async () => new Response("x") }),
-  });
-  URL.createObjectURL = () => "blob:custom";
-  URL.revokeObjectURL = () => {};
-  return put;
-};
-
 const stubAudio = () => {
   const players: { src: string; volume: number }[] = [];
   vi.stubGlobal("fetch", async (url: string) => ({
@@ -200,16 +190,16 @@ describe("CalendarPage", () => {
     it("keeps an uploaded file as the sound and previews it", async () => {
       const user = userEvent.setup();
       const players = stubAudio();
-      const put = stubCache();
       await renderLoadedCalendarPage();
       const file = new File(["x"], "ding.mp3", { type: "audio/mpeg" });
 
       await user.upload(screen.getByTestId("custom-sound-input"), file);
 
       await waitFor(() => expect(players).toHaveLength(1));
-      expect(put).toHaveBeenCalledWith("https://acl.invalid/custom", expect.any(Response));
-      expect(readSettings().notificationSound).toBe(0);
-      expect(players[0].src).toBe("blob:custom");
+      expect(readSettings().notificationSound).toMatch(
+        /^data:audio\/mpeg;base64,/,
+      );
+      expect(players[0].src).toBe("blob:audio/mpeg");
       expect(
         screen.getByRole("button", { name: "Choose another file" }),
       ).toBeInTheDocument();
@@ -218,22 +208,20 @@ describe("CalendarPage", () => {
     it.each([
       ["a file that is not audio", new File(["x"], "a.txt", { type: "text/plain" })],
       [
-        "an audio file over 1 MB",
-        new File([new Uint8Array((1 << 20) + 1)], "big.mp3", {
+        "an audio file over 64 KB",
+        new File([new Uint8Array((64 << 10) + 1)], "big.mp3", {
           type: "audio/mpeg",
         }),
       ],
     ])("rejects %s", async (_, file) => {
       const user = userEvent.setup({ applyAccept: false });
-      const put = stubCache();
       await renderLoadedCalendarPage();
 
       await user.upload(screen.getByTestId("custom-sound-input"), file);
 
       expect(mocks.toastError).toHaveBeenCalledWith(
-        "Choose an audio file smaller than 1 MB.",
+        "Choose an audio file smaller than 64 KB.",
       );
-      expect(put).not.toHaveBeenCalledWith("https://acl.invalid/custom", expect.anything());
       expect(
         screen.getByRole("combobox", { name: "Notification sound" }),
       ).toHaveTextContent("Sound 1");
