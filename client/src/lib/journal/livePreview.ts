@@ -26,6 +26,7 @@ import {
   BULLET_GAP,
   BULLETS,
   CheckboxWidget,
+  CopyCodeWidget,
   FootnoteLabelWidget,
   FootnoteRefWidget,
   LinkIconWidget,
@@ -313,6 +314,20 @@ const build = (
           out.push(...highlightFence(state, node.node, from, to));
           eachLine(node.from, node.to, (start, i, last) => {
             if (quote) quotedCode.add(start);
+            if (!source && i === 0)
+              out.push(
+                Decoration.widget({
+                  widget: new CopyCodeWidget(
+                    node.node
+                      .getChildren("CodeText")
+                      .map((p) =>
+                        state.sliceDoc(p.from, p.to).replace(/\n$/, ""),
+                      )
+                      .join("\n"),
+                  ),
+                  side: 1,
+                }).range(start),
+              );
             if (lists > 0 && !raw) {
               out.push(
                 Decoration.line({

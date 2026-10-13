@@ -136,9 +136,18 @@ export const journalTheme = EditorView.theme({
     fontFamily: "var(--journal-font-mono)",
     fontSize: "var(--journal-code-size)",
     backgroundColor: "var(--muted)",
+    position: "relative",
     paddingInline: "var(--journal-code-pad-x) !important",
   },
+  ".cm-copy-code": {
+    position: "absolute",
+    insetBlockStart: "6px",
+    insetInlineEnd: "6px",
+    zIndex: "1",
+    fontFamily: "var(--font-sans)",
+  },
   ".cm-codefence": { color: "var(--muted-foreground)" },
+  ".cm-codefence.cm-collapsed": { overflow: "visible" },
   ".cm-code-first": {
     paddingTop: "var(--journal-code-pad-y) !important",
   },

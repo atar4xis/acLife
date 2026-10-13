@@ -49,6 +49,31 @@ describe("live preview code highlighting", () => {
   });
 });
 
+describe("live preview copy button", () => {
+  const text = "> ```js\n> let a = 1;\n> let b = 2;\n> ```\n\nend";
+  const props = { label: "Editor", placeholder: "", value: text, onChange: vi.fn() };
+
+  it("copies the code of a fenced block and is absent in source mode", async () => {
+    const writeText = vi.fn();
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const view = render(<JournalEditor {...props} />);
+    const editor = editorView();
+    act(() => editor.dispatch({ selection: { anchor: text.length } }));
+
+    const button = await waitFor(() => {
+      const found = editor.contentDOM.querySelector("button[aria-label='Copy code']");
+      expect(found).toBeTruthy();
+      return found!;
+    });
+    expect(button.closest(".cm-line")!.classList).toContain("cm-code-first");
+    fireEvent.click(button);
+    expect(writeText).toHaveBeenCalledWith("let a = 1;\nlet b = 2;");
+
+    view.rerender(<JournalEditor {...props} source />);
+    expect(editor.contentDOM.querySelector(".cm-copy-code")).toBeNull();
+  });
+});
+
 describe("live preview source mode", () => {
   const text = "# Title\n\n**bold** and [a](https://x.y)\n\n| a |\n| - |\n| 1 |\n\nend";
   const editorProps = { label: "Editor", placeholder: "", value: text, onChange: vi.fn() };

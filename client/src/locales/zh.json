@@ -825,6 +825,7 @@
   },
   "journal": {
     "newNote": "新建笔记",
+    "copyCode": "复制代码",
     "newFolder": "新建文件夹",
     "sortOrder": "更改排序方式",
     "collapseAll": "全部折叠",

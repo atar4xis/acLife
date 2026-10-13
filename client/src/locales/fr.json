@@ -847,6 +847,7 @@
   },
   "journal": {
     "newNote": "Nouvelle note",
+    "copyCode": "Copier le code",
     "newFolder": "Nouveau dossier",
     "sortOrder": "Changer l'ordre de tri",
     "collapseAll": "Tout réduire",

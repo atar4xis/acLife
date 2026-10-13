@@ -853,6 +853,7 @@
   },
   "journal": {
     "newNote": "नया नोट",
+    "copyCode": "कोड कॉपी करें",
     "newFolder": "नया फ़ोल्डर",
     "sortOrder": "क्रम बदलें",
     "collapseAll": "सभी समेटें",

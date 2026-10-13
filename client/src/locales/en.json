@@ -851,6 +851,7 @@
   },
   "journal": {
     "newNote": "New note",
+    "copyCode": "Copy code",
     "newFolder": "New folder",
     "sortOrder": "Change sort order",
     "collapseAll": "Collapse all",

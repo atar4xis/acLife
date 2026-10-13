@@ -2,6 +2,7 @@ import { type EditorView, WidgetType } from "@codemirror/view";
 import { ExternalLink } from "lucide-react";
 import { type ReactElement, createElement } from "react";
 import { type Root, createRoot } from "react-dom/client";
+import CopyCodeButton from "@/components/journal/CopyCodeButton";
 import JournalMarkdown from "@/components/journal/JournalMarkdown";
 import { Checkbox } from "@/components/ui/checkbox";
 import { openExternal } from "@/lib/nativeUpdater";
@@ -227,5 +228,25 @@ export class TableWidget extends WidgetType {
 
   ignoreEvent() {
     return false;
+  }
+}
+
+export class CopyCodeWidget extends WidgetType {
+  constructor(readonly code: string) {
+    super();
+  }
+
+  eq(other: CopyCodeWidget) {
+    return other.code === this.code;
+  }
+
+  toDOM() {
+    const host = document.createElement("span");
+    host.className = "cm-copy-code";
+    return mount(host, createElement(CopyCodeButton, { code: this.code }));
+  }
+
+  destroy(dom: HTMLElement) {
+    unmount(dom);
   }
 }

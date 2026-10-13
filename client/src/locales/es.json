@@ -845,6 +845,7 @@
   },
   "journal": {
     "newNote": "Nueva nota",
+    "copyCode": "Copiar código",
     "newFolder": "Nueva carpeta",
     "sortOrder": "Cambiar orden",
     "collapseAll": "Contraer todo",

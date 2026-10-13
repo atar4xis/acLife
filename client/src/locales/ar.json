@@ -934,6 +934,7 @@
   },
   "journal": {
     "newNote": "ملاحظة جديدة",
+    "copyCode": "نسخ الكود",
     "newFolder": "مجلد جديد",
     "sortOrder": "تغيير ترتيب الفرز",
     "collapseAll": "طي الكل",

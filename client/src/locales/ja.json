@@ -825,6 +825,7 @@
   },
   "journal": {
     "newNote": "新規ノート",
+    "copyCode": "コードをコピー",
     "newFolder": "新規フォルダ",
     "sortOrder": "並び順を変更",
     "collapseAll": "すべて折りたたむ",
