@@ -116,6 +116,18 @@ const (
 	DefaultMaxPushSubscriptions      = 50
 )
 
+// Rate limits: requests per window (per client IP unless noted), windows are fixed in the routes.
+var (
+	RateLimitAuth          int // per minute
+	RateLimitRegister      int // per minute
+	RateLimitUser          int // per second
+	RateLimitCalendar      int // per second
+	RateLimitJournal       int // per second
+	RateLimitStream        int // per minute
+	RateLimitStripe        int // per second
+	RateLimitStripePerUser int // per minute, per user (checkout and portal)
+)
+
 var (
 	MaxUserBytes          int64
 	MaxSaveBodyBytes      int64
@@ -154,6 +166,15 @@ func Configure() {
 	MailHourlyLimit = int(envInt("MAIL_HOURLY_LIMIT", DefaultMailHourlyLimit))
 	MailDomainHourlyLimit = int(envInt("MAIL_DOMAIN_HOURLY_LIMIT", DefaultMailDomainHourlyLimit))
 	MaxPushSubscriptions = int(envInt("MAX_PUSH_SUBSCRIPTIONS", DefaultMaxPushSubscriptions))
+
+	RateLimitAuth = int(envInt("RATE_LIMIT_AUTH", 30))
+	RateLimitRegister = int(envInt("RATE_LIMIT_REGISTER", 9))
+	RateLimitUser = int(envInt("RATE_LIMIT_USER", 20))
+	RateLimitCalendar = int(envInt("RATE_LIMIT_CALENDAR", 30))
+	RateLimitJournal = int(envInt("RATE_LIMIT_JOURNAL", 30))
+	RateLimitStream = int(envInt("RATE_LIMIT_STREAM", 60))
+	RateLimitStripe = int(envInt("RATE_LIMIT_STRIPE", 100))
+	RateLimitStripePerUser = int(envInt("RATE_LIMIT_STRIPE_PER_USER", 8))
 
 	Metadata = types.ServerMetadata{
 		URL: os.Getenv("SERVER_URL"),

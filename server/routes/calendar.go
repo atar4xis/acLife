@@ -14,9 +14,9 @@ import (
 func Calendar(r *mux.Router) {
 	sr := r.PathPrefix("/calendar").Subrouter()
 
-	sr.Use(handlers.RateLimitMiddleware(30, time.Second)) // 30 reqs/sec
-	sr.Use(handlers.AuthMiddleware())                     // must be logged in
-	sr.Use(handlers.SubscriptionMiddleware())             // must have a valid subscription
+	sr.Use(handlers.RateLimitMiddleware(constants.RateLimitCalendar, time.Second))
+	sr.Use(handlers.AuthMiddleware())         // must be logged in
+	sr.Use(handlers.SubscriptionMiddleware()) // must have a valid subscription
 	sr.Use(handlers.MaxBodySizeMiddleware(constants.MaxSaveBodyBytes))
 
 	sr.HandleFunc("/events/save", handlers.SaveCalendarEvents).Methods("POST")

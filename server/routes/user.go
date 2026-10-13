@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"acLife/constants"
 	"acLife/handlers"
 
 	"github.com/gorilla/mux"
@@ -13,8 +14,8 @@ import (
 func User(r *mux.Router) {
 	ur := r.PathPrefix("/user").Subrouter()
 
-	ur.Use(handlers.RateLimitMiddleware(20, time.Second)) // 20 reqs/sec
-	ur.Use(handlers.AuthMiddleware())                     // must be logged in
+	ur.Use(handlers.RateLimitMiddleware(constants.RateLimitUser, time.Second))
+	ur.Use(handlers.AuthMiddleware()) // must be logged in
 
 	ss := ur.PathPrefix("/settings").Subrouter()
 	ss.Use(handlers.SubscriptionMiddleware())         // must have a valid subscription

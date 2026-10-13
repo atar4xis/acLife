@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"acLife/constants"
 	"acLife/handlers"
 
 	"github.com/gorilla/mux"
@@ -13,9 +14,9 @@ import (
 func Stripe(r *mux.Router) {
 	sr := r.PathPrefix("/stripe").Subrouter()
 
-	sr.Use(handlers.RateLimitMiddleware(100, time.Second)) // 100 reqs/sec
-	sr.Use(handlers.AuthMiddleware())                      // require login
-	sr.Use(handlers.MaxBodySizeMiddleware(64 << 10))       // 64 KB
+	sr.Use(handlers.RateLimitMiddleware(constants.RateLimitStripe, time.Second))
+	sr.Use(handlers.AuthMiddleware())                // require login
+	sr.Use(handlers.MaxBodySizeMiddleware(64 << 10)) // 64 KB
 	sr.Use(handlers.CSRFMiddleware())
 
 	// The webhook doesn't have to be logged in and doesn't require CSRF protection
@@ -26,7 +27,7 @@ func Stripe(r *mux.Router) {
 	// Other routes are authenticated
 	sr.HandleFunc("/pricing", handlers.Pricing).Methods("GET")
 	// each of these calls Stripe, so a user gets only a few per minute
-	perUser := handlers.UserRateLimitMiddleware(8, time.Minute)
+	perUser := handlers.UserRateLimitMiddleware(constants.RateLimitStripePerUser, time.Minute)
 	sr.Handle("/checkout", perUser(http.HandlerFunc(handlers.CreateCheckoutSession))).Methods("POST")
 	sr.Handle("/manage", perUser(http.HandlerFunc(handlers.CreatePortalSession))).Methods("GET")
 }
