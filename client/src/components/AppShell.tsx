@@ -7,6 +7,7 @@ import JournalView from "@/components/journal/JournalView";
 import { useAppView } from "@/hooks/useAppView";
 import { useStorage } from "@/context/StorageContext";
 import { useUser } from "@/context/UserContext";
+import { useJournalSaving } from "@/context/JournalContext";
 import { useCalendarActions } from "@/context/CalendarContext";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { Spinner } from "./ui/spinner";
@@ -60,6 +61,8 @@ export default function AppShell() {
     syncBuckets,
     applyChanges,
   } = useCalendarEvents(user, masterKey, bucketKey);
+
+  const journalSaving = useJournalSaving();
 
   const subscriptionMissing = isSubscriptionMissing(user, serverMeta);
 
@@ -203,7 +206,7 @@ export default function AppShell() {
           {t("appShell.offline")}
         </div>
       )}
-      {saving && (
+      {(saving || journalSaving) && (
         <Spinner className="fixed bottom-5 inset-e-5 z-30 size-8 in-data-has-undo-buttons:inset-e-32" />
       )}
       <PushService />

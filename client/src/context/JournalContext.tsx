@@ -64,6 +64,7 @@ type JournalActions = {
 const JournalContext = createContext<JournalContextValue | null>(null);
 const JournalActionsContext = createContext<JournalActions | null>(null);
 const JournalItemsContext = createContext<JournalItem[] | null>(null);
+const JournalSavingContext = createContext(false);
 
 export function JournalProvider({ children }: WithChildren) {
   const [state, dispatch] = useReducer(
@@ -79,7 +80,7 @@ export function JournalProvider({ children }: WithChildren) {
     state,
     dispatch,
   });
-  useJournalSync({ items: state.items, loaded, dispatch });
+  const saving = useJournalSync({ items: state.items, loaded, dispatch });
 
   const actions = useMemo<JournalActions>(() => {
     const setDragging = (next: JournalDrag | null) => {
@@ -195,9 +196,11 @@ export function JournalProvider({ children }: WithChildren) {
   return (
     <JournalActionsContext.Provider value={actions}>
       <JournalItemsContext.Provider value={state.items}>
-        <JournalContext.Provider value={value}>
-          {children}
-        </JournalContext.Provider>
+        <JournalSavingContext.Provider value={saving}>
+          <JournalContext.Provider value={value}>
+            {children}
+          </JournalContext.Provider>
+        </JournalSavingContext.Provider>
       </JournalItemsContext.Provider>
     </JournalActionsContext.Provider>
   );
@@ -226,4 +229,9 @@ export function useJournalItems() {
   if (!items)
     throw new Error("useJournalItems must be used within a JournalProvider");
   return items;
+}
+
+// eslint-disable-next-line
+export function useJournalSaving() {
+  return useContext(JournalSavingContext);
 }

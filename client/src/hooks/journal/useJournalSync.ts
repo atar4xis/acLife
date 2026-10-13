@@ -61,6 +61,7 @@ export const useJournalSync = ({
     !isSubscriptionMissing(user, serverMeta);
   const [queue] = useState(createSerialQueue);
   const [acked] = useState(() => new Map<string, JournalItem>());
+  const [saving, setSaving] = useState(false);
   const generation = useRef(0);
 
   const latestItems = useEffectEvent(() => items);
@@ -119,7 +120,12 @@ export const useJournalSync = ({
   const pushNow = useEffectEvent(async () => {
     if (!masterKey || !active) return false;
     const { upserts, removed } = pendingChanges(latestItems(), acked);
-    return send(upserts, removed, masterKey, false);
+    setSaving(true);
+    try {
+      return await send(upserts, removed, masterKey, false);
+    } finally {
+      setSaving(false);
+    }
   });
 
   const applyMerged = useEffectEvent(
@@ -260,4 +266,6 @@ export const useJournalSync = ({
   }, [active]);
 
   useEffect(() => () => void schedulePush(), []);
+
+  return saving;
 };
