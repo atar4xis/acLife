@@ -8,13 +8,14 @@ type MockUser = { type: string; subscription_status?: string } | null;
 
 let mockUser: MockUser = { type: "online" };
 let mockMeta: object | null = null;
+const mockGet = vi.fn();
 
 vi.mock("../../src/context/UserContext.tsx", () => ({
   useUser: () => ({ user: mockUser }),
 }));
 
 vi.mock("../../src/context/ApiContext.tsx", () => ({
-  useApi: () => ({ url: "http://mock-api", serverMeta: mockMeta }),
+  useApi: () => ({ url: "http://mock-api", serverMeta: mockMeta, get: mockGet }),
 }));
 
 class FakeEventSource {
@@ -63,6 +64,7 @@ describe("event stream", () => {
     vi.useFakeTimers();
     mockUser = { type: "online" };
     mockMeta = null;
+    mockGet.mockReset();
     FakeEventSource.instances = [];
     vi.stubGlobal("EventSource", FakeEventSource);
   });
@@ -223,6 +225,23 @@ describe("event stream", () => {
 
     expect(onSync).toHaveBeenCalledTimes(1);
     stop();
+  });
+
+  it("checks the session when the server refuses the connection and stops retrying once logged out", () => {
+    const view = render(<StreamService />);
+    const first = FakeEventSource.instances[0];
+
+    first.readyState = FakeEventSource.CLOSED;
+    first.onerror?.();
+    expect(mockGet).toHaveBeenCalledWith("user");
+
+    mockUser = null;
+    view.rerender(<StreamService />);
+    act(() => {
+      vi.advanceTimersByTime(60000);
+    });
+
+    expect(FakeEventSource.instances).toHaveLength(1);
   });
 
   it("opens a new stream after the server refuses the connection", () => {

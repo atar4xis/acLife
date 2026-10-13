@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { useApi } from "@/context/ApiContext";
 import { useUser } from "@/context/UserContext";
 import { emitStream, type StreamMessage } from "@/lib/stream";
@@ -18,10 +18,12 @@ const TIMEOUT_MS = 60000;
 type WireMessage = StreamMessage & { seq: number };
 
 export default function StreamService() {
-  const { url, serverMeta } = useApi();
+  const { url, serverMeta, get } = useApi();
   const { user } = useUser();
   const active =
     user?.type === "online" && !isSubscriptionMissing(user, serverMeta);
+
+  const checkSession = useEffectEvent(() => get("user"));
 
   useEffect(() => {
     if (!active || !url) return;
@@ -60,6 +62,7 @@ export default function StreamService() {
         clearTimeout(heartbeat);
         if (source.readyState === EventSource.CLOSED) {
           retry = setTimeout(connect, RETRY_MS);
+          void checkSession();
         }
       };
 
