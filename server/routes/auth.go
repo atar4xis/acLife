@@ -16,10 +16,10 @@ func Auth(r *mux.Router) {
 	sr.Use(handlers.MaxBodySizeMiddleware(16 << 10))      // 16 KB
 	sr.Use(handlers.RateLimitMiddleware(30, time.Minute)) // 30 reqs/min
 
-	sr.Handle("/register", handlers.RateLimitMiddleware(3, time.Minute)(http.HandlerFunc(handlers.Register))).Methods("POST")                    // Stricter 3 req/min for registrations
-	sr.Handle("/register/challenge", handlers.RateLimitMiddleware(3, time.Minute)(http.HandlerFunc(handlers.RegisterChallenge))).Methods("POST") // Same limit as /register
-	sr.Handle("/register/start", handlers.RateLimitMiddleware(3, time.Minute)(http.HandlerFunc(handlers.RegisterStart))).Methods("POST")
-	sr.Handle("/register/complete", handlers.RateLimitMiddleware(3, time.Minute)(http.HandlerFunc(handlers.RegisterComplete))).Methods("POST")
+	sr.Handle("/register", handlers.RateLimitMiddleware(9, time.Minute)(http.HandlerFunc(handlers.Register))).Methods("POST")                    // Stricter 10 req/min for registrations
+	sr.Handle("/register/challenge", handlers.RateLimitMiddleware(9, time.Minute)(http.HandlerFunc(handlers.RegisterChallenge))).Methods("POST") // Same limit as /register
+	sr.Handle("/register/start", handlers.RateLimitMiddleware(9, time.Minute)(http.HandlerFunc(handlers.RegisterStart))).Methods("POST")
+	sr.Handle("/register/complete", handlers.RateLimitMiddleware(9, time.Minute)(http.HandlerFunc(handlers.RegisterComplete))).Methods("POST")
 	sr.HandleFunc("/login/start", handlers.LoginStart).Methods("POST")
 	sr.HandleFunc("/login/verify", handlers.LoginVerify).Methods("POST")
 	sr.HandleFunc("/logout", handlers.Logout).Methods("POST")

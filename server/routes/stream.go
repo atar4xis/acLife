@@ -12,9 +12,9 @@ import (
 func Stream(r *mux.Router) {
 	sr := r.PathPrefix("/stream").Subrouter()
 
-	sr.Use(handlers.RateLimitMiddleware(30, time.Minute)) // 30 reqs/min
-	sr.Use(handlers.AuthMiddleware())                     // must be logged in
-	sr.Use(handlers.SubscriptionMiddleware())             // must have a valid subscription
+	sr.Use(handlers.RateLimitMiddleware(60, time.Minute)) // 60 reqs/min
+	sr.Use(handlers.AuthMiddleware())                      // must be logged in
+	sr.Use(handlers.SubscriptionMiddleware())              // must have a valid subscription
 	sr.Use(handlers.CSRFMiddleware())
 
 	sr.HandleFunc("", handlers.Stream).Methods("GET")

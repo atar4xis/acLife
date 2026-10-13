@@ -14,7 +14,7 @@ import (
 func Journal(r *mux.Router) {
 	sr := r.PathPrefix("/journal").Subrouter()
 
-	sr.Use(handlers.RateLimitMiddleware(20, time.Second)) // 20 reqs/sec
+	sr.Use(handlers.RateLimitMiddleware(30, time.Second)) // 30 reqs/sec
 	sr.Use(handlers.AuthMiddleware())                     // must be logged in
 	sr.Use(handlers.SubscriptionMiddleware())             // must have a valid subscription
 	sr.Use(handlers.MaxBodySizeMiddleware(constants.MaxSaveBodyBytes))
