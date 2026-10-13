@@ -33,7 +33,7 @@ export default function StatusBar({
   );
 
   return (
-    <div className="text-muted-foreground flex shrink-0 justify-end gap-4 border-t px-3 py-1 text-xs tabular-nums">
+    <div className="text-muted-foreground bg-background absolute inset-e-0 bottom-0 z-10 flex gap-4 rounded-ss-md border-s border-t px-3 py-1 text-xs tabular-nums">
       {showCursor && (
         <>
           <span>{t("journal.line", { n: fmt(cursor.line) })}</span>
