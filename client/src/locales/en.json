@@ -910,6 +910,11 @@
       "bottom": "Move to a new pane below"
     },
     "movePane": "Move to pane {{n}}",
+    "closeOthers": "Close others",
+    "closeLeft": "Close to the left",
+    "closeRight": "Close to the right",
+    "splitRight": "Split right",
+    "splitDown": "Split down",
     "resize": "Resize panes",
     "tabMenu": "Tab actions",
     "wordCount": "Words: {{n}}",

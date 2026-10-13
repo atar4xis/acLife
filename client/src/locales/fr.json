@@ -906,6 +906,11 @@
       "bottom": "Déplacer vers un nouveau volet en dessous"
     },
     "movePane": "Déplacer vers le volet {{n}}",
+    "closeOthers": "Fermer les autres",
+    "closeLeft": "Fermer à gauche",
+    "closeRight": "Fermer à droite",
+    "splitRight": "Diviser à droite",
+    "splitDown": "Diviser vers le bas",
     "resize": "Redimensionner les volets",
     "tabMenu": "Actions de l'onglet",
     "wordCount": "Mots : {{n}}",

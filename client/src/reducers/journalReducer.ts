@@ -10,6 +10,7 @@ import {
   openNote,
   setReading,
   setSource,
+  splitTab,
 } from "@/lib/journal/layout";
 import type { JournalAction, JournalItem, JournalState } from "@/types/Journal";
 
@@ -174,6 +175,21 @@ export function journalReducer(
       return {
         ...state,
         workspace: closeTab(state.workspace, action.paneId, action.id),
+      };
+    case "closeTabs":
+      return {
+        ...state,
+        workspace: closeNotes(state.workspace, action.ids),
+      };
+    case "splitTab":
+      return {
+        ...state,
+        workspace: splitTab(
+          state.workspace,
+          action.paneId,
+          action.id,
+          action.zone,
+        ),
       };
     case "focusPane":
       return state.workspace.focused === action.paneId

@@ -52,6 +52,8 @@ type JournalActions = {
   openNote: (id: string, newTab?: boolean) => void;
   activateTab: (paneId: string, id: string) => void;
   closeTab: (paneId: string, id: string) => void;
+  closeTabs: (ids: string[]) => void;
+  splitTab: (paneId: string, id: string, zone: "right" | "bottom") => void;
   focusPane: (paneId: string) => void;
   startDrag: (drag: JournalDrag) => void;
   endDrag: () => void;
@@ -130,6 +132,9 @@ export function JournalProvider({ children }: WithChildren) {
       activateTab: (paneId, id) =>
         dispatch({ type: "activateTab", paneId, id }),
       closeTab: (paneId, id) => dispatch({ type: "closeTab", paneId, id }),
+      closeTabs: (ids) => dispatch({ type: "closeTabs", ids }),
+      splitTab: (paneId, id, zone) =>
+        dispatch({ type: "splitTab", paneId, id, zone }),
       focusPane: (paneId) => dispatch({ type: "focusPane", paneId }),
       startDrag: (payload) => setTimeout(() => setDragging(payload)),
       endDrag: () => setDragging(null),

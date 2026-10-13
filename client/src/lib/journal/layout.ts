@@ -233,6 +233,19 @@ const applyDrop = (
   return settle({ ...workspace, focused }, layout);
 };
 
+export const splitTab = (
+  workspace: Workspace,
+  paneId: string,
+  id: string,
+  zone: "right" | "bottom",
+): Workspace => {
+  const added = newPane([id]);
+  return {
+    layout: wrapPane(workspace.layout, paneId, zone, added),
+    focused: added.id,
+  };
+};
+
 export const canDrop = (
   workspace: Workspace,
   drag: JournalDrag,

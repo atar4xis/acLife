@@ -146,11 +146,15 @@ describe("journal tab keyboard", () => {
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
     ).toEqual([
+      "Close",
+      "Close others",
+      "Close to the left",
+      "Split right",
+      "Split down",
       "Move to a new pane on the left",
       "Move to a new pane on the right",
       "Move to a new pane above",
       "Move to a new pane below",
-      "Close",
     ]);
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
@@ -187,7 +191,7 @@ describe("journal tab keyboard", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Close"]);
+    ).toEqual(["Close", "Split right", "Split down"]);
   });
 
   it("moves a tab to a new split with M and focuses it there", async () => {
@@ -197,8 +201,11 @@ describe("journal tab keyboard", () => {
     focus(tab("Two"));
 
     await user.keyboard("m");
-    await screen.findByRole("menu");
-    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "Move to a new pane on the right",
+      }),
+    );
 
     await waitFor(() => expect(lists()).toHaveLength(2));
     const moved = tab("Two", lists()[1]);
@@ -223,8 +230,8 @@ describe("journal tab keyboard", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Move to pane 1", "Close"]);
-    await user.keyboard("{Enter}");
+    ).toEqual(["Close", "Split right", "Split down", "Move to pane 1"]);
+    await user.click(within(menu).getByRole("menuitem", { name: "Move to pane 1" }));
 
     await waitFor(() => expect(lists()).toHaveLength(1));
     await waitFor(() => expect(focused()).toBe(tab("Three")));
@@ -242,11 +249,49 @@ describe("journal tab keyboard", () => {
     focus(tab("Two"));
 
     await user.keyboard("m");
-    await screen.findByRole("menu");
-    await user.keyboard("{End}{Enter}");
+    await user.click(await screen.findByRole("menuitem", { name: "Close" }));
 
     await waitFor(() =>
       expect(screen.queryByRole("tab", { name: "Two" })).toBeNull(),
+    );
+  });
+
+  it.each([
+    ["Close others", ["Two"]],
+    ["Close to the left", ["Two", "Three"]],
+    ["Close to the right", ["One", "Two"]],
+  ])("%s from the tab menu", async (label, remaining) => {
+    const user = userEvent.setup();
+    await renderLoadedJournal();
+    openTabs("One", "Two", "Three");
+    focus(tab("Two"));
+
+    await user.keyboard("m");
+    await user.click(await screen.findByRole("menuitem", { name: label }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryAllByRole("tab").map((item) => item.textContent),
+      ).toEqual(remaining),
+    );
+  });
+
+  it("splits down with a copy of the tab from the tab menu", async () => {
+    const user = userEvent.setup();
+    await renderLoadedJournal();
+    openTabs("One", "Two");
+    focus(tab("Two"));
+
+    await user.keyboard("m");
+    await user.click(await screen.findByRole("menuitem", { name: "Split down" }));
+
+    await waitFor(() => expect(lists()).toHaveLength(2));
+    expect(journal.workspace.layout).toMatchObject({ direction: "column" });
+    expect(
+      panesOf(journal.workspace.layout).map((pane) => pane.tabs.length),
+    ).toEqual([2, 1]);
+    expect(journal.workspace.focused).toBe(
+      panesOf(journal.workspace.layout)[1].id,
     );
   });
 

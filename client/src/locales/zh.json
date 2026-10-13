@@ -884,6 +884,11 @@
       "bottom": "移动到下方的新窗格"
     },
     "movePane": "移动到窗格 {{n}}",
+    "closeOthers": "关闭其他",
+    "closeLeft": "关闭左侧",
+    "closeRight": "关闭右侧",
+    "splitRight": "向右拆分",
+    "splitDown": "向下拆分",
     "resize": "调整窗格大小",
     "tabMenu": "标签页操作",
     "wordCount": "字数: {{n}}",

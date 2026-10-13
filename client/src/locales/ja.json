@@ -884,6 +884,11 @@
       "bottom": "下側の新しいペインに移動"
     },
     "movePane": "ペイン{{n}}に移動",
+    "closeOthers": "他のタブを閉じる",
+    "closeLeft": "左側のタブを閉じる",
+    "closeRight": "右側のタブを閉じる",
+    "splitRight": "右に分割",
+    "splitDown": "下に分割",
     "resize": "ペインのサイズを変更",
     "tabMenu": "タブの操作",
     "wordCount": "単語数: {{n}}",

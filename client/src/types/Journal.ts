@@ -127,6 +127,8 @@ export type JournalAction =
   | { type: "openNote"; id: string; newTab: boolean }
   | { type: "activateTab"; paneId: string; id: string }
   | { type: "closeTab"; paneId: string; id: string }
+  | { type: "closeTabs"; ids: string[] }
+  | { type: "splitTab"; paneId: string; id: string; zone: "right" | "bottom" }
   | { type: "focusPane"; paneId: string }
   | { type: "dropOnPane"; drag: JournalDrag; paneId: string; zone: DropZone }
   | { type: "dropOnTabs"; drag: JournalDrag; paneId: string; index: number };

@@ -904,6 +904,11 @@
       "bottom": "Mover a un nuevo panel abajo"
     },
     "movePane": "Mover al panel {{n}}",
+    "closeOthers": "Cerrar otras",
+    "closeLeft": "Cerrar a la izquierda",
+    "closeRight": "Cerrar a la derecha",
+    "splitRight": "Dividir a la derecha",
+    "splitDown": "Dividir hacia abajo",
     "resize": "Cambiar el tamaño de los paneles",
     "tabMenu": "Acciones de la pestaña",
     "wordCount": "Palabras: {{n}}",

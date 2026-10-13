@@ -1,6 +1,7 @@
 import {
   ContextMenuItem,
   ContextMenuLabel,
+  ContextMenuSeparator,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
@@ -8,6 +9,7 @@ import {
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -20,6 +22,7 @@ export type MenuParts = {
       "className" | "children"
     >
   >;
+  Separator: React.ComponentType;
   Item: React.ComponentType<
     Pick<
       React.ComponentProps<typeof ContextMenuItem>,
@@ -39,6 +42,7 @@ export type MenuParts = {
 
 export const CONTEXT_PARTS: MenuParts = {
   Label: ContextMenuLabel,
+  Separator: ContextMenuSeparator,
   Item: ContextMenuItem,
   Sub: ContextMenuSub,
   SubTrigger: ContextMenuSubTrigger,
@@ -47,6 +51,7 @@ export const CONTEXT_PARTS: MenuParts = {
 
 export const DROPDOWN_PARTS: MenuParts = {
   Label: DropdownMenuLabel,
+  Separator: DropdownMenuSeparator,
   Item: DropdownMenuItem,
   Sub: DropdownMenuSub,
   SubTrigger: DropdownMenuSubTrigger,
