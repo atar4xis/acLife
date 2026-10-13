@@ -330,6 +330,7 @@
       "updates": "更新",
       "about": "关于",
       "journal-editor": "编辑器",
+      "journal-customization": "自定义",
       "note-defaults": "笔记默认设置"
     },
     "items": {
@@ -409,6 +410,8 @@
       "journal-foreground": "前景色",
       "journal-background": "背景色",
       "journal-color-icons": "图标使用前景色",
+      "journal-color-presets": "预设颜色",
+      "journal-add-colors-automatically": "自动添加新颜色",
       "journal-foreground-value": "前景色值",
       "journal-background-value": "背景色值"
     },

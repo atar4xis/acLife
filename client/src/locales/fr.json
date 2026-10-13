@@ -336,6 +336,7 @@
       "updates": "Mises à jour",
       "about": "À propos",
       "journal-editor": "Éditeur",
+      "journal-customization": "Personnalisation",
       "note-defaults": "Valeurs par défaut des notes"
     },
     "items": {
@@ -415,6 +416,8 @@
       "journal-foreground": "Couleur de premier plan",
       "journal-background": "Couleur d'arrière-plan",
       "journal-color-icons": "Utiliser la couleur de premier plan pour les icônes",
+      "journal-color-presets": "Couleurs prédéfinies",
+      "journal-add-colors-automatically": "Ajouter automatiquement les nouvelles couleurs",
       "journal-foreground-value": "Valeur de la couleur de premier plan",
       "journal-background-value": "Valeur de la couleur d'arrière-plan"
     },

@@ -340,6 +340,7 @@
       "updates": "Updates",
       "about": "About",
       "journal-editor": "Editor",
+      "journal-customization": "Customization",
       "note-defaults": "Note defaults"
     },
     "items": {
@@ -419,6 +420,8 @@
       "journal-foreground": "Foreground color",
       "journal-background": "Background color",
       "journal-color-icons": "Use foreground color for icons",
+      "journal-color-presets": "Color presets",
+      "journal-add-colors-automatically": "Add new colors automatically",
       "journal-foreground-value": "Foreground color value",
       "journal-background-value": "Background color value"
     },

@@ -361,6 +361,7 @@
       "updates": "التحديثات",
       "about": "حول التطبيق",
       "journal-editor": "المحرر",
+      "journal-customization": "التخصيص",
       "note-defaults": "الإعدادات الافتراضية للملاحظات"
     },
     "items": {
@@ -440,6 +441,8 @@
       "journal-foreground": "لون الخط",
       "journal-background": "لون الخلفية",
       "journal-color-icons": "استخدام لون الخط للأيقونات",
+      "journal-color-presets": "الألوان المحددة مسبقًا",
+      "journal-add-colors-automatically": "إضافة الألوان الجديدة تلقائيًا",
       "journal-foreground-value": "قيمة لون الخط",
       "journal-background-value": "قيمة لون الخلفية"
     },

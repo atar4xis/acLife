@@ -4,7 +4,6 @@ import {
   useSettingsStore,
 } from "@/context/SettingsStoreContext";
 
-export const MAX_EVENT_COLOR_PRESETS = 45;
 export const MAX_CALENDAR_TIMEZONES = 6;
 export const EVENT_COLOR_FALLBACK = "#2563eb";
 

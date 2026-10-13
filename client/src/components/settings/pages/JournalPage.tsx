@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { SelectItem } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import ColorPresetsSettings from "../ColorPresetsSettings";
 import ResetToDefault from "../ResetToDefault";
 import { sectionLabel, settingLabel, settingLabelId } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
@@ -131,6 +132,7 @@ function ColorField({
         {settings[enabledKey] && (
           <ColorPicker
             aria-label={settingLabel(itemId)}
+            presetColors={settings.journalColorPresets}
             value={field.value}
             onChange={field.onChange}
             onBlur={field.flush}
@@ -174,6 +176,19 @@ export default function JournalPage({
         <SettingsSwitch settingKey="journalShowTitle" className="min-h-9" />
         <SettingsSwitch settingKey="journalLineNumbers" className="min-h-9" />
         <SettingsSwitch settingKey="journalStatusBar" className="min-h-9" />
+      </Section>
+
+      <Separator />
+
+      <Section
+        id="journal-customization"
+        label={sectionLabel("journal-customization")}
+        sectionRefs={sectionRefs}
+      >
+        <ColorPresetsSettings
+          presetsKey="journalColorPresets"
+          autoKey="journalAddColorsAutomatically"
+        />
       </Section>
 
       <Separator />

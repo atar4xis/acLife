@@ -330,6 +330,7 @@
       "updates": "アップデート",
       "about": "このアプリについて",
       "journal-editor": "エディタ",
+      "journal-customization": "カスタマイズ",
       "note-defaults": "ノートの初期設定"
     },
     "items": {
@@ -409,6 +410,8 @@
       "journal-foreground": "文字色",
       "journal-background": "背景色",
       "journal-color-icons": "アイコンにも文字色を使う",
+      "journal-color-presets": "プリセットカラー",
+      "journal-add-colors-automatically": "新しい色を自動的に追加",
       "journal-foreground-value": "文字色の値",
       "journal-background-value": "背景色の値"
     },

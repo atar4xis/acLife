@@ -340,6 +340,19 @@ export const settingsCategories: SettingsCategory[] = [
         ],
       },
       {
+        id: "journal-customization",
+        items: [
+          {
+            id: "journal-color-presets",
+            settingKey: "journalColorPresets",
+          },
+          {
+            id: "journal-add-colors-automatically",
+            settingKey: "journalAddColorsAutomatically",
+          },
+        ],
+      },
+      {
         id: "note-defaults",
         items: [
           { id: "journal-note-name", settingKey: "journalNoteName" },

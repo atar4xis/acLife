@@ -10,6 +10,18 @@ export const RESYNC_INTERVAL_OPTIONS = [5, 15, 30];
 export const NOTIFICATION_SOUNDS = [1, 2, 3, 4, 5];
 export const CUSTOM_NOTIFICATION_SOUND = 0;
 
+export const defaultColorPresets = [
+  "#2563eb",
+  "#8125ea",
+  "#ea25d6",
+  "#ea2528",
+  "#ea7a25",
+  "#eae425",
+  "#2fea25",
+  "#e5e5e5",
+  "#141414",
+];
+
 export const defaultCalendarSettings: CalendarSettings = {
   language: "system",
   defaultView: "week",
@@ -41,17 +53,7 @@ export const defaultCalendarSettings: CalendarSettings = {
   detachRecurringOnEdit: false,
   eventClickAction: "details",
   eventDoubleClickAction: "edit",
-  eventColorPresets: [
-    "#2563eb",
-    "#8125ea",
-    "#ea25d6",
-    "#ea2528",
-    "#ea7a25",
-    "#eae425",
-    "#2fea25",
-    "#e5e5e5",
-    "#141414",
-  ],
+  eventColorPresets: defaultColorPresets,
   addColorsAutomatically: false,
   followCurrentTime: true,
   autoCheckUpdates: false,
@@ -79,6 +81,8 @@ export const defaultJournalSettings: JournalSettings = {
   journalBackgroundEnabled: false,
   journalBackground: "#e5e5e5",
   journalColorIcons: true,
+  journalColorPresets: defaultColorPresets,
+  journalAddColorsAutomatically: false,
 };
 
 export const defaultThemeSettings: {

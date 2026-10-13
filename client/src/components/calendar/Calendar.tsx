@@ -45,9 +45,9 @@ import {
 } from "@/context/CalendarContext";
 import {
   EVENT_COLOR_FALLBACK,
-  MAX_EVENT_COLOR_PRESETS,
   useCalendarSettings,
 } from "@/context/CalendarSettingsContext";
+import { addColorPreset } from "@/lib/colorPresets";
 import {
   getDay,
   getWeekDays,
@@ -1296,19 +1296,11 @@ export default memo(function AppCalendar({
       // nothing changed, so there's nothing to save
       if (eventUnchanged(originalEvent, event)) return;
 
-      if (
-        settings.addColorsAutomatically &&
-        event.color &&
-        settings.eventColorPresets.length < MAX_EVENT_COLOR_PRESETS &&
-        !settings.eventColorPresets.some(
-          (presetColor) =>
-            presetColor.toLowerCase() === event.color!.toLowerCase(),
-        )
-      ) {
-        settings.setSetting("eventColorPresets", [
-          ...settings.eventColorPresets,
-          event.color,
-        ]);
+      if (settings.addColorsAutomatically && event.color) {
+        const presets = addColorPreset(settings.eventColorPresets, event.color);
+        if (presets !== settings.eventColorPresets) {
+          settings.setSetting("eventColorPresets", presets);
+        }
       }
 
       const batch = getBatch(originalEvent);

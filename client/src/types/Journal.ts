@@ -32,6 +32,8 @@ export interface JournalSettings {
   journalBackgroundEnabled: boolean;
   journalBackground: string;
   journalColorIcons: boolean;
+  journalColorPresets: string[];
+  journalAddColorsAutomatically: boolean;
 }
 
 export type JournalSort =

@@ -49,6 +49,8 @@ export const syncByDefault = {
   journalBackgroundEnabled: true,
   journalBackground: true,
   journalColorIcons: true,
+  journalColorPresets: true,
+  journalAddColorsAutomatically: true,
   presets: true,
   theme: false,
   colors: false,
@@ -242,6 +244,8 @@ export const syncGroups: { id: string; label: string; keys: SyncableKey[] }[] =
         "journalBackgroundEnabled",
         "journalBackground",
         "journalColorIcons",
+        "journalColorPresets",
+        "journalAddColorsAutomatically",
       ],
     },
     {

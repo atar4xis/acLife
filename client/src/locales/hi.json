@@ -342,6 +342,7 @@
       "updates": "अपडेट",
       "about": "ऐप के बारे में",
       "journal-editor": "संपादक",
+      "journal-customization": "अनुकूलन",
       "note-defaults": "नोट की डिफ़ॉल्ट सेटिंग्स"
     },
     "items": {
@@ -421,6 +422,8 @@
       "journal-foreground": "अग्रभूमि रंग",
       "journal-background": "पृष्ठभूमि रंग",
       "journal-color-icons": "आइकनों के लिए अग्रभूमि रंग का उपयोग करें",
+      "journal-color-presets": "रंग प्रीसेट",
+      "journal-add-colors-automatically": "नए रंग अपने आप जोड़ें",
       "journal-foreground-value": "अग्रभूमि रंग का मान",
       "journal-background-value": "पृष्ठभूमि रंग का मान"
     },

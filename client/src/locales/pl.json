@@ -350,6 +350,7 @@
       "updates": "Aktualizacje",
       "about": "O aplikacji",
       "journal-editor": "Edytor",
+      "journal-customization": "Personalizacja",
       "note-defaults": "Domyślne ustawienia notatek"
     },
     "items": {
@@ -429,6 +430,8 @@
       "journal-foreground": "Kolor tekstu",
       "journal-background": "Kolor tła",
       "journal-color-icons": "Użyj koloru tekstu dla ikon",
+      "journal-color-presets": "Gotowe kolory",
+      "journal-add-colors-automatically": "Dodawaj nowe kolory automatycznie",
       "journal-foreground-value": "Wartość koloru tekstu",
       "journal-background-value": "Wartość koloru tła"
     },

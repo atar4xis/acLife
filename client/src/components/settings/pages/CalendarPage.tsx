@@ -1,14 +1,8 @@
 import { memo, useRef, useState } from "react";
-import { Plus, Sparkles, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { toast } from "sonner";
+import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import {
-  EVENT_COLOR_FALLBACK,
-  MAX_EVENT_COLOR_PRESETS,
-  useCalendarSettings,
-} from "@/context/CalendarSettingsContext";
-import { useTheme } from "@/components/ThemeProvider";
-import {
-  defaultCalendarSettings,
   CUSTOM_NOTIFICATION_SOUND,
   NOTIFICATION_SOUNDS,
 } from "@/lib/settingsDefaults";
@@ -17,30 +11,15 @@ import {
   playNotificationSound,
   readCustomSound,
 } from "@/lib/calendar/notifications";
-import { DARK_COLORS, LIGHT_COLORS } from "@/lib/themeColors";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
-import { useDragReorder } from "@/hooks/useDragReorder";
-import { cn, cssColorToHex } from "@/lib/utils";
 import { resolveDefaultName } from "@/lib/calendar/defaultNames";
-import { generateThemeColorPresets } from "@/lib/calendar/colorPresets";
 import { Button } from "@/components/ui/button";
-import { ColorPicker } from "@/components/ui/color-picker";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldGroup,
-  FieldTitle,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldTitle } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SelectItem } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import ColorPresetsSettings from "../ColorPresetsSettings";
 import ResetToDefault from "../ResetToDefault";
 import { sectionLabel, settingLabel, settingLabelId } from "../settingsData";
 import type { SectionRefs } from "../SettingsSection";
@@ -55,178 +34,6 @@ import NotificationsField, {
 } from "@/components/calendar/NotificationsField";
 import DeferredContent from "../DeferredContent";
 import { useTranslation } from "react-i18next";
-
-const ColorPresetsField = memo(function ColorPresetsField() {
-  const { t } = useTranslation();
-  const { eventColorPresets, setSetting } = useCalendarSettings();
-  const { resolvedBase, colors } = useTheme();
-  const [newColor, setNewColor] = useState(EVENT_COLOR_FALLBACK);
-
-  const isDefaultPresets =
-    eventColorPresets.length ===
-      defaultCalendarSettings.eventColorPresets.length &&
-    eventColorPresets.every(
-      (color, i) =>
-        color.toLowerCase() ===
-        defaultCalendarSettings.eventColorPresets[i].toLowerCase(),
-    );
-
-  const generateFromTheme = () => {
-    const basePalette = resolvedBase === "dark" ? DARK_COLORS : LIGHT_COLORS;
-    const brandColors = (["primary", "accent", "secondary"] as const).map(
-      (variable) => cssColorToHex(colors[variable] ?? basePalette[variable]),
-    );
-    setSetting(
-      "eventColorPresets",
-      generateThemeColorPresets(brandColors, resolvedBase),
-    );
-    toast.success(t("settings.calendar.colorsGenerated"));
-  };
-
-  const isDuplicate = eventColorPresets.some(
-    (presetColor) => presetColor.toLowerCase() === newColor.toLowerCase(),
-  );
-  const isLimitReached = eventColorPresets.length >= MAX_EVENT_COLOR_PRESETS;
-
-  const addColor = () => {
-    if (isDuplicate || isLimitReached) return;
-    setSetting("eventColorPresets", [...eventColorPresets, newColor]);
-  };
-
-  const removeColor = (index: number) => {
-    setSetting(
-      "eventColorPresets",
-      eventColorPresets.filter((_, i) => i !== index),
-    );
-  };
-
-  const {
-    order: orderedColorPresets,
-    dragIndex,
-    onPointerDown,
-    onKeyDown,
-    setItemRef,
-  } = useDragReorder(eventColorPresets, (next) =>
-    setSetting("eventColorPresets", next),
-  );
-
-  return (
-    <FieldGroup className="mb-2 gap-4">
-      <Field orientation="responsive" className="min-h-9">
-        <FieldContent>
-          <div className="flex items-center gap-1.5">
-            <FieldTitle>
-              {settingLabel("calendar-event-editor-color-presets")}
-            </FieldTitle>
-            <SyncToggle settingKey="eventColorPresets" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-5 text-muted-foreground hover:text-foreground"
-                  aria-label={t("settings.calendar.generate")}
-                  onClick={generateFromTheme}
-                >
-                  <Sparkles className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("settings.calendar.generate")}</TooltipContent>
-            </Tooltip>
-            {!isDefaultPresets && (
-              <ResetToDefault
-                onClick={() =>
-                  setSetting(
-                    "eventColorPresets",
-                    defaultCalendarSettings.eventColorPresets,
-                  )
-                }
-              />
-            )}
-          </div>
-          <FieldDescription>
-            {t("settings.calendar.colorsHelp")}
-          </FieldDescription>
-        </FieldContent>
-
-        <div className="flex items-center gap-2">
-          <ColorPicker
-            aria-label={t("settings.calendar.newColor")}
-            value={newColor}
-            onChange={setNewColor}
-          />
-          {isDuplicate || isLimitReached ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {/* eslint-disable-next-line */}
-                <span tabIndex={0}>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    aria-label={t("settings.calendar.addColor")}
-                    disabled
-                  >
-                    <Plus />
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                {isLimitReached
-                  ? t("settings.calendar.colorLimit", {
-                      count: MAX_EVENT_COLOR_PRESETS,
-                    })
-                  : t("settings.calendar.alreadyAdded")}
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label={t("settings.calendar.addColor")}
-              onClick={addColor}
-            >
-              <Plus />
-            </Button>
-          )}
-        </div>
-      </Field>
-
-      <div className="flex flex-wrap gap-2">
-        {orderedColorPresets.map((presetColor, index) => (
-          <Tooltip key={presetColor}>
-            <TooltipTrigger asChild>
-              <button
-                ref={setItemRef(index)}
-                type="button"
-                aria-label={t("settings.calendar.remove", {
-                  name: presetColor,
-                })}
-                aria-keyshortcuts="Shift+ArrowLeft Shift+ArrowRight"
-                onPointerDown={onPointerDown(index, () => removeColor(index))}
-                onKeyDown={(e) => {
-                  onKeyDown(index)(e);
-                  if (["Enter", " ", "Delete", "Backspace"].includes(e.key)) {
-                    e.preventDefault();
-                    removeColor(index);
-                  }
-                }}
-                className={cn(
-                  "size-8 cursor-pointer rounded border opacity-90 hover:opacity-100",
-                  dragIndex === index && "opacity-40",
-                )}
-                style={{ background: presetColor, touchAction: "none" }}
-              />
-            </TooltipTrigger>
-            <TooltipContent>{presetColor}</TooltipContent>
-          </Tooltip>
-        ))}
-      </div>
-    </FieldGroup>
-  );
-});
 
 const DefaultEventNameField = memo(function DefaultEventNameField() {
   useTranslation();
@@ -324,7 +131,6 @@ export default function CalendarPage({
     followCurrentTime,
     eventClickAction,
     eventDoubleClickAction,
-    addColorsAutomatically,
     eventEditorOpacity,
     eventEditorBlur,
     eventEditorRadius,
@@ -582,18 +388,10 @@ export default function CalendarPage({
         sectionRefs={sectionRefs}
       >
         <DeferredContent skeletonClassName="h-96">
-          <ColorPresetsField />
-
-          <Field orientation="responsive" className="min-h-9">
-            <SettingsLabel settingKey="addColorsAutomatically" />
-            <Switch
-              aria-labelledby={settingLabelId("addColorsAutomatically")}
-              checked={addColorsAutomatically}
-              onCheckedChange={(checked) =>
-                setSetting("addColorsAutomatically", checked)
-              }
-            />
-          </Field>
+          <ColorPresetsSettings
+            presetsKey="eventColorPresets"
+            autoKey="addColorsAutomatically"
+          />
 
           <div className="@container mt-4">
             <div className="grid gap-6 @min-[40rem]:grid-cols-[minmax(0,1fr)_auto] @min-[40rem]:items-start">

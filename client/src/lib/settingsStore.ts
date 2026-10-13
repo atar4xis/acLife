@@ -6,6 +6,7 @@ import {
 } from "@/lib/calendar/notifications";
 import {
   defaultCalendarSettings,
+  defaultJournalSettings,
   defaultStoreSettings,
   NOTIFICATION_SOUNDS,
   RESYNC_INTERVAL_OPTIONS,
@@ -180,6 +181,13 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
   );
   if (!parsed.eventColorPresets.length) {
     parsed.eventColorPresets = defaultCalendarSettings.eventColorPresets;
+  }
+
+  parsed.journalColorPresets = parsed.journalColorPresets.filter(
+    (color) => typeof color === "string",
+  );
+  if (!parsed.journalColorPresets.length) {
+    parsed.journalColorPresets = defaultJournalSettings.journalColorPresets;
   }
 
   parsed.defaultEventNotifications = sanitizeNotifications(

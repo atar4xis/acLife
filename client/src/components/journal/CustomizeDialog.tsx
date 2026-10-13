@@ -21,6 +21,7 @@ import {
   itemStyle,
   MAX_JOURNAL_NAME_LENGTH,
 } from "@/lib/journal/item";
+import { addColorPreset } from "@/lib/colorPresets";
 import { defaultJournalSettings } from "@/lib/settingsDefaults";
 import type { JournalItem } from "@/types/Journal";
 import { useTranslation } from "react-i18next";
@@ -106,6 +107,16 @@ export default function CustomizeDialog({
       style.colorIcon !== item.colorIcon;
 
     if (changed) customizeItem(item.id, nextName, style);
+
+    if (settings.journalAddColorsAutomatically) {
+      const presets = [style.color, style.background].reduce(
+        (acc, color) => (color ? addColorPreset(acc, color) : acc),
+        settings.journalColorPresets,
+      );
+      if (presets !== settings.journalColorPresets) {
+        settings.setSetting("journalColorPresets", presets);
+      }
+    }
     onClose();
   };
 
@@ -162,6 +173,7 @@ export default function CustomizeDialog({
               {useForeground && (
                 <ColorPicker
                   aria-label={t("settings.items.journal-foreground")}
+                  presetColors={settings.journalColorPresets}
                   value={foreground}
                   onChange={setForeground}
                 />
@@ -191,6 +203,7 @@ export default function CustomizeDialog({
               {useBackground && (
                 <ColorPicker
                   aria-label={t("settings.items.journal-background")}
+                  presetColors={settings.journalColorPresets}
                   value={background}
                   onChange={setBackground}
                 />

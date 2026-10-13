@@ -1,4 +1,4 @@
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -158,5 +158,119 @@ describe("journal settings", () => {
 
     expect(screen.queryByRole("button", { name: "Reset to default" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Background color" })).toBeNull();
+  });
+
+  describe("color presets", () => {
+    const openCustomize = async (user: ReturnType<typeof userEvent.setup>) => {
+      await renderLoadedJournal();
+      await addNote(user);
+      const note = journal.items.find((item) => item.type === "note")!;
+
+      await user.pointer({
+        keys: "[MouseRight]",
+        target: treeItem(note.name),
+      });
+      await user.click(
+        await screen.findByRole("menuitem", { name: "Customize" }),
+      );
+      await user.click(
+        await screen.findByRole("switch", { name: "Foreground color" }),
+      );
+      return note;
+    };
+
+    const typeColor = async (
+      user: ReturnType<typeof userEvent.setup>,
+      hex: string,
+    ) => {
+      await user.click(screen.getByRole("button", { name: "Foreground color" }));
+      const input = screen.getByLabelText("Hex color");
+      await user.clear(input);
+      await user.type(input, hex);
+      await user.keyboard("{Escape}");
+    };
+
+    it("offers the presets in the customize dialog", async () => {
+      seedSettings({ journalColorPresets: ["#123456", "#654321"] });
+      const user = userEvent.setup();
+      const note = await openCustomize(user);
+
+      await user.click(screen.getByRole("button", { name: "Foreground color" }));
+      expect(screen.queryByRole("button", { name: "#2563eb" })).toBeNull();
+      await user.click(screen.getByRole("button", { name: "#654321" }));
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(journal.itemsById.get(note.id)!.color).toBe("#654321");
+    });
+
+    it("adds a new color to the presets when customizing", async () => {
+      seedSettings({ journalAddColorsAutomatically: true });
+      const user = userEvent.setup();
+      await openCustomize(user);
+
+      await typeColor(user, "abcdef");
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(readSettings().journalColorPresets).toContain("#abcdef");
+    });
+
+    it("leaves the presets alone unless adding automatically", async () => {
+      seedSettings({});
+      const user = userEvent.setup();
+      await openCustomize(user);
+
+      await typeColor(user, "abcdef");
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(readSettings().journalColorPresets).toBeUndefined();
+    });
+
+    it("offers the presets in the settings page color pickers", async () => {
+      seedSettings({
+        journalColorPresets: ["#123456"],
+        journalForegroundEnabled: true,
+      });
+      const user = userEvent.setup();
+      render(
+        <SettingsStoreProvider>
+          <JournalProvider>
+            <JournalPage sectionRefs={{ current: new Map() }} />
+          </JournalProvider>
+        </SettingsStoreProvider>,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Foreground color" }));
+      await user.click(screen.getByRole("button", { name: "#123456" }));
+
+      await waitFor(() =>
+        expect(readSettings().journalForeground).toBe("#123456"),
+      );
+    });
+
+    it("manages the presets from the settings page", async () => {
+      const user = userEvent.setup();
+      render(
+        <SettingsStoreProvider>
+          <JournalProvider>
+            <JournalPage sectionRefs={{ current: new Map() }} />
+          </JournalProvider>
+        </SettingsStoreProvider>,
+      );
+
+      await user.click(screen.getByRole("button", { name: "New color" }));
+      const input = screen.getByLabelText("Hex color");
+      await user.clear(input);
+      await user.type(input, "abcdef");
+      await user.keyboard("{Escape}");
+      await user.click(screen.getByRole("button", { name: "Add color" }));
+      await user.click(
+        screen.getByRole("switch", { name: "Add new colors automatically" }),
+      );
+
+      expect(readSettings()).toMatchObject({
+        journalColorPresets: expect.arrayContaining(["#abcdef"]),
+        journalAddColorsAutomatically: true,
+      });
+    });
   });
 });

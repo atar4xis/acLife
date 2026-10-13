@@ -275,6 +275,7 @@ describe("settings store", () => {
     ["colors is a string", { colors: "red" }],
     ["eventColorPresets is an object", { eventColorPresets: { length: 3 } }],
     ["eventColorPresets is a string", { eventColorPresets: "#fff" }],
+    ["journalColorPresets is an object", { journalColorPresets: { length: 3 } }],
     ["presets is an object", { presets: {} }],
     ["defaultView is unknown", { defaultView: "month" }],
     ["weekStartsOn is out of range", { weekStartsOn: 9 }],
@@ -294,6 +295,7 @@ describe("settings store", () => {
       timezones: ["Europe/Paris", 7, "Not/AZone", null],
       colors: { sidebar: "#123456", card: 5 },
       eventColorPresets: ["#111111", 3, null],
+      journalColorPresets: ["#222222", 3, null],
       presets: [
         { id: "a", name: "A", colors: {}, fontFamily: "", fontSize: 16 },
         { id: 1, name: "bad" },
@@ -325,6 +327,7 @@ describe("settings store", () => {
     expect(settings.defaultTimezone).toBe("Europe/Paris");
     expect(settings.colors).toEqual({ sidebar: "#123456" });
     expect(settings.eventColorPresets).toEqual(["#111111"]);
+    expect(settings.journalColorPresets).toEqual(["#222222"]);
     expect(settings.presets.map((p) => p.id)).toEqual(["a"]);
   });
 
@@ -442,9 +445,11 @@ describe("sync rules", () => {
         "followCurrentTime",
         "fontFamily",
         "fontSize",
+        "journalAddColorsAutomatically",
         "journalBackground",
         "journalBackgroundEnabled",
         "journalColorIcons",
+        "journalColorPresets",
         "journalFolderIcon",
         "journalForeground",
         "journalForegroundEnabled",

@@ -1,7 +1,19 @@
 import { clamp, hexToHsl, hslToHex } from "@/lib/utils";
 
+export const MAX_COLOR_PRESETS = 45;
+
+export function addColorPreset(presets: string[], color: string): string[] {
+  const exists = presets.some(
+    (preset) => preset.toLowerCase() === color.toLowerCase(),
+  );
+
+  return exists || presets.length >= MAX_COLOR_PRESETS
+    ? presets
+    : [...presets, color];
+}
+
 // target hues for the 7 chromatic presets, in the order they're generated
-// (matches the hues of defaultCalendarSettings.eventColorPresets)
+// (matches the hues of defaultColorPresets)
 const PRESET_HUES = [221, 268, 306, 359, 26, 58, 117];
 
 // vibe used when the theme's brand colors are neutral (grays)
