@@ -14,11 +14,7 @@ env:
   SIGNING_KEY_FINGERPRINT: "0752974F303C1E0B2F914A067950BE1352DC8C8B"
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
-
   build-windows:
-    needs: ci
     runs-on: windows-latest
 
     steps:
@@ -68,7 +64,6 @@ jobs:
           if-no-files-found: error
 
   build-macos:
-    needs: ci
     runs-on: macos-latest
     strategy:
       fail-fast: true
@@ -136,8 +131,97 @@ jobs:
           path: macos-out/*
           if-no-files-found: error
 
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "pnpm"
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          set -euo pipefail
+
+          sdkmanager "ndk;27.2.12479018"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: client/src-tauri
+          key: android
+
+      - name: Install dependencies
+        working-directory: client
+        run: pnpm install --frozen-lockfile
+
+      - name: Decode keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/aclife-release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/aclife-release.jks" >> "$GITHUB_ENV"
+
+      - name: Build Android APK
+        working-directory: client
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: pnpm exec tauri android build --apk --target aarch64
+
+      - name: Collect Android artifacts
+        run: |
+          set -euo pipefail
+
+          version=$(node -p "require('./client/package.json').version")
+          mkdir android-out
+          cp client/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk \
+            "android-out/acLife_${version}_android-arm64.apk"
+          ls -l android-out
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/aclife-release.jks"
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-bundles
+          path: android-out/*.apk
+          if-no-files-found: error
+
   build-and-sign:
-    needs: [ci, build-windows, build-macos]
+    needs: [build-windows, build-macos, build-android]
     runs-on: ubuntu-latest
 
     steps:
@@ -221,6 +305,12 @@ jobs:
           pattern: macos-bundles-*
           merge-multiple: true
           path: client/src-tauri/target/release/bundle/macos
+
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-bundles
+          path: client/src-tauri/target/release/bundle/android
 
       - name: Build server
         working-directory: server
@@ -330,6 +420,7 @@ jobs:
           sign_glob "target/release/bundle/appimage/*.AppImage"
           sign_glob "target/release/bundle/macos/*.dmg"
           sign_glob "target/release/bundle/macos/*.app.tar.gz"
+          sign_glob "target/release/bundle/android/*.apk"
           sign_glob "target/release/bundle/server/aclife-server-*"
 
       - name: Generate and sign checksums
@@ -346,6 +437,7 @@ jobs:
             target/release/bundle/appimage/*.AppImage
             target/release/bundle/macos/*.dmg
             target/release/bundle/macos/*.app.tar.gz
+            target/release/bundle/android/*.apk
             target/release/bundle/server/aclife-server-*
           )
 
@@ -383,6 +475,7 @@ jobs:
                    target/release/bundle/appimage/*.AppImage \
                    target/release/bundle/macos/*.dmg \
                    target/release/bundle/macos/*.app.tar.gz \
+                   target/release/bundle/android/*.apk \
                    target/release/bundle/server/aclife-server-*; do
             [ -e "$f" ] || continue
             case "$f" in *.asc) continue ;; esac
@@ -419,6 +512,8 @@ jobs:
             client/src-tauri/target/release/bundle/macos/*.dmg.asc
             client/src-tauri/target/release/bundle/macos/*.app.tar.gz
             client/src-tauri/target/release/bundle/macos/*.app.tar.gz.asc
+            client/src-tauri/target/release/bundle/android/*.apk
+            client/src-tauri/target/release/bundle/android/*.apk.asc
             client/src-tauri/target/release/bundle/server/aclife-server-*
             client/src-tauri/SHA256SUMS
             client/src-tauri/SHA256SUMS.asc
@@ -472,6 +567,8 @@ jobs:
             client/src-tauri/target/release/bundle/macos/*.dmg.asc
             client/src-tauri/target/release/bundle/macos/*.app.tar.gz
             client/src-tauri/target/release/bundle/macos/*.app.tar.gz.asc
+            client/src-tauri/target/release/bundle/android/*.apk
+            client/src-tauri/target/release/bundle/android/*.apk.asc
             client/src-tauri/target/release/bundle/server/aclife-server-*
             client/src-tauri/SHA256SUMS
             client/src-tauri/SHA256SUMS.asc
