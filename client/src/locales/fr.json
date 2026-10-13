@@ -213,6 +213,7 @@
     "createTitle": "Créer un compte",
     "onServer": "sur",
     "offlineMode": "Utiliser hors ligne",
+    "settingUpOffline": "Configuration du mode hors ligne...",
     "fillAll": "Veuillez remplir tous les champs.",
     "passwordsMismatch": "Les mots de passe ne correspondent pas.",
     "passwordLength": "Le mot de passe doit contenir entre 12 et 256 caractères.",

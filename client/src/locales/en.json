@@ -217,6 +217,7 @@
     "createTitle": "Create an account",
     "onServer": "on",
     "offlineMode": "Use in offline mode",
+    "settingUpOffline": "Setting up offline mode...",
     "fillAll": "Please fill out all the fields.",
     "passwordsMismatch": "Passwords do not match.",
     "passwordLength": "Password must be 12 to 256 characters long.",

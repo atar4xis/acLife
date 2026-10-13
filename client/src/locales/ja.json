@@ -207,6 +207,7 @@
     "createTitle": "アカウントを作成",
     "onServer": "サーバー:",
     "offlineMode": "オフラインモードで使う",
+    "settingUpOffline": "オフラインモードを設定しています...",
     "fillAll": "すべての項目を入力してください。",
     "passwordsMismatch": "パスワードが一致しません。",
     "passwordLength": "パスワードは12〜256文字で入力してください。",

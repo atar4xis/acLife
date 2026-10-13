@@ -211,6 +211,7 @@
     "createTitle": "Crear una cuenta",
     "onServer": "en",
     "offlineMode": "Usar sin conexión",
+    "settingUpOffline": "Configurando el modo sin conexión...",
     "fillAll": "Rellena todos los campos.",
     "passwordsMismatch": "Las contraseñas no coinciden.",
     "passwordLength": "La contraseña debe tener entre 12 y 256 caracteres.",

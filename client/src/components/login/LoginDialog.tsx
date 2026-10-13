@@ -57,6 +57,7 @@ export default function LoginDialog() {
   const [verificationCooldown, setVerificationCooldown] = useState(0);
   const [confirmToken, setConfirmToken] = useState<string | null>(null);
   const [newAccount, setNewAccount] = useState(false);
+  const [offlineLoading, setOfflineLoading] = useState(false);
   const [registerLink, setRegisterLink] = useState<RegisterLink | null>(null);
   const {
     url,
@@ -217,17 +218,29 @@ export default function LoginDialog() {
       );
     } else {
       // if one doesn't exist, derive it using a random password
-      const randomPassword = btoa(String.fromCharCode(...randomBytes(64)));
-      const randomSalt = randomBytes(16);
-      ({ masterKey } = await deriveMasterKey(randomPassword, randomSalt, true));
+      setOfflineLoading(true);
+      const toastId = toast.loading(t("login.settingUpOffline"));
 
-      const exportedKey = new Uint8Array(
-        await crypto.subtle.exportKey("raw", masterKey),
-      );
-      storage.set(
-        "offlineMasterKey",
-        btoa(String.fromCharCode(...exportedKey)),
-      );
+      try {
+        const randomPassword = btoa(String.fromCharCode(...randomBytes(64)));
+        const randomSalt = randomBytes(16);
+        ({ masterKey } = await deriveMasterKey(
+          randomPassword,
+          randomSalt,
+          true,
+        ));
+
+        const exportedKey = new Uint8Array(
+          await crypto.subtle.exportKey("raw", masterKey),
+        );
+        storage.set(
+          "offlineMasterKey",
+          btoa(String.fromCharCode(...exportedKey)),
+        );
+      } finally {
+        toast.dismiss(toastId);
+        setOfflineLoading(false);
+      }
     }
 
     setUser({
@@ -341,6 +354,7 @@ export default function LoginDialog() {
             ) : (
               <LoginForm
                 handleOfflineClick={handleOfflineClick}
+                offlineLoading={offlineLoading}
                 serverMeta={serverMeta}
                 onNeedsVerification={handleNeedsVerification}
                 registerLink={activeLink}

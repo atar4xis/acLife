@@ -29,6 +29,7 @@ import { useTranslation } from "react-i18next";
 
 export function LoginForm({
   handleOfflineClick,
+  offlineLoading,
   serverMeta,
   onNeedsVerification,
   registerLink,
@@ -38,6 +39,7 @@ export function LoginForm({
 }: {
   serverMeta: ServerMetadata | null;
   handleOfflineClick: (e: React.MouseEvent) => void;
+  offlineLoading: boolean;
   onNeedsVerification: (email: string) => void;
   registerLink: RegisterLink | null;
   onRegisterLinkDone: () => void;
@@ -383,7 +385,11 @@ export function LoginForm({
                     </TooltipContent>
                   </Tooltip>
                 )}
-                <Button variant="link" onClick={handleOfflineClick}>
+                <Button
+                  variant="link"
+                  onClick={handleOfflineClick}
+                  disabled={offlineLoading}
+                >
                   {t("login.offlineMode")}
                 </Button>
               </Field>

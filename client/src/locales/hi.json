@@ -219,6 +219,7 @@
     "createTitle": "खाता बनाएँ",
     "onServer": "सर्वर:",
     "offlineMode": "ऑफ़लाइन मोड में उपयोग करें",
+    "settingUpOffline": "ऑफ़लाइन मोड सेट हो रहा है...",
     "fillAll": "कृपया सभी फ़ील्ड भरें।",
     "passwordsMismatch": "पासवर्ड मेल नहीं खाते।",
     "passwordLength": "पासवर्ड 12 से 256 वर्णों का होना चाहिए।",

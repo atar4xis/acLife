@@ -227,6 +227,7 @@
     "createTitle": "Utwórz konto",
     "onServer": "na",
     "offlineMode": "Użyj w trybie offline",
+    "settingUpOffline": "Konfigurowanie trybu offline...",
     "fillAll": "Wypełnij wszystkie pola.",
     "passwordsMismatch": "Hasła nie są zgodne.",
     "passwordLength": "Hasło musi mieć od 12 do 256 znaków.",
