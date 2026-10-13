@@ -1,12 +1,13 @@
 # acLife Client
 
-The web and desktop app for [acLife](../README.md). One React codebase runs in the browser and, wrapped in Tauri, as a native app on Windows, Linux and macOS.
+The web, desktop and Android app for [acLife](../README.md). One React codebase runs in the browser and, wrapped in Tauri, as a native app on Windows, Linux, macOS and Android.
 
 All encryption happens here. Events, notes, settings and keys are encrypted and decrypted on your device, and the [server](../server/README.md) only ever stores ciphertext.
 
 ## Getting the app
 
 - **Desktop**: download an installer from the [latest release](https://github.com/atar4xis/acLife/releases/latest). Releases are GPG-signed (see [`KEYS`](../KEYS)). The desktop app updates itself.
+- **Android**: download `acLife_<version>_android-arm64.apk` from the same release and install it (arm64 devices only). It will not update itself.
 - **Web**: build the client yourself (below) and host the static files, or use a hosted instance.
 
 On first launch, enter the address of the server you want to use, or choose offline mode to keep everything local on the device.
@@ -15,7 +16,7 @@ On first launch, enter the address of the server you want to use, or choose offl
 
 - React 19, TypeScript and Vite
 - Tailwind CSS 4 with shadcn/ui components on Radix
-- Tauri 2 (Rust) for the desktop app
+- Tauri 2 (Rust) for the desktop and Android apps
 - Web Crypto, Argon2id (`argon2-browser`) and SRP for the cryptography
 - CodeMirror 6 and react-markdown for the journal
 - i18next for translations, luxon for dates
@@ -43,6 +44,19 @@ pnpm exec tauri build    # build installers into src-tauri/target/release/bundle
 ```
 
 On Linux, the desktop app stores unlock PINs in the system keyring and needs a Secret Service provider such as GNOME Keyring or KWallet.
+
+### Android app
+
+The Android project is in `src-tauri/gen/android`. You need a JDK 17, the Android SDK with platform 37 and NDK 27.2.12479018, and the Android Rust targets (`rustup target add aarch64-linux-android`). Set `JAVA_HOME`, `ANDROID_HOME` and `NDK_HOME`, then:
+
+```bash
+pnpm exec tauri android build --apk --debug --target aarch64   # debug APK, signed with the debug key
+pnpm exec tauri android build --apk --target aarch64           # release APK, needs the signing variables below
+```
+
+The APK is written to `src-tauri/gen/android/app/build/outputs/apk/universal/`. Release builds read the keystore from `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Install on a device with `adb install -r <apk>`, including over wireless debugging.
+
+The app runs from `http://tauri.localhost`, so the server must list that origin in `CORS_ALLOWED_ORIGINS`. Android has no system keystore integration yet, so PINs use the web format.
 
 ## Building the web app
 
@@ -78,7 +92,7 @@ Tests include accessibility checks (jest-axe). Tests run in UTC.
 | `src/locales/` | One JSON bundle per language |
 | `public/themes/` | Built-in themes |
 | `public/sw.js` | Service worker for push notifications |
-| `src-tauri/` | Rust desktop shell |
+| `src-tauri/` | Rust shell for desktop and Android (`gen/android` is the Android Studio project) |
 | `tests/` | Vitest suites |
 
 ## Contributing a translation or theme

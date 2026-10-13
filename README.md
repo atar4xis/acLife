@@ -1,6 +1,6 @@
 # acLife
 
-acLife is a personal organizer with end-to-end encryption. It includes a calendar with tasks and a markdown journal, available as a web app and as a desktop app.
+acLife is a personal organizer with end-to-end encryption. It includes a calendar with tasks and a markdown journal, available as a web app, a desktop app and an Android app.
 
 Events, notes and settings are encrypted on your device before they are uploaded, so the server only stores encrypted data.
 
@@ -57,6 +57,7 @@ acLife is fully open source. Offline mode and self-hosting are free and include 
 - Calendar and journal changes sync live between your devices.
 - Settings sync too, and you choose which settings are synced and which stay on the device.
 - A web app, and a desktop app for Windows, Linux and macOS with native notifications and automatic updates.
+- An Android app (arm64), installed from the APK on the releases page.
 
 ### Customization and accessibility
 
@@ -77,7 +78,7 @@ acLife is highly customizable. See the settings pages for the full list.
 | Part | Stack |
 |---|---|
 | Web client | React 19, TypeScript, Vite, Tailwind CSS 4, shadcn/ui and Radix |
-| Desktop app | Tauri 2 (Rust) around the same client |
+| Desktop and Android app | Tauri 2 (Rust) around the same client |
 | Server | Go, REST API with an SSE stream, MariaDB/MySQL |
 | Auth and crypto | SRP, Argon2id, AES-GCM, HKDF and HMAC-SHA256 via the Web Crypto API |
 | Payments | Stripe (optional) |
@@ -87,12 +88,13 @@ acLife is highly customizable. See the settings pages for the full list.
 ## Downloads
 
 - **Desktop app**: installers for Windows, Linux and macOS are on the [releases page](https://github.com/atar4xis/acLife/releases). Releases are GPG-signed and come with checksums. The signing key is in [`KEYS`](KEYS).
+- **Android app**: a signed APK (`acLife_<version>_android-arm64.apk`) for 64-bit ARM devices is attached to each release. You must install it manually.
 - **Server**: server binaries are attached to each release as well.
 
 ## Repository layout
 
 ```
-client/   web client and Tauri desktop app
+client/   web client and Tauri desktop and Android app
 server/   Go API server
 ```
 
