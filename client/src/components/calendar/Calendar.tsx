@@ -107,6 +107,7 @@ import {
   MAX_CLIPBOARD_EVENTS,
   MAX_EVENTS_PER_DAY,
   countEventsOnDay,
+  completionKey,
   eventKey,
   stateTargets,
   getDayEventStyles,
@@ -1418,7 +1419,7 @@ export default memo(function AppCalendar({
         if (originalParent?.repeat) {
           pushHistory();
 
-          const dateKey = event.start.toISODate()!;
+          const dateKey = completionKey(event);
           const instances = originalParent.completedInstances ?? [];
           const parent = {
             ...originalParent,

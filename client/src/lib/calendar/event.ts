@@ -168,6 +168,9 @@ export const resolveInstanceCompleted = (
     ? (event.completedInstances?.includes(dateKey) ?? false)
     : event.completed;
 
+export const completionKey = (event: CalendarEvent) =>
+  event._instanceId?.slice(event.id.length + 1) ?? event.start.toISODate()!;
+
 export const sameNotifications = (
   a: EventNotification[] = [],
   b: EventNotification[] = [],

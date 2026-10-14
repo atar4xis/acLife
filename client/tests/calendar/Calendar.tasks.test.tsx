@@ -170,6 +170,36 @@ describe("Calendar", () => {
     expect(savedEvents[0].completedInstances).toEqual(["2026-03-19"]);
   });
 
+  it("completes a moved override of a recurring task under its original date", async () => {
+    const saveEvents = vi.fn();
+    const base = buildRecurringEvent({ isTask: true });
+    const dayMs = 24 * 60 * 60 * 1000;
+    const { user } = renderCalendar({
+      mode: "week",
+      events: [
+        {
+          ...base,
+          repeat: {
+            ...base.repeat!,
+            overrides: { "2026-03-19": { startShift: dayMs, endShift: dayMs } },
+          },
+        },
+      ],
+      saveEvents,
+    });
+
+    const instanceBlock = document.querySelector(
+      '[data-event-key="repeat-parent_2026-03-19"]',
+    ) as HTMLElement;
+
+    await user.click(within(instanceBlock).getByRole("checkbox"));
+    await advanceSave();
+
+    const savedEvents = getLastSavedEvents(saveEvents);
+    expect(savedEvents[0].completedInstances).toEqual(["2026-03-19"]);
+    expect(instanceBlock.className).toContain("opacity-50");
+  });
+
   it("removes an occurrence from completedInstances when unchecked", async () => {
     const saveEvents = vi.fn();
     const { user } = renderCalendar({
