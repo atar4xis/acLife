@@ -42,6 +42,9 @@ func Main(m *testing.M) int {
 	_ = os.Setenv("CLIENT_URL", Origin)
 	_ = os.Setenv("CORS_ALLOWED_ORIGINS", Origin)
 	_ = os.Setenv("DISABLE_EMAIL_VERIFICATION", "true")
+	_ = os.Setenv("RATE_LIMIT_USER", "5")
+	_ = os.Setenv("RATE_LIMIT_STREAM", "30")
+	_ = os.Setenv("RATE_LIMIT_STRIPE_PER_USER", "5")
 
 	constants.Configure()
 	session.Store = session.NewStore([]byte(os.Getenv("SESSION_KEY")), "")
