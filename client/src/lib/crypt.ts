@@ -445,11 +445,14 @@ export const randomBytes = (len: number): Uint8Array => {
   return crypto.getRandomValues(new Uint8Array(len));
 };
 
+export const IV_BYTES = 12;
+export const GCM_TAG_BYTES = 16;
+
 export const encrypt = async (
   payload: Uint8Array,
   key: CryptoKey,
 ): Promise<Encrypted> => {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
 
   const ciphertext = new Uint8Array(
     await crypto.subtle.encrypt(
@@ -472,8 +475,8 @@ export const decrypt = async (
 ): Promise<Uint8Array> => {
   const bytes = new Uint8Array(data);
 
-  const iv = bytes.slice(0, 12);
-  const ciphertext = bytes.slice(12);
+  const iv = bytes.slice(0, IV_BYTES);
+  const ciphertext = bytes.slice(IV_BYTES);
 
   const plaintext = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv },

@@ -9,6 +9,7 @@ import {
   MAX_ENCRYPTED_JOURNAL_BYTES,
 } from "@/lib/journal/crypt";
 import {
+  CHUNK_ITEMS,
   diffBuckets,
   journalBucket,
   journalHashTable,
@@ -38,7 +39,6 @@ import { flushSync } from "react-dom";
 import { toast } from "sonner";
 
 const SAVE_DELAY_MS = 1000;
-const CHUNK_ITEMS = 20;
 const SYNC_BUCKETS = 16;
 
 const present = <T>(value: T | null): value is T => value !== null;

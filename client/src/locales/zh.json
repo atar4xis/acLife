@@ -331,7 +331,8 @@
       "about": "关于",
       "journal-editor": "编辑器",
       "journal-customization": "自定义",
-      "note-defaults": "笔记默认设置"
+      "note-defaults": "笔记默认设置",
+      "journal-import-export": "导入 / 导出"
     },
     "items": {
       "theme-mode": "主题模式",
@@ -413,7 +414,9 @@
       "journal-color-presets": "预设颜色",
       "journal-add-colors-automatically": "自动添加新颜色",
       "journal-foreground-value": "前景色值",
-      "journal-background-value": "背景色值"
+      "journal-background-value": "背景色值",
+      "journal-import": "导入格式",
+      "journal-export": "导出"
     },
     "colors": {
       "background": "背景",
@@ -898,7 +901,37 @@
     "charCount": "字符数: {{n}}",
     "line": "行: {{n}}",
     "column": "列: {{n}}",
-    "customize": "自定义"
+    "customize": "自定义",
+    "transfer": {
+      "files": "文件",
+      "folder": "文件夹",
+      "all": "全部",
+      "export": "导出为 .zip",
+      "cancelled": "导入已取消，未做任何更改。",
+      "stopped": "导入已停止，进度：{{applied}}/{{total}} 项。",
+      "importFailed": "导入失败。",
+      "conflictTitle": "笔记已存在",
+      "conflictDescription": "“{{path}}”已存在。你想如何处理？",
+      "applyToAll": "对所有项目执行此操作",
+      "skip": "跳过",
+      "replace": "替换",
+      "keepBoth": "保留两者",
+      "import": "导入",
+      "exportTitle": "选择要导出的项目",
+      "done_other": "已导入 {{count}} 项，已跳过 {{failed}} 项。",
+      "progress": "正在导入... {{percent}}%",
+      "details": "详情",
+      "detailsTitle": "导入详情",
+      "detailsTime": "开始于 {{start}}，耗时 {{seconds}} 秒",
+      "status": {
+        "imported": "已导入",
+        "replaced": "已替换",
+        "renamed": "两者均保留（已重命名）",
+        "skipped": "已跳过",
+        "unsupported": "不支持的文件类型",
+        "tooLarge": "文件过大"
+      }
+    }
   },
   "iconPicker": {
     "search": "搜索图标...",

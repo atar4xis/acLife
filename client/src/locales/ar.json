@@ -362,7 +362,8 @@
       "about": "حول التطبيق",
       "journal-editor": "المحرر",
       "journal-customization": "التخصيص",
-      "note-defaults": "الإعدادات الافتراضية للملاحظات"
+      "note-defaults": "الإعدادات الافتراضية للملاحظات",
+      "journal-import-export": "استيراد / تصدير"
     },
     "items": {
       "theme-mode": "وضع السمة",
@@ -444,7 +445,9 @@
       "journal-color-presets": "الألوان المحددة مسبقًا",
       "journal-add-colors-automatically": "إضافة الألوان الجديدة تلقائيًا",
       "journal-foreground-value": "قيمة لون الخط",
-      "journal-background-value": "قيمة لون الخلفية"
+      "journal-background-value": "قيمة لون الخلفية",
+      "journal-import": "صيغة الاستيراد",
+      "journal-export": "تصدير"
     },
     "colors": {
       "background": "الخلفية",
@@ -1007,7 +1010,42 @@
     "charCount": "الأحرف: {{n}}",
     "line": "السطر: {{n}}",
     "column": "العمود: {{n}}",
-    "customize": "تخصيص"
+    "customize": "تخصيص",
+    "transfer": {
+      "files": "ملفات",
+      "folder": "مجلد",
+      "all": "الكل",
+      "export": "تصدير بصيغة .zip",
+      "cancelled": "تم إلغاء الاستيراد. لم يتم تغيير أي شيء.",
+      "stopped": "توقف الاستيراد. التقدم: {{applied}} من أصل {{total}}.",
+      "importFailed": "فشل الاستيراد.",
+      "conflictTitle": "الملاحظة موجودة بالفعل",
+      "conflictDescription": "\"{{path}}\" موجود بالفعل. ماذا تريد أن تفعل؟",
+      "applyToAll": "تطبيق هذا على كل العناصر",
+      "skip": "تخطي",
+      "replace": "استبدال",
+      "keepBoth": "الاحتفاظ بالملاحظتين",
+      "import": "استيراد",
+      "exportTitle": "حدد العناصر المراد تصديرها",
+      "done_zero": "العناصر المستوردة: {{count}}، العناصر المتخطاة: {{failed}}.",
+      "done_one": "العناصر المستوردة: {{count}}، العناصر المتخطاة: {{failed}}.",
+      "done_two": "العناصر المستوردة: {{count}}، العناصر المتخطاة: {{failed}}.",
+      "done_few": "العناصر المستوردة: {{count}}، العناصر المتخطاة: {{failed}}.",
+      "done_many": "العناصر المستوردة: {{count}}، العناصر المتخطاة: {{failed}}.",
+      "done_other": "العناصر المستوردة: {{count}}، العناصر المتخطاة: {{failed}}.",
+      "progress": "الاستيراد قيد التنفيذ... {{percent}}%",
+      "details": "التفاصيل",
+      "detailsTitle": "تفاصيل الاستيراد",
+      "detailsTime": "بدأ في {{start}}، واستغرق {{seconds}} ث",
+      "status": {
+        "imported": "تم الاستيراد",
+        "replaced": "تم الاستبدال",
+        "renamed": "تم الاحتفاظ بالملاحظتين (أعيدت التسمية)",
+        "skipped": "تم التخطي",
+        "unsupported": "نوع ملف غير مدعوم",
+        "tooLarge": "كبير جدًا"
+      }
+    }
   },
   "iconPicker": {
     "search": "ابحث عن الأيقونات...",

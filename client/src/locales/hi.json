@@ -343,7 +343,8 @@
       "about": "ऐप के बारे में",
       "journal-editor": "संपादक",
       "journal-customization": "अनुकूलन",
-      "note-defaults": "नोट की डिफ़ॉल्ट सेटिंग्स"
+      "note-defaults": "नोट की डिफ़ॉल्ट सेटिंग्स",
+      "journal-import-export": "आयात / निर्यात"
     },
     "items": {
       "theme-mode": "थीम मोड",
@@ -425,7 +426,9 @@
       "journal-color-presets": "रंग प्रीसेट",
       "journal-add-colors-automatically": "नए रंग अपने आप जोड़ें",
       "journal-foreground-value": "अग्रभूमि रंग का मान",
-      "journal-background-value": "पृष्ठभूमि रंग का मान"
+      "journal-background-value": "पृष्ठभूमि रंग का मान",
+      "journal-import": "आयात प्रारूप",
+      "journal-export": "निर्यात करें"
     },
     "colors": {
       "background": "पृष्ठभूमि",
@@ -926,7 +929,38 @@
     "charCount": "वर्ण: {{n}}",
     "line": "पंक्ति: {{n}}",
     "column": "स्तंभ: {{n}}",
-    "customize": "अनुकूलित करें"
+    "customize": "अनुकूलित करें",
+    "transfer": {
+      "files": "फ़ाइलें",
+      "folder": "फ़ोल्डर",
+      "all": "सभी",
+      "export": ".zip के रूप में निर्यात करें",
+      "cancelled": "आयात रद्द किया गया। कुछ भी नहीं बदला।",
+      "stopped": "आयात रोक दिया गया। प्रगति: {{total}} में से {{applied}}।",
+      "importFailed": "आयात विफल रहा।",
+      "conflictTitle": "नोट पहले से मौजूद है",
+      "conflictDescription": "\"{{path}}\" पहले से मौजूद है। आप क्या करना चाहेंगे?",
+      "applyToAll": "सभी आइटमों पर लागू करें",
+      "skip": "छोड़ें",
+      "replace": "बदलें",
+      "keepBoth": "दोनों रखें",
+      "import": "आयात करें",
+      "exportTitle": "निर्यात करने के लिए आइटम चुनें",
+      "done_one": "{{count}} आइटम आयात किया गया। छोड़े गए आइटम: {{failed}}।",
+      "done_other": "{{count}} आइटम आयात किए गए। छोड़े गए आइटम: {{failed}}।",
+      "progress": "आयात जारी है... {{percent}}%",
+      "details": "विवरण",
+      "detailsTitle": "आयात विवरण",
+      "detailsTime": "शुरुआत: {{start}}, अवधि: {{seconds}} सेकंड",
+      "status": {
+        "imported": "आयात किया गया",
+        "replaced": "बदला गया",
+        "renamed": "दोनों रखे गए (नाम बदला गया)",
+        "skipped": "छोड़ा गया",
+        "unsupported": "असमर्थित फ़ाइल प्रकार",
+        "tooLarge": "बहुत बड़ा"
+      }
+    }
   },
   "iconPicker": {
     "search": "आइकन खोजें...",

@@ -34,6 +34,7 @@ type JournalContextValue = JournalState & {
   drag: JournalDrag | null;
   acceptedDrag: JournalDrag | null;
   loadFailed: boolean;
+  loaded: boolean;
   itemsById: ReadonlyMap<string, JournalItem>;
 };
 
@@ -42,6 +43,7 @@ type JournalActions = {
   setReading: (paneId: string, reading: boolean) => void;
   setSource: (paneId: string, source: boolean) => void;
   setSort: (sort: JournalSort) => void;
+  importItems: (upserts: JournalItem[]) => void;
   addItem: (type: JournalItem["type"], parentId: string | null) => string;
   addTab: (paneId: string) => void;
   renameItem: (id: string, name: string) => void;
@@ -92,6 +94,7 @@ export function JournalProvider({ children }: WithChildren) {
 
     return {
       setSort: (sort) => dispatch({ type: "setSort", sort }),
+      importItems: (upserts) => dispatch({ type: "importItems", upserts }),
       addItem: (kind, parentId) => {
         const settings = settingsStore.getSnapshot();
         const id = crypto.randomUUID();
@@ -183,6 +186,7 @@ export function JournalProvider({ children }: WithChildren) {
       drag,
       acceptedDrag,
       loadFailed,
+      loaded,
       itemsById,
     }),
     [
@@ -194,6 +198,7 @@ export function JournalProvider({ children }: WithChildren) {
       drag,
       acceptedDrag,
       loadFailed,
+      loaded,
       itemsById,
     ],
   );

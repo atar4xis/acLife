@@ -7,6 +7,7 @@ import {
   usagePercent,
 } from "@/lib/utils";
 import { FieldDescription, FieldTitle } from "@/components/ui/field";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { settingLabel } from "../settingsData";
 
@@ -29,25 +30,14 @@ export default function UsageField() {
         <Skeleton className="h-8 w-full" />
       ) : (
         <>
-          <div
-            role="progressbar"
+          <Progress
+            value={percent}
             aria-label={settingLabel("account-usage")}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(percent)}
             aria-valuetext={summary}
-            className="h-2 w-full overflow-hidden rounded-full bg-muted"
-          >
-            <div
-              className={cn(
-                "h-full",
-                percent >= USAGE_WARNING_PERCENT
-                  ? "bg-destructive"
-                  : "bg-primary",
-              )}
-              style={{ width: `${percent}%` }}
-            />
-          </div>
+            indicatorClassName={cn(
+              percent >= USAGE_WARNING_PERCENT && "bg-destructive",
+            )}
+          />
           <FieldDescription className="text-xs">{summary}</FieldDescription>
         </>
       )}

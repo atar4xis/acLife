@@ -351,7 +351,8 @@
       "about": "O aplikacji",
       "journal-editor": "Edytor",
       "journal-customization": "Personalizacja",
-      "note-defaults": "Domyślne ustawienia notatek"
+      "note-defaults": "Domyślne ustawienia notatek",
+      "journal-import-export": "Import / eksport"
     },
     "items": {
       "theme-mode": "Tryb motywu",
@@ -433,7 +434,9 @@
       "journal-color-presets": "Gotowe kolory",
       "journal-add-colors-automatically": "Dodawaj nowe kolory automatycznie",
       "journal-foreground-value": "Wartość koloru tekstu",
-      "journal-background-value": "Wartość koloru tła"
+      "journal-background-value": "Wartość koloru tła",
+      "journal-import": "Format importu",
+      "journal-export": "Eksportuj"
     },
     "colors": {
       "background": "Tło",
@@ -968,7 +971,40 @@
     "charCount": "Znaki: {{n}}",
     "line": "Wiersz: {{n}}",
     "column": "Kolumna: {{n}}",
-    "customize": "Dostosuj"
+    "customize": "Dostosuj",
+    "transfer": {
+      "files": "Pliki",
+      "folder": "Folder",
+      "all": "Wszystko",
+      "export": "Eksportuj jako .zip",
+      "cancelled": "Import anulowany. Nic nie zostało zmienione.",
+      "stopped": "Import zatrzymany. Postęp: {{applied}} z {{total}}.",
+      "importFailed": "Import nie powiódł się.",
+      "conflictTitle": "Notatka już istnieje",
+      "conflictDescription": "„{{path}}” już istnieje. Co chcesz zrobić?",
+      "applyToAll": "Zastosuj do wszystkich elementów",
+      "skip": "Pomiń",
+      "replace": "Zastąp",
+      "keepBoth": "Zachowaj obie",
+      "import": "Importuj",
+      "exportTitle": "Wybierz elementy do eksportu",
+      "done_one": "Zaimportowano {{count}} element, pominięto: {{failed}}.",
+      "done_few": "Zaimportowano {{count}} elementy, pominięto: {{failed}}.",
+      "done_many": "Zaimportowano {{count}} elementów, pominięto: {{failed}}.",
+      "done_other": "Zaimportowano {{count}} elementu, pominięto: {{failed}}.",
+      "progress": "Trwa import... {{percent}}%",
+      "details": "Szczegóły",
+      "detailsTitle": "Szczegóły importu",
+      "detailsTime": "Rozpoczęcie: {{start}}; czas trwania: {{seconds}} s",
+      "status": {
+        "imported": "Zaimportowano",
+        "replaced": "Zastąpiono",
+        "renamed": "Zachowano obie notatki (zmieniono nazwę)",
+        "skipped": "Pominięto",
+        "unsupported": "Nieobsługiwany typ pliku",
+        "tooLarge": "Zbyt duży"
+      }
+    }
   },
   "iconPicker": {
     "search": "Szukaj ikon...",

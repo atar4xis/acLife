@@ -217,6 +217,27 @@ export function formatBytes(bytes: number, language: string): string {
   }).format(value);
 }
 
+export async function downloadBlob(blob: Blob, filename: string) {
+  if (isTauri) {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+
+    const path = await save({ defaultPath: filename });
+    if (!path) return;
+
+    const { writeFile } = await import("@tauri-apps/plugin-fs");
+    await writeFile(path, new Uint8Array(await blob.arrayBuffer()));
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
 export const USAGE_WARNING_PERCENT = 90;
 
 export function usagePercent(used: number, limit: number): number {

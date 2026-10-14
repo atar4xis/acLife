@@ -341,7 +341,8 @@
       "about": "About",
       "journal-editor": "Editor",
       "journal-customization": "Customization",
-      "note-defaults": "Note defaults"
+      "note-defaults": "Note defaults",
+      "journal-import-export": "Import / Export"
     },
     "items": {
       "theme-mode": "Theme mode",
@@ -423,7 +424,9 @@
       "journal-color-presets": "Color presets",
       "journal-add-colors-automatically": "Add new colors automatically",
       "journal-foreground-value": "Foreground color value",
-      "journal-background-value": "Background color value"
+      "journal-background-value": "Background color value",
+      "journal-import": "Import format",
+      "journal-export": "Export"
     },
     "colors": {
       "background": "Background",
@@ -924,7 +927,38 @@
     "charCount": "Characters: {{n}}",
     "line": "Line: {{n}}",
     "column": "Column: {{n}}",
-    "customize": "Customize"
+    "customize": "Customize",
+    "transfer": {
+      "files": "Files",
+      "folder": "Folder",
+      "all": "All",
+      "export": "Export as .zip",
+      "cancelled": "Import cancelled. Nothing was changed.",
+      "stopped": "Import stopped. Progress: {{applied}} of {{total}}.",
+      "importFailed": "Import failed.",
+      "conflictTitle": "Note already exists",
+      "conflictDescription": "\"{{path}}\" already exists. What would you like to do?",
+      "applyToAll": "Do this for all items",
+      "skip": "Skip",
+      "replace": "Replace",
+      "keepBoth": "Keep both",
+      "import": "Import",
+      "exportTitle": "Select items to export",
+      "done_one": "Imported {{count}} item, skipped {{failed}}.",
+      "done_other": "Imported {{count}} items, skipped {{failed}}.",
+      "progress": "Import in progress... {{percent}}%",
+      "details": "Details",
+      "detailsTitle": "Import details",
+      "detailsTime": "Started {{start}}, took {{seconds}} s",
+      "status": {
+        "imported": "Imported",
+        "replaced": "Replaced",
+        "renamed": "Kept both (renamed)",
+        "skipped": "Skipped",
+        "unsupported": "Unsupported file type",
+        "tooLarge": "Too large"
+      }
+    }
   },
   "iconPicker": {
     "search": "Search icons...",

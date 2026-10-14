@@ -335,7 +335,8 @@
       "about": "Acerca de",
       "journal-editor": "Editor",
       "journal-customization": "Personalización",
-      "note-defaults": "Valores predeterminados de las notas"
+      "note-defaults": "Valores predeterminados de las notas",
+      "journal-import-export": "Importar / Exportar"
     },
     "items": {
       "theme-mode": "Modo del tema",
@@ -417,7 +418,9 @@
       "journal-color-presets": "Colores predefinidos",
       "journal-add-colors-automatically": "Añadir colores nuevos automáticamente",
       "journal-foreground-value": "Valor del color de primer plano",
-      "journal-background-value": "Valor del color de fondo"
+      "journal-background-value": "Valor del color de fondo",
+      "journal-import": "Formato de importación",
+      "journal-export": "Exportar"
     },
     "colors": {
       "background": "Fondo",
@@ -918,7 +921,39 @@
     "charCount": "Caracteres: {{n}}",
     "line": "Línea: {{n}}",
     "column": "Columna: {{n}}",
-    "customize": "Personalizar"
+    "customize": "Personalizar",
+    "transfer": {
+      "files": "Archivos",
+      "folder": "Carpeta",
+      "all": "Todo",
+      "export": "Exportar como .zip",
+      "cancelled": "Importación cancelada. No se cambió nada.",
+      "stopped": "Importación detenida. Progreso: {{applied}} de {{total}}.",
+      "importFailed": "Error al importar.",
+      "conflictTitle": "La nota ya existe",
+      "conflictDescription": "«{{path}}» ya existe. ¿Qué quieres hacer?",
+      "applyToAll": "Hacer esto con todos los elementos",
+      "skip": "Omitir",
+      "replace": "Reemplazar",
+      "keepBoth": "Conservar ambas",
+      "import": "Importar",
+      "exportTitle": "Selecciona los elementos que exportar",
+      "done_one": "Se importó {{count}} elemento; elementos omitidos: {{failed}}.",
+      "done_many": "Se importaron {{count}} elementos; elementos omitidos: {{failed}}.",
+      "done_other": "Se importaron {{count}} elementos; elementos omitidos: {{failed}}.",
+      "progress": "Importación en curso... {{percent}} %",
+      "details": "Detalles",
+      "detailsTitle": "Detalles de la importación",
+      "detailsTime": "Inicio: {{start}}; duración: {{seconds}} s",
+      "status": {
+        "imported": "Importado",
+        "replaced": "Reemplazado",
+        "renamed": "Ambas notas conservadas (nombre cambiado)",
+        "skipped": "Omitido",
+        "unsupported": "Tipo de archivo no compatible",
+        "tooLarge": "Demasiado grande"
+      }
+    }
   },
   "iconPicker": {
     "search": "Buscar iconos...",

@@ -337,7 +337,8 @@
       "about": "À propos",
       "journal-editor": "Éditeur",
       "journal-customization": "Personnalisation",
-      "note-defaults": "Valeurs par défaut des notes"
+      "note-defaults": "Valeurs par défaut des notes",
+      "journal-import-export": "Importer / Exporter"
     },
     "items": {
       "theme-mode": "Mode du thème",
@@ -419,7 +420,9 @@
       "journal-color-presets": "Couleurs prédéfinies",
       "journal-add-colors-automatically": "Ajouter automatiquement les nouvelles couleurs",
       "journal-foreground-value": "Valeur de la couleur de premier plan",
-      "journal-background-value": "Valeur de la couleur d'arrière-plan"
+      "journal-background-value": "Valeur de la couleur d'arrière-plan",
+      "journal-import": "Format d'importation",
+      "journal-export": "Exporter"
     },
     "colors": {
       "background": "Arrière-plan",
@@ -920,7 +923,39 @@
     "charCount": "Caractères : {{n}}",
     "line": "Ligne : {{n}}",
     "column": "Colonne : {{n}}",
-    "customize": "Personnaliser"
+    "customize": "Personnaliser",
+    "transfer": {
+      "files": "Fichiers",
+      "folder": "Dossier",
+      "all": "Tout",
+      "export": "Exporter en .zip",
+      "cancelled": "Importation annulée. Rien n'a été modifié.",
+      "stopped": "Importation arrêtée. Progression : {{applied}} sur {{total}}.",
+      "importFailed": "Échec de l'importation.",
+      "conflictTitle": "La note existe déjà",
+      "conflictDescription": "« {{path}} » existe déjà. Que souhaitez-vous faire ?",
+      "applyToAll": "Appliquer à tous les éléments",
+      "skip": "Ignorer",
+      "replace": "Remplacer",
+      "keepBoth": "Garder les deux",
+      "import": "Importer",
+      "exportTitle": "Sélectionnez les éléments à exporter",
+      "done_one": "{{count}} élément importé ; éléments ignorés : {{failed}}.",
+      "done_many": "{{count}} éléments importés ; éléments ignorés : {{failed}}.",
+      "done_other": "{{count}} éléments importés ; éléments ignorés : {{failed}}.",
+      "progress": "Importation en cours... {{percent}} %",
+      "details": "Détails",
+      "detailsTitle": "Détails de l'importation",
+      "detailsTime": "Début : {{start}} ; durée : {{seconds}} s",
+      "status": {
+        "imported": "Importé",
+        "replaced": "Remplacé",
+        "renamed": "Les deux notes conservées (nom modifié)",
+        "skipped": "Ignoré",
+        "unsupported": "Type de fichier non pris en charge",
+        "tooLarge": "Trop volumineux"
+      }
+    }
   },
   "iconPicker": {
     "search": "Rechercher des icônes...",

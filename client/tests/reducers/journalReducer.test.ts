@@ -433,3 +433,83 @@ describe("applyRemote", () => {
     expect(state.expanded).toBe(before.expanded);
   });
 });
+
+describe("importItems", () => {
+  const imported = (
+    id: string,
+    updatedAt: number,
+    content: string,
+  ): JournalItem => ({
+    id,
+    parentId: null,
+    type: "note",
+    name: "imported",
+    content,
+    createdAt: 1,
+    updatedAt,
+  });
+
+  it("appends new items and keeps untouched ones", () => {
+    const before = run(add("a"));
+    const created = imported("b", 5, "new");
+    const state = journalReducer(before, {
+      type: "importItems",
+      upserts: [created],
+    });
+
+    expect(state.items[0]).toBe(before.items[0]);
+    expect(state.items[1]).toBe(created);
+  });
+
+  it("replaces only the content of a known item", () => {
+    const before = run(add("f", "folder"), add("a", "note", "f", 1));
+    const state = journalReducer(before, {
+      type: "importItems",
+      upserts: [imported("a", 9, "replaced")],
+    });
+
+    expect(item(state, "a")).toMatchObject({
+      name: "a",
+      parentId: "f",
+      content: "replaced",
+      updatedAt: 9,
+    });
+  });
+
+  it("moves new items whose parent no longer exists to the root", () => {
+    const before = run(add("a"));
+    const orphan = { ...imported("b", 5, "x"), parentId: "gone" };
+    const child = { ...imported("c", 5, "x"), parentId: "b" };
+    const state = journalReducer(before, {
+      type: "importItems",
+      upserts: [orphan, child],
+    });
+
+    expect(state.items.map((i) => [i.id, i.parentId])).toEqual([
+      ["a", null],
+      ["b", null],
+      ["c", "b"],
+    ]);
+  });
+
+  it("keeps new items whose parent comes in the same batch", () => {
+    const folder = { ...imported("f", 5, ""), type: "folder" as const };
+    const note = { ...imported("n", 5, "x"), parentId: "f" };
+    const state = journalReducer(run(add("a")), {
+      type: "importItems",
+      upserts: [folder, note],
+    });
+
+    expect(state.items.map((i) => i.id)).toEqual(["a", "f", "n"]);
+  });
+
+  it("never lowers the updatedAt of a known item", () => {
+    const before = run(add("a", "note", null, 10));
+    const state = journalReducer(before, {
+      type: "importItems",
+      upserts: [imported("a", 5, "replaced")],
+    });
+
+    expect(item(state, "a")).toMatchObject({ content: "replaced", updatedAt: 11 });
+  });
+});

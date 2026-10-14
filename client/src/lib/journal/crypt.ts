@@ -1,4 +1,5 @@
-import { decryptJson, encryptJson } from "@/lib/crypt";
+import { decryptJson, encryptJson, GCM_TAG_BYTES, IV_BYTES } from "@/lib/crypt";
+import { compress } from "@/lib/gzip";
 import { DEFAULT_JOURNAL } from "@/lib/journal/item";
 import { arrayBufferToBase64, uint8ArrayFromBase64 } from "@/lib/utils";
 import type { Encrypted } from "@/types/Crypt";
@@ -6,6 +7,15 @@ import type { JournalData, JournalItem } from "@/types/Journal";
 import type { EncryptedRecord } from "@/types/Sync";
 
 export const MAX_ENCRYPTED_JOURNAL_BYTES = 256 << 10;
+
+export const fitsUpload = async (item: JournalItem) => {
+  const json = new TextEncoder().encode(JSON.stringify(item));
+  const compressed = await compress(json);
+
+  return (
+    compressed.length + IV_BYTES + GCM_TAG_BYTES <= MAX_ENCRYPTED_JOURNAL_BYTES
+  );
+};
 
 export const decryptJournal = async (
   data: Encrypted,

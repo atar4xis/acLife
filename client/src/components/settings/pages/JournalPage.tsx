@@ -21,6 +21,7 @@ import SettingsLabel from "../SettingsLabel";
 import SettingsSelect from "../SettingsSelect";
 import SettingsSwitch from "../SettingsSwitch";
 import SyncToggle from "../SyncToggle";
+import JournalImportExport from "./JournalImportExport";
 import { useTranslation } from "react-i18next";
 
 const NoteNameField = memo(function NoteNameField() {
@@ -236,6 +237,16 @@ export default function JournalPage({
           itemId="journal-background"
         />
         <SettingsSwitch settingKey="journalColorIcons" className="min-h-9" />
+      </Section>
+
+      <Separator />
+
+      <Section
+        id="journal-import-export"
+        label={sectionLabel("journal-import-export")}
+        sectionRefs={sectionRefs}
+      >
+        <JournalImportExport />
       </Section>
     </FieldGroup>
   );

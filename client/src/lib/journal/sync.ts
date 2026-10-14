@@ -1,6 +1,8 @@
 import { computeBucketHash } from "@/lib/bucketHash";
 import type { JournalItem } from "@/types/Journal";
 
+export const CHUNK_ITEMS = 20;
+
 const JOURNAL_BUCKET_CHARS = 2;
 const JOURNAL_HASH_CHARS = 11;
 

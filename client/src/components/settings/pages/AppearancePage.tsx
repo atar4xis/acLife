@@ -20,7 +20,7 @@ import {
 import type { Theme, ThemeColors, ThemePreset } from "@/types/Theme";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
-import { cn, cssColorToHex } from "@/lib/utils";
+import { cn, cssColorToHex, downloadBlob } from "@/lib/utils";
 import { presetErrorMessage } from "@/lib/themePresets";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Button } from "@/components/ui/button";
@@ -100,12 +100,10 @@ function downloadPreset(preset: ThemePreset) {
     [JSON.stringify({ name, base, colors, fontFamily, fontSize }, null, 2)],
     { type: "application/json" },
   );
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${name.trim().replace(/[^a-z0-9-_]+/gi, "-") || "theme-preset"}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadBlob(
+    blob,
+    `${name.trim().replace(/[^a-z0-9-_]+/gi, "-") || "theme-preset"}.json`,
+  );
 }
 
 const THEMES_PER_PAGE = 5;

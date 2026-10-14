@@ -372,6 +372,10 @@ export const settingsCategories: SettingsCategory[] = [
           { id: "journal-color-icons", settingKey: "journalColorIcons" },
         ],
       },
+      {
+        id: "journal-import-export",
+        items: [{ id: "journal-import" }, { id: "journal-export" }],
+      },
     ],
   },
   {

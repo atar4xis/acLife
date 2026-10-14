@@ -119,6 +119,7 @@ export type JournalAction =
   | { type: "moveItem"; id: string; parentId: string | null; now: number }
   | { type: "removeItem"; id: string }
   | { type: "applyRemote"; upserts: JournalItem[]; deletedIds: string[] }
+  | { type: "importItems"; upserts: JournalItem[] }
   | { type: "setSort"; sort: JournalSort }
   | { type: "toggleFolder"; id: string }
   | { type: "setAllExpanded"; expanded: boolean }

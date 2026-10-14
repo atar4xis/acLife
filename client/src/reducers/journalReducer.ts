@@ -126,6 +126,31 @@ export function journalReducer(
         ...(removed.size > 0 && closeItems(state, removed)),
       };
     }
+    case "importItems": {
+      const imported = new Map(action.upserts.map((item) => [item.id, item]));
+      const present = new Set(state.items.map((item) => item.id));
+      const hasParent = (item: JournalItem) =>
+        item.parentId === null ||
+        present.has(item.parentId) ||
+        imported.has(item.parentId);
+
+      const replaced = state.items.map((item) => {
+        const replacement = imported.get(item.id);
+        if (!replacement) return item;
+
+        return {
+          ...item,
+          content: replacement.content,
+          updatedAt: Math.max(replacement.updatedAt, item.updatedAt + 1),
+        };
+      });
+
+      const added = action.upserts
+        .filter((item) => !present.has(item.id))
+        .map((item) => (hasParent(item) ? item : { ...item, parentId: null }));
+
+      return { ...state, items: [...replaced, ...added] };
+    }
     case "setSort":
       return { ...state, sort: action.sort };
     case "toggleFolder": {

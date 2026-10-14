@@ -274,7 +274,10 @@ describe("AppearancePage", () => {
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(clickSpy).toHaveBeenCalledTimes(1);
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+    await vi.waitFor(
+      () => expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-url"),
+      { timeout: 3000 },
+    );
   });
 
   it("switches Save to Overwrite when the name already exists and replaces the theme", async () => {

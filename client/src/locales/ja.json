@@ -331,7 +331,8 @@
       "about": "このアプリについて",
       "journal-editor": "エディタ",
       "journal-customization": "カスタマイズ",
-      "note-defaults": "ノートの初期設定"
+      "note-defaults": "ノートの初期設定",
+      "journal-import-export": "インポート / エクスポート"
     },
     "items": {
       "theme-mode": "テーマモード",
@@ -413,7 +414,9 @@
       "journal-color-presets": "プリセットカラー",
       "journal-add-colors-automatically": "新しい色を自動的に追加",
       "journal-foreground-value": "文字色の値",
-      "journal-background-value": "背景色の値"
+      "journal-background-value": "背景色の値",
+      "journal-import": "インポート形式",
+      "journal-export": "エクスポート"
     },
     "colors": {
       "background": "背景",
@@ -898,7 +901,37 @@
     "charCount": "文字数: {{n}}",
     "line": "行: {{n}}",
     "column": "列: {{n}}",
-    "customize": "カスタマイズ"
+    "customize": "カスタマイズ",
+    "transfer": {
+      "files": "ファイル",
+      "folder": "フォルダー",
+      "all": "すべて",
+      "export": ".zip としてエクスポート",
+      "cancelled": "インポートをキャンセルしました。変更はありません。",
+      "stopped": "{{total}} 件中 {{applied}} 件をインポートしたところで停止しました。",
+      "importFailed": "インポートに失敗しました。",
+      "conflictTitle": "ノートはすでに存在します",
+      "conflictDescription": "「{{path}}」はすでに存在します。どうしますか？",
+      "applyToAll": "すべての項目に適用する",
+      "skip": "スキップ",
+      "replace": "置き換え",
+      "keepBoth": "両方を残す",
+      "import": "インポート",
+      "exportTitle": "エクスポートする項目を選択",
+      "done_other": "{{count}} 件をインポートし、{{failed}} 件をスキップしました。",
+      "progress": "インポート中... {{percent}}%",
+      "details": "詳細",
+      "detailsTitle": "インポートの詳細",
+      "detailsTime": "開始 {{start}}、所要時間 {{seconds}} 秒",
+      "status": {
+        "imported": "インポート済み",
+        "replaced": "置き換え済み",
+        "renamed": "両方を保持（名前変更）",
+        "skipped": "スキップ",
+        "unsupported": "未対応のファイル形式",
+        "tooLarge": "大きすぎます"
+      }
+    }
   },
   "iconPicker": {
     "search": "アイコンを検索...",
