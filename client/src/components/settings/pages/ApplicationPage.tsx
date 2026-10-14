@@ -1,3 +1,4 @@
+import ScrollContainer from "@/components/ui/scroll-container";
 import { DateTime } from "luxon";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -185,7 +186,7 @@ export default function ApplicationPage({
 
         <div className="flex flex-col gap-3">
           <FieldTitle>{settingLabel("updates-changelog")}</FieldTitle>
-          <div className="flex max-h-64 flex-col gap-3 overflow-y-auto rounded-lg border p-3">
+          <ScrollContainer className="flex max-h-64 flex-col gap-3 rounded-lg border p-3">
             {updater.changelog.length === 0 && (
               <FieldDescription>
                 {t("settings.updates.noChanges")}
@@ -211,7 +212,7 @@ export default function ApplicationPage({
                 </ul>
               </div>
             ))}
-          </div>
+          </ScrollContainer>
         </div>
       </Section>
 

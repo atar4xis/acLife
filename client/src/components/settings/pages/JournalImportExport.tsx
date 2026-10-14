@@ -1,3 +1,4 @@
+import ScrollContainer from "@/components/ui/scroll-container";
 import { DateTime } from "luxon";
 import { useEffect, useRef, useState } from "react";
 import FolderTargetLabel from "@/components/journal/FolderTargetLabel";
@@ -94,28 +95,30 @@ function ImportDetails({
           </p>
         </DialogHeader>
 
-        <ul className="flex max-h-96 flex-col overflow-y-auto">
-          {report.log.map((entry, index) => (
-            <li
-              key={`${index}:${entry.path}`}
-              className={cn(
-                "flex flex-col gap-0.5 border-b px-3 py-2 text-sm last:border-b-0",
-                STATUS_CLASSES[entry.status],
-              )}
-            >
-              <div className="flex justify-between gap-2">
-                <span className="truncate font-medium">{entry.name}</span>
-                <span className="shrink-0">
-                  {t(`journal.transfer.status.${entry.status}`)}
-                </span>
-              </div>
+        <ScrollContainer className="max-h-96">
+          <ul className="flex flex-col">
+            {report.log.map((entry, index) => (
+              <li
+                key={`${index}:${entry.path}`}
+                className={cn(
+                  "flex flex-col gap-0.5 border-b px-3 py-2 text-sm last:border-b-0",
+                  STATUS_CLASSES[entry.status],
+                )}
+              >
+                <div className="flex justify-between gap-2">
+                  <span className="truncate font-medium">{entry.name}</span>
+                  <span className="shrink-0">
+                    {t(`journal.transfer.status.${entry.status}`)}
+                  </span>
+                </div>
 
-              <span className="truncate text-xs opacity-80">
-                {entry.path} - {formatBytes(entry.size, i18n.language)}
-              </span>
-            </li>
-          ))}
-        </ul>
+                <span className="truncate text-xs opacity-80">
+                  {entry.path} - {formatBytes(entry.size, i18n.language)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </ScrollContainer>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             {t("common.close")}
@@ -426,7 +429,7 @@ function ExportDialog({ onClose }: { onClose: () => void }) {
           <DialogTitle>{t("journal.transfer.exportTitle")}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex max-h-72 flex-col overflow-y-auto rounded-md border p-1">
+        <ScrollContainer className="flex max-h-72 flex-col rounded-md border p-1">
           <Label className="flex items-center gap-2 rounded px-2 py-1.5">
             <Checkbox
               checked={allSelected}
@@ -460,7 +463,7 @@ function ExportDialog({ onClose }: { onClose: () => void }) {
               <FolderTargetLabel folder={folder} />
             </Label>
           ))}
-        </div>
+        </ScrollContainer>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

@@ -3,6 +3,7 @@ import { Check, ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import ScrollContainer from "@/components/ui/scroll-container";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -172,11 +173,11 @@ function SearchableSelect({
           />
         </div>
         {showResults && (
-          <div
+          <ScrollContainer
             ref={listRef}
             id={listId}
             role="listbox"
-            className="max-h-72 overflow-y-auto p-1"
+            className="max-h-72 p-1"
           >
             {debouncedQuery && results.length === 0 && (
               <div className="text-muted-foreground px-2 py-6 text-center text-sm">
@@ -212,7 +213,7 @@ function SearchableSelect({
                 )}
               </button>
             ))}
-          </div>
+          </ScrollContainer>
         )}
       </PopoverContent>
     </Popover>

@@ -1,3 +1,4 @@
+import ScrollContainer from "@/components/ui/scroll-container";
 import { useRef, useState } from "react";
 import { ChevronRight, Settings } from "lucide-react";
 import { toast } from "sonner";
@@ -184,7 +185,7 @@ export default function SyncPage({
             />
           </Field>
           <DialogContent
-            className="max-h-[80vh] overflow-y-auto"
+            className="max-h-[80vh] grid-rows-[auto_minmax(0,1fr)]"
             onCloseAutoFocus={(e) => {
               e.preventDefault();
               manageRef.current?.focus();
@@ -197,7 +198,7 @@ export default function SyncPage({
                 {t("settings.sync.manageHelp")}
               </DialogDescription>
             </DialogHeader>
-            <div className="flex flex-col gap-4">
+            <ScrollContainer className="flex flex-col gap-4">
               {syncGroups.map((group) => (
                 <SyncGroup
                   key={group.id}
@@ -205,7 +206,7 @@ export default function SyncPage({
                   keys={group.keys}
                 />
               ))}
-            </div>
+            </ScrollContainer>
           </DialogContent>
         </Dialog>
       </Section>

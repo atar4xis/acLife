@@ -99,6 +99,7 @@ import useGridKeyboard from "@/hooks/useGridKeyboard";
 import { useKeyboardMode } from "@/hooks/useGridFocus";
 import { SpokenMessage, SlotIndicator } from "./GridFocus";
 import GridLayout from "./GridLayout";
+import ScrollContainer from "@/components/ui/scroll-container";
 import ScrollThumb from "@/components/ui/scroll-thumb";
 import UndoRedoButtons from "./UndoRedoButtons";
 import { useWeekStart } from "@/hooks/useWeekStart";
@@ -3084,30 +3085,32 @@ export default memo(function AppCalendar({
                   : t("calendar.noMatches")}
               </p>
             ) : (
-              <ul className="max-h-80 overflow-auto">
-                {searchResults.map((ev) => (
-                  <li key={eventKey(ev)}>
-                    <button
-                      type="button"
-                      className="hover:bg-accent flex w-full items-stretch gap-2 rounded-sm p-2 text-start text-sm"
-                      onClick={() => onSelectSearchResult(ev)}
-                    >
-                      <span
-                        className="w-1 shrink-0 rounded-full"
-                        style={{
-                          backgroundColor: ev.color ?? EVENT_COLOR_FALLBACK,
-                        }}
-                      />
-                      <span className="flex flex-col items-start">
-                        <span className="font-medium">{ev.title}</span>
-                        <span className="text-muted-foreground text-xs">
-                          {ev.start.toFormat(fmt("dateTimeLong"))}
+              <ScrollContainer className="max-h-80">
+                <ul>
+                  {searchResults.map((ev) => (
+                    <li key={eventKey(ev)}>
+                      <button
+                        type="button"
+                        className="hover:bg-accent flex w-full items-stretch gap-2 rounded-sm p-2 text-start text-sm"
+                        onClick={() => onSelectSearchResult(ev)}
+                      >
+                        <span
+                          className="w-1 shrink-0 rounded-full"
+                          style={{
+                            backgroundColor: ev.color ?? EVENT_COLOR_FALLBACK,
+                          }}
+                        />
+                        <span className="flex flex-col items-start">
+                          <span className="font-medium">{ev.title}</span>
+                          <span className="text-muted-foreground text-xs">
+                            {ev.start.toFormat(fmt("dateTimeLong"))}
+                          </span>
                         </span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </ScrollContainer>
             )}
             {!isSearchExpanding && canExpandSearchRadius && (
               <div className="p-1">

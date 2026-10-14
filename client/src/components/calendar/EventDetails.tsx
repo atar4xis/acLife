@@ -1,3 +1,4 @@
+import ScrollContainer from "@/components/ui/scroll-container";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import { repeatLabel } from "@/lib/calendar/repeatOptions";
 import { describeEvent } from "@/lib/calendar/a11y";
@@ -135,7 +136,10 @@ export default function EventDetails({
           </Button>
         </div>
       </div>
-      <div className="flex flex-col gap-2 mb-3 min-h-0 overflow-y-auto overflow-x-hidden md:min-w-80 md:max-w-120">
+      <ScrollContainer
+        className="flex flex-col gap-2 overflow-x-hidden"
+        wrapperClassName="mb-3 md:min-w-80 md:max-w-120"
+      >
         <div className="flex items-start gap-2 text-sm">
           <span
             className="size-4 shrink-0 rounded-full border mt-1"
@@ -195,7 +199,7 @@ export default function EventDetails({
             </Label>
           </div>
         )}
-      </div>
+      </ScrollContainer>
     </div>,
     document.body,
   );

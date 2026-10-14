@@ -1,3 +1,4 @@
+import ScrollContainer from "@/components/ui/scroll-container";
 import {
   useEffect,
   useMemo,
@@ -8,7 +9,6 @@ import {
 import { Menu } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { loadTimezones } from "@/lib/calendar/timezone";
@@ -102,9 +102,7 @@ export default function SettingsDialog({
   }, [open, activeCategory.id]);
 
   useEffect(() => {
-    pagesRef.current
-      ?.closest('[data-slot="scroll-area-viewport"]')
-      ?.scrollTo(0, 0);
+    pagesRef.current?.closest('[data-slot="scroll-container"]')?.scrollTo(0, 0);
   }, [activeCategory.id]);
 
   const results = useMemo(() => {
@@ -131,7 +129,7 @@ export default function SettingsDialog({
   const scrollToSection = (sectionId: string) => {
     const el = sectionRefs.current.get(sectionId);
     const viewport = pagesRef.current?.closest(
-      '[data-slot="scroll-area-viewport"]',
+      '[data-slot="scroll-container"]',
     );
     if (!el) return;
 
@@ -228,7 +226,7 @@ export default function SettingsDialog({
           )}
           <div className="flex min-h-0 flex-1 flex-col">
             {isMobile && <div className="h-12 shrink-0 border-b" />}
-            <ScrollArea className="min-h-0 flex-1">
+            <ScrollContainer wrapperClassName="flex-1">
               <div ref={pagesRef} className="p-6">
                 {visibleCategories
                   .filter(
@@ -248,7 +246,7 @@ export default function SettingsDialog({
                     );
                   })}
               </div>
-            </ScrollArea>
+            </ScrollContainer>
           </div>
         </div>
         {isMobile && (

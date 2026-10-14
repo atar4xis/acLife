@@ -1,7 +1,7 @@
+import ScrollContainer from "@/components/ui/scroll-container";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import SettingsTree from "./SettingsTree";
 import type { SearchHit, SettingsCategory } from "./settingsData";
 import { useTranslation } from "react-i18next";
@@ -59,7 +59,7 @@ export default function SettingsNav({
           </div>
         )}
       </div>
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollContainer wrapperClassName="flex-1">
         <div className="p-3 pt-0">
           <SettingsTree
             categories={categories}
@@ -68,7 +68,7 @@ export default function SettingsNav({
             onSelectSection={onSelectSection}
           />
         </div>
-      </ScrollArea>
+      </ScrollContainer>
       {onClose && (
         <div className="border-t p-3">
           <Button variant="outline" className="w-full" onClick={onClose}>

@@ -1,3 +1,4 @@
+import ScrollContainer from "@/components/ui/scroll-container";
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
@@ -31,6 +32,7 @@ function DropdownMenuTrigger({
 
 function DropdownMenuContent({
   className,
+  children,
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
@@ -40,11 +42,15 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "bg-popover text-popover-foreground z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-32 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
+          "bg-popover text-popover-foreground z-50 min-w-32 origin-(--radix-dropdown-menu-content-transform-origin) rounded-md border shadow-md",
           className,
         )}
         {...props}
-      />
+      >
+        <ScrollContainer className="max-h-(--radix-dropdown-menu-content-available-height) overflow-x-hidden p-1">
+          {children}
+        </ScrollContainer>
+      </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   );
 }

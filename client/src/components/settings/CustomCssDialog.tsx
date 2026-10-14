@@ -1,3 +1,4 @@
+import ScrollContainer from "@/components/ui/scroll-container";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Editor from "react-simple-code-editor";
@@ -42,7 +43,7 @@ export default function CustomCssDialog({
         <DialogHeader>
           <DialogTitle>{settingLabel("custom-css")}</DialogTitle>
         </DialogHeader>
-        <div className="border-input bg-background max-h-[50vh] overflow-auto rounded-md border">
+        <ScrollContainer className="border-input bg-background max-h-[50vh] rounded-md border">
           <Editor
             value={draft}
             onValueChange={setDraft}
@@ -52,7 +53,7 @@ export default function CustomCssDialog({
             spellCheck={false}
             className="css-editor min-h-48 font-mono text-sm"
           />
-        </div>
+        </ScrollContainer>
         <p
           className={cn(
             "text-muted-foreground text-xs",

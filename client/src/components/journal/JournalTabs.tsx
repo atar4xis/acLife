@@ -1,3 +1,4 @@
+import ScrollContainer from "@/components/ui/scroll-container";
 import { DROPDOWN_PARTS } from "@/components/journal/menuParts";
 import JournalTab from "@/components/journal/JournalTab";
 import TabMenu from "@/components/journal/TabMenu";
@@ -65,30 +66,33 @@ export default memo(function JournalTabs({ pane }: { pane: PaneNode }) {
           {panes.findIndex(({ id }) => id === pane.id) + 1}
         </span>
       )}
-      <ul
-        ref={list}
-        role="tablist"
-        aria-label={t("journal.tabs")}
-        className="flex min-w-0 gap-1 overflow-x-auto"
-      >
-        {pane.tabs.map((id, index) => {
-          const note = journal.itemsById.get(id);
-          if (!note && !isNewTab(id)) return null;
+      <ScrollContainer wrapperClassName="min-w-0" className="overflow-y-hidden">
+        <ul
+          ref={list}
+          role="tablist"
+          aria-label={t("journal.tabs")}
+          className="flex gap-1"
+        >
+          {pane.tabs.map((id, index) => {
+            const note = journal.itemsById.get(id);
+            if (!note && !isNewTab(id)) return null;
 
-          return (
-            <JournalTab
-              key={id}
-              pane={pane}
-              id={id}
-              name={note?.name ?? t("journal.newTab")}
-              insertBefore={insertAt === index}
-              insertAfter={
-                insertAt === pane.tabs.length && index === pane.tabs.length - 1
-              }
-            />
-          );
-        })}
-      </ul>
+            return (
+              <JournalTab
+                key={id}
+                pane={pane}
+                id={id}
+                name={note?.name ?? t("journal.newTab")}
+                insertBefore={insertAt === index}
+                insertAfter={
+                  insertAt === pane.tabs.length &&
+                  index === pane.tabs.length - 1
+                }
+              />
+            );
+          })}
+        </ul>
+      </ScrollContainer>
       <IconButton
         label={t("journal.newTab")}
         size="icon-sm"

@@ -1,5 +1,6 @@
 "use client";
 
+import ScrollContainer from "@/components/ui/scroll-container";
 import { Slot } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
@@ -499,11 +500,12 @@ const SidebarContent = React.forwardRef<
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
   return (
-    <div
+    <ScrollContainer
       ref={ref}
       data-sidebar="content"
+      wrapperClassName="flex-1"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "flex flex-col gap-2 group-data-[collapsible=icon]:overflow-hidden",
         className,
       )}
       {...props}

@@ -10,20 +10,36 @@ import {
 
 const HIDE_DELAY_MS = 1500;
 
+const AXES = {
+  y: {
+    scrollPos: "scrollTop",
+    scrollSize: "scrollHeight",
+    clientSize: "clientHeight",
+    pointer: "clientY",
+  },
+  x: {
+    scrollPos: "scrollLeft",
+    scrollSize: "scrollWidth",
+    clientSize: "clientWidth",
+    pointer: "clientX",
+  },
+} as const;
+
 export default memo(function ScrollThumb({
   gridRef,
+  axis = "y",
 }: {
   gridRef: RefObject<HTMLElement | null>;
+  axis?: "x" | "y";
 }) {
-  const [thumb, setThumb] = useState<{ top: number; height: number } | null>(
+  const { scrollPos, scrollSize, clientSize, pointer } = AXES[axis];
+  const [thumb, setThumb] = useState<{ offset: number; size: number } | null>(
     null,
   );
   const [visible, setVisible] = useState(false);
   const hideTimerRef = useRef<number | null>(null);
-  const thumbHeightRef = useRef(0);
-  const dragRef = useRef<{ startY: number; startScrollTop: number } | null>(
-    null,
-  );
+  const thumbSizeRef = useRef(0);
+  const dragRef = useRef<{ start: number; startScroll: number } | null>(null);
 
   const clearHideTimer = useCallback(() => {
     if (hideTimerRef.current !== null) {
@@ -45,21 +61,23 @@ export default memo(function ScrollThumb({
   const update = useCallback(() => {
     const container = gridRef.current;
     if (!container) return;
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    if (scrollHeight <= clientHeight) {
-      thumbHeightRef.current = 0;
+    const total = container[scrollSize];
+    const visibleSize = container[clientSize];
+    if (total <= visibleSize) {
+      thumbSizeRef.current = 0;
       setThumb(null);
       return;
     }
-    const height = Math.max((clientHeight / scrollHeight) * clientHeight, 24);
-    const top =
-      (scrollTop / (scrollHeight - clientHeight)) * (clientHeight - height);
-    thumbHeightRef.current = height;
+    const size = Math.max((visibleSize / total) * visibleSize, 24);
+    const offset =
+      (Math.abs(container[scrollPos]) / (total - visibleSize)) *
+      (visibleSize - size);
+    thumbSizeRef.current = size;
     setThumb((prev) =>
-      prev?.top === top && prev.height === height ? prev : { top, height },
+      prev?.offset === offset && prev.size === size ? prev : { offset, size },
     );
     show();
-  }, [gridRef, show]);
+  }, [gridRef, show, scrollPos, scrollSize, clientSize]);
 
   useEffect(() => {
     const container = gridRef.current;
@@ -92,13 +110,13 @@ export default memo(function ScrollThumb({
       e.stopPropagation();
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
       dragRef.current = {
-        startY: e.clientY,
-        startScrollTop: container.scrollTop,
+        start: e[pointer],
+        startScroll: container[scrollPos],
       };
       setVisible(true);
       clearHideTimer();
     },
-    [gridRef, clearHideTimer],
+    [gridRef, clearHideTimer, pointer, scrollPos],
   );
 
   useEffect(() => {
@@ -106,16 +124,17 @@ export default memo(function ScrollThumb({
       const drag = dragRef.current;
       const container = gridRef.current;
       if (!drag || !container) return;
-      const { scrollHeight, clientHeight } = container;
-      const trackHeight = clientHeight - thumbHeightRef.current;
-      if (trackHeight <= 0) return;
-      const deltaY = e.clientY - drag.startY;
-      const deltaScroll =
-        (deltaY / trackHeight) * (scrollHeight - clientHeight);
-      container.scrollTop = Math.min(
-        Math.max(drag.startScrollTop + deltaScroll, 0),
-        scrollHeight - clientHeight,
-      );
+      const maxScroll = container[scrollSize] - container[clientSize];
+      const track = container[clientSize] - thumbSizeRef.current;
+      if (track <= 0) return;
+      const rtl =
+        axis === "x" && getComputedStyle(container).direction === "rtl";
+      const delta = (e[pointer] - drag.start) * (rtl ? -1 : 1);
+      const deltaScroll = (delta / track) * maxScroll;
+      const next = drag.startScroll + deltaScroll;
+      container[scrollPos] = rtl
+        ? Math.min(Math.max(next, -maxScroll), 0)
+        : Math.min(Math.max(next, 0), maxScroll);
     };
     const handlePointerUp = () => {
       if (dragRef.current) show();
@@ -127,18 +146,23 @@ export default memo(function ScrollThumb({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [gridRef, show]);
+  }, [gridRef, show, axis, pointer, scrollPos, scrollSize, clientSize]);
 
   if (!thumb) return null;
 
   return (
     <div
-      data-testid="scroll-thumb"
+      data-testid={axis === "y" ? "scroll-thumb" : "scroll-thumb-x"}
       className={cn(
-        "absolute inset-e-0.5 w-1 rounded-full bg-foreground/20 hover:bg-foreground/40 z-40",
+        "absolute rounded-full bg-foreground/20 hover:bg-foreground/40 z-40",
+        axis === "y" ? "inset-e-0.5 w-1" : "bottom-0.5 h-1",
         visible ? "opacity-100" : "opacity-0 pointer-events-none",
       )}
-      style={{ top: thumb.top, height: thumb.height }}
+      style={
+        axis === "y"
+          ? { top: thumb.offset, height: thumb.size }
+          : { insetInlineStart: thumb.offset, width: thumb.size }
+      }
       onPointerDown={handlePointerDown}
     />
   );

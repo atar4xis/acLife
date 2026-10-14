@@ -1,3 +1,4 @@
+import ScrollContainer from "@/components/ui/scroll-container";
 import * as React from "react";
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
@@ -93,6 +94,7 @@ function ContextMenuSubContent({
 
 function ContextMenuContent({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Content>) {
   return (
@@ -100,11 +102,15 @@ function ContextMenuContent({
       <ContextMenuPrimitive.Content
         data-slot="context-menu-content"
         className={cn(
-          "bg-popover text-popover-foreground z-50 max-h-(--radix-context-menu-content-available-height) min-w-32 origin-(--radix-context-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
+          "bg-popover text-popover-foreground z-50 min-w-32 origin-(--radix-context-menu-content-transform-origin) rounded-md border shadow-md",
           className,
         )}
         {...props}
-      />
+      >
+        <ScrollContainer className="max-h-(--radix-context-menu-content-available-height) overflow-x-hidden p-1">
+          {children}
+        </ScrollContainer>
+      </ContextMenuPrimitive.Content>
     </ContextMenuPrimitive.Portal>
   );
 }
