@@ -8,6 +8,7 @@ export type OccurrenceOverride = {
   description?: string | null; // null clears the series value
   color?: string | null;
   allDay?: boolean;
+  isTask?: boolean;
   notifications?: EventNotification[];
   startShift?: number; // millis from the nominal start
   endShift?: number; // millis from the nominal end

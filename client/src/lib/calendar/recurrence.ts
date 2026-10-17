@@ -491,6 +491,9 @@ export function detachSingleOccurrence(
     if (!!event.allDay !== !!originalParent.allDay) {
       override.allDay = !!event.allDay;
     }
+    if (!!event.isTask !== !!originalParent.isTask) {
+      override.isTask = !!event.isTask;
+    }
     if (!sameNotifications(event.notifications, originalParent.notifications)) {
       override.notifications = event.notifications ?? [];
     }

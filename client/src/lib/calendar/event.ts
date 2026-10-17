@@ -193,6 +193,7 @@ export const makeOccurrence = (
     allDay,
     notifications,
   } = override ?? {};
+  const isTask = override?.isTask ?? event.isTask;
 
   return {
     ...event,
@@ -203,6 +204,7 @@ export const makeOccurrence = (
         : (description ?? undefined),
     color: color === undefined ? event.color : (color ?? undefined),
     allDay: allDay ?? event.allDay,
+    isTask,
     notifications: notifications ?? event.notifications,
     _instanceId: `${event.id}_${key}`,
     start: start.plus(startShift),
@@ -210,7 +212,7 @@ export const makeOccurrence = (
     _parent: event.id,
     _overrideKey: slot,
     _resettable: override ? true : undefined,
-    completed: event.isTask ? resolveInstanceCompleted(event, key) : undefined,
+    completed: isTask ? resolveInstanceCompleted(event, key) : undefined,
   };
 };
 
