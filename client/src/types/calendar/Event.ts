@@ -1,4 +1,5 @@
 import type { DateTime } from "luxon";
+import type { SharedInfo } from "@/types/Share";
 import type { CachedRecord, EncryptedRecord, SyncDiff } from "@/types/Sync";
 
 export type RepeatIntervalUnit = "day" | "week" | "month" | "year";
@@ -57,6 +58,7 @@ export type CalendarEvent = {
   _overrideKey?: string; // UTC date of the occurrence, the key of its override
   _resettable?: boolean; // instance with an override that can be removed
   _remote?: boolean;
+  _shared?: SharedInfo;
 };
 
 export type RejectedEvent = {
@@ -138,6 +140,14 @@ export type EventHashRequest = {
   hashes: Record<string, string>; // bucket id -> hash of cached events in it
 };
 
+export type EventExistsRequest = {
+  exists: string[];
+};
+
+export type EventMissingResponse = {
+  missing: string[];
+};
+
 export type EventHashResponse = {
   mismatched: string[];
 };
@@ -148,8 +158,5 @@ export type EventChange = {
   type: "added" | "updated" | "deleted";
   event?: CalendarEvent; // for added/updated
   id?: string; // for deleted
-};
-
-export type WithoutPrivateKeys<T> = {
-  [K in keyof T as K extends `_${string}` ? never : K]: T[K];
+  space?: string;
 };

@@ -6,6 +6,7 @@ import type {
   OccurrenceOverride,
   RepeatInterval,
 } from "@/types/calendar/Event";
+import { canDeleteEvent, persistable } from "@/lib/calendar/shared";
 import type { CalendarAction } from "@/types/calendar/Action";
 import {
   eventKey,
@@ -22,11 +23,6 @@ export const isChainParent = (event: CalendarEvent) =>
   !event._parent && !!event.repeat;
 
 export const overrideKey = (event: CalendarEvent) => event._overrideKey ?? "";
-
-const standalone = (event: CalendarEvent) =>
-  Object.fromEntries(
-    Object.entries(event).filter(([key]) => !key.startsWith("_")),
-  ) as CalendarEvent;
 
 const isEmptyOverride = (override: OccurrenceOverride) =>
   Object.values(override).every((v) => v === undefined || v === 0);
@@ -182,7 +178,7 @@ export function splitSeries(
   ].map(moveKey(parent.start, event.start, days));
 
   // clone the event
-  const created = standalone({
+  const created = persistable({
     ...event,
     id: crypto.randomUUID(),
     timestamp: Date.now(),
@@ -264,7 +260,7 @@ function keepAsEvents(
   const duration = parent.end.diff(parent.start);
   for (const key of keys) {
     const nominal = nominalOnDate(parent.start, key);
-    const kept = standalone({
+    const kept = persistable({
       ...makeOccurrence(parent, nominal, nominal.toISODate()!, duration),
       id: crypto.randomUUID(),
       timestamp: Date.now(),
@@ -450,7 +446,7 @@ export function detachSingleOccurrence(
   calendarEvents: CalendarEvent[],
   dispatch: Dispatch<CalendarAction>,
   updateChange: (change: EventChange) => void,
-  detach = true,
+  wantDetach = true,
 ): CalendarEvent | undefined {
   const isParent = isChainParent(event);
   const parentId = isParent ? event.id : event._parent;
@@ -463,6 +459,7 @@ export function detachSingleOccurrence(
     return;
   }
 
+  const detach = wantDetach && canDeleteEvent(originalParent);
   const duration = originalParent.end.diff(originalParent.start);
   // repeat settings belong to the series, so a parent edit applies them to it
   const repeat =
@@ -527,7 +524,7 @@ export function detachSingleOccurrence(
     }
   }
 
-  const newEvent = standalone({
+  const newEvent = persistable({
     ...event,
     id: crypto.randomUUID(),
     timestamp: Date.now(),

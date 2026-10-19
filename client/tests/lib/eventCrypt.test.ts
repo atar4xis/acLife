@@ -6,7 +6,7 @@ import { FakeArgonWorker } from "./fakeArgonWorker";
 vi.stubGlobal("Worker", FakeArgonWorker);
 
 const { generateMasterKeyEnvelope } = await import("../../src/lib/crypt.ts");
-const { decryptEvents, encryptEvents } = await import(
+const { decryptEvents, decryptSpaceEvents, encryptEvents } = await import(
   "../../src/lib/calendar/crypt.ts"
 );
 
@@ -67,5 +67,35 @@ describe("decryptEvents", () => {
 
     expect(result.map((ev) => ev.id)).toEqual([B]);
     expect(result[0].data.title).toBe(B);
+  });
+
+  it("rejects when an event cannot be decrypted", async () => {
+    const [a, b] = await encryptEvents(
+      [event(A), event(B)],
+      masterKey,
+      bucketKey,
+    );
+
+    await expect(
+      decryptEvents([{ ...a, data: "AAAAAAAAAAAAAAAAAAAAAAAA" }, b], masterKey),
+    ).rejects.toThrow();
+  });
+});
+
+describe("decryptSpaceEvents", () => {
+  it("drops an event that cannot be decrypted and keeps the others", async () => {
+    const [a, b] = await encryptEvents(
+      [event(A), event(B)],
+      masterKey,
+      bucketKey,
+    );
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const result = await decryptSpaceEvents(
+      [{ ...a, data: "AAAAAAAAAAAAAAAAAAAAAAAA" }, b],
+      masterKey,
+    );
+
+    expect(result.map((ev) => ev.id)).toEqual([B]);
   });
 });

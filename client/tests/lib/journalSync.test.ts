@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   diffBuckets,
   journalBucket,
-  journalHashTable,
+  journalLines,
+  journalLinesTable,
   mergeRemote,
   pendingChanges,
 } from "../../src/lib/journal/sync.ts";
@@ -18,6 +19,9 @@ const item = (id: string, updatedAt: number, name = id): JournalItem => ({
   createdAt: 0,
   updatedAt,
 });
+
+const journalHashTable = (items: JournalItem[]) =>
+  journalLinesTable(journalLines(items));
 
 const A = "0a000001-0000-4000-8000-000000000001";
 const B = "0a000002-0000-4000-8000-000000000002";
@@ -166,8 +170,20 @@ describe("pendingChanges", () => {
     const pending = pendingChanges([edited, added], acked);
 
     expect(pending.upserts).toEqual([edited, added]);
-    expect(pending.removed).toEqual([B]);
+    expect(pending.deletedIds).toEqual([B]);
     expect(pending.ids).toEqual(new Set([A, C, B]));
+  });
+
+  it("keeps an item acked when only its shared info changed", () => {
+    const shared = { space: "s", owner: "o", scope: "collection" as const };
+    const a = { ...item(A, 1), _shared: { ...shared, permission: "read" as const } };
+    const promoted = { ...a, _shared: { ...shared, permission: "write" as const } };
+    const edited = { ...promoted, updatedAt: 2 };
+
+    expect(pendingChanges([promoted], new Map([[A, a]])).ids.size).toBe(0);
+    expect(pendingChanges([edited], new Map([[A, a]])).ids).toEqual(
+      new Set([A]),
+    );
   });
 
   it("treats an equal copy as changed (identity ack)", () => {

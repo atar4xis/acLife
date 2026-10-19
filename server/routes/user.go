@@ -23,6 +23,15 @@ func User(r *mux.Router) {
 	ss.HandleFunc("", handlers.GetSettings).Methods("GET")
 	ss.HandleFunc("", handlers.SaveSettings).Methods("POST")
 
+	kr := ur.PathPrefix("/keys").Subrouter()
+	kr.Use(handlers.SubscriptionMiddleware())
+	kr.Use(handlers.MaxBodySizeMiddleware(8 << 10))
+	kr.HandleFunc("", handlers.GetKeys).Methods("GET")
+	kr.HandleFunc("", handlers.StoreKeys).Methods("POST")
+	lr := kr.PathPrefix("/lookup").Subrouter()
+	lr.Use(handlers.UserRateLimitMiddleware(constants.KeyLookupsPerMinute, time.Minute))
+	lr.HandleFunc("", handlers.LookupKey).Methods("POST")
+
 	sr := ur.NewRoute().Subrouter()
 	sr.Use(handlers.MaxBodySizeMiddleware(8 << 10)) // 8 KB
 

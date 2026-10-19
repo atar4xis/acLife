@@ -19,6 +19,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -81,6 +82,9 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { useTranslation } from "react-i18next";
+import { useShares } from "@/context/ShareContext";
+import { canDeleteEvent } from "@/lib/calendar/shared";
+import { toSharedInfo } from "@/lib/shareInfo";
 
 const readSize = (el: HTMLElement): DescriptionSize => ({
   width: el.offsetWidth,
@@ -156,6 +160,18 @@ export default function EventEditor({
   const [completed, setCompleted] = useState(event.completed ?? false);
   const [allDay, setAllDay] = useState(event.allDay ?? false);
   const [notifications, setNotifications] = useState(event.notifications ?? []);
+  const { joined, nameOf } = useShares();
+  const calendars = useMemo(
+    () =>
+      joined.filter(
+        (space) =>
+          space.kind === "calendar" &&
+          space.permission === "write" &&
+          space.scope === "collection",
+      ),
+    [joined],
+  );
+  const [space, setSpace] = useState(event._shared?.space ?? "");
   const startTime = DateTime.fromJSDate(start || new Date());
 
   const newEvent = useRef<CalendarEvent>({
@@ -369,7 +385,13 @@ export default function EventEditor({
     newEvent.current.isTask = isTask;
     newEvent.current.completed = isTask ? completed : undefined;
     newEvent.current.timestamp = Date.now();
+
+    const target = calendars.find((calendar) => calendar.id === space);
+    if (target) newEvent.current._shared = toSharedInfo(target);
+    else if (!space) delete newEvent.current._shared;
   }, [
+    calendars,
+    space,
     title,
     description,
     color,
@@ -437,7 +459,7 @@ export default function EventEditor({
                 </DropdownMenuItem>
               )}
 
-              {event._parent && (
+              {event._parent && canDeleteEvent(originalEvent.current) && (
                 <DropdownMenuItem onClick={onDetach}>
                   <Unlink />
                   {t("block.detach")}
@@ -506,6 +528,34 @@ export default function EventEditor({
               />
             </div>
           </Field>
+
+          {calendars.length > 0 &&
+            !event._parent &&
+            canDeleteEvent(originalEvent.current) && (
+              <Field>
+                <FieldLabel>{t("shares.calendar")}</FieldLabel>
+                <Select
+                  value={space || "own"}
+                  onValueChange={(value) =>
+                    setSpace(value === "own" ? "" : value)
+                  }
+                >
+                  <SelectTrigger aria-label={t("shares.calendar")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="own">
+                      {t("shares.myCalendar")}
+                    </SelectItem>
+                    {calendars.map((calendar) => (
+                      <SelectItem key={calendar.id} value={calendar.id}>
+                        {nameOf(calendar.owner, calendar.ownerEmail)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
 
           <Field>
             <FieldLabel>{t("editor.startEnd")}</FieldLabel>

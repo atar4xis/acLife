@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { withParts } from "../syncParts.ts";
 import { act, renderHook } from "@testing-library/react";
 import { DateTime } from "luxon";
 import type { ReactNode } from "react";
@@ -21,7 +22,7 @@ vi.mock("../../src/lib/gzip.ts", () => ({
 }));
 
 vi.mock("../../src/context/ApiContext.tsx", () => ({
-  useApi: () => ({ post: (e: string, b: unknown) => server.post(e, b) }),
+  useApi: () => ({ post: withParts((e: string, b: never) => server.post(e, b)) }),
 }));
 
 vi.mock("../../src/context/StorageContext.tsx", async () => {

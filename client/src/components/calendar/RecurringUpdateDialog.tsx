@@ -19,6 +19,7 @@ type RecurringUpdateDialogOptions = {
   open: boolean;
   setOpen: (open: boolean) => void;
   canKeepChanges?: boolean;
+  canSplit?: boolean;
   onSubmit: (option: string, keepChanges: boolean) => void;
   onCancel: () => void;
   onFocusReturned?: (toOpener: boolean) => void;
@@ -30,6 +31,7 @@ export default memo(function RecurringUpdateDialog({
   open,
   setOpen,
   canKeepChanges,
+  canSplit = true,
   onSubmit,
   onCancel,
   onFocusReturned,
@@ -76,10 +78,12 @@ export default memo(function RecurringUpdateDialog({
             <RadioGroupItem value="this" id="this" />
             <Label htmlFor="this">{t("recurringDialog.this")}</Label>
           </div>
-          <div className="flex gap-3">
-            <RadioGroupItem value="future" id="future" />
-            <Label htmlFor="future">{t("recurringDialog.future")}</Label>
-          </div>
+          {canSplit && (
+            <div className="flex gap-3">
+              <RadioGroupItem value="future" id="future" />
+              <Label htmlFor="future">{t("recurringDialog.future")}</Label>
+            </div>
+          )}
           <div className="flex gap-3">
             <RadioGroupItem value="all" id="all" />
             <Label htmlFor="all">{t("recurringDialog.all")}</Label>

@@ -28,6 +28,7 @@ export const syncByDefault = {
   miniCalendarBoldDayNumbers: true,
   miniCalendarAdaptiveNumbers: true,
   miniCalendarDropdowns: true,
+  inviteNotifications: true,
   eventColorPresets: true,
   addColorsAutomatically: true,
   detachRecurringOnEdit: true,
@@ -227,6 +228,11 @@ export const syncGroups: { id: string; label: string; keys: SyncableKey[] }[] =
         "eventEditorBlur",
         "eventEditorRadius",
       ],
+    },
+    {
+      id: "sharing",
+      label: "settings.categories.sharing",
+      keys: ["inviteNotifications"],
     },
     {
       id: "journal",

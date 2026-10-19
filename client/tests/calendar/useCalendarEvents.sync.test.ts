@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { withParts } from "../syncParts.ts";
 import { renderHook } from "@testing-library/react";
 import { toast } from "sonner";
 import { DateTime } from "luxon";
@@ -9,7 +10,7 @@ const apiMock = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/context/ApiContext.tsx", () => ({
-  useApi: () => apiMock,
+  useApi: () => ({ post: withParts(apiMock.post) }),
 }));
 
 vi.mock("../../src/context/StorageContext.tsx", () => ({
@@ -116,7 +117,7 @@ describe("syncBuckets", () => {
 
     await vi.waitFor(() => expect(apiMock.post).toHaveBeenCalledTimes(3));
     const [path, changes] = apiMock.post.mock.calls[2];
-    expect(path).toBe("calendar/events/save");
+    expect(path).toMatch(/^calendar\/events\/save\?c=/);
     expect(changes).toHaveLength(1);
     expect(changes[0].type).toBe("updated");
   });

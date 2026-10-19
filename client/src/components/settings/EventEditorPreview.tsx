@@ -92,6 +92,7 @@ export default memo(function EventEditorPreview({
         onEventDelete={noop}
         onDuplicate={noop}
         onDetach={noop}
+        onShareOccurrence={() => ""}
         onReset={noop}
         setEditingEvent={noop}
         setViewingEvent={noop}

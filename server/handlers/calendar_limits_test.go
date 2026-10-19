@@ -1,8 +1,6 @@
 package handlers_test
 
 import (
-	"bytes"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -78,51 +76,50 @@ func TestConcurrentSavesCannotExceedTheStorageLimit(t *testing.T) {
 func TestSyncCapsTheRequest(t *testing.T) {
 	testutil.RequireDB(t)
 	c := testutil.NewClient(t).As(testutil.NewUser(t))
-	id := testutil.UUIDToBase64(testutil.NewUUID())
+	id := testutil.NewUUID()
 	entries := func(n int) string {
 		return strings.TrimSuffix(strings.Repeat(`{"id":"`+id+`","ts":1790000000000},`, n), ",")
 	}
 	buckets := `,"buckets":["` + testutil.BucketID(1) + `"]`
 
 	t.Run("accepts a full cache", func(t *testing.T) {
-		body := []byte(`{"records":[` + entries(constants.MaxRequestRecords) + `]` + buckets + `}`)
+		body := []byte(`{"parts":[{"records":[` + entries(constants.MaxRequestRecords) + `]` + buckets + `}]}`)
 		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusOK {
 			t.Fatalf("got %d", resp.StatusCode)
 		}
 	})
 	t.Run("rejects more events than a user may own", func(t *testing.T) {
-		body := []byte(`{"records":[` + entries(constants.MaxRequestRecords+1) + `]` + buckets + `}`)
+		body := []byte(`{"parts":[{"records":[` + entries(constants.MaxRequestRecords+1) + `]` + buckets + `}]}`)
 		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusBadRequest {
 			t.Fatalf("got %d", resp.StatusCode)
 		}
 	})
-	t.Run("rejects a body over 4 MB", func(t *testing.T) {
-		body := []byte(`{"records":[]` + strings.Repeat(" ", 4<<20) + `}`)
+	t.Run("accepts a body at the limit", func(t *testing.T) {
+		body := paddedSyncBody(buckets, constants.MaxSyncBodyBytes)
+		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusOK {
+			t.Fatalf("got %d", resp.StatusCode)
+		}
+	})
+	t.Run("rejects a body over the limit", func(t *testing.T) {
+		body := paddedSyncBody(buckets, constants.MaxSyncBodyBytes+1)
 		if resp, _ := c.Do("POST", "/calendar/events/sync", body); resp.StatusCode != http.StatusBadRequest {
 			t.Fatalf("got %d", resp.StatusCode)
 		}
 	})
 }
 
-func TestSyncLogsInvalidIDsOnce(t *testing.T) {
+func paddedSyncBody(buckets string, size int) []byte {
+	body := `{"parts":[{"records":[]` + buckets + `}]`
+	return []byte(body + strings.Repeat(" ", size-len(body)-1) + "}")
+}
+
+func TestSyncRejectsInvalidIDs(t *testing.T) {
 	testutil.RequireDB(t)
 	c := testutil.NewClient(t).As(testutil.NewUser(t))
 
-	var out bytes.Buffer
-	original := log.Writer()
-	log.SetOutput(&out)
-	t.Cleanup(func() { log.SetOutput(original) })
-
-	entries := strings.TrimSuffix(strings.Repeat(`{"id":"bad\nforged line","ts":1},`, 500), ",")
-	if resp, _ := c.Do("POST", "/calendar/events/sync", []byte(`{"records":[`+entries+`],"buckets":["`+testutil.BucketID(1)+`"]}`)); resp.StatusCode != http.StatusOK {
+	body := `{"parts":[{"records":[{"id":"bad","ts":1}],"buckets":["` + testutil.BucketID(1) + `"]}]}`
+	if resp, _ := c.Do("POST", "/calendar/events/sync", []byte(body)); resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("got %d", resp.StatusCode)
-	}
-
-	if lines := strings.Count(out.String(), "InvalidUUID"); lines != 1 {
-		t.Fatalf("%d log lines", lines)
-	}
-	if strings.Contains(out.String(), "forged") {
-		t.Fatal("request content in the log")
 	}
 }
 

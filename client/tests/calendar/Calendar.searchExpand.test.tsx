@@ -33,11 +33,11 @@ describe("Calendar search expansion", () => {
       start: FIXED_NOW.plus({ weeks: 20 }).startOf("day").plus({ hours: 9 }),
       end: FIXED_NOW.plus({ weeks: 20 }).startOf("day").plus({ hours: 10 }),
     });
-    const syncBuckets = vi.fn().mockResolvedValue([far]);
+    const syncExpanded = vi.fn().mockResolvedValue([far]);
     renderCalendar({
       mode: "week",
       events: [buildEvent()],
-      syncBuckets,
+      syncExpanded,
     });
 
     const input = await screen.findByPlaceholderText("Search events...");
@@ -46,7 +46,7 @@ describe("Calendar search expansion", () => {
     });
     await act(() => new Promise((r) => setTimeout(r, 700)));
 
-    expect(syncBuckets).toHaveBeenCalled();
+    expect(syncExpanded).toHaveBeenCalled();
     expect(await screen.findAllByText("Dentist")).not.toHaveLength(0);
     expect(await getEventBlock("Planning")).toBeInTheDocument();
   });

@@ -16,10 +16,10 @@ const BUCKETS = Array.from({ length: 16 ** JOURNAL_BUCKET_CHARS }, (_, i) =>
 export const journalLines = (items: JournalItem[]) =>
   items.map((item) => ({ id: item.id, ts: item.updatedAt }));
 
-export const journalHashTable = async (items: JournalItem[]) => {
-  const byBucket = Map.groupBy(journalLines(items), (line) =>
-    journalBucket(line.id),
-  );
+export const journalLinesTable = async (
+  lines: { id: string; ts: number }[],
+) => {
+  const byBucket = Map.groupBy(lines, (line) => journalBucket(line.id));
   const hashes = await Promise.all(
     BUCKETS.map(async (bucket) =>
       (await computeBucketHash(byBucket.get(bucket) ?? [])).slice(
@@ -56,16 +56,24 @@ export const mergeRemote = (
   };
 };
 
+const differsOnlyInSharing = (
+  item: JournalItem,
+  acked: JournalItem | undefined,
+) => acked?.updatedAt === item.updatedAt && acked._shared !== item._shared;
+
+const isAcked = (item: JournalItem, acked: JournalItem | undefined) =>
+  acked === item || differsOnlyInSharing(item, acked);
+
 export const pendingChanges = (
   items: JournalItem[],
   acked: ReadonlyMap<string, JournalItem>,
 ) => {
   const ids = new Set(items.map((item) => item.id));
-  const upserts = items.filter((item) => acked.get(item.id) !== item);
-  const removed = Array.from(acked.keys()).filter((id) => !ids.has(id));
+  const upserts = items.filter((item) => !isAcked(item, acked.get(item.id)));
+  const deletedIds = Array.from(acked.keys()).filter((id) => !ids.has(id));
   return {
     upserts,
-    removed,
-    ids: new Set([...upserts.map((item) => item.id), ...removed]),
+    deletedIds,
+    ids: new Set([...upserts.map((item) => item.id), ...deletedIds]),
   };
 };

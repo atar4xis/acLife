@@ -106,14 +106,14 @@ export const renderCalendar = ({
   mode = "day",
   saveEvents = vi.fn(),
   syncEvents = vi.fn(),
-  syncBuckets = vi.fn(),
+  syncExpanded = vi.fn(),
   setMode = vi.fn(),
 }: {
   events?: CalendarEvent[];
   mode?: "day" | "week";
   saveEvents?: Mock<ComponentProps<typeof AppCalendar>["saveEvents"]>;
   syncEvents?: Mock<ComponentProps<typeof AppCalendar>["syncEvents"]>;
-  syncBuckets?: Mock<ComponentProps<typeof AppCalendar>["syncBuckets"]>;
+  syncExpanded?: Mock<ComponentProps<typeof AppCalendar>["syncExpanded"]>;
   setMode?: Mock<(mode: ViewMode) => void>;
 } = {}) => {
   const user = userEvent.setup();
@@ -130,7 +130,7 @@ export const renderCalendar = ({
           setMode={setMode}
           saveEvents={saveEvents}
           syncEvents={syncEvents}
-          syncBuckets={syncBuckets}
+          syncExpanded={syncExpanded}
           saveDebounceMs={0}
         />
       </CalendarProvider>

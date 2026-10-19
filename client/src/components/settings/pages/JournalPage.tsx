@@ -4,6 +4,7 @@ import { useJournal } from "@/context/JournalContext";
 import { useJournalSettings } from "@/context/JournalSettingsContext";
 import { useDebouncedSetting } from "@/hooks/useDebouncedSetting";
 import { colorChanged, folderTargets, noteName } from "@/lib/journal/item";
+import { isOwnItem } from "@/lib/journal/shared";
 import { defaultJournalSettings } from "@/lib/settingsDefaults";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Field, FieldGroup, FieldTitle } from "@/components/ui/field";
@@ -54,7 +55,7 @@ const NoteNameField = memo(function NoteNameField() {
 function NoteFolderField() {
   const { items, sort } = useJournal();
   const { journalNoteFolder, setSetting } = useJournalSettings();
-  const targets = folderTargets(items, sort);
+  const targets = folderTargets(items.filter(isOwnItem), sort);
 
   if (targets.length === 1) return null;
 

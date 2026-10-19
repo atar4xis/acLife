@@ -38,6 +38,12 @@ export interface StorageData {
   journal: Encrypted | null;
   offlineJournal: Encrypted | null;
   journalLayout: Encrypted | null;
+  shareContacts: Record<string, string>;
+  contactEmails: Encrypted | null;
+  contactNicknames: Encrypted | null;
+  notifiedInvites: string[];
+  journalLastSynced: Record<string, Encrypted>;
+  sharedJournals: Record<string, Encrypted>;
   appView: AppView;
   pushSubscription: string | null;
   pushDismissed: boolean;

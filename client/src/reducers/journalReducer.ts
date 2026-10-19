@@ -1,5 +1,12 @@
 import { DEFAULT_JOURNAL, descendantIds } from "@/lib/journal/item";
 import {
+  canCreateIn,
+  canDeleteItem,
+  canEditItem,
+  canMoveInto,
+  sharedRootId,
+} from "@/lib/journal/shared";
+import {
   activateTab,
   addNewTab,
   closeNotes,
@@ -19,18 +26,24 @@ export const createJournalState = (): JournalState => ({
   workspace: createWorkspace(),
   expanded: new Set(),
   splitSizes: {},
+  removed: [],
 });
 
 const updateItem = (
   state: JournalState,
   id: string,
   changes: Partial<JournalItem>,
-): JournalState => ({
-  ...state,
-  items: state.items.map((item) =>
-    item.id === id ? { ...item, ...changes } : item,
-  ),
-});
+): JournalState => {
+  const target = state.items.find((item) => item.id === id);
+  if (!target || !canEditItem(target)) return state;
+
+  return {
+    ...state,
+    items: state.items.map((item) =>
+      item.id === id ? { ...item, ...changes } : item,
+    ),
+  };
+};
 
 const expand = (state: JournalState, id: string | null) =>
   id ? new Set(state.expanded).add(id) : state.expanded;
@@ -50,9 +63,9 @@ export function journalReducer(
     case "hydrate":
       return { ...state, ...action.state };
     case "addItem": {
-      const parentId = state.items.some((item) => item.id === action.parentId)
-        ? action.parentId
-        : null;
+      const found = state.items.find((item) => item.id === action.parentId);
+      const parent = found && canCreateIn(found) ? found : undefined;
+      const parentId = parent?.id ?? null;
       return {
         ...state,
         items: [
@@ -66,6 +79,7 @@ export function journalReducer(
             createdAt: action.now,
             updatedAt: action.now,
             ...action.style,
+            ...(parent?._shared && { _shared: parent._shared }),
           },
         ],
         expanded: expand(state, parentId),
@@ -90,7 +104,13 @@ export function journalReducer(
         content: action.content,
         updatedAt: action.now,
       });
-    case "moveItem":
+    case "moveItem": {
+      const item = state.items.find((found) => found.id === action.id);
+      const parent =
+        state.items.find((found) => found.id === action.parentId) ?? null;
+      if (!item || (action.parentId && !parent) || !canMoveInto(item, parent))
+        return state;
+
       return {
         ...updateItem(state, action.id, {
           parentId: action.parentId,
@@ -98,11 +118,19 @@ export function journalReducer(
         }),
         expanded: expand(state, action.parentId),
       };
+    }
     case "removeItem": {
       const removed = new Set(descendantIds(state.items, action.id));
+      // don't delete if the subtree holds an item the user may not delete
+      const protectedItem = state.items.find(
+        (item) => removed.has(item.id) && !canDeleteItem(item),
+      );
+      if (protectedItem) return state;
+
       return {
         ...state,
         items: state.items.filter((item) => !removed.has(item.id)),
+        removed: [...removed],
         ...closeItems(state, removed),
       };
     }
@@ -123,7 +151,10 @@ export function journalReducer(
             }),
           ...action.upserts.filter((item) => !known.has(item.id)),
         ],
-        ...(removed.size > 0 && closeItems(state, removed)),
+        ...(removed.size > 0 && {
+          removed: action.deletedIds,
+          ...closeItems(state, removed),
+        }),
       };
     }
     case "importItems": {
@@ -151,6 +182,35 @@ export function journalReducer(
 
       return { ...state, items: [...replaced, ...added] };
     }
+    case "setSharedSpaces": {
+      const spaces = new Map(action.spaces.map((info) => [info.space, info]));
+      const removed = new Set<string>();
+      const items = state.items.flatMap((item) => {
+        if (!item._shared) return [item];
+
+        const info = spaces.get(item._shared.space);
+        if (!info) {
+          removed.add(item.id);
+          return [];
+        }
+
+        const unchanged =
+          info.permission === item._shared.permission &&
+          info.scope === item._shared.scope &&
+          info.owner === item._shared.owner;
+        return [unchanged ? item : { ...item, _shared: info }];
+      });
+
+      const unchanged =
+        removed.size === 0 && items.every((item, i) => item === state.items[i]);
+      if (unchanged) return state;
+
+      return {
+        ...state,
+        items,
+        ...(removed.size > 0 && closeItems(state, removed)),
+      };
+    }
     case "setSort":
       return { ...state, sort: action.sort };
     case "toggleFolder": {
@@ -163,9 +223,14 @@ export function journalReducer(
         ...state,
         expanded: new Set(
           action.expanded
-            ? state.items
-                .filter((item) => item.type === "folder")
-                .map((item) => item.id)
+            ? [
+                ...state.items
+                  .filter((item) => item.type === "folder")
+                  .map((item) => item.id),
+                ...state.items.flatMap((item) =>
+                  item._shared ? [sharedRootId(item._shared.owner)] : [],
+                ),
+              ]
             : [],
         ),
       };

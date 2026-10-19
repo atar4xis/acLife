@@ -379,6 +379,32 @@ export const settingsCategories: SettingsCategory[] = [
     ],
   },
   {
+    id: "sharing",
+    hideOffline: true,
+    sections: [
+      {
+        id: "sharing-start",
+        items: [{ id: "sharing-calendar" }, { id: "sharing-journal" }],
+      },
+      {
+        id: "sharing-invites",
+        items: [
+          {
+            id: "sharing-invite-notifications",
+            settingKey: "inviteNotifications",
+          },
+          { id: "sharing-invites-list" },
+        ],
+      },
+      { id: "sharing-owned", items: [{ id: "sharing-owned-list" }] },
+      { id: "sharing-joined", items: [{ id: "sharing-joined-list" }] },
+      {
+        id: "sharing-contacts",
+        items: [{ id: "sharing-code" }, { id: "sharing-contacts-list" }],
+      },
+    ],
+  },
+  {
     id: "sync",
     hideOffline: true,
     sections: [

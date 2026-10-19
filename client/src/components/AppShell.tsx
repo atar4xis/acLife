@@ -1,6 +1,6 @@
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { ViewMode } from "@/types/calendar/ViewMode";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AppCalendar from "@/components/calendar/Calendar";
 import AppSidebar from "@/components/Sidebar";
 import JournalView from "@/components/journal/JournalView";
@@ -12,8 +12,13 @@ import { useCalendarActions } from "@/context/CalendarContext";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { Spinner } from "./ui/spinner";
 import { useCalendarEvents } from "@/hooks/calendar/useCalendarEvents";
+import {
+  withoutPendingDeletes,
+  withPendingChanges,
+} from "@/lib/calendar/pending";
 import { emitStream, isOwnMessage, onStream } from "@/lib/stream";
 import { useApi } from "@/context/ApiContext";
+import { useShares } from "@/context/ShareContext";
 import UnlockDialog from "./login/UnlockDialog";
 import SubscriptionDialog from "./subscription/SubscriptionDialog";
 import { toast } from "sonner";
@@ -22,6 +27,8 @@ import StreamService from "./StreamService";
 import NotificationService from "./NotificationService";
 import AutoLockService from "./AutoLockService";
 import SettingsDialog from "./settings/SettingsDialog";
+import InviteNotifier from "./sharing/InviteNotifier";
+import ShareDialog from "./sharing/ShareDialog";
 import TimezoneChangeDialog from "./calendar/TimezoneChangeDialog";
 import {
   canManageSubscription,
@@ -51,6 +58,7 @@ export default function AppShell() {
   const { dispatch, pendingChanges, setCurrentDate, getCurrentDate } =
     useCalendarActions();
   const { serverMeta } = useApi();
+  const { joined, owned, loaded: sharesLoaded } = useShares();
   const storage = useStorage();
   const { view, changeView } = useAppView();
   const {
@@ -58,8 +66,9 @@ export default function AppShell() {
     loadEvents,
     saveEvents,
     syncEvents,
-    syncBuckets,
+    syncExpanded,
     applyChanges,
+    applySharedChanges,
   } = useCalendarEvents(user, masterKey, bucketKey);
 
   const journalSaving = useJournalSaving();
@@ -71,12 +80,29 @@ export default function AppShell() {
     setSettingsOpen(true);
   }, []);
 
+  // changes whenever the set of calendar shares or a permission does, so events reload
+  const calendarSpaces = useMemo(
+    () =>
+      [
+        ...joined
+          .filter((space) => space.kind === "calendar")
+          .map((space) => `${space.id}:${space.permission}`),
+        ...owned
+          .filter((space) => space.kind === "calendar")
+          .map((space) => space.id),
+      ]
+        .toSorted()
+        .join(";"),
+    [joined, owned],
+  );
+
   // load calendar events
   useEffect(() => {
     if (!user) return;
     if (masterKey === null) return;
     if (user.type === "online" && bucketKey === null) return;
     if (subscriptionMissing) return;
+    if (!sharesLoaded) return;
 
     const id = "loading-calendar-events";
     const timer = setTimeout(
@@ -84,31 +110,49 @@ export default function AppShell() {
       300,
     );
 
+    let cancelled = false;
     (async () => {
       try {
-        setCalEvents(
-          await loadEvents(user, masterKey, bucketKey, getCurrentDate()),
+        const loaded = await loadEvents(
+          user,
+          masterKey,
+          bucketKey,
+          getCurrentDate(),
         );
+        if (cancelled) return;
+
+        setCalEvents(withPendingChanges(loaded, pendingChanges));
         toast.dismiss(id);
       } catch {
-        toast.error(translate("appShell.loadEventsFailed"), { id });
+        if (!cancelled)
+          toast.error(translate("appShell.loadEventsFailed"), { id });
       } finally {
         clearTimeout(timer);
       }
     })();
 
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line
-  }, [user, masterKey, bucketKey, subscriptionMissing]);
+  }, [
+    user,
+    masterKey,
+    bucketKey,
+    subscriptionMissing,
+    sharesLoaded,
+    calendarSpaces,
+  ]);
 
   // cache every save and show those from other devices, pull everything if that fails
   useEffect(() => {
     if (!masterKey || !bucketKey || user?.type !== "online") return;
 
-    let current = true;
+    let cancelled = false;
     const stopListening = onStream("calendar", (event) => {
       applyChanges(event.changes ?? [], masterKey, bucketKey)
         .then((events) => {
-          if (!current || isOwnMessage(event)) return;
+          if (cancelled || isOwnMessage(event)) return;
 
           const changes = event.changes ?? [];
           const deletedIds = changes
@@ -119,21 +163,20 @@ export default function AppShell() {
           );
           dispatch({
             type: "merge",
-            events: events.filter(
-              (ev) =>
-                upsertedIds.has(ev.id) &&
-                pendingChanges.get(ev.id)?.at(-1)?.type !== "deleted",
+            events: withoutPendingDeletes(
+              events.filter((ev) => upsertedIds.has(ev.id)),
+              pendingChanges,
             ),
             deletedIds,
           });
         })
         .catch(() => {
-          if (current) emitStream({ type: "sync" });
+          if (!cancelled) emitStream({ type: "sync" });
         });
     });
 
     return () => {
-      current = false;
+      cancelled = true;
       stopListening();
     };
   }, [
@@ -141,6 +184,53 @@ export default function AppShell() {
     bucketKey,
     user?.type,
     applyChanges,
+    dispatch,
+    pendingChanges,
+  ]);
+
+  useEffect(() => {
+    if (!masterKey || !bucketKey || user?.type !== "online") return;
+
+    let cancelled = false;
+    const stopListening = onStream("space-updated", (event) => {
+      if (!event.space) return;
+      // too large to push, so fall back to a full sync
+      if (!event.changes) {
+        emitStream({ type: "sync" });
+        return;
+      }
+
+      applySharedChanges(
+        event.space,
+        event.changes,
+        isOwnMessage(event),
+        masterKey,
+        bucketKey,
+      )
+        .then(({ events, deletedIds }) => {
+          if (cancelled || isOwnMessage(event)) return;
+
+          dispatch({
+            type: "merge",
+            // a local delete not saved yet must not be undone by the incoming copy
+            events: withoutPendingDeletes(events, pendingChanges),
+            deletedIds,
+          });
+        })
+        .catch(() => {
+          if (!cancelled) emitStream({ type: "sync" });
+        });
+    });
+
+    return () => {
+      cancelled = true;
+      stopListening();
+    };
+  }, [
+    masterKey,
+    bucketKey,
+    user?.type,
+    applySharedChanges,
     dispatch,
     pendingChanges,
   ]);
@@ -214,6 +304,8 @@ export default function AppShell() {
       <NotificationService />
       <AutoLockService />
       <TimezoneChangeDialog />
+      <ShareDialog />
+      <InviteNotifier onView={openSettings} />
       <div className={view === "calendar" ? "contents" : "hidden"}>
         {calEvents !== null && (
           <AppCalendar
@@ -223,7 +315,7 @@ export default function AppShell() {
             setMode={setViewMode}
             saveEvents={saveEvents}
             syncEvents={syncEvents}
-            syncBuckets={syncBuckets}
+            syncExpanded={syncExpanded}
           />
         )}
       </div>

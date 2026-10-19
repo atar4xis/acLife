@@ -216,3 +216,36 @@ func TestSerializeCommitsExcludesTheSameUserOnly(t *testing.T) {
 		t.Fatal("second save never got the lock")
 	}
 }
+
+func TestPublishToNumbersEachRecipientAndSkipsOthers(t *testing.T) {
+	a := subscribe(t, "to-a", "t1")
+	b := subscribe(t, "to-b", "t2")
+	other := subscribe(t, "to-c", "t3")
+
+	stream.Publish("to-a", stream.Sync(""))
+	stream.PublishTo([]string{"to-a", "to-b", "to-nobody"}, stream.SpacesChanged(""))
+
+	if first, second := <-a.Messages, <-a.Messages; first.Seq != 1 || second.Type != "spaces" || second.Seq != 2 {
+		t.Fatalf("got %+v, %+v", first, second)
+	}
+	if got := <-b.Messages; got.Type != "spaces" || got.Seq != 1 {
+		t.Fatalf("got %+v", got)
+	}
+	select {
+	case got := <-other.Messages:
+		t.Fatalf("outsider received %+v", got)
+	default:
+	}
+}
+
+func TestSpaceUpdatedNamesTheSpaceAndFallsBackWithoutChanges(t *testing.T) {
+	small := stream.SpaceUpdated("space-1", "origin", []stream.Change{{Type: "deleted", ID: "x"}})
+	if small.Type != "space-updated" || small.Space != "space-1" || small.OriginClientID != "origin" || len(small.Changes) != 1 {
+		t.Fatalf("got %+v", small)
+	}
+
+	big := stream.SpaceUpdated("space-1", "origin", []stream.Change{{Type: "updated", ID: "x", Data: strings.Repeat("a", constants.MaxStreamPayloadBytes)}})
+	if big.Type != "space-updated" || big.Space != "space-1" || big.OriginClientID != "origin" || len(big.Changes) != 0 {
+		t.Fatalf("got %+v", big)
+	}
+}

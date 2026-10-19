@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { UpdaterProvider } from "./context/UpdaterContext";
 import LanguageSync from "@/components/LanguageSync";
 import { JournalProvider } from "./context/JournalContext";
+import { ShareProvider } from "./context/ShareContext";
 
 function AuthWrapper({ children }: WithChildren) {
   const { user, isUnlocking, checkLogin, setUser } = useUser();
@@ -67,16 +68,21 @@ export default function App() {
             <ApiProvider>
               <StorageProvider>
                 <UserProvider>
-                  <CalendarProvider>
-                    <JournalProvider>
-                      <SidebarProvider defaultWidth="18rem" defaultOpen={true}>
-                        <Toaster position="bottom-center" />
-                        <AuthWrapper>
-                          <AppShell />
-                        </AuthWrapper>
-                      </SidebarProvider>
-                    </JournalProvider>
-                  </CalendarProvider>
+                  <ShareProvider>
+                    <CalendarProvider>
+                      <JournalProvider>
+                        <SidebarProvider
+                          defaultWidth="18rem"
+                          defaultOpen={true}
+                        >
+                          <Toaster position="bottom-center" />
+                          <AuthWrapper>
+                            <AppShell />
+                          </AuthWrapper>
+                        </SidebarProvider>
+                      </JournalProvider>
+                    </CalendarProvider>
+                  </ShareProvider>
                 </UserProvider>
               </StorageProvider>
             </ApiProvider>

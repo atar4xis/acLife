@@ -68,6 +68,44 @@ describe("journal tree", () => {
     expect(ids(buildTree(dated, "created-asc"))).toEqual(["new", "old"]);
   });
 
+  describe("shared folders", () => {
+    const own = [
+      item("a-own", "folder", null, { updatedAt: 50, createdAt: 50 }),
+      item("z-own", "folder", null, { updatedAt: 60, createdAt: 60 }),
+      item("m-note", "note", null, { updatedAt: 70, createdAt: 70 }),
+    ];
+    const virtual = [
+      item("shared:b", "folder", null, { name: "Shared by b", _virtual: true, updatedAt: 10, createdAt: 10 }),
+      item("shared:a", "folder", null, { name: "Shared by a", _virtual: true, updatedAt: 20, createdAt: 5 }),
+    ];
+
+    it("sits above everything of mine and is ordered on its own", () => {
+      const tree = buildTree([...own, ...virtual], "name-asc");
+      expect(ids(tree)).toEqual(["shared:a", "shared:b", "a-own", "z-own", "m-note"]);
+    });
+
+    it("keeps above mine whichever way it is sorted", () => {
+      for (const sort of ["name-desc", "modified-desc", "modified-asc", "created-desc", "created-asc"] as const) {
+        const tree = buildTree([...own, ...virtual], sort);
+        expect(ids(tree).slice(0, 2).toSorted()).toEqual(["shared:a", "shared:b"]);
+        expect(ids(tree).slice(2).toSorted()).toEqual(["a-own", "m-note", "z-own"]);
+      }
+    });
+
+    it("follows the sort preference among the shared folders", () => {
+      expect(ids(buildTree(virtual, "name-desc"))).toEqual(["shared:b", "shared:a"]);
+      expect(ids(buildTree(virtual, "modified-desc"))).toEqual(["shared:a", "shared:b"]);
+      expect(ids(buildTree(virtual, "created-asc"))).toEqual(["shared:a", "shared:b"]);
+      expect(ids(buildTree(virtual, "created-desc"))).toEqual(["shared:b", "shared:a"]);
+    });
+
+    it("does not let my own folders change the order of the shared ones", () => {
+      const withMine = buildTree([...own, ...virtual], "modified-desc");
+      const alone = buildTree(virtual, "modified-desc");
+      expect(ids(withMine).slice(0, 2)).toEqual(ids(alone));
+    });
+  });
+
   it("filters by name or content and keeps matching ancestors", () => {
     const tree = buildTree(items, "name-asc");
     expect(ids(filterTree(tree, "A-NOTE"))).toEqual(["a-note"]);

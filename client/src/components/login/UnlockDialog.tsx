@@ -78,7 +78,7 @@ export default function UnlockDialog() {
     setUsePin(false);
   };
 
-  const handlePinSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handlePinSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!pinWrappedKeys) return;
 
@@ -115,7 +115,7 @@ export default function UnlockDialog() {
     }
   };
 
-  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 

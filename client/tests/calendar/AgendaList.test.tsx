@@ -59,7 +59,7 @@ const renderAgendaAndCalendar = (events: ReturnType<typeof buildEvent>[]) => {
           setMode={vi.fn()}
           saveEvents={vi.fn()}
           syncEvents={vi.fn()}
-          syncBuckets={vi.fn()}
+          syncExpanded={vi.fn()}
           saveDebounceMs={0}
         />
       </CalendarProvider>

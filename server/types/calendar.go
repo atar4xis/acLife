@@ -9,16 +9,25 @@ type CalendarEvent struct {
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
-// EventSyncRequest is the structure of an event sync request.
-type EventSyncRequest struct {
+type EventSyncPart struct {
+	Space   string            `json:"space,omitempty"`
 	Records []CachedRecord    `json:"records"`
 	Buckets []string          `json:"buckets"`
 	Hashes  map[string]string `json:"hashes"` // bucket id -> client's hash of cached events in that bucket
+	Exists  []string          `json:"exists"` // ids to look up in a space, whatever bucket they are in
+}
+
+type EventSyncRequest struct {
+	Parts []EventSyncPart `json:"parts"`
 }
 
 // EventHashResponse is the response to an event sync request that carries hashes.
 type EventHashResponse struct {
 	Mismatched []string `json:"mismatched"`
+}
+
+type EventMissingResponse struct {
+	Missing []string `json:"missing"`
 }
 
 // EventSyncResponse is the structure of the response to an event sync request.

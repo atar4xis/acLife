@@ -2,6 +2,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import { type Dispatch, useReducer } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { withParts } from "../syncParts.ts";
 
 const session = vi.hoisted(() => ({
   masterKey: null as CryptoKey | null,
@@ -33,7 +34,7 @@ vi.mock("../../src/context/UserContext.tsx", () => ({
 
 vi.mock("../../src/context/ApiContext.tsx", () => ({
   useApi: () => ({
-    post: (endpoint: string, body: unknown) => session.post(endpoint, body as never),
+    post: withParts((endpoint: string, body: never) => session.post(endpoint, body)),
     serverMeta: session.serverMeta,
   }),
 }));
@@ -593,8 +594,7 @@ describe("useJournalSync pulling", () => {
     const a = note("0a", 1);
     server.fail = "network";
     await mount([a], [{ ...a, updatedAt: 9000, name: "server" }]);
-    await until(() => stateIds().length === 1);
-    expect(current.state.items[0].name).toBe("server");
+    await until(() => current.state.items[0].name === "server");
 
     await edit(a.id, "local", 8000);
     await debounce();
@@ -648,7 +648,7 @@ describe("useJournalSync pulling", () => {
     expect(current.state.items[0].updatedAt).toBe(8000);
   });
 
-  it("starts from the new baseline when the journal is reloaded", async () => {
+  it("starts from the new sync state when the journal is reloaded", async () => {
     const [a, b] = [note("0a", 1), note("0b", 2)];
     const view = await mount([a], [a, b]);
     await until(() => stateIds().length === 2);

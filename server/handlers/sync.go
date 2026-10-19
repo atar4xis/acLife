@@ -27,7 +27,12 @@ import (
 var (
 	errBadChanges   = errors.New("invalid changes")
 	errStorageLimit = errors.New("storage limit reached")
+	errBadSync      = errors.New("invalid sync request")
 )
+
+func placeholders(n int) string {
+	return strings.TrimSuffix(strings.Repeat("?,", n), ",")
+}
 
 // recordChanges decodes at most constants.MaxRequestRecords changes, so a huge array of tiny entries is rejected instead of expanded in memory.
 type recordChanges[T types.Recorded] []types.RecordChange[T]
@@ -65,12 +70,12 @@ func replyChangesError(w http.ResponseWriter, function string, err error) {
 	switch {
 	case errors.Is(err, errBadChanges):
 		utils.SendBadRequest(w)
+	case errors.Is(err, errNoSpace):
+		utils.SendError(w, http.StatusNotFound, "share_not_found", "Share not found.")
+	case errors.Is(err, errForbidden):
+		utils.SendError(w, http.StatusForbidden, "share_forbidden", "You don't have permission to do that.")
 	case errors.Is(err, errStorageLimit):
-		utils.SendJSON(w, http.StatusRequestEntityTooLarge, types.Reply[any]{
-			Success: false,
-			Message: "Storage limit reached.",
-			Code:    "storage_limit_reached",
-		})
+		utils.SendError(w, http.StatusRequestEntityTooLarge, "storage_limit_reached", "Storage limit reached.")
 	default:
 		utils.LogError(function, "apply", err)
 		utils.SendInternalError(w)
@@ -83,6 +88,27 @@ func saveChanges[T types.Recorded](w http.ResponseWriter, r *http.Request, funct
 	user := session.GetLoggedInUser(r)
 	utils.Assert(user != nil) // ensured by AuthMiddleware
 
+	saveScoped(w, r, function, user.UUID,
+		func(ctx context.Context, tx *sql.Tx, changes []types.RecordChange[T]) ([]stream.Change, error) {
+			return apply(ctx, tx, user.UUID, changes)
+		},
+		func(originClientID string, applied []stream.Change) {
+			stream.Publish(user.UUID, message(originClientID, applied))
+		},
+	)
+}
+
+// requestClientID returns the client id sent as ?c=, empty unless it has the expected length.
+func requestClientID(r *http.Request) string {
+	id := r.URL.Query().Get("c")
+	if len(id) != 6 {
+		return ""
+	}
+	return id
+}
+
+// saveScoped is saveChanges under any lock key (the caller or a space), publish decides who gets the message.
+func saveScoped[T types.Recorded](w http.ResponseWriter, r *http.Request, function, lockKey string, apply func(ctx context.Context, tx *sql.Tx, changes []types.RecordChange[T]) ([]stream.Change, error), publish func(originClientID string, applied []stream.Change)) {
 	var changes recordChanges[T]
 	if err := utils.ParseJSON(r.Body, &changes); err != nil {
 		utils.SendBadRequest(w)
@@ -98,23 +124,19 @@ func saveChanges[T types.Recorded](w http.ResponseWriter, r *http.Request, funct
 
 	ctx := r.Context()
 	err := database.RunTx(ctx, func(tx *sql.Tx) error {
-		applied, err := apply(ctx, tx, user.UUID, changes)
+		applied, err := apply(ctx, tx, changes)
 		if err != nil {
 			return err
 		}
 
 		// commit and publish together so other clients see changes in commit order
-		unlock := stream.SerializeCommits(user.UUID)
+		unlock := stream.SerializeCommits(lockKey)
 		defer unlock()
 		if err := tx.Commit(); err != nil {
 			return err
 		}
 
-		originClientID := r.URL.Query().Get("c")
-		if len(originClientID) != 6 {
-			originClientID = ""
-		}
-		stream.Publish(user.UUID, message(originClientID, applied))
+		publish(requestClientID(r), applied)
 		return nil
 	})
 	if err != nil {
@@ -126,8 +148,6 @@ func saveChanges[T types.Recorded](w http.ResponseWriter, r *http.Request, funct
 		Success: true,
 	})
 }
-
-func identity(id string) string { return id }
 
 type collectedChanges[U any] struct {
 	deleted []string
@@ -194,4 +214,61 @@ func bucketHash(lines []string) string {
 
 func hashLine(id string, updatedAt time.Time) string {
 	return fmt.Sprintf("%s:%d", strings.ToLower(id), updatedAt.UnixMilli())
+}
+
+// syncParts answers each part of a batched sync with run, in request order.
+func syncParts[P any](w http.ResponseWriter, r *http.Request, function, kind string, parts []P, spaceOf func(P) string, run func(ctx context.Context, space string, part P) (any, error)) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	if len(parts) == 0 || len(parts) > constants.MaxSyncParts {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		space := strings.ToLower(spaceOf(part))
+		if _, duplicate := seen[space]; duplicate {
+			utils.SendBadRequest(w)
+			return
+		}
+		seen[space] = struct{}{}
+	}
+
+	ctx := r.Context()
+	reply := types.SyncReply{Parts: make([]types.Reply[any], len(parts))}
+	for i, part := range parts {
+		space := spaceOf(part)
+		if space != "" {
+			sp, err := spaceAccess(ctx, database.DB, space, user.UUID)
+			if err == nil && sp.Kind != kind {
+				err = errNoSpace
+			}
+			if errors.Is(err, errNoSpace) {
+				reply.Parts[i] = types.Reply[any]{Code: "share_not_found", Message: "Share not found."}
+				continue
+			}
+			if err != nil {
+				utils.LogError(function, "spaceAccess", err)
+				utils.SendInternalError(w)
+				return
+			}
+			space = sp.ID
+		}
+
+		data, err := run(ctx, space, part)
+		if errors.Is(err, errBadSync) {
+			utils.SendBadRequest(w)
+			return
+		}
+		if err != nil {
+			utils.LogError(function, "run", err)
+			utils.SendInternalError(w)
+			return
+		}
+		reply.Parts[i] = types.Reply[any]{Success: true, Data: data}
+	}
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[types.SyncReply]{Success: true, Data: reply})
 }

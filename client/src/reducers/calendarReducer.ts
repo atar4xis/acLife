@@ -1,5 +1,10 @@
+import {
+  canDeleteEvent,
+  canEditEvent,
+  persistable,
+} from "@/lib/calendar/shared";
 import type { CalendarAction } from "@/types/calendar/Action";
-import type { CalendarEvent, WithoutPrivateKeys } from "@/types/calendar/Event";
+import type { CalendarEvent } from "@/types/calendar/Event";
 
 export function calendarReducer(
   state: CalendarEvent[],
@@ -16,19 +21,17 @@ export function calendarReducer(
     }
     case "update":
       return state.map((ev) => {
+        if (ev.id !== action.id || !canEditEvent(ev)) return ev;
+
         const newEv = {
           ...ev,
           ...action.data,
           timestamp: Date.now(),
         };
-        return ev.id === action.id
-          ? (Object.fromEntries(
-              Object.entries(newEv).filter(([key]) => !key.startsWith("_")),
-            ) as WithoutPrivateKeys<CalendarEvent>)
-          : ev;
+        return persistable({ ...newEv, _shared: ev._shared });
       });
     case "delete":
-      return state.filter((ev) => ev.id !== action.id);
+      return state.filter((ev) => ev.id !== action.id || !canDeleteEvent(ev));
     case "merge": {
       const incoming = new Map(
         action.events.map((ev) => [ev.id, { ...ev, _remote: true }]),

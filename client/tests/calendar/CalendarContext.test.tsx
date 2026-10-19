@@ -153,6 +153,7 @@ describe("calendar context slices", () => {
       remove: vi.fn(),
       duplicate: vi.fn(),
       detach: vi.fn(),
+      shareOccurrence: vi.fn(),
       reset: vi.fn(),
     });
 

@@ -53,10 +53,10 @@ func mustSave(t *testing.T, c *testutil.Client, changes ...handlers.EventChange)
 	}
 }
 
-func syncDiff(t *testing.T, c *testutil.Client, req types.EventSyncRequest) types.EventSyncResponse {
+func syncDiff(t *testing.T, c *testutil.Client, req types.EventSyncPart) types.EventSyncResponse {
 	t.Helper()
 
-	status, reply := testutil.Call[types.EventSyncResponse](c, "POST", "/calendar/events/sync", req)
+	status, reply := syncOne[types.EventSyncResponse](c, "/calendar/events/sync", "", req)
 	if status != http.StatusOK {
 		t.Fatalf("sync: got %d %+v", status, reply)
 	}
@@ -64,12 +64,12 @@ func syncDiff(t *testing.T, c *testutil.Client, req types.EventSyncRequest) type
 }
 
 func syncHashes(c *testutil.Client, hashes map[string]string) (int, []string) {
-	status, reply := testutil.Call[types.EventHashResponse](c, "POST", "/calendar/events/sync", types.EventSyncRequest{Hashes: hashes})
+	status, reply := syncOne[types.EventHashResponse](c, "/calendar/events/sync", "", types.EventSyncPart{Hashes: hashes})
 	return status, reply.Data.Mismatched
 }
 
 func cached(id string, ts int64) types.CachedRecord {
-	return types.CachedRecord{ID: testutil.UUIDToBase64(id), Timestamp: ts}
+	return types.CachedRecord{ID: id, Timestamp: ts}
 }
 
 func eventIDs(events []types.EncryptedEvent) []string {
@@ -99,10 +99,10 @@ func insertEvents(t *testing.T, owner string, ids ...string) {
 	}
 }
 
-func bucketIDsOf(t *testing.T, eventID string) []string {
+func bucketIDsOf(t *testing.T, owner, eventID string) []string {
 	t.Helper()
 
-	rows, err := database.DB.Query("SELECT bucket_id FROM calendar_event_buckets WHERE event_id = ?", eventID)
+	rows, err := database.DB.Query("SELECT bucket_id FROM calendar_event_buckets WHERE owner = ? AND event_id = ?", owner, eventID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestSaveStoresAddedEvent(t *testing.T) {
 	if string(data) != "data-"+id || updatedAt.UnixMilli() != baseTS {
 		t.Fatalf("got %q at %d", data, updatedAt.UnixMilli())
 	}
-	if got := bucketIDsOf(t, id); !slices.Equal(got, []string{b1, b2}) {
+	if got := bucketIDsOf(t, user.UUID, id); !slices.Equal(got, []string{b1, b2}) {
 		t.Fatalf("buckets %v", got)
 	}
 }
@@ -166,7 +166,7 @@ func TestSaveUpdateReplacesDataTimestampAndBuckets(t *testing.T) {
 	if string(data) != "v2" || updatedAt.UnixMilli() != baseTS+5000 {
 		t.Fatalf("got %q at %d", data, updatedAt.UnixMilli())
 	}
-	if got := bucketIDsOf(t, id); !slices.Equal(got, []string{b2, b3}) {
+	if got := bucketIDsOf(t, user.UUID, id); !slices.Equal(got, []string{b2, b3}) {
 		t.Fatalf("buckets %v", got)
 	}
 }
@@ -328,6 +328,23 @@ func TestSaveAcceptsUppercaseUUID(t *testing.T) {
 	mustSave(t, c, added(ev(strings.ToUpper(testutil.NewUUID()), baseTS, testutil.BucketID(1))))
 }
 
+func TestSaveStoresUppercaseUUIDInLowercase(t *testing.T) {
+	testutil.RequireDB(t)
+	c := testutil.NewClient(t).As(testutil.NewUser(t))
+	id := testutil.NewUUID()
+	bucket := testutil.BucketID(1)
+
+	mustSave(t, c, added(ev(strings.ToUpper(id), baseTS, bucket)))
+
+	got := syncDiff(t, c, types.EventSyncPart{
+		Records: []types.CachedRecord{cached(id, baseTS)},
+		Buckets: []string{bucket},
+	})
+	if len(got.Added)+len(got.Updated)+len(got.Deleted) != 0 {
+		t.Fatalf("expected no diff, got %+v", got)
+	}
+}
+
 func TestSaveAcceptsTimestampsAtTheLimits(t *testing.T) {
 	testutil.RequireDB(t)
 	c := testutil.NewClient(t).As(testutil.NewUser(t))
@@ -338,14 +355,15 @@ func TestSaveAcceptsTimestampsAtTheLimits(t *testing.T) {
 
 func TestSaveReaddedEventReplacesBuckets(t *testing.T) {
 	testutil.RequireDB(t)
-	c := testutil.NewClient(t).As(testutil.NewUser(t))
+	user := testutil.NewUser(t)
+	c := testutil.NewClient(t).As(user)
 	id := testutil.NewUUID()
 	b1, b2 := testutil.BucketID(1), testutil.BucketID(2)
 
 	mustSave(t, c, added(ev(id, baseTS, b1)))
 	mustSave(t, c, added(ev(id, baseTS+1, b2)))
 
-	if got := bucketIDsOf(t, id); !slices.Equal(got, []string{b2}) {
+	if got := bucketIDsOf(t, user.UUID, id); !slices.Equal(got, []string{b2}) {
 		t.Fatalf("buckets %v", got)
 	}
 }
@@ -364,7 +382,7 @@ func TestSaveAcceptsEventsAtTheLimits(t *testing.T) {
 
 	mustSave(t, c, added(atLimit))
 
-	if got := bucketIDsOf(t, atLimit.ID); len(got) != constants.MaxEventBuckets {
+	if got := bucketIDsOf(t, user.UUID, atLimit.ID); len(got) != constants.MaxEventBuckets {
 		t.Fatalf("got %d buckets", len(got))
 	}
 }
@@ -410,13 +428,13 @@ func TestSaveCannotModifyOtherUsersEvents(t *testing.T) {
 			var data []byte
 			var ownerUUID string
 			var updatedAt time.Time
-			if err := database.DB.QueryRow("SELECT data, owner, updated_at FROM calendar_events WHERE id = ?", id).Scan(&data, &ownerUUID, &updatedAt); err != nil {
+			if err := database.DB.QueryRow("SELECT data, owner, updated_at FROM calendar_events WHERE id = ? AND owner = ?", id, owner.UUID).Scan(&data, &ownerUUID, &updatedAt); err != nil {
 				t.Fatal(err)
 			}
 			if string(data) != "data-"+id || ownerUUID != owner.UUID || updatedAt.UnixMilli() != baseTS {
 				t.Fatalf("event changed: %q owner=%s ts=%d", data, ownerUUID, updatedAt.UnixMilli())
 			}
-			if got := bucketIDsOf(t, id); !slices.Equal(got, []string{b1}) {
+			if got := bucketIDsOf(t, owner.UUID, id); !slices.Equal(got, []string{b1}) {
 				t.Fatalf("buckets changed: %v", got)
 			}
 		})
@@ -440,7 +458,7 @@ func TestSyncNeverReturnsOtherUsersEvents(t *testing.T) {
 	insertEvents(t, owner.UUID, testutil.NewUUID())
 
 	t.Run("bucket sync", func(t *testing.T) {
-		got := syncDiff(t, srv.As(other), types.EventSyncRequest{Buckets: []string{bucket}})
+		got := syncDiff(t, srv.As(other), types.EventSyncPart{Buckets: []string{bucket}})
 		if len(got.Added)+len(got.Updated) != 0 {
 			t.Fatalf("leaked %+v", got)
 		}
@@ -454,7 +472,7 @@ func TestSyncNeverReturnsOtherUsersEvents(t *testing.T) {
 	})
 
 	t.Run("does not report other users events as deleted", func(t *testing.T) {
-		got := syncDiff(t, srv.As(owner), types.EventSyncRequest{Records: []types.CachedRecord{cached(id, baseTS)}, Buckets: []string{bucket}})
+		got := syncDiff(t, srv.As(owner), types.EventSyncPart{Records: []types.CachedRecord{cached(id, baseTS)}, Buckets: []string{bucket}})
 		if len(got.Deleted) != 0 {
 			t.Fatalf("got %+v", got)
 		}
@@ -473,7 +491,7 @@ func TestSyncDiffFull(t *testing.T) {
 		added(ev(fresh, baseTS, bucket)),
 	)
 
-	got := syncDiff(t, c, types.EventSyncRequest{
+	got := syncDiff(t, c, types.EventSyncPart{
 		Records: []types.CachedRecord{
 			cached(unchanged, baseTS),
 			cached(stale, baseTS),
@@ -506,7 +524,7 @@ func TestSyncDiffDoesNotReturnEventsOlderOnServerAsUpdated(t *testing.T) {
 
 	mustSave(t, c, added(ev(id, baseTS, testutil.BucketID(1))))
 
-	got := syncDiff(t, c, types.EventSyncRequest{Records: []types.CachedRecord{cached(id, baseTS+100)}, Buckets: []string{testutil.BucketID(1)}})
+	got := syncDiff(t, c, types.EventSyncPart{Records: []types.CachedRecord{cached(id, baseTS+100)}, Buckets: []string{testutil.BucketID(1)}})
 	if len(got.Updated)+len(got.Added)+len(got.Deleted) != 0 {
 		t.Fatalf("got %+v", got)
 	}
@@ -525,7 +543,7 @@ func TestSyncDiffRestrictsToRequestedBuckets(t *testing.T) {
 		added(ev(outside, baseTS, other)),
 	)
 
-	got := syncDiff(t, c, types.EventSyncRequest{Buckets: []string{a, b}})
+	got := syncDiff(t, c, types.EventSyncPart{Buckets: []string{a, b}})
 
 	want := []string{inA, inB, inBoth}
 	slices.Sort(want)
@@ -541,7 +559,7 @@ func TestSyncDiffReportsCachedEventsOutsideBucketsAsDeleted(t *testing.T) {
 
 	mustSave(t, c, added(ev(outside, baseTS, testutil.BucketID(3))))
 
-	got := syncDiff(t, c, types.EventSyncRequest{
+	got := syncDiff(t, c, types.EventSyncPart{
 		Records: []types.CachedRecord{cached(outside, baseTS)},
 		Buckets: []string{testutil.BucketID(1)},
 	})
@@ -568,7 +586,7 @@ func TestSyncDiffRejectsInvalidBuckets(t *testing.T) {
 	for name, buckets := range cases {
 		t.Run(name, func(t *testing.T) {
 			c := testutil.NewClient(t).As(testutil.NewUser(t))
-			status, _ := testutil.Call[any](c, "POST", "/calendar/events/sync", types.EventSyncRequest{Buckets: buckets})
+			status, _ := syncOne[any](c, "/calendar/events/sync", "", types.EventSyncPart{Buckets: buckets})
 			if status != http.StatusBadRequest {
 				t.Fatalf("got %d", status)
 			}
@@ -584,7 +602,7 @@ func TestSyncDiffAcceptsMaxBuckets(t *testing.T) {
 	for i := range buckets {
 		buckets[i] = testutil.BucketID(byte(i))
 	}
-	syncDiff(t, c, types.EventSyncRequest{Buckets: buckets})
+	syncDiff(t, c, types.EventSyncPart{Buckets: buckets})
 }
 
 func TestSyncHashes(t *testing.T) {
@@ -763,4 +781,43 @@ func TestSaveBatchFollowsListOrderForOneEvent(t *testing.T) {
 			t.Fatal("wrong events remain")
 		}
 	})
+}
+
+func TestSeveralOwnersCanHoldTheSameEventID(t *testing.T) {
+	testutil.RequireDB(t)
+	first, second := testutil.NewUser(t), testutil.NewUser(t)
+	srv := testutil.NewClient(t)
+	id := testutil.NewUUID()
+	b1, b2 := testutil.BucketID(1), testutil.BucketID(2)
+
+	mustSave(t, srv.As(first), added(ev(id, baseTS, b1)))
+	squatted := hijack(id, b2)
+	mustSave(t, srv.As(second), added(squatted))
+
+	mustSave(t, srv.As(first), updated(ev(id, baseTS+5, b1)))
+
+	read := func(owner string) (string, []string) {
+		var data []byte
+		if err := database.DB.QueryRow("SELECT data FROM calendar_events WHERE id = ? AND owner = ?", id, owner).Scan(&data); err != nil {
+			t.Fatal(err)
+		}
+		return string(data), bucketIDsOf(t, owner, id)
+	}
+	if data, buckets := read(first.UUID); data != "data-"+id || !slices.Equal(buckets, []string{b1}) {
+		t.Fatalf("first owner: %q %v", data, buckets)
+	}
+	if data, buckets := read(second.UUID); data != "hijacked" || !slices.Equal(buckets, []string{b2}) {
+		t.Fatalf("second owner: %q %v", data, buckets)
+	}
+
+	mustSave(t, srv.As(second), deleted(id))
+	if data, buckets := read(first.UUID); data != "data-"+id || !slices.Equal(buckets, []string{b1}) {
+		t.Fatalf("first owner after the other deleted: %q %v", data, buckets)
+	}
+	if n := count(t, "SELECT COUNT(*) FROM calendar_events WHERE id = ? AND owner = ?", id, second.UUID); n != 0 {
+		t.Fatal("second owner's event survived its delete")
+	}
+	if got := bucketIDsOf(t, second.UUID, id); len(got) != 0 {
+		t.Fatalf("second owner's buckets survived: %v", got)
+	}
 }

@@ -26,10 +26,12 @@ export interface CalendarProps {
     bucketKey: CryptoKey,
     currentDate: DateTime,
   ) => Promise<CalendarEvent[]>;
-  syncBuckets: (
-    buckets: string[],
+  syncExpanded: (
+    currentDate: DateTime,
     masterKey: CryptoKey,
     bucketKey: CryptoKey,
+    fromRange: number,
+    toRange: number,
   ) => Promise<CalendarEvent[]>;
   saveDebounceMs?: number;
 }
@@ -60,6 +62,7 @@ export interface EventBlockProps {
   onEventDelete: (event: CalendarEvent) => void;
   onDuplicate: (event: CalendarEvent) => void;
   onDetach: (event: CalendarEvent) => void;
+  onShareOccurrence: (event: CalendarEvent) => string;
   onReset: (event: CalendarEvent) => void;
   setEditingEvent: (event: CalendarEvent | null, day?: number | null) => void;
   setViewingEvent: (event: CalendarEvent | null, day?: number | null) => void;

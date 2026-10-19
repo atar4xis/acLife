@@ -1,6 +1,6 @@
 import ScrollContainer from "@/components/ui/scroll-container";
 import { DateTime } from "luxon";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import FolderTargetLabel from "@/components/journal/FolderTargetLabel";
 import {
   AlertDialog,
@@ -21,11 +21,12 @@ import {
 import { Field, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { useJournal, useJournalItems } from "@/context/JournalContext";
+import { useJournal, useOwnJournalItems } from "@/context/JournalContext";
 import { useSettingsStore } from "@/context/SettingsStoreContext";
 import { timeFormat } from "@/lib/calendar/date";
 import { cn, downloadBlob, formatBytes } from "@/lib/utils";
 import { descendantIds, folderTargets, itemStyle } from "@/lib/journal/item";
+import { isOwnItem } from "@/lib/journal/shared";
 import {
   applyInBatches,
   exportZip,
@@ -146,7 +147,7 @@ const askConflict =
 
 function ImportField() {
   const { t } = useTranslation();
-  const items = useJournalItems();
+  const items = useOwnJournalItems();
   const { importItems, loaded } = useJournal();
   const settingsStore = useSettingsStore();
   const [format, setFormat] = useState<ImportFormat>("zip");
@@ -391,8 +392,9 @@ function ImportField() {
 
 function ExportDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
-  const items = useJournalItems();
-  const { items: outline, sort } = useJournal();
+  const items = useOwnJournalItems();
+  const { items: allOutline, sort } = useJournal();
+  const outline = useMemo(() => allOutline.filter(isOwnItem), [allOutline]);
   const targets = folderTargets(outline, sort);
   const folderRows = targets.flatMap(({ folder, depth }) =>
     folder ? [{ folder, depth }] : [],

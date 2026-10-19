@@ -14,7 +14,7 @@ import {
   ContextMenuContent,
   ContextMenuTrigger,
 } from "../ui/context-menu";
-import { RedoDot } from "lucide-react";
+import { RedoDot, Users } from "lucide-react";
 import useTapInteraction from "@/hooks/useTapInteraction";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EventMenuItems } from "./EventMenuItems";
@@ -26,6 +26,7 @@ import { eventDomId } from "@/lib/calendar/gridFocus";
 import { useEventFocused } from "@/hooks/useGridFocus";
 import { useEventSelected } from "@/hooks/useSelection";
 import { useTranslation } from "react-i18next";
+import { canEditEvent } from "@/lib/calendar/shared";
 
 // how long (ms) a touch must be held roughly still before it starts a drag
 const LONG_PRESS_MS = 450;
@@ -56,6 +57,7 @@ export default memo(
     onEventDelete,
     onDuplicate,
     onDetach,
+    onShareOccurrence,
     onReset,
     setEditingEvent,
     setViewingEvent,
@@ -237,7 +239,8 @@ export default memo(
         setViewingEvent(event, day);
       } else if (action === "edit") {
         setViewingEvent(null);
-        setEditingEvent(event, day);
+        if (canEditEvent(event)) setEditingEvent(event, day);
+        else setViewingEvent(event, day);
       }
     };
 
@@ -486,6 +489,13 @@ export default memo(
                     >
                       {event.title}
                     </div>
+                    {event._shared && (
+                      <Users
+                        size={14}
+                        className="mt-0.5 shrink-0"
+                        aria-hidden
+                      />
+                    )}
                     {event.isTask && (
                       <Checkbox
                         className="pointer-events-auto mt-0.5 shrink-0 border-current/50"
@@ -567,6 +577,7 @@ export default memo(
               onDelete={onEventDelete}
               onDuplicate={onDuplicate}
               onDetach={onDetach}
+              onShareOccurrence={onShareOccurrence}
               onReset={onReset}
             />
           </ContextMenuContent>
@@ -625,6 +636,7 @@ export default memo(
       prev.onEventDelete === next.onEventDelete &&
       prev.onDuplicate === next.onDuplicate &&
       prev.onDetach === next.onDetach &&
+      prev.onShareOccurrence === next.onShareOccurrence &&
       prev.onReset === next.onReset &&
       prev.setEditingEvent === next.setEditingEvent &&
       prev.setViewingEvent === next.setViewingEvent &&

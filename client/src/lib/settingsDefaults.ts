@@ -50,6 +50,7 @@ export const defaultCalendarSettings: CalendarSettings = {
   miniCalendarBoldDayNumbers: false,
   miniCalendarAdaptiveNumbers: false,
   miniCalendarDropdowns: false,
+  inviteNotifications: true,
   detachRecurringOnEdit: false,
   eventClickAction: "details",
   eventDoubleClickAction: "edit",

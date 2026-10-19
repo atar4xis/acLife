@@ -26,6 +26,7 @@ import SecurityPage from "./pages/SecurityPage";
 import RegionPage from "./pages/RegionPage";
 import CalendarPage from "./pages/CalendarPage";
 import JournalPage from "./pages/JournalPage";
+import SharingPage from "./pages/SharingPage";
 import SyncPage from "./pages/SyncPage";
 import type { SectionRefs } from "./SettingsSection";
 import { useTranslation } from "react-i18next";
@@ -38,6 +39,7 @@ const PAGES: Record<string, ComponentType<{ sectionRefs: SectionRefs }>> = {
   region: RegionPage,
   calendar: CalendarPage,
   journal: JournalPage,
+  sharing: SharingPage,
   sync: SyncPage,
 };
 

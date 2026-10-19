@@ -9,10 +9,12 @@ export default memo(function NoteTitle({
   id,
   name,
   onEnter,
+  readOnly = false,
 }: {
   id: string;
   name: string;
   onEnter: () => void;
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const { renameItem } = useJournalActions();
@@ -32,6 +34,7 @@ export default memo(function NoteTitle({
         "mx-auto mt-6 w-full max-w-3xl bg-transparent px-6 pb-2 text-3xl font-bold outline-none",
       )}
       maxLength={MAX_JOURNAL_NAME_LENGTH}
+      readOnly={readOnly}
       value={draft}
       onChange={(e) => {
         setDraft(e.target.value);

@@ -1,10 +1,14 @@
 package types
 
-// JournalSyncRequest is the structure of a journal sync request: either a hash of all items, or the buckets to diff.
-type JournalSyncRequest struct {
+type JournalSyncPart struct {
+	Space   string         `json:"space,omitempty"`
 	Hash    string         `json:"hash"`    // hash of every cached item, set for the first step only
 	Buckets []string       `json:"buckets"` // two-char id prefixes to diff, set for the second step only
 	Records []CachedRecord `json:"records"` // the client's cached items in those buckets
+}
+
+type JournalSyncRequest struct {
+	Parts []JournalSyncPart `json:"parts"`
 }
 
 // JournalHashResponse is the response to a journal sync request that carries a hash.

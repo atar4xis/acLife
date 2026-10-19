@@ -4,6 +4,7 @@ import type { CalendarEvent } from "@/types/calendar/Event";
 import { describeSlot, describeWhen } from "@/lib/calendar/a11y";
 import { getWeekDays, isSameDate } from "@/lib/calendar/date";
 import { eventKey } from "@/lib/calendar/event";
+import { canEditEvent } from "@/lib/calendar/shared";
 import {
   ALL_DAY_SLOT,
   MINUTES_PER_DAY,
@@ -559,7 +560,7 @@ export default function useGridKeyboard(params: Params) {
 
   const startMove = useCallback(
     ({ p, focus, focused, handled }: KeyContext) => {
-      if (!focused) return;
+      if (!focused || !canEditEvent(focused)) return;
       handled();
       const count = p.beginMove(focused, focus.day);
       moving.current = {

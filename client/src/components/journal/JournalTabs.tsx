@@ -24,12 +24,19 @@ import {
 import { memo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-export default memo(function JournalTabs({ pane }: { pane: PaneNode }) {
+export default memo(function JournalTabs({
+  pane,
+  reading,
+  locked,
+}: {
+  pane: PaneNode;
+  reading: boolean;
+  locked: boolean;
+}) {
   const { t } = useTranslation();
   const journal = useJournal();
   const list = useRef<HTMLUListElement>(null);
   const [insertAt, setInsertAt] = useState<number | null>(null);
-  const reading = !!pane.reading;
 
   const panes = panesOf(journal.workspace.layout);
   const coarse = useCoarsePointer();
@@ -137,14 +144,16 @@ export default memo(function JournalTabs({ pane }: { pane: PaneNode }) {
               <CodeXml />
             </IconButton>
           )}
-          <IconButton
-            label={t(reading ? "journal.editMode" : "journal.readingMode")}
-            size="icon-sm"
-            data-reading-toggle
-            onClick={() => journal.setReading(pane.id, !reading)}
-          >
-            {reading ? <Pencil /> : <BookOpen />}
-          </IconButton>
+          {!locked && (
+            <IconButton
+              label={t(reading ? "journal.editMode" : "journal.readingMode")}
+              size="icon-sm"
+              data-reading-toggle
+              onClick={() => journal.setReading(pane.id, !reading)}
+            >
+              {reading ? <Pencil /> : <BookOpen />}
+            </IconButton>
+          )}
         </div>
       )}
     </div>

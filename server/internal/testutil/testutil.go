@@ -144,15 +144,6 @@ func NewUUID() string {
 	return h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:]
 }
 
-// UUIDToBase64 converts a uuid to the base64 form clients send in sync requests.
-func UUIDToBase64(id string) string {
-	raw, err := hex.DecodeString(id[0:8] + id[9:13] + id[14:18] + id[19:23] + id[24:])
-	if err != nil {
-		panic(err)
-	}
-	return base64.StdEncoding.EncodeToString(raw)
-}
-
 // BucketID returns a valid base64 bucket id derived from n.
 func BucketID(n byte) string {
 	return base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{n}, constants.BucketIDLen))

@@ -445,6 +445,7 @@ describe("sync rules", () => {
         "followCurrentTime",
         "fontFamily",
         "fontSize",
+        "inviteNotifications",
         "journalAddColorsAutomatically",
         "journalBackground",
         "journalBackgroundEnabled",

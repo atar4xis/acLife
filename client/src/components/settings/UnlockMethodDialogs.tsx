@@ -40,7 +40,7 @@ export function PinSetupDialog({
     }
   }, [open]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
 
     if (!/^\d{4,16}$/.test(pin)) {
@@ -158,7 +158,7 @@ export function StayUnlockedDialog({
     }
   }, [open]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
 
     if (!currentPassword) {

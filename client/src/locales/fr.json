@@ -309,7 +309,8 @@
       "security": "Compte et sécurité",
       "sync": "Synchronisation",
       "application": "Application",
-      "journal": "Journal"
+      "journal": "Journal",
+      "sharing": "Partage"
     },
     "sections": {
       "theme": "Thème",
@@ -338,7 +339,12 @@
       "journal-editor": "Éditeur",
       "journal-customization": "Personnalisation",
       "note-defaults": "Valeurs par défaut des notes",
-      "journal-import-export": "Importer / Exporter"
+      "journal-import-export": "Importer / Exporter",
+      "sharing-start": "Partager",
+      "sharing-invites": "Invitations",
+      "sharing-owned": "Partagé par vous",
+      "sharing-joined": "Partagé avec vous",
+      "sharing-contacts": "Contacts"
     },
     "items": {
       "theme-mode": "Mode du thème",
@@ -422,7 +428,15 @@
       "journal-foreground-value": "Valeur de la couleur de premier plan",
       "journal-background-value": "Valeur de la couleur d'arrière-plan",
       "journal-import": "Format d'importation",
-      "journal-export": "Exporter"
+      "journal-export": "Exporter",
+      "sharing-calendar": "Partager tout votre calendrier",
+      "sharing-journal": "Partager tout votre journal",
+      "sharing-code": "Votre code de sécurité",
+      "sharing-invite-notifications": "Notifications d’invitation",
+      "sharing-invites-list": "Invitations",
+      "sharing-owned-list": "Partagé par vous",
+      "sharing-joined-list": "Partagé avec vous",
+      "sharing-contacts-list": "Contacts"
     },
     "colors": {
       "background": "Arrière-plan",
@@ -622,7 +636,7 @@
       },
       "status": {
         "idle": "Non vérifié",
-        "checking": "Vérification…",
+        "checking": "Vérification...",
         "upToDate": "À jour",
         "available": "Mise à jour disponible ({{version}})",
         "downloading": "Téléchargement",
@@ -846,7 +860,13 @@
     "too_many_attempts_seconds_one": "Trop de tentatives. Réessayez dans {{count}} seconde.",
     "too_many_attempts_seconds_other": "Trop de tentatives. Réessayez dans {{count}} secondes.",
     "too_many_attempts_minutes_one": "Trop de tentatives. Réessayez dans {{count}} minute.",
-    "too_many_attempts_minutes_other": "Trop de tentatives. Réessayez dans {{count}} minutes."
+    "too_many_attempts_minutes_other": "Trop de tentatives. Réessayez dans {{count}} minutes.",
+    "keys_exist": "Les clés existent déjà.",
+    "share_not_found": "Partage introuvable.",
+    "share_forbidden": "Vous n’avez pas la permission de faire cela.",
+    "user_not_found": "Utilisateur introuvable.",
+    "already_member": "Cette personne a déjà accès.",
+    "share_limit_reached": "Limite de partage atteinte."
   },
   "views": {
     "calendar": "Calendrier",
@@ -955,10 +975,85 @@
         "unsupported": "Type de fichier non pris en charge",
         "tooLarge": "Trop volumineux"
       }
-    }
+    },
+    "sharedBy": "Partagé par {{email}}"
   },
   "iconPicker": {
     "search": "Rechercher des icônes...",
     "empty": "Aucune icône trouvée"
+  },
+  "shares": {
+    "share": "Partager...",
+    "shareOccurrence": "Partager uniquement cet événement...",
+    "shareSeries": "Partager toute la série...",
+    "occurrenceDetached": "Cet événement est désormais indépendant de la série. Les autres événements de la série restent privés.",
+    "title": "Partager « {{label}} »",
+    "descriptionItem": "Les personnes que vous ajoutez pourront ouvrir cet élément et voir les modifications en temps réel.",
+    "descriptionCollection": "Les personnes que vous ajoutez pourront accéder à tout le contenu, y compris les ajouts à venir, et voir les modifications en temps réel.",
+    "email": "Adresse e-mail",
+    "continue": "Continuer",
+    "permission": "Autorisation",
+    "canView": "Peut consulter",
+    "canEdit": "Peut modifier",
+    "canViewLower": "peut consulter",
+    "canEditLower": "peut modifier",
+    "userNotFound": "Utilisateur introuvable.",
+    "enterOtherEmail": "Saisissez l’e-mail d’une autre personne.",
+    "alreadyMember": "Cette personne a déjà accès.",
+    "invited": "Invitation envoyée.",
+    "sendInvite": "Envoyer l’invitation",
+    "people": "Personnes",
+    "pending": "Invitation envoyée",
+    "permissionOf": "Autorisation de {{email}}",
+    "removePerson": "Retirer {{email}}",
+    "stopSharing": "Arrêter le partage",
+    "codeIntro": "Voici le code de sécurité de {{email}}. Demandez-lui de vous lire son propre code (Paramètres > Partage > Contacts). En personne ou par un autre moyen de communication de confiance, vérifiez que les deux codes sont identiques.",
+    "codeHint": "La vérification est facultative. Elle peut aider à détecter une manipulation du serveur.",
+    "codeChanged": "Le code de sécurité de {{email}} a changé depuis votre dernier partage avec cette personne. Cela peut arriver après une réinitialisation de son compte.",
+    "codeChangedHint": "Si possible, vérifiez le nouveau code avec cette personne avant de continuer. Ne continuez que si vous faites confiance au nouveau code.",
+    "codeLabel": "Code de sécurité de {{email}}",
+    "acceptTitle": "Accepter cette invitation ?",
+    "acceptDescription": "{{email}} vous invite à accéder à du contenu partagé.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "inviteFrom": "{{email}} a partagé {{what}} avec vous.",
+    "kind": {
+      "calendar": {
+        "collection": "un calendrier",
+        "item": "un événement"
+      },
+      "journal": {
+        "collection": "un journal ou un dossier",
+        "item": "une note"
+      }
+    },
+    "leave": "Quitter",
+    "shareAction": "Partager",
+    "nickname": "Surnom",
+    "editNickname": "Définir un surnom pour {{email}}",
+    "nothingShared": "Vous ne partagez rien.",
+    "nothingReceived": "Aucun contenu n’est partagé avec vous.",
+    "noContacts": "Aucun contact pour le moment.",
+    "contacts": "Contacts",
+    "addContact": "Ajouter un contact",
+    "newInvitation": "Nouvelle invitation",
+    "inviteToast": "{{email}} a partagé {{what}} avec vous.",
+    "viewInvite": "Voir",
+    "noInvites": "Aucune invitation.",
+    "removeContact": "Retirer le contact {{email}}",
+    "contactAdded": "Contact ajouté.",
+    "codeChangedWarning": "Le code de sécurité de {{email}} a changé.",
+    "trustNewCode": "Faire confiance au nouveau code de sécurité",
+    "unavailable": "Pour utiliser le partage, connectez-vous à un compte avec un abonnement actif.",
+    "wholeCalendar": "Tout le calendrier",
+    "wholeJournal": "Tout le journal",
+    "anEvent": "Événement",
+    "aNote": "Note",
+    "calendar": "Calendrier",
+    "myCalendar": "Mon calendrier",
+    "sharedByView": "Partagé par {{email}} (lecture seule)",
+    "sharedByEdit": "Partagé par {{email}}",
+    "memberStorageFull": "Le stockage du propriétaire est plein. Vos modifications n’ont pas été enregistrées.",
+    "ownerStorageFull": "Votre stockage partagé est plein. Les modifications n’ont pas été partagées."
   }
 }

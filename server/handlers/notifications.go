@@ -73,10 +73,8 @@ func SyncNotifications(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var retry []string
 	err := database.RunTx(ctx, func(tx *sql.Tx) error {
-		marks := "?" + strings.Repeat(",?", len(ids)-1)
-
 		rows, err := tx.QueryContext(ctx,
-			`SELECT id FROM calendar_events WHERE owner = ? AND id IN (`+marks+`)`,
+			`SELECT id FROM calendar_events WHERE owner = ? AND id IN (`+placeholders(len(ids))+`)`,
 			append([]any{user.UUID}, ids...)...,
 		)
 		if err != nil {
@@ -142,7 +140,7 @@ func SyncNotifications(w http.ResponseWriter, r *http.Request) {
 			if _, err := tx.ExecContext(ctx,
 				`DELETE FROM scheduled_notifications
 				WHERE owner = ? AND (subscription_id IS NULL OR subscription_id = ?)
-				AND event_id IN (?`+strings.Repeat(",?", len(ownedID)-1)+`)`,
+				AND event_id IN (`+placeholders(len(ownedID))+`)`,
 				append([]any{user.UUID, subscription}, ownedID...)...,
 			); err != nil {
 				return fmt.Errorf("delete: %w", err)

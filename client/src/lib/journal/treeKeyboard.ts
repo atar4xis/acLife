@@ -1,5 +1,6 @@
 import { openContextMenu } from "@/lib/journal/focus";
 import type { TreeRow } from "@/lib/journal/item";
+import { canDeleteItem, canEditItem } from "@/lib/journal/shared";
 import type { JournalItem } from "@/types/Journal";
 
 type TreeKeyContext = {
@@ -45,9 +46,9 @@ export const treeKeyDown = (
   } else if (e.key === "ArrowLeft") {
     if (isFolder && row.open && !searching) onToggle(row.item);
     else focus(rows.slice(0, index).findLast((r) => r.depth < row.depth));
-  } else if (e.key === "F2") {
+  } else if (e.key === "F2" && canEditItem(row.item)) {
     onRename(row.item.id);
-  } else if (e.key === "Delete") {
+  } else if (e.key === "Delete" && canDeleteItem(row.item)) {
     onDelete(row.item);
   } else {
     return;

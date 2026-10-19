@@ -4,9 +4,13 @@ import { useTranslation } from "react-i18next";
 
 export default function RenameInput({
   name,
+  label,
+  maxLength = MAX_JOURNAL_NAME_LENGTH,
   onDone,
 }: {
   name: string;
+  label?: string;
+  maxLength?: number;
   onDone: (name?: string) => void;
 }) {
   const { t } = useTranslation();
@@ -22,9 +26,10 @@ export default function RenameInput({
     <input
       ref={ref}
       className="min-w-0 flex-1 bg-transparent outline-none"
-      aria-label={t("journal.rename")}
+      aria-label={label ?? t("journal.rename")}
       defaultValue={name}
-      maxLength={MAX_JOURNAL_NAME_LENGTH}
+      data-handles-escape
+      maxLength={maxLength}
       onBlur={(e) => onDone(cancelled.current ? undefined : e.target.value)}
       onKeyDown={(e) => {
         if (e.key === "Escape") cancelled.current = true;

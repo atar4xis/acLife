@@ -60,8 +60,8 @@ const (
 	MaxSaltLen        = 16
 	MaxVerifierLen    = 520
 	MaxEventLen       = 10000
-	MaxRequestRecords = 50000                         // records in one save or sync request
-	MaxSyncBodyBytes  = MaxRequestRecords*80 + 64<<10 // about 80 bytes per cached record entry
+	MaxRequestRecords = 50000                                      // records in one save or sync request
+	MaxSyncBodyBytes  = MaxRequestRecords*80 + MaxSyncParts*16<<10 // about 80 bytes per cached record entry, 16 KiB of hashes and buckets per part
 	MaxPowTokenLen    = 512
 	MaxPowNonceLen    = 32
 
@@ -81,6 +81,7 @@ const (
 	BucketRowBytes  = 36 + BucketIDLen // what a calendar_event_buckets row counts toward the quota: event uuid + bucket id
 	MaxEventBuckets = 60               // caps the number of weeks a single event may span
 	MaxSyncBuckets  = 100              // caps the number of buckets requested in a single sync
+	MaxSyncParts    = 32               // spaces (plus the caller's own data) in one batched sync request
 
 	MaxJournalLen         = 256 << 10
 	MaxJournalSyncBytes   = 2 << 20
@@ -90,6 +91,15 @@ const (
 	JournalFetchChunk     = 16
 
 	MaxSettingsBytes = 128 << 10 // caps the encrypted settings blob
+
+	MaxWrappedPrivateLen = 512
+	MaxWrappedKeyLen     = 256
+	MaxSharesPerOwner    = 20
+	MaxMembersPerSpace   = 50
+	MaxPendingInvites    = 50
+	MaxPendingReceived   = 50 // invites a user can have pending from anyone
+	MaxPendingPerPair    = 5  // invites pending from one owner to one user
+	KeyLookupsPerMinute  = 30
 
 	MaxNotificationEvents = 200              // events per notifications sync request
 	MaxNotificationTimes  = 5000             // notification times per request, and scheduled per user
@@ -123,6 +133,7 @@ var (
 	RateLimitUser          int // per second
 	RateLimitCalendar      int // per second
 	RateLimitJournal       int // per second
+	RateLimitShares        int // per second
 	RateLimitStream        int // per minute
 	RateLimitStripe        int // per second
 	RateLimitStripePerUser int // per minute, per user (checkout and portal)
@@ -172,6 +183,7 @@ func Configure() {
 	RateLimitUser = int(envInt("RATE_LIMIT_USER", 20))
 	RateLimitCalendar = int(envInt("RATE_LIMIT_CALENDAR", 30))
 	RateLimitJournal = int(envInt("RATE_LIMIT_JOURNAL", 30))
+	RateLimitShares = int(envInt("RATE_LIMIT_SHARES", 30))
 	RateLimitStream = int(envInt("RATE_LIMIT_STREAM", 60))
 	RateLimitStripe = int(envInt("RATE_LIMIT_STRIPE", 100))
 	RateLimitStripePerUser = int(envInt("RATE_LIMIT_STRIPE_PER_USER", 8))

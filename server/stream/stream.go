@@ -21,6 +21,7 @@ type Message struct {
 	Type           string           `json:"type"`
 	Seq            uint64           `json:"seq"`
 	OriginClientID string           `json:"originClientId,omitempty"`
+	Space          string           `json:"space,omitempty"`
 	Changes        []Change         `json:"changes,omitempty"`
 	Push           *types.PushEvent `json:"push,omitempty"`
 }
@@ -45,6 +46,20 @@ func Changed(kind, originClientID string, changes []Change) Message {
 			return Sync(originClientID)
 		}
 		return Message{Type: kind, OriginClientID: originClientID}
+	}
+	return ev
+}
+
+// SpacesChanged tells a user that the shares they own or belong to changed, they refetch the list.
+func SpacesChanged(originClientID string) Message {
+	return Message{Type: "spaces", OriginClientID: originClientID}
+}
+
+// SpaceUpdated replicates the changes of a shared space, or falls back to a message without changes when they are too large to push.
+func SpaceUpdated(space, originClientID string, changes []Change) Message {
+	ev := Message{Type: "space-updated", OriginClientID: originClientID, Space: space, Changes: changes}
+	if raw, err := json.Marshal(ev); err != nil || len(raw) > constants.MaxStreamPayloadBytes {
+		return Message{Type: "space-updated", OriginClientID: originClientID, Space: space}
 	}
 	return ev
 }
@@ -103,21 +118,29 @@ func (s *Conn) Close() {
 
 // Publish numbers the message and sends it to the user's streams without blocking.
 func Publish(uuid string, ev Message) {
+	PublishTo([]string{uuid}, ev)
+}
+
+// PublishTo numbers the message per user and sends it to each of their streams without blocking.
+func PublishTo(uuids []string, ev Message) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	u := users[uuid]
-	if u == nil {
-		return
-	}
+	for _, uuid := range uuids {
+		u := users[uuid]
+		if u == nil {
+			continue
+		}
 
-	u.seq++
-	ev.Seq = u.seq
-	for s := range u.streams {
-		select {
-		case s.c <- ev:
-		default:
-			remove(s)
+		u.seq++
+		numbered := ev
+		numbered.Seq = u.seq
+		for s := range u.streams {
+			select {
+			case s.c <- numbered:
+			default:
+				remove(s)
+			}
 		}
 	}
 }

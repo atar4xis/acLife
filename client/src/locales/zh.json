@@ -303,7 +303,8 @@
       "security": "账户与安全",
       "sync": "同步",
       "application": "应用",
-      "journal": "日记"
+      "journal": "日记",
+      "sharing": "共享"
     },
     "sections": {
       "theme": "主题",
@@ -332,7 +333,12 @@
       "journal-editor": "编辑器",
       "journal-customization": "自定义",
       "note-defaults": "笔记默认设置",
-      "journal-import-export": "导入 / 导出"
+      "journal-import-export": "导入 / 导出",
+      "sharing-start": "共享",
+      "sharing-invites": "邀请",
+      "sharing-owned": "你共享的",
+      "sharing-joined": "与你共享的",
+      "sharing-contacts": "联系人"
     },
     "items": {
       "theme-mode": "主题模式",
@@ -416,7 +422,15 @@
       "journal-foreground-value": "前景色值",
       "journal-background-value": "背景色值",
       "journal-import": "导入格式",
-      "journal-export": "导出"
+      "journal-export": "导出",
+      "sharing-calendar": "共享整个日历",
+      "sharing-journal": "共享整个日记本",
+      "sharing-code": "你的安全码",
+      "sharing-invite-notifications": "邀请通知",
+      "sharing-invites-list": "邀请",
+      "sharing-owned-list": "你共享的",
+      "sharing-joined-list": "与你共享的",
+      "sharing-contacts-list": "联系人"
     },
     "colors": {
       "background": "背景",
@@ -612,7 +626,7 @@
       },
       "status": {
         "idle": "未检查",
-        "checking": "正在检查…",
+        "checking": "正在检查...",
         "upToDate": "已是最新",
         "available": "有可用更新 ({{version}})",
         "downloading": "正在下载",
@@ -824,7 +838,13 @@
     "already_subscribed": "您已有订阅。",
     "registration_busy": "目前注册人数较多，请稍后再试。",
     "too_many_attempts_seconds_other": "尝试次数过多，请在{{count}}秒后重试。",
-    "too_many_attempts_minutes_other": "尝试次数过多，请在{{count}}分钟后重试。"
+    "too_many_attempts_minutes_other": "尝试次数过多，请在{{count}}分钟后重试。",
+    "keys_exist": "密钥已存在。",
+    "share_not_found": "未找到该共享。",
+    "share_forbidden": "你没有执行此操作的权限。",
+    "user_not_found": "未找到用户。",
+    "already_member": "此人已有访问权限。",
+    "share_limit_reached": "已达到共享上限。"
   },
   "views": {
     "calendar": "日历",
@@ -931,10 +951,85 @@
         "unsupported": "不支持的文件类型",
         "tooLarge": "文件过大"
       }
-    }
+    },
+    "sharedBy": "由 {{email}} 共享"
   },
   "iconPicker": {
     "search": "搜索图标...",
     "empty": "未找到图标"
+  },
+  "shares": {
+    "share": "共享...",
+    "shareOccurrence": "仅共享此日程...",
+    "shareSeries": "共享整个系列...",
+    "occurrenceDetached": "此日程现已从系列中分离。系列中的其他日程仍保持私密。",
+    "title": "共享“{{label}}”",
+    "descriptionItem": "你添加的人可以打开此项目，并实时查看更改。",
+    "descriptionCollection": "你添加的人可以访问这里的全部内容，包括之后添加的内容，并实时查看更改。",
+    "email": "电子邮箱",
+    "continue": "继续",
+    "permission": "权限",
+    "canView": "可查看",
+    "canEdit": "可编辑",
+    "canViewLower": "可查看",
+    "canEditLower": "可编辑",
+    "userNotFound": "未找到用户。",
+    "enterOtherEmail": "请输入其他人的邮箱。",
+    "alreadyMember": "此人已有访问权限。",
+    "invited": "邀请已发送。",
+    "sendInvite": "发送邀请",
+    "people": "成员",
+    "pending": "已邀请",
+    "permissionOf": "{{email}} 的权限",
+    "removePerson": "移除 {{email}}",
+    "stopSharing": "停止共享",
+    "codeIntro": "这是 {{email}} 的安全码。请对方读出自己的安全码（设置 > 共享 > 联系人）。请当面或通过其他可信的沟通渠道核对两个安全码是否一致。",
+    "codeHint": "核对是可选的，可能有助于发现服务器遭篡改的情况。",
+    "codeChanged": "{{email}} 的安全码自你上次共享以来发生了变化。如果对方重置了账户，就可能出现这种情况。",
+    "codeChangedHint": "如有可能，请先与对方确认新的安全码。只有信任新安全码时才继续。",
+    "codeLabel": "{{email}} 的安全码",
+    "acceptTitle": "接受此邀请？",
+    "acceptDescription": "{{email}} 邀请你访问共享内容。",
+    "accept": "接受",
+    "decline": "拒绝",
+    "inviteFrom": "{{email}} 与你共享了{{what}}。",
+    "kind": {
+      "calendar": {
+        "collection": "一个日历",
+        "item": "一项日程"
+      },
+      "journal": {
+        "collection": "一个日记本或文件夹",
+        "item": "一条笔记"
+      }
+    },
+    "leave": "退出",
+    "shareAction": "共享",
+    "nickname": "昵称",
+    "editNickname": "为 {{email}} 设置昵称",
+    "nothingShared": "你没有共享任何内容。",
+    "nothingReceived": "没有与你共享的内容。",
+    "noContacts": "还没有联系人。",
+    "contacts": "联系人",
+    "addContact": "添加联系人",
+    "newInvitation": "新邀请",
+    "inviteToast": "{{email}} 与你共享了{{what}}。",
+    "viewInvite": "查看",
+    "noInvites": "没有邀请。",
+    "removeContact": "移除联系人 {{email}}",
+    "contactAdded": "已添加联系人。",
+    "codeChangedWarning": "{{email}} 的安全码已更改。",
+    "trustNewCode": "信任新的安全码",
+    "unavailable": "请登录具有有效订阅的账户以使用共享功能。",
+    "wholeCalendar": "整个日历",
+    "wholeJournal": "整个日记本",
+    "anEvent": "日程",
+    "aNote": "笔记",
+    "calendar": "日历",
+    "myCalendar": "我的日历",
+    "sharedByView": "由 {{email}} 共享（仅查看）",
+    "sharedByEdit": "由 {{email}} 共享",
+    "memberStorageFull": "所有者的存储空间已满，你的更改未保存。",
+    "ownerStorageFull": "你的共享存储空间已满，更改未共享。"
   }
 }

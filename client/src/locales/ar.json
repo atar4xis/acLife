@@ -334,7 +334,8 @@
       "security": "الحساب والأمان",
       "sync": "المزامنة",
       "application": "التطبيق",
-      "journal": "اليوميات"
+      "journal": "اليوميات",
+      "sharing": "المشاركة"
     },
     "sections": {
       "theme": "السمة",
@@ -363,7 +364,12 @@
       "journal-editor": "المحرر",
       "journal-customization": "التخصيص",
       "note-defaults": "الإعدادات الافتراضية للملاحظات",
-      "journal-import-export": "استيراد / تصدير"
+      "journal-import-export": "استيراد / تصدير",
+      "sharing-start": "مشاركة",
+      "sharing-invites": "الدعوات",
+      "sharing-owned": "ما شاركته",
+      "sharing-joined": "ما تمت مشاركته معك",
+      "sharing-contacts": "جهات الاتصال"
     },
     "items": {
       "theme-mode": "وضع السمة",
@@ -447,7 +453,15 @@
       "journal-foreground-value": "قيمة لون الخط",
       "journal-background-value": "قيمة لون الخلفية",
       "journal-import": "صيغة الاستيراد",
-      "journal-export": "تصدير"
+      "journal-export": "تصدير",
+      "sharing-calendar": "مشاركة التقويم بالكامل",
+      "sharing-journal": "مشاركة دفتر اليوميات بالكامل",
+      "sharing-code": "رمز الأمان الخاص بك",
+      "sharing-invite-notifications": "إشعارات الدعوات",
+      "sharing-invites-list": "الدعوات",
+      "sharing-owned-list": "ما شاركته",
+      "sharing-joined-list": "ما تمت مشاركته معك",
+      "sharing-contacts-list": "جهات الاتصال"
     },
     "colors": {
       "background": "الخلفية",
@@ -663,7 +677,7 @@
       },
       "status": {
         "idle": "لم يتم التحقق",
-        "checking": "جارٍ التحقق…",
+        "checking": "جارٍ التحقق...",
         "upToDate": "محدّث",
         "available": "يتوفر تحديث ({{version}})",
         "downloading": "جارٍ التنزيل",
@@ -933,7 +947,13 @@
     "too_many_attempts_minutes_two": "محاولات كثيرة جدًا. حاول مرة أخرى بعد دقيقتين.",
     "too_many_attempts_minutes_few": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} دقائق.",
     "too_many_attempts_minutes_many": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} دقيقة.",
-    "too_many_attempts_minutes_other": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} دقيقة."
+    "too_many_attempts_minutes_other": "محاولات كثيرة جدًا. حاول مرة أخرى بعد {{count}} دقيقة.",
+    "keys_exist": "المفاتيح موجودة بالفعل.",
+    "share_not_found": "المشاركة غير موجودة.",
+    "share_forbidden": "ليس لديك إذن للقيام بذلك.",
+    "user_not_found": "المستخدم غير موجود.",
+    "already_member": "لدى هذا الشخص صلاحية الوصول بالفعل.",
+    "share_limit_reached": "تم بلوغ حد المشاركة."
   },
   "views": {
     "calendar": "التقويم",
@@ -1045,10 +1065,85 @@
         "unsupported": "نوع ملف غير مدعوم",
         "tooLarge": "كبير جدًا"
       }
-    }
+    },
+    "sharedBy": "تمت المشاركة بواسطة {{email}}"
   },
   "iconPicker": {
     "search": "ابحث عن الأيقونات...",
     "empty": "لم يتم العثور على أيقونات"
+  },
+  "shares": {
+    "share": "مشاركة...",
+    "shareOccurrence": "مشاركة هذا الحدث فقط...",
+    "shareSeries": "مشاركة السلسلة كاملة...",
+    "occurrenceDetached": "أصبح هذا الحدث مستقلًا عن السلسلة. تبقى بقية أحداث السلسلة خاصة.",
+    "title": "مشاركة «{{label}}»",
+    "descriptionItem": "يمكن للأشخاص الذين تضيفهم فتح هذا العنصر ورؤية التغييرات فور حدوثها.",
+    "descriptionCollection": "يمكن للأشخاص الذين تضيفهم الوصول إلى كل المحتوى هنا، بما في ذلك ما تضيفه لاحقًا، ورؤية التغييرات فور حدوثها.",
+    "email": "البريد الإلكتروني",
+    "continue": "متابعة",
+    "permission": "الإذن",
+    "canView": "يمكنه العرض",
+    "canEdit": "يمكنه التعديل",
+    "canViewLower": "يمكنه العرض",
+    "canEditLower": "يمكنه التعديل",
+    "userNotFound": "المستخدم غير موجود.",
+    "enterOtherEmail": "أدخل البريد الإلكتروني لشخص آخر.",
+    "alreadyMember": "لدى هذا الشخص صلاحية الوصول بالفعل.",
+    "invited": "تم إرسال الدعوة.",
+    "sendInvite": "إرسال الدعوة",
+    "people": "الأشخاص",
+    "pending": "تمت دعوته",
+    "permissionOf": "إذن {{email}}",
+    "removePerson": "إزالة {{email}}",
+    "stopSharing": "إيقاف المشاركة",
+    "codeIntro": "هذا هو رمز الأمان الخاص بـ {{email}}. اطلب من هذا الشخص قراءة رمزه الخاص بصوت مسموع (الإعدادات > المشاركة > جهات الاتصال). تأكد من تطابق الرمزين وجهًا لوجه أو عبر وسيلة تواصل أخرى تثق بها.",
+    "codeHint": "التحقق اختياري. قد يساعد على كشف التلاعب بالخادم.",
+    "codeChanged": "تغيّر رمز الأمان الخاص بـ {{email}} منذ آخر مشاركة. قد يحدث ذلك إذا أعاد ضبط حسابه.",
+    "codeChangedHint": "إن أمكن، تحقّق من الرمز الجديد مع هذا الشخص قبل المتابعة. تابع فقط إذا كنت تثق بالرمز الجديد.",
+    "codeLabel": "رمز الأمان الخاص بـ {{email}}",
+    "acceptTitle": "قبول هذه الدعوة؟",
+    "acceptDescription": "أرسل إليك {{email}} دعوة للوصول إلى محتوى مشترك.",
+    "accept": "قبول",
+    "decline": "رفض",
+    "inviteFrom": "شارك {{email}} {{what}} معك.",
+    "kind": {
+      "calendar": {
+        "collection": "تقويمًا",
+        "item": "حدثًا"
+      },
+      "journal": {
+        "collection": "دفتر يوميات أو مجلدًا",
+        "item": "ملاحظة"
+      }
+    },
+    "leave": "مغادرة",
+    "shareAction": "مشاركة",
+    "nickname": "الاسم المستعار",
+    "editNickname": "تعيين اسم مستعار لـ {{email}}",
+    "nothingShared": "أنت لا تشارك أي شيء.",
+    "nothingReceived": "لا يوجد محتوى تمت مشاركته معك.",
+    "noContacts": "لا توجد جهات اتصال بعد.",
+    "contacts": "جهات الاتصال",
+    "addContact": "إضافة جهة اتصال",
+    "newInvitation": "دعوة جديدة",
+    "inviteToast": "شارك {{email}} {{what}} معك.",
+    "viewInvite": "عرض",
+    "noInvites": "لا توجد دعوات.",
+    "removeContact": "إزالة جهة الاتصال {{email}}",
+    "contactAdded": "تمت إضافة جهة الاتصال.",
+    "codeChangedWarning": "تغيّر رمز الأمان الخاص بـ {{email}}.",
+    "trustNewCode": "الوثوق برمز الأمان الجديد",
+    "unavailable": "لاستخدام المشاركة، سجّل الدخول إلى حساب باشتراك نشط.",
+    "wholeCalendar": "التقويم بالكامل",
+    "wholeJournal": "دفتر اليوميات بالكامل",
+    "anEvent": "حدث",
+    "aNote": "ملاحظة",
+    "calendar": "التقويم",
+    "myCalendar": "تقويمي",
+    "sharedByView": "تمت المشاركة بواسطة {{email}} (للعرض فقط)",
+    "sharedByEdit": "تمت المشاركة بواسطة {{email}}",
+    "memberStorageFull": "مساحة تخزين المالك ممتلئة. لم تُحفظ تغييراتك.",
+    "ownerStorageFull": "مساحة التخزين المشتركة لديك ممتلئة. لم تتم مشاركة التغييرات."
   }
 }

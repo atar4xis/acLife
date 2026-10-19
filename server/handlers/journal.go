@@ -66,7 +66,7 @@ func applyJournalChanges(ctx context.Context, tx *sql.Tx, owner string, changes 
 	deletedIDs, upserts, touched := collected.deleted, collected.upserts, collected.touched
 
 	var kept []journalUpsert
-	err = withQuota(ctx, tx, owner, touched, measureJournal, func() error {
+	err = withQuota(ctx, tx, owner, personalBytes, touched, measureJournal, func() error {
 		if len(deletedIDs) > 0 {
 			query, args, err := database.In(`DELETE FROM journal_items WHERE owner = ? AND id IN (?)`, owner, touched[:len(deletedIDs)])
 			if err != nil {
@@ -160,6 +160,12 @@ type journalRow struct {
 	updatedAt int64
 }
 
+type journalSource struct {
+	table  string
+	keyCol string
+	key    string
+}
+
 func SyncJournal(w http.ResponseWriter, r *http.Request) {
 	user := session.GetLoggedInUser(r)
 	utils.Assert(user != nil) // ensured by AuthMiddleware
@@ -170,33 +176,55 @@ func SyncJournal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Hash != "" {
-		syncJournalHash(w, r, user.UUID, req.Hash)
-		return
+	records := 0
+	for _, part := range req.Parts {
+		records += len(part.Records)
 	}
-
-	if len(req.Buckets) == 0 || len(req.Buckets) > constants.MaxJournalSyncBuckets || len(req.Records) > constants.MaxRequestRecords {
+	if records > constants.MaxRequestRecords {
 		utils.SendBadRequest(w)
 		return
 	}
 
-	wanted := make(map[string]struct{}, len(req.Buckets))
-	for _, b := range req.Buckets {
+	// the byte budget is shared by all parts, so later parts get what earlier ones left
+	budget := journalSyncBytes
+	syncParts(w, r, "SyncJournal", kindJournal, req.Parts,
+		func(part types.JournalSyncPart) string { return part.Space },
+		func(ctx context.Context, space string, part types.JournalSyncPart) (any, error) {
+			src := journalSource{"journal_items", "owner", user.UUID}
+			if space != "" {
+				src = journalSource{"share_records", "space", space}
+			}
+
+			if part.Hash != "" {
+				return syncJournalHash(ctx, src, part.Hash)
+			}
+
+			buckets, err := parseJournalBuckets(part.Buckets)
+			if err != nil {
+				return nil, err
+			}
+
+			res, sent, err := diffJournalBuckets(ctx, src, buckets, part.Records, budget)
+			budget -= sent
+			return res, err
+		},
+	)
+}
+
+func parseJournalBuckets(requested []string) ([]string, error) {
+	if len(requested) == 0 || len(requested) > constants.MaxJournalSyncBuckets {
+		return nil, errBadSync
+	}
+
+	wanted := make(map[string]struct{}, len(requested))
+	for _, b := range requested {
 		if !slices.Contains(journalBuckets, b) {
-			utils.SendBadRequest(w)
-			return
+			return nil, errBadSync
 		}
 		wanted[b] = struct{}{}
 	}
 
-	res, err := diffJournalBuckets(r.Context(), user.UUID, slices.Sorted(maps.Keys(wanted)), req.Records)
-	if err != nil {
-		utils.LogError("SyncJournal", "diffJournalBuckets", err)
-		utils.SendInternalError(w)
-		return
-	}
-
-	utils.SendJSON(w, http.StatusOK, types.Reply[types.JournalSyncResponse]{Success: true, Data: res})
+	return slices.Sorted(maps.Keys(wanted)), nil
 }
 
 type journalSend struct {
@@ -205,7 +233,7 @@ type journalSend struct {
 	added  bool
 }
 
-func diffJournalBuckets(ctx context.Context, owner string, buckets []string, cached []types.CachedRecord) (types.JournalSyncResponse, error) {
+func diffJournalBuckets(ctx context.Context, src journalSource, buckets []string, cached []types.CachedRecord, limit int64) (types.JournalSyncResponse, int64, error) {
 	res := types.JournalSyncResponse{
 		SyncDiff: types.SyncDiff[types.EncryptedRecord]{
 			Added:   []types.EncryptedRecord{},
@@ -214,20 +242,24 @@ func diffJournalBuckets(ctx context.Context, owner string, buckets []string, cac
 		},
 		Remaining: []string{},
 	}
+	if limit <= 0 {
+		res.Remaining = buckets
+		return res, 0, nil
+	}
 
 	ranges := make([]string, len(buckets))
 	args := make([]any, 0, 2*len(buckets)+1)
-	args = append(args, owner)
+	args = append(args, src.key)
 	for i, b := range buckets {
 		ranges[i] = "(id >= ? AND id < ?)"
 		args = append(args, b, nextBucket(b))
 	}
 	rows, err := database.Query(ctx,
-		`SELECT id, updated_at FROM journal_items WHERE owner = ? AND (`+strings.Join(ranges, " OR ")+`) ORDER BY id`,
+		`SELECT id, updated_at FROM `+src.table+` WHERE `+src.keyCol+` = ? AND (`+strings.Join(ranges, " OR ")+`) ORDER BY id`,
 		args...,
 	)
 	if err != nil {
-		return res, err
+		return res, 0, err
 	}
 	defer func() { _ = rows.Close() }()
 
@@ -237,13 +269,13 @@ func diffJournalBuckets(ctx context.Context, owner string, buckets []string, cac
 		var id string
 		var updatedAt time.Time
 		if err := rows.Scan(&id, &updatedAt); err != nil {
-			return res, err
+			return res, 0, err
 		}
 		server[id] = updatedAt.UnixMilli()
 		serverIDs[journalBucket(id)] = append(serverIDs[journalBucket(id)], id)
 	}
 	if err := rows.Err(); err != nil {
-		return res, err
+		return res, 0, err
 	}
 
 	client := make(map[string]int64, len(cached))
@@ -272,9 +304,9 @@ func diffJournalBuckets(ctx context.Context, owner string, buckets []string, cac
 	var sent int64
 	for start := 0; start < len(send); start += constants.JournalFetchChunk {
 		chunk := send[start:min(start+constants.JournalFetchChunk, len(send))]
-		items, err := fetchJournalItems(ctx, owner, chunk)
+		items, err := fetchJournalItems(ctx, src, chunk)
 		if err != nil {
-			return res, err
+			return res, sent, err
 		}
 
 		for i, s := range chunk {
@@ -289,21 +321,21 @@ func diffJournalBuckets(ctx context.Context, owner string, buckets []string, cac
 			}
 
 			sent += int64(len(ev.Data))
-			if next := start + i + 1; sent >= journalSyncBytes && next < len(send) {
+			if next := start + i + 1; sent >= limit && next < len(send) {
 				res.Remaining = buckets[slices.Index(buckets, send[next].bucket):]
-				return res, nil
+				return res, sent, nil
 			}
 		}
 	}
-	return res, nil
+	return res, sent, nil
 }
 
-func fetchJournalItems(ctx context.Context, owner string, chunk []journalSend) (map[string]types.EncryptedRecord, error) {
+func fetchJournalItems(ctx context.Context, src journalSource, chunk []journalSend) (map[string]types.EncryptedRecord, error) {
 	ids := make([]string, len(chunk))
 	for i, s := range chunk {
 		ids[i] = s.id
 	}
-	query, args, err := database.In(`SELECT id, data, updated_at FROM journal_items WHERE owner = ? AND id IN (?)`, owner, ids)
+	query, args, err := database.In(`SELECT id, data, updated_at FROM `+src.table+` WHERE `+src.keyCol+` = ? AND id IN (?)`, src.key, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -326,12 +358,10 @@ func fetchJournalItems(ctx context.Context, owner string, chunk []journalSend) (
 	return items, rows.Err()
 }
 
-func syncJournalHash(w http.ResponseWriter, r *http.Request, owner, hash string) {
-	rows, err := database.Query(r.Context(), `SELECT id, updated_at FROM journal_items WHERE owner = ?`, owner)
+func syncJournalHash(ctx context.Context, src journalSource, hash string) (types.JournalHashResponse, error) {
+	rows, err := database.Query(ctx, `SELECT id, updated_at FROM `+src.table+` WHERE `+src.keyCol+` = ?`, src.key)
 	if err != nil {
-		utils.LogError("syncJournalHash", "Query", err)
-		utils.SendInternalError(w)
-		return
+		return types.JournalHashResponse{}, err
 	}
 	defer func() { _ = rows.Close() }()
 
@@ -341,9 +371,7 @@ func syncJournalHash(w http.ResponseWriter, r *http.Request, owner, hash string)
 		var id string
 		var updatedAt time.Time
 		if err := rows.Scan(&id, &updatedAt); err != nil {
-			utils.LogError("syncJournalHash", "Scan", err)
-			utils.SendInternalError(w)
-			return
+			return types.JournalHashResponse{}, err
 		}
 		line := hashLine(id, updatedAt)
 		all = append(all, line)
@@ -351,9 +379,7 @@ func syncJournalHash(w http.ResponseWriter, r *http.Request, owner, hash string)
 		byBucket[bucket] = append(byBucket[bucket], line)
 	}
 	if err := rows.Err(); err != nil {
-		utils.LogError("syncJournalHash", "Rows", err)
-		utils.SendInternalError(w)
-		return
+		return types.JournalHashResponse{}, err
 	}
 
 	res := types.JournalHashResponse{Match: bucketHash(all) == hash}
@@ -365,14 +391,14 @@ func syncJournalHash(w http.ResponseWriter, r *http.Request, owner, hash string)
 		res.Table = table.String()
 	}
 
-	utils.SendJSON(w, http.StatusOK, types.Reply[types.JournalHashResponse]{Success: true, Data: res})
+	return res, nil
 }
 
 // measureJournal returns the quota bytes of the owner's journal items among ids.
 func measureJournal(ctx context.Context, tx *sql.Tx, owner string, ids []any) (int64, error) {
 	var used int64
 	err := tx.QueryRowContext(ctx,
-		`SELECT COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM journal_items WHERE owner = ? AND id IN (?`+strings.Repeat(",?", len(ids)-1)+`)`,
+		`SELECT COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM journal_items WHERE owner = ? AND id IN (`+placeholders(len(ids))+`)`,
 		append([]any{owner}, ids...)...,
 	).Scan(&used)
 	return used, err

@@ -313,7 +313,8 @@
       "security": "Account and security",
       "sync": "Sync",
       "application": "Application",
-      "journal": "Journal"
+      "journal": "Journal",
+      "sharing": "Sharing"
     },
     "sections": {
       "theme": "Theme",
@@ -342,7 +343,12 @@
       "journal-editor": "Editor",
       "journal-customization": "Customization",
       "note-defaults": "Note defaults",
-      "journal-import-export": "Import / Export"
+      "journal-import-export": "Import / Export",
+      "sharing-start": "Share",
+      "sharing-invites": "Invitations",
+      "sharing-owned": "Shared by you",
+      "sharing-joined": "Shared with you",
+      "sharing-contacts": "Contacts"
     },
     "items": {
       "theme-mode": "Theme mode",
@@ -426,7 +432,15 @@
       "journal-foreground-value": "Foreground color value",
       "journal-background-value": "Background color value",
       "journal-import": "Import format",
-      "journal-export": "Export"
+      "journal-export": "Export",
+      "sharing-calendar": "Share your whole calendar",
+      "sharing-journal": "Share your whole journal",
+      "sharing-code": "Your security code",
+      "sharing-invite-notifications": "Invitation notifications",
+      "sharing-invites-list": "Invitations",
+      "sharing-owned-list": "Shared by you",
+      "sharing-joined-list": "Shared with you",
+      "sharing-contacts-list": "Contacts"
     },
     "colors": {
       "background": "Background",
@@ -626,7 +640,7 @@
       },
       "status": {
         "idle": "Not checked",
-        "checking": "Checking…",
+        "checking": "Checking...",
         "upToDate": "Up to date",
         "available": "Update available ({{version}})",
         "downloading": "Downloading",
@@ -850,7 +864,13 @@
     "too_many_attempts_seconds_one": "Too many attempts. Try again in {{count}} second.",
     "too_many_attempts_seconds_other": "Too many attempts. Try again in {{count}} seconds.",
     "too_many_attempts_minutes_one": "Too many attempts. Try again in {{count}} minute.",
-    "too_many_attempts_minutes_other": "Too many attempts. Try again in {{count}} minutes."
+    "too_many_attempts_minutes_other": "Too many attempts. Try again in {{count}} minutes.",
+    "keys_exist": "Keys already exist.",
+    "share_not_found": "Share not found.",
+    "share_forbidden": "You don't have permission to do that.",
+    "user_not_found": "User not found.",
+    "already_member": "This person already has access.",
+    "share_limit_reached": "Sharing limit reached."
   },
   "views": {
     "calendar": "Calendar",
@@ -958,10 +978,85 @@
         "unsupported": "Unsupported file type",
         "tooLarge": "Too large"
       }
-    }
+    },
+    "sharedBy": "Shared by {{email}}"
   },
   "iconPicker": {
     "search": "Search icons...",
     "empty": "No icons found"
+  },
+  "shares": {
+    "share": "Share...",
+    "shareOccurrence": "Share only this event...",
+    "shareSeries": "Share the whole series...",
+    "occurrenceDetached": "This event is now separate from the series. The rest of the series stays private.",
+    "title": "Share \"{{label}}\"",
+    "descriptionItem": "People you add can open this item and see changes in real time.",
+    "descriptionCollection": "People you add can access everything here, including future additions, and see changes in real time.",
+    "email": "Email address",
+    "continue": "Continue",
+    "permission": "Permission",
+    "canView": "Can view",
+    "canEdit": "Can edit",
+    "canViewLower": "can view",
+    "canEditLower": "can edit",
+    "userNotFound": "User not found.",
+    "enterOtherEmail": "Enter another person's email.",
+    "alreadyMember": "This person already has access.",
+    "invited": "Invitation sent.",
+    "sendInvite": "Send invitation",
+    "people": "People",
+    "pending": "Invited",
+    "permissionOf": "Permission for {{email}}",
+    "removePerson": "Remove {{email}}",
+    "stopSharing": "Stop sharing",
+    "codeIntro": "This is the security code for {{email}}. Ask them to read out their own code (Settings > Sharing > Contacts). Check that the two codes match, in person or through another trusted channel.",
+    "codeHint": "Verification is optional. It can help detect server tampering.",
+    "codeChanged": "The security code for {{email}} has changed since you last shared with them. This can happen after an account reset.",
+    "codeChangedHint": "If possible, confirm the new code with them before continuing. Continue only if you trust the new code.",
+    "codeLabel": "Security code of {{email}}",
+    "acceptTitle": "Accept this invitation?",
+    "acceptDescription": "{{email}} has invited you to access shared content.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "inviteFrom": "{{email}} shared {{what}} with you.",
+    "kind": {
+      "calendar": {
+        "collection": "a calendar",
+        "item": "an event"
+      },
+      "journal": {
+        "collection": "a journal or folder",
+        "item": "a note"
+      }
+    },
+    "leave": "Leave",
+    "shareAction": "Share",
+    "nickname": "Nickname",
+    "editNickname": "Set a nickname for {{email}}",
+    "nothingShared": "You are not sharing anything.",
+    "nothingReceived": "Nothing is shared with you.",
+    "noContacts": "No contacts yet.",
+    "contacts": "Contacts",
+    "addContact": "Add contact",
+    "newInvitation": "New invitation",
+    "inviteToast": "{{email}} shared {{what}} with you.",
+    "viewInvite": "View",
+    "noInvites": "No invitations.",
+    "removeContact": "Remove contact {{email}}",
+    "contactAdded": "Contact added.",
+    "codeChangedWarning": "The security code for {{email}} has changed.",
+    "trustNewCode": "Trust new security code",
+    "unavailable": "To use sharing, sign in to an account with an active subscription.",
+    "wholeCalendar": "Whole calendar",
+    "wholeJournal": "Whole journal",
+    "anEvent": "Event",
+    "aNote": "Note",
+    "calendar": "Calendar",
+    "myCalendar": "My calendar",
+    "sharedByView": "Shared by {{email}} (view only)",
+    "sharedByEdit": "Shared by {{email}}",
+    "memberStorageFull": "The owner's storage is full. Your changes were not saved.",
+    "ownerStorageFull": "Your shared storage is full. Changes were not shared."
   }
 }

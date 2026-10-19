@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 import { t as translate } from "@/i18n";
+import { canMoveInto } from "@/lib/journal/shared";
 import { defaultJournalSettings } from "@/lib/settingsDefaults";
 import type {
   ItemStyle,
@@ -70,6 +71,7 @@ export const buildTree = (
     level.forEach((node) => sortLevel(node.children));
   };
   sortLevel(roots);
+  roots.sort((a, b) => Number(!!b.item._virtual) - Number(!!a.item._virtual));
 
   return roots;
 };
@@ -134,7 +136,8 @@ export const canMoveItem = (
   parentId: string | null,
 ) =>
   item.parentId !== parentId &&
-  !(parentId && descendantIds(items, item.id).includes(parentId));
+  !(parentId && descendantIds(items, item.id).includes(parentId)) &&
+  canMoveInto(item, items.find((found) => found.id === parentId) ?? null);
 
 export type MoveTarget = { folder: JournalItem | null; depth: number };
 

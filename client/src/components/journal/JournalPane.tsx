@@ -10,6 +10,7 @@ import NoteTitle from "@/components/journal/NoteTitle";
 import ScrollThumb from "@/components/ui/scroll-thumb";
 import { useJournalActions, useJournalItems } from "@/context/JournalContext";
 import { useJournalSettings } from "@/context/JournalSettingsContext";
+import { canEditItem } from "@/lib/journal/shared";
 import type { PaneNode } from "@/types/Journal";
 import {
   FOLLOW_MS,
@@ -29,10 +30,12 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
   const items = useJournalItems();
   const editor = useRef<JournalEditorHandle>(null);
   const anchor = useRef(1);
-  const reading = !!pane.reading;
-  const mode = useRef(reading);
   const scroller = useRef<HTMLDivElement>(null);
   const note = items.find((item) => item.id === pane.active);
+  const editable = !!note && canEditItem(note);
+  const locked = !!note && !editable;
+  const reading = !!pane.reading || locked;
+  const mode = useRef(reading);
   const settings = useJournalSettings((s) => ({
     showTitle: s.journalShowTitle,
     lineNumbers: s.journalLineNumbers,
@@ -48,6 +51,7 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
   const toggleTask = useCallback(
     (line: number) => {
       const current = noteRef.current!;
+      if (!canEditItem(current)) return;
       const lines = current.content.split("\n");
       lines[line - 1] = lines[line - 1].replace(/\[[ xX]\]/, (marker) =>
         marker === "[ ]" ? "[x]" : "[ ]",
@@ -101,7 +105,7 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
       onClickCapture={captureAnchor}
       onFocusCapture={() => journal.focusPane(pane.id)}
     >
-      <JournalTabs pane={pane} />
+      <JournalTabs pane={pane} reading={reading} locked={locked} />
       <div className="relative min-h-0 flex-1">
         <div
           ref={scroller}
@@ -117,9 +121,10 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
                   id={note.id}
                   name={note.name}
                   onEnter={focusEditor}
+                  readOnly={!editable}
                 />
               )}
-              {pane.reading ? (
+              {reading ? (
                 <article className="relative mx-auto w-full max-w-3xl px-6 pb-12">
                   <JournalMarkdown onToggleTask={toggleTask}>
                     {note.content}
@@ -169,7 +174,7 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
           ref={statusBar}
           content={note.content}
           initialCursor={cursor.current}
-          showCursor={!pane.reading}
+          showCursor={!reading}
         />
       )}
     </section>

@@ -70,15 +70,15 @@ func jsave(t *testing.T, c *testutil.Client, changes ...handlers.JournalChange) 
 	}
 }
 
-func jsyncStatus(c *testutil.Client, req types.JournalSyncRequest) (int, types.JournalSyncResponse) {
-	status, reply := testutil.Call[types.JournalSyncResponse](c, "POST", "/journal/sync", req)
+func syncJournal(c *testutil.Client, req types.JournalSyncPart) (int, types.JournalSyncResponse) {
+	status, reply := syncOne[types.JournalSyncResponse](c, "/journal/sync", "", req)
 	return status, reply.Data
 }
 
 func jsync(t *testing.T, c *testutil.Client, buckets []string, items ...types.CachedRecord) types.JournalSyncResponse {
 	t.Helper()
 
-	status, res := jsyncStatus(c, types.JournalSyncRequest{Buckets: buckets, Records: items})
+	status, res := syncJournal(c, types.JournalSyncPart{Buckets: buckets, Records: items})
 	if status != http.StatusOK {
 		t.Fatalf("journal sync: got %d", status)
 	}
@@ -88,7 +88,7 @@ func jsync(t *testing.T, c *testutil.Client, buckets []string, items ...types.Ca
 func jhash(t *testing.T, c *testutil.Client, hash string) types.JournalHashResponse {
 	t.Helper()
 
-	status, reply := testutil.Call[types.JournalHashResponse](c, "POST", "/journal/sync", types.JournalSyncRequest{Hash: hash})
+	status, reply := syncOne[types.JournalHashResponse](c, "/journal/sync", "", types.JournalSyncPart{Hash: hash})
 	if status != http.StatusOK {
 		t.Fatalf("journal hash: got %d", status)
 	}
@@ -169,7 +169,7 @@ func TestJournalRoutesAreGated(t *testing.T) {
 		if status, _ := testutil.Call[any](c, "POST", "/journal/save", []any{}); status != http.StatusUnauthorized {
 			t.Fatalf("save: got %d", status)
 		}
-		if status, _ := testutil.Call[any](c, "POST", "/journal/sync", types.JournalSyncRequest{Hash: "x"}); status != http.StatusUnauthorized {
+		if status, _ := syncOne[any](c, "/journal/sync", "", types.JournalSyncPart{Hash: "x"}); status != http.StatusUnauthorized {
 			t.Fatalf("sync: got %d", status)
 		}
 	})
@@ -189,7 +189,7 @@ func TestJournalRoutesAreGated(t *testing.T) {
 		if status, reply := testutil.Call[any](c, "POST", "/journal/save", []any{}); status != http.StatusPaymentRequired || reply.Code != "invalid_subscription" {
 			t.Fatalf("save: got %d %q", status, reply.Code)
 		}
-		if status, _ := testutil.Call[any](c, "POST", "/journal/sync", types.JournalSyncRequest{Hash: "x"}); status != http.StatusPaymentRequired {
+		if status, _ := syncOne[any](c, "/journal/sync", "", types.JournalSyncPart{Hash: "x"}); status != http.StatusPaymentRequired {
 			t.Fatalf("sync: got %d", status)
 		}
 
@@ -567,20 +567,20 @@ func TestJournalSyncRejectsBadRequests(t *testing.T) {
 
 	cases := []struct {
 		name string
-		req  types.JournalSyncRequest
+		req  types.JournalSyncPart
 	}{
-		{"nothing requested", types.JournalSyncRequest{}},
-		{"no buckets", types.JournalSyncRequest{Records: []types.CachedRecord{jcached(jid("ab", 1), baseTS)}}},
-		{"too many buckets", types.JournalSyncRequest{Buckets: jbuckets()[:constants.MaxJournalSyncBuckets+1]}},
-		{"uppercase bucket", types.JournalSyncRequest{Buckets: []string{"AB"}}},
-		{"short bucket", types.JournalSyncRequest{Buckets: []string{"a"}}},
-		{"long bucket", types.JournalSyncRequest{Buckets: []string{"abc"}}},
-		{"non hex bucket", types.JournalSyncRequest{Buckets: []string{"zz"}}},
-		{"too many items", types.JournalSyncRequest{Buckets: []string{"ab"}, Records: make([]types.CachedRecord, constants.MaxRequestRecords+1)}},
+		{"nothing requested", types.JournalSyncPart{}},
+		{"no buckets", types.JournalSyncPart{Records: []types.CachedRecord{jcached(jid("ab", 1), baseTS)}}},
+		{"too many buckets", types.JournalSyncPart{Buckets: jbuckets()[:constants.MaxJournalSyncBuckets+1]}},
+		{"uppercase bucket", types.JournalSyncPart{Buckets: []string{"AB"}}},
+		{"short bucket", types.JournalSyncPart{Buckets: []string{"a"}}},
+		{"long bucket", types.JournalSyncPart{Buckets: []string{"abc"}}},
+		{"non hex bucket", types.JournalSyncPart{Buckets: []string{"zz"}}},
+		{"too many items", types.JournalSyncPart{Buckets: []string{"ab"}, Records: make([]types.CachedRecord, constants.MaxRequestRecords+1)}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if status, _ := jsyncStatus(c, tc.req); status != http.StatusBadRequest {
+			if status, _ := syncJournal(c, tc.req); status != http.StatusBadRequest {
 				t.Fatalf("got %d", status)
 			}
 		})
@@ -591,13 +591,13 @@ func TestJournalSyncRejectsBadRequests(t *testing.T) {
 		for i := range items {
 			items[i] = jcached(jid("ab", i), baseTS)
 		}
-		if status, _ := jsyncStatus(c, types.JournalSyncRequest{Buckets: []string{"ab"}, Records: items}); status != http.StatusOK {
+		if status, _ := syncJournal(c, types.JournalSyncPart{Buckets: []string{"ab"}, Records: items}); status != http.StatusOK {
 			t.Fatalf("got %d", status)
 		}
 	})
 
 	t.Run("the maximum number of buckets is accepted", func(t *testing.T) {
-		if status, _ := jsyncStatus(c, types.JournalSyncRequest{Buckets: jbuckets()[:constants.MaxJournalSyncBuckets]}); status != http.StatusOK {
+		if status, _ := syncJournal(c, types.JournalSyncPart{Buckets: jbuckets()[:constants.MaxJournalSyncBuckets]}); status != http.StatusOK {
 			t.Fatalf("got %d", status)
 		}
 	})
@@ -816,12 +816,10 @@ func TestJournalStreamReplicatesOnlyTheFinalStateOfEachItem(t *testing.T) {
 
 func TestJournalStreamSkipsWritesThatLoseNewerWins(t *testing.T) {
 	testutil.RequireDB(t)
-	owner, other := testutil.NewUser(t), testutil.NewUser(t)
-	c := testutil.NewClient(t).As(owner)
+	c := testutil.NewClient(t).As(testutil.NewUser(t))
 	ownerConn, _ := openStream(t, c)
-	otherConn, _ := openStream(t, testutil.NewClient(t).As(other))
-	stale, equal, fresh, foreign := jid("ab", 1), jid("ab", 2), jid("ab", 3), jid("ab", 4)
-	jsave(t, c, jadded(jev(stale, baseTS+5)), jadded(jev(equal, baseTS)), jadded(jev(foreign, baseTS)))
+	stale, equal, fresh := jid("ab", 1), jid("ab", 2), jid("ab", 3)
+	jsave(t, c, jadded(jev(stale, baseTS+5)), jadded(jev(equal, baseTS)))
 	readMessage(t, ownerConn)
 
 	jsave(t, c, jupdated(jev(stale, baseTS)), jupdated(jev(equal, baseTS)), jadded(jev(fresh, baseTS)))
@@ -833,10 +831,35 @@ func TestJournalStreamSkipsWritesThatLoseNewerWins(t *testing.T) {
 	if want := []string{equal, fresh}; !slices.Equal(ids, want) {
 		t.Fatalf("published %v, want %v", ids, want)
 	}
+}
 
-	jsave(t, testutil.NewClient(t).As(other), jupdated(jevSized(foreign, baseTS+100, 7)))
-	if got := readMessage(t, otherConn); len(got.Changes) != 0 {
-		t.Fatalf("foreign write published %+v", got.Changes)
+func TestSeveralOwnersCanHoldTheSameJournalID(t *testing.T) {
+	testutil.RequireDB(t)
+	first, second := testutil.NewUser(t), testutil.NewUser(t)
+	srv := testutil.NewClient(t)
+	id := jid("ab", 4)
+
+	jsave(t, srv.As(first), jadded(jev(id, baseTS)))
+	jsave(t, srv.As(second), jupdated(jevSized(id, baseTS+100, 7)))
+	jsave(t, srv.As(first), jupdated(jevSized(id, baseTS+5, 3)))
+
+	size := func(owner string) int64 {
+		var n int64
+		if err := database.DB.QueryRow("SELECT OCTET_LENGTH(data) FROM journal_items WHERE id = ? AND owner = ?", id, owner).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if got := size(first.UUID); got != 3 {
+		t.Fatalf("first owner's item is %d bytes", got)
+	}
+	if got := size(second.UUID); got != 7 {
+		t.Fatalf("second owner's item is %d bytes", got)
+	}
+
+	jsave(t, srv.As(second), jdeleted(id))
+	if n := count(t, "SELECT COUNT(*) FROM journal_items WHERE id = ? AND owner = ?", id, first.UUID); n != 1 {
+		t.Fatal("the first owner's item was deleted")
 	}
 }
 

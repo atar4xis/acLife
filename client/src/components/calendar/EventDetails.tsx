@@ -11,6 +11,7 @@ import {
   ClockIcon,
   PencilIcon,
   RepeatIcon,
+  UsersIcon,
   XIcon,
 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -23,6 +24,8 @@ import {
 import { cn } from "@/lib/utils";
 import { fmt } from "@/i18n";
 import { useTranslation } from "react-i18next";
+import { canEditEvent } from "@/lib/calendar/shared";
+import { useShares } from "@/context/ShareContext";
 
 export default function EventDetails({
   event,
@@ -40,6 +43,11 @@ export default function EventDetails({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
+  const { joined, nameOf } = useShares();
+  const owner = event._shared
+    ? joined.find((space) => space.id === event._shared?.space)
+    : undefined;
+  const sharedBy = owner && nameOf(owner.owner, owner.ownerEmail);
   const detailsRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const completedId = useId();
@@ -118,14 +126,16 @@ export default function EventDetails({
           {t(event.isTask ? "details.taskTitle" : "details.title")}
         </h3>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t("editor.title")}
-            onClick={onEdit}
-          >
-            <PencilIcon />
-          </Button>
+          {canEditEvent(event) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t("editor.title")}
+              onClick={onEdit}
+            >
+              <PencilIcon />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -155,6 +165,17 @@ export default function EventDetails({
           {" · "}
           {event.allDay ? t("editor.allDay") : timeLabel}
         </div>
+        {sharedBy && (
+          <div className="flex items-center gap-2 text-sm">
+            <UsersIcon className="size-4 shrink-0" />
+            {t(
+              event._shared?.permission === "write"
+                ? "shares.sharedByEdit"
+                : "shares.sharedByView",
+              { email: sharedBy },
+            )}
+          </div>
+        )}
         {event.repeat && (
           <div className="flex items-center gap-2 text-sm">
             <RepeatIcon className="size-4 shrink-0" />
@@ -192,6 +213,7 @@ export default function EventDetails({
             <Checkbox
               id={completedId}
               checked={!!event.completed}
+              disabled={!canEditEvent(event)}
               onCheckedChange={(c) => onToggleCompleted(!!c)}
             />
             <Label htmlFor={completedId} className="font-normal leading-5">

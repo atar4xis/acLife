@@ -28,6 +28,7 @@ type EventHandlers = {
   remove: (event: CalendarEvent) => void;
   duplicate: (event: CalendarEvent) => void;
   detach: (event: CalendarEvent) => void;
+  shareOccurrence: (event: CalendarEvent) => string;
   reset: (event: CalendarEvent) => void;
 };
 
@@ -37,6 +38,7 @@ const HANDLER_KEYS = [
   "remove",
   "duplicate",
   "detach",
+  "shareOccurrence",
   "reset",
 ] as const;
 

@@ -3,14 +3,17 @@ import type { MenuParts } from "@/components/journal/menuParts";
 import SplitMenu from "@/components/journal/SplitMenu";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useJournal } from "@/context/JournalContext";
+import { useShares } from "@/context/ShareContext";
 import { moveOptions } from "@/lib/journal/layout";
 import { moveTargets } from "@/lib/journal/item";
+import { canDeleteItem, canEditItem, isOwnItem } from "@/lib/journal/shared";
 import type { JournalItem } from "@/types/Journal";
 import {
   Clipboard,
   Columns2,
   FolderInput,
   Palette,
+  Share2,
   PencilLine,
   Trash2,
 } from "lucide-react";
@@ -35,6 +38,7 @@ export default function TreeItemMenu({
   const { t } = useTranslation();
   const developerMode = useCalendarSettings((s) => s.developerMode);
   const { items, sort, workspace, expanded } = useJournal();
+  const { enabled: canShare, openShare } = useShares();
   const targets = moveTargets(items, sort, item);
   const drag = { id: item.id };
   const options = moveOptions(workspace, drag, workspace.focused);
@@ -44,14 +48,33 @@ export default function TreeItemMenu({
   return (
     <>
       <Label className="max-w-64 truncate">{item.name}</Label>
-      <Item onSelect={() => actions.onRename(item.id)}>
-        <PencilLine />
-        {t("journal.rename")}
-      </Item>
-      <Item onSelect={() => actions.onCustomize(item)}>
-        <Palette />
-        {t("journal.customize")}
-      </Item>
+      {canEditItem(item) && (
+        <>
+          <Item onSelect={() => actions.onRename(item.id)}>
+            <PencilLine />
+            {t("journal.rename")}
+          </Item>
+          <Item onSelect={() => actions.onCustomize(item)}>
+            <Palette />
+            {t("journal.customize")}
+          </Item>
+        </>
+      )}
+      {canShare && isOwnItem(item) && (
+        <Item
+          onSelect={() =>
+            openShare({
+              kind: "journal",
+              scope: item.type === "folder" ? "collection" : "item",
+              target: item.id,
+              label: item.name,
+            })
+          }
+        >
+          <Share2 />
+          {t("shares.share")}
+        </Item>
+      )}
       {developerMode && (
         <Item onSelect={() => navigator.clipboard.writeText(item.id)}>
           <Clipboard />
@@ -96,10 +119,12 @@ export default function TreeItemMenu({
           </SubContent>
         </Sub>
       )}
-      <Item onSelect={() => actions.onDelete(item)}>
-        <Trash2 />
-        {t("journal.delete")}
-      </Item>
+      {canDeleteItem(item) && (
+        <Item onSelect={() => actions.onDelete(item)}>
+          <Trash2 />
+          {t("journal.delete")}
+        </Item>
+      )}
     </>
   );
 }

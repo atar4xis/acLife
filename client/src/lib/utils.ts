@@ -140,22 +140,6 @@ export function arrayBufferToBase64Url(buffer: ArrayBufferLike): string {
     .replace(/=+$/, "");
 }
 
-export function uuidToBytes(uuid: string): Uint8Array {
-  const hex = uuid.replace(/-/g, "");
-  if (hex.length !== 32) throw new Error("invalid UUID in uuidToBytes");
-
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
-  }
-
-  return bytes;
-}
-
-export function uuidToBase64(uuid: string): string {
-  return bytesToBase64(uuidToBytes(uuid));
-}
-
 export function uint8ArrayFromBase64(b64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(b64);
 
@@ -274,3 +258,14 @@ export function normalize(text: string): string {
 export function tokenize(query: string): string[] {
   return normalize(query).split(/\s+/).filter(Boolean);
 }
+
+export const identity = <T>(value: T) => value;
+
+type WithoutRuntimeFields<T> = {
+  [K in keyof T as K extends `_${string}` ? never : K]: T[K];
+};
+
+export const withoutRuntimeFields = <T extends object>(value: T) =>
+  Object.fromEntries(
+    Object.entries(value).filter(([key]) => !key.startsWith("_")),
+  ) as WithoutRuntimeFields<T>;

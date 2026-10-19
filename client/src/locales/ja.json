@@ -303,7 +303,8 @@
       "security": "アカウントとセキュリティ",
       "sync": "同期",
       "application": "アプリ",
-      "journal": "ジャーナル"
+      "journal": "ジャーナル",
+      "sharing": "共有"
     },
     "sections": {
       "theme": "テーマ",
@@ -332,7 +333,12 @@
       "journal-editor": "エディタ",
       "journal-customization": "カスタマイズ",
       "note-defaults": "ノートの初期設定",
-      "journal-import-export": "インポート / エクスポート"
+      "journal-import-export": "インポート / エクスポート",
+      "sharing-start": "共有",
+      "sharing-invites": "招待",
+      "sharing-owned": "自分が共有したアイテム",
+      "sharing-joined": "共有されたアイテム",
+      "sharing-contacts": "連絡先"
     },
     "items": {
       "theme-mode": "テーマモード",
@@ -416,7 +422,15 @@
       "journal-foreground-value": "文字色の値",
       "journal-background-value": "背景色の値",
       "journal-import": "インポート形式",
-      "journal-export": "エクスポート"
+      "journal-export": "エクスポート",
+      "sharing-calendar": "カレンダー全体を共有",
+      "sharing-journal": "ジャーナル全体を共有",
+      "sharing-code": "あなたのセキュリティコード",
+      "sharing-invite-notifications": "招待の通知",
+      "sharing-invites-list": "招待",
+      "sharing-owned-list": "自分が共有したアイテム",
+      "sharing-joined-list": "共有されたアイテム",
+      "sharing-contacts-list": "連絡先"
     },
     "colors": {
       "background": "背景",
@@ -612,7 +626,7 @@
       },
       "status": {
         "idle": "未確認",
-        "checking": "確認中…",
+        "checking": "確認中...",
         "upToDate": "最新です",
         "available": "アップデートがあります ({{version}})",
         "downloading": "ダウンロード中",
@@ -824,7 +838,13 @@
     "already_subscribed": "すでにサブスクリプションに登録されています。",
     "registration_busy": "現在、登録が混み合っています。しばらくしてからもう一度お試しください。",
     "too_many_attempts_seconds_other": "試行回数が多すぎます。{{count}}秒後にもう一度お試しください。",
-    "too_many_attempts_minutes_other": "試行回数が多すぎます。{{count}}分後にもう一度お試しください。"
+    "too_many_attempts_minutes_other": "試行回数が多すぎます。{{count}}分後にもう一度お試しください。",
+    "keys_exist": "キーはすでに存在します。",
+    "share_not_found": "共有が見つかりません。",
+    "share_forbidden": "この操作を行う権限がありません。",
+    "user_not_found": "ユーザーが見つかりません。",
+    "already_member": "この人はすでにアクセスできます。",
+    "share_limit_reached": "共有の上限に達しました。"
   },
   "views": {
     "calendar": "カレンダー",
@@ -931,10 +951,85 @@
         "unsupported": "未対応のファイル形式",
         "tooLarge": "大きすぎます"
       }
-    }
+    },
+    "sharedBy": "{{email}} が共有"
   },
   "iconPicker": {
     "search": "アイコンを検索...",
     "empty": "アイコンが見つかりません"
+  },
+  "shares": {
+    "share": "共有...",
+    "shareOccurrence": "この予定のみを共有...",
+    "shareSeries": "シリーズ全体を共有...",
+    "occurrenceDetached": "この予定はシリーズから独立しました。シリーズの他の予定は非公開のままです。",
+    "title": "「{{label}}」を共有",
+    "descriptionItem": "追加したメンバーは、このアイテムを開いて変更をリアルタイムで確認できます。",
+    "descriptionCollection": "追加したメンバーは、後から追加されるものも含め、ここにあるすべてのコンテンツにアクセスし、変更をリアルタイムで確認できます。",
+    "email": "メールアドレス",
+    "continue": "続ける",
+    "permission": "権限",
+    "canView": "閲覧可",
+    "canEdit": "編集可",
+    "canViewLower": "閲覧できます",
+    "canEditLower": "編集できます",
+    "userNotFound": "ユーザーが見つかりません。",
+    "enterOtherEmail": "他の人のメールアドレスを入力してください。",
+    "alreadyMember": "この人はすでにアクセスできます。",
+    "invited": "招待を送信しました。",
+    "sendInvite": "招待を送る",
+    "people": "メンバー",
+    "pending": "招待中",
+    "permissionOf": "{{email}} の権限",
+    "removePerson": "{{email}} を削除",
+    "stopSharing": "共有を停止",
+    "codeIntro": "これは {{email}} のセキュリティコードです。相手自身のコード（設定 > 共有 > 連絡先）を読み上げてもらってください。対面または別の信頼できる連絡手段で、2つのコードが一致することを確認してください。",
+    "codeHint": "確認は任意です。サーバーの改ざんを見つける手がかりになります。",
+    "codeChanged": "{{email}} のセキュリティコードが前回の共有から変わりました。アカウントをリセットした場合に起こることがあります。",
+    "codeChangedHint": "可能であれば、続ける前に相手と新しいコードを照合してください。新しいコードを信頼できる場合にのみ続けてください。",
+    "codeLabel": "{{email}} のセキュリティコード",
+    "acceptTitle": "この招待を承諾しますか？",
+    "acceptDescription": "{{email}} から共有コンテンツへの招待が届いています。",
+    "accept": "承諾",
+    "decline": "辞退",
+    "inviteFrom": "{{email}} が{{what}}をあなたと共有しました。",
+    "kind": {
+      "calendar": {
+        "collection": "カレンダー",
+        "item": "予定"
+      },
+      "journal": {
+        "collection": "ジャーナルまたはフォルダ",
+        "item": "ノート"
+      }
+    },
+    "leave": "退出",
+    "shareAction": "共有",
+    "nickname": "ニックネーム",
+    "editNickname": "{{email}} のニックネームを設定",
+    "nothingShared": "共有しているものはありません。",
+    "nothingReceived": "共有されたアイテムはありません。",
+    "noContacts": "連絡先はまだありません。",
+    "contacts": "連絡先",
+    "addContact": "連絡先を追加",
+    "newInvitation": "新しい招待",
+    "inviteToast": "{{email}} が{{what}}をあなたと共有しました。",
+    "viewInvite": "表示",
+    "noInvites": "招待はありません。",
+    "removeContact": "連絡先 {{email}} を削除",
+    "contactAdded": "連絡先を追加しました。",
+    "codeChangedWarning": "{{email}} のセキュリティコードが変わりました。",
+    "trustNewCode": "新しいセキュリティコードを信頼",
+    "unavailable": "共有を利用するには、サブスクリプションが有効なアカウントでサインインしてください。",
+    "wholeCalendar": "カレンダー全体",
+    "wholeJournal": "ジャーナル全体",
+    "anEvent": "予定",
+    "aNote": "ノート",
+    "calendar": "カレンダー",
+    "myCalendar": "自分のカレンダー",
+    "sharedByView": "{{email}} が共有（閲覧のみ）",
+    "sharedByEdit": "{{email}} が共有",
+    "memberStorageFull": "所有者のストレージがいっぱいです。変更は保存されませんでした。",
+    "ownerStorageFull": "共有ストレージがいっぱいです。変更は共有されませんでした。"
   }
 }

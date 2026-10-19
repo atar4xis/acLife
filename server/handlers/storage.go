@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
-	"strings"
+	"slices"
 	"time"
 
 	"acLife/constants"
@@ -16,7 +16,26 @@ import (
 )
 
 // storedBytesSQL is what one calendar_events row (alias ce) counts toward the quota: its data plus its bucket rows, it takes constants.BucketRowBytes as its argument.
-const storedBytesSQL = `OCTET_LENGTH(ce.data) + ? * (SELECT COUNT(*) FROM calendar_event_buckets ceb WHERE ceb.event_id = ce.id)`
+const storedBytesSQL = `OCTET_LENGTH(ce.data) + ? * (SELECT COUNT(*) FROM calendar_event_buckets ceb WHERE ceb.owner = ce.owner AND ceb.event_id = ce.id)`
+
+// sharedStoredBytesSQL is what the records of all the owner's spaces count toward their shared quota, it takes the owner, constants.BucketRowBytes and the owner again.
+const sharedStoredBytesSQL = `(SELECT COALESCE(SUM(OCTET_LENGTH(sr.data)), 0) FROM share_records sr JOIN share_spaces sp ON sp.id = sr.space WHERE sp.owner = ?)
+	+ (SELECT COUNT(*) * ? FROM share_record_buckets srb JOIN share_spaces sp ON sp.id = srb.space WHERE sp.owner = ?)`
+
+// quotaCounter picks which user_storage column a quota check reads and how to recount it.
+type quotaCounter struct {
+	column string
+	count  func(ctx context.Context, q rowQuerier, owner string) (int64, error)
+}
+
+var (
+	personalBytes = quotaCounter{"used_bytes", countStorage}
+	sharedBytes   = quotaCounter{"shared_bytes", countSharedStorage}
+)
+
+type storageBytes struct {
+	personal, shared int64
+}
 
 type rowQuerier interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
@@ -62,7 +81,7 @@ func GetQuota(w http.ResponseWriter, r *http.Request) {
 }
 
 // lockStorage takes the owner's user_storage lock, which serializes that owner's saves until tx ends.
-func lockStorage(ctx context.Context, tx *sql.Tx, owner string) (used, limit int64, err error) {
+func lockStorage(ctx context.Context, tx *sql.Tx, owner string, c quotaCounter) (used, limit int64, err error) {
 	if _, err := tx.ExecContext(ctx,
 		"INSERT INTO user_storage (owner) VALUES (?) ON DUPLICATE KEY UPDATE owner = owner",
 		owner,
@@ -72,7 +91,7 @@ func lockStorage(ctx context.Context, tx *sql.Tx, owner string) (used, limit int
 
 	var override sql.NullInt64
 	if err := tx.QueryRowContext(ctx,
-		"SELECT used_bytes, max_bytes FROM user_storage WHERE owner = ? FOR UPDATE",
+		"SELECT "+c.column+", max_bytes FROM user_storage WHERE owner = ? FOR UPDATE",
 		owner,
 	).Scan(&used, &override); err != nil {
 		return 0, 0, err
@@ -80,7 +99,7 @@ func lockStorage(ctx context.Context, tx *sql.Tx, owner string) (used, limit int
 
 	limit = storageLimit(override)
 	if used < 0 {
-		used, err = countStorage(ctx, tx, owner)
+		used, err = c.count(ctx, tx, owner)
 	}
 	return used, limit, err
 }
@@ -95,8 +114,14 @@ func countStorage(ctx context.Context, q rowQuerier, owner string) (int64, error
 	return used, err
 }
 
-func withQuota(ctx context.Context, tx *sql.Tx, owner string, touched []any, measure func(ctx context.Context, tx *sql.Tx, owner string, ids []any) (int64, error), write func() error) error {
-	used, limit, err := lockStorage(ctx, tx, owner)
+func countSharedStorage(ctx context.Context, q rowQuerier, owner string) (int64, error) {
+	var used int64
+	err := q.QueryRowContext(ctx, `SELECT `+sharedStoredBytesSQL, owner, constants.BucketRowBytes, owner).Scan(&used)
+	return used, err
+}
+
+func withQuota(ctx context.Context, tx *sql.Tx, owner string, c quotaCounter, touched []any, measure func(ctx context.Context, tx *sql.Tx, owner string, ids []any) (int64, error), write func() error) error {
+	used, limit, err := lockStorage(ctx, tx, owner, c)
 	if err != nil {
 		return err
 	}
@@ -119,11 +144,11 @@ func withQuota(ctx context.Context, tx *sql.Tx, owner string, touched []any, mea
 	if used > limit && after > before {
 		return errStorageLimit
 	}
-	return saveStorage(ctx, tx, owner, used)
+	return saveStorage(ctx, tx, owner, c, used)
 }
 
-func saveStorage(ctx context.Context, tx *sql.Tx, owner string, used int64) error {
-	_, err := tx.ExecContext(ctx, "UPDATE user_storage SET used_bytes = ? WHERE owner = ?", used, owner)
+func saveStorage(ctx context.Context, tx *sql.Tx, owner string, c quotaCounter, used int64) error {
+	_, err := tx.ExecContext(ctx, "UPDATE user_storage SET "+c.column+" = ? WHERE owner = ?", used, owner)
 	return err
 }
 
@@ -168,23 +193,23 @@ func reconcileStorage(ctx context.Context) int {
 // storageSuspects returns the owners of the next batch after the given one whose counter looks wrong, and the last owner of the batch.
 func storageSuspects(ctx context.Context, after string) (suspects []string, last string, err error) {
 	rows, err := database.Query(ctx,
-		"SELECT owner, used_bytes FROM user_storage WHERE owner > ? ORDER BY owner LIMIT ?",
+		"SELECT owner, used_bytes, shared_bytes FROM user_storage WHERE owner > ? ORDER BY owner LIMIT ?",
 		after, constants.StorageReconcileBatch,
 	)
 	if err != nil {
 		return nil, "", err
 	}
 
-	counted := map[string]int64{}
+	recorded := map[string]storageBytes{}
 	var owners []any
 	for rows.Next() {
 		var owner string
-		var used int64
-		if err := rows.Scan(&owner, &used); err != nil {
+		var used, shared int64
+		if err := rows.Scan(&owner, &used, &shared); err != nil {
 			_ = rows.Close()
 			return nil, "", err
 		}
-		counted[owner] = used
+		recorded[owner] = storageBytes{used, shared}
 		owners = append(owners, owner)
 		last = owner
 	}
@@ -194,7 +219,7 @@ func storageSuspects(ctx context.Context, after string) (suspects []string, last
 		return nil, "", err
 	}
 
-	inList := "?" + strings.Repeat(",?", len(owners)-1)
+	inList := placeholders(len(owners))
 	rows, err = database.Query(ctx,
 		`SELECT owner, SUM(bytes) FROM (
 			SELECT ce.owner AS owner, `+storedBytesSQL+` AS bytes FROM calendar_events ce WHERE ce.owner IN (`+inList+`)
@@ -206,38 +231,63 @@ func storageSuspects(ctx context.Context, after string) (suspects []string, last
 	if err != nil {
 		return nil, "", err
 	}
-	defer func() { _ = rows.Close() }()
 
-	actual := map[string]int64{}
-	for rows.Next() {
-		var owner string
-		var used int64
-		if err := rows.Scan(&owner, &used); err != nil {
-			return nil, "", err
-		}
-		actual[owner] = used
+	actual := map[string]storageBytes{}
+	if err := collectOwnerBytes(rows, actual, func(b *storageBytes, n int64) { b.personal = n }); err != nil {
+		return nil, "", err
 	}
-	if err := rows.Err(); err != nil {
+
+	sharedArgs := slices.Concat(owners, []any{constants.BucketRowBytes}, owners)
+	sharedRows, err := database.Query(ctx,
+		`SELECT owner, SUM(bytes) FROM (
+			SELECT sp.owner AS owner, OCTET_LENGTH(sr.data) AS bytes FROM share_records sr JOIN share_spaces sp ON sp.id = sr.space WHERE sp.owner IN (`+inList+`)
+			UNION ALL
+			SELECT sp.owner, ? FROM share_record_buckets srb JOIN share_spaces sp ON sp.id = srb.space WHERE sp.owner IN (`+inList+`)
+		) stored GROUP BY owner`,
+		sharedArgs...,
+	)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if err := collectOwnerBytes(sharedRows, actual, func(b *storageBytes, n int64) { b.shared = n }); err != nil {
 		return nil, "", err
 	}
 
 	for _, owner := range owners {
-		if actual[owner.(string)] != counted[owner.(string)] {
+		if actual[owner.(string)] != recorded[owner.(string)] {
 			suspects = append(suspects, owner.(string))
 		}
 	}
 	return suspects, last, nil
 }
 
-// fixStorage corrects one owner's counter under their lock, it reports whether it was wrong.
+// collectOwnerBytes reads (owner, bytes) rows into the map with set and closes rows.
+func collectOwnerBytes(rows *sql.Rows, into map[string]storageBytes, set func(*storageBytes, int64)) error {
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		var owner string
+		var used int64
+		if err := rows.Scan(&owner, &used); err != nil {
+			return err
+		}
+		bytes := into[owner]
+		set(&bytes, used)
+		into[owner] = bytes
+	}
+	return rows.Err()
+}
+
+// fixStorage corrects one owner's counters under their lock, it reports whether either was wrong.
 func fixStorage(ctx context.Context, owner string) (bool, error) {
-	var counted, actual int64
+	var recorded, actual storageBytes
 	fixed := false
 	err := database.RunTx(ctx, func(tx *sql.Tx) error {
 		if err := tx.QueryRowContext(ctx,
-			"SELECT used_bytes FROM user_storage WHERE owner = ? FOR UPDATE",
+			"SELECT used_bytes, shared_bytes FROM user_storage WHERE owner = ? FOR UPDATE",
 			owner,
-		).Scan(&counted); err != nil {
+		).Scan(&recorded.personal, &recorded.shared); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil
 			}
@@ -245,15 +295,21 @@ func fixStorage(ctx context.Context, owner string) (bool, error) {
 		}
 
 		var err error
-		if actual, err = countStorage(ctx, tx, owner); err != nil {
+		if actual.personal, err = personalBytes.count(ctx, tx, owner); err != nil {
 			return err
 		}
-		fixed = actual != counted
+		if actual.shared, err = sharedBytes.count(ctx, tx, owner); err != nil {
+			return err
+		}
+		fixed = actual != recorded
 		if !fixed {
 			return nil
 		}
 
-		if err := saveStorage(ctx, tx, owner, actual); err != nil {
+		if err := saveStorage(ctx, tx, owner, personalBytes, actual.personal); err != nil {
+			return err
+		}
+		if err := saveStorage(ctx, tx, owner, sharedBytes, actual.shared); err != nil {
 			return err
 		}
 		return tx.Commit()
@@ -262,6 +318,6 @@ func fixStorage(ctx context.Context, owner string) (bool, error) {
 		return false, err
 	}
 
-	utils.LogInfo("reconcileStorage: corrected the counter of owner %s from %d to %d bytes", owner, counted, actual)
+	utils.LogInfo("reconcileStorage: corrected the counters of owner %s from %d/%d to %d/%d bytes (personal/shared)", owner, recorded.personal, recorded.shared, actual.personal, actual.shared)
 	return true, nil
 }

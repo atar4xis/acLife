@@ -33,3 +33,7 @@ type SyncDiff[T any] struct {
 	Deleted []string `json:"deleted"`
 	Added   []T      `json:"added"`
 }
+
+type SyncReply struct {
+	Parts []Reply[any] `json:"parts"`
+}

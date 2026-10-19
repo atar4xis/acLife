@@ -1140,7 +1140,7 @@ describe("Calendar grid keyboard: views", () => {
             setMode={vi.fn()}
             saveEvents={vi.fn()}
             syncEvents={vi.fn()}
-            syncBuckets={vi.fn()}
+            syncExpanded={vi.fn()}
             saveDebounceMs={0}
           />
         </CalendarProvider>

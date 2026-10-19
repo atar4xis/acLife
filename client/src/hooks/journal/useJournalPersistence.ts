@@ -10,6 +10,7 @@ import { createJournalState } from "@/reducers/journalReducer";
 import type { Encrypted } from "@/types/Crypt";
 import type {
   JournalAction,
+  JournalItem,
   JournalLayoutState,
   JournalState,
 } from "@/types/Journal";
@@ -36,9 +37,11 @@ const restoreLayout = async (
 
 export const useJournalPersistence = ({
   state,
+  ownItems,
   dispatch,
 }: {
   state: JournalState;
+  ownItems: JournalItem[];
   dispatch: Dispatch<JournalAction>;
 }) => {
   const { masterKey, user } = useUser();
@@ -124,8 +127,8 @@ export const useJournalPersistence = ({
     };
   }, [masterKey, storage.ready, offline]);
 
-  const { items, sort, workspace, splitSizes, expanded } = state;
-  const data = useMemo(() => ({ items, sort }), [items, sort]);
+  const { sort, workspace, splitSizes, expanded } = state;
+  const data = useMemo(() => ({ items: ownItems, sort }), [ownItems, sort]);
   const layout = useMemo(
     () => ({ workspace, splitSizes, expanded: Array.from(expanded) }),
     [workspace, splitSizes, expanded],

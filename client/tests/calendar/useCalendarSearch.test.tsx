@@ -8,7 +8,10 @@ import {
   MAX_EXPAND_STEP_WEEKS,
   SEARCH_RADIUS_CHECKPOINTS,
 } from "@/hooks/calendar/useCalendarSearch";
-import { SYNC_RANGE_WEEKS } from "@/lib/calendar/buckets";
+import {
+  computeExpandedRangeBuckets,
+  SYNC_RANGE_WEEKS,
+} from "@/lib/calendar/buckets";
 import type { CalendarEvent } from "@/types/calendar/Event";
 import type { User } from "@/types/User";
 
@@ -46,6 +49,13 @@ const dentistEvent: CalendarEvent = {
   timestamp: DateTime.now().toMillis(),
 };
 
+const recordingSync =
+  (calls: string[][]): Parameters<typeof useCalendarSearch>[5] =>
+  async (currentDate, _masterKey, key, fromRange, toRange) => {
+    calls.push(await computeExpandedRangeBuckets(currentDate, key, fromRange, toRange));
+    return [];
+  };
+
 const chunkSizes = (fromRange: number, toRange: number): number[] => {
   const sizes: number[] = [];
   let range = fromRange;
@@ -75,37 +85,34 @@ describe("useCalendarSearch", () => {
     vi.useRealTimers();
   });
 
-  it("paces requests and stops at the first checkpoint even when syncBuckets churns identity every call", async () => {
+  it("paces requests and stops at the first checkpoint even when syncExpanded churns identity every call", async () => {
     const calls: string[][] = [];
 
-    const makeSyncBuckets = () =>
-      vi.fn(async (buckets: string[]): Promise<CalendarEvent[]> => {
-        calls.push(buckets);
-        return [];
-      });
+    const makeSyncExpanded = () =>
+      vi.fn(recordingSync(calls));
 
     let rerenderFn:
-      | ((props: { syncBuckets: ReturnType<typeof makeSyncBuckets> }) => void)
+      | ((props: { syncExpanded: ReturnType<typeof makeSyncExpanded> }) => void)
       | null = null;
 
     const onExpandedEvents = () => {
       act(() => {
-        rerenderFn?.({ syncBuckets: makeSyncBuckets() });
+        rerenderFn?.({ syncExpanded: makeSyncExpanded() });
       });
     };
 
     const { result, rerender } = renderHook(
-      (props: { syncBuckets: ReturnType<typeof makeSyncBuckets> }) =>
+      (props: { syncExpanded: ReturnType<typeof makeSyncExpanded> }) =>
         useCalendarSearch(
           [],
           onlineUser,
           masterKey,
           bucketKey,
           DateTime.now(),
-          props.syncBuckets,
+          props.syncExpanded,
           onExpandedEvents,
         ),
-      { initialProps: { syncBuckets: makeSyncBuckets() } },
+      { initialProps: { syncExpanded: makeSyncExpanded() } },
     );
     rerenderFn = rerender;
 
@@ -147,12 +154,7 @@ describe("useCalendarSearch", () => {
   it("only expands to the next checkpoint when expandSearchRadius is called", async () => {
     const calls: string[][] = [];
 
-    const syncBuckets = vi.fn(
-      async (buckets: string[]): Promise<CalendarEvent[]> => {
-        calls.push(buckets);
-        return [];
-      },
-    );
+    const syncExpanded = vi.fn(recordingSync(calls));
 
     const { result } = renderHook(() =>
       useCalendarSearch(
@@ -161,7 +163,7 @@ describe("useCalendarSearch", () => {
         masterKey,
         bucketKey,
         DateTime.now(),
-        syncBuckets,
+        syncExpanded,
         () => {},
       ),
     );
@@ -204,7 +206,7 @@ describe("useCalendarSearch", () => {
   });
 
   it("keeps events found while expanding when the events prop is replaced", async () => {
-    const syncBuckets = vi.fn(
+    const syncExpanded = vi.fn(
       async (): Promise<CalendarEvent[]> => [dentistEvent],
     );
 
@@ -216,7 +218,7 @@ describe("useCalendarSearch", () => {
           masterKey,
           bucketKey,
           DateTime.now(),
-          syncBuckets,
+          syncExpanded,
           () => {},
         ),
       { initialProps: { events: [] as CalendarEvent[] } },
@@ -236,7 +238,7 @@ describe("useCalendarSearch", () => {
   });
 
   it("does not list an expanded event twice when the events prop has it too", async () => {
-    const syncBuckets = vi.fn(
+    const syncExpanded = vi.fn(
       async (): Promise<CalendarEvent[]> => [dentistEvent],
     );
 
@@ -247,7 +249,7 @@ describe("useCalendarSearch", () => {
         masterKey,
         bucketKey,
         DateTime.now(),
-        syncBuckets,
+        syncExpanded,
         () => {},
       ),
     );
@@ -263,7 +265,7 @@ describe("useCalendarSearch", () => {
   });
 
   it("hands each expanded batch to onExpandedEvents and forgets them on a new query", async () => {
-    const syncBuckets = vi
+    const syncExpanded = vi
       .fn<() => Promise<CalendarEvent[]>>()
       .mockResolvedValueOnce([dentistEvent])
       .mockResolvedValue([]);
@@ -276,7 +278,7 @@ describe("useCalendarSearch", () => {
         masterKey,
         bucketKey,
         DateTime.now(),
-        syncBuckets,
+        syncExpanded,
         onExpandedEvents,
       ),
     );
@@ -299,7 +301,7 @@ describe("useCalendarSearch", () => {
   });
 
   it("allows expanding the search radius even when local results already match", async () => {
-    const syncBuckets = vi.fn(async (): Promise<CalendarEvent[]> => []);
+    const syncExpanded = vi.fn(async (): Promise<CalendarEvent[]> => []);
 
     const { result } = renderHook(() =>
       useCalendarSearch(
@@ -308,7 +310,7 @@ describe("useCalendarSearch", () => {
         masterKey,
         bucketKey,
         DateTime.now(),
-        syncBuckets,
+        syncExpanded,
         () => {},
       ),
     );
@@ -327,12 +329,7 @@ describe("useCalendarSearch", () => {
 
   it("resyncs the base radius from scratch on every new search instead of trusting a stale local match", async () => {
     const calls: string[][] = [];
-    const syncBuckets = vi.fn(
-      async (buckets: string[]): Promise<CalendarEvent[]> => {
-        calls.push(buckets);
-        return [];
-      },
-    );
+    const syncExpanded = vi.fn(recordingSync(calls));
 
     const { result } = renderHook(() =>
       useCalendarSearch(
@@ -341,7 +338,7 @@ describe("useCalendarSearch", () => {
         masterKey,
         bucketKey,
         DateTime.now(),
-        syncBuckets,
+        syncExpanded,
         () => {},
       ),
     );

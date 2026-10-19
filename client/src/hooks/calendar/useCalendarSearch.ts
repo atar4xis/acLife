@@ -12,9 +12,9 @@ import type { User } from "@/types/User";
 import {
   SYNC_RANGE_WEEKS,
   MAX_SYNC_BUCKETS_PER_REQUEST,
-  computeExpandedRangeBuckets,
 } from "@/lib/calendar/buckets";
 import { nearbyOccurrences } from "@/lib/calendar/recurrence";
+import type { CalendarProps } from "@/types/calendar/Props";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { normalize, sleep, tokenize } from "@/lib/utils";
 
@@ -41,11 +41,7 @@ export const useCalendarSearch = (
   masterKey: CryptoKey | null,
   bucketKey: CryptoKey | null,
   currentDate: DateTime,
-  syncBuckets: (
-    buckets: string[],
-    masterKey: CryptoKey,
-    bucketKey: CryptoKey,
-  ) => Promise<CalendarEvent[]>,
+  syncExpanded: CalendarProps["syncExpanded"],
   onExpandedEvents: (events: CalendarEvent[]) => void,
 ) => {
   const [query, setQuery] = useState("");
@@ -104,13 +100,13 @@ export const useCalendarSearch = (
           targetRange,
         );
 
-        const buckets = await computeExpandedRangeBuckets(
+        const merged = await syncExpanded(
           currentDate,
+          masterKey,
           bucketKey,
           syncedRangeRef.current,
           nextRange,
         );
-        const merged = await syncBuckets(buckets, masterKey, bucketKey);
         if (gen !== searchGenRef.current) return matched;
 
         syncedRangeRef.current = nextRange;
@@ -127,7 +123,7 @@ export const useCalendarSearch = (
 
       return matched;
     },
-    [currentDate, masterKey, bucketKey, syncBuckets, onExpandedEvents],
+    [currentDate, masterKey, bucketKey, syncExpanded, onExpandedEvents],
   );
 
   const runSearchStage = useEffectEvent(runStage);

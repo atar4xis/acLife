@@ -11,6 +11,8 @@ const MESSAGE_TYPES = [
   "calendar",
   "journal",
   "push",
+  "space-updated",
+  "spaces",
 ] as const;
 const RETRY_MS = 30000;
 const TIMEOUT_MS = 60000;

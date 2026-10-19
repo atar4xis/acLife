@@ -1,3 +1,4 @@
+import type { SharedInfo } from "@/types/Share";
 import type { EncryptedRecord, SyncDiff } from "@/types/Sync";
 
 export type JournalItem = {
@@ -12,6 +13,8 @@ export type JournalItem = {
   color?: string;
   background?: string;
   colorIcon?: boolean;
+  _shared?: SharedInfo;
+  _virtual?: boolean;
 };
 
 export type ItemStyle = Pick<
@@ -94,6 +97,7 @@ export type JournalState = JournalData & {
   workspace: Workspace;
   expanded: ReadonlySet<string>;
   splitSizes: Record<string, number[]>;
+  removed: string[];
 };
 
 export type JournalAction =
@@ -120,6 +124,7 @@ export type JournalAction =
   | { type: "removeItem"; id: string }
   | { type: "applyRemote"; upserts: JournalItem[]; deletedIds: string[] }
   | { type: "importItems"; upserts: JournalItem[] }
+  | { type: "setSharedSpaces"; spaces: SharedInfo[] }
   | { type: "setSort"; sort: JournalSort }
   | { type: "toggleFolder"; id: string }
   | { type: "setAllExpanded"; expanded: boolean }

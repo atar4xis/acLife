@@ -11,6 +11,7 @@ import {
   timeFormat,
 } from "@/lib/calendar/date";
 import { useTranslation } from "react-i18next";
+import { canEditEvent } from "@/lib/calendar/shared";
 import { DateTime } from "luxon";
 import {
   ContextMenu,
@@ -25,7 +26,7 @@ type AgendaEventProps = {
 };
 export default function AgendaEvent({ event, overdue }: AgendaEventProps) {
   const { t } = useTranslation();
-  const { setEditingEvent, setCurrentDate, eventHandlers } =
+  const { setEditingEvent, setViewingEvent, setCurrentDate, eventHandlers } =
     useCalendarActions();
   const { setOpenMobile } = useSidebar();
   const [now, setNow] = useState(Date.now());
@@ -82,7 +83,8 @@ export default function AgendaEvent({ event, overdue }: AgendaEventProps) {
 
   const openEditor = () => {
     setCurrentDate(event.start.startOf("day"));
-    setEditingEvent(event);
+    if (canEditEvent(event)) setEditingEvent(event);
+    else setViewingEvent(event);
     setOpenMobile(false); // close sidebar
   };
 
@@ -110,6 +112,7 @@ export default function AgendaEvent({ event, overdue }: AgendaEventProps) {
               <Checkbox
                 className="relative z-10 me-2 mt-0.5 shrink-0 self-start"
                 checked={event.completed ?? false}
+                disabled={!canEditEvent(event)}
                 onClick={(e) => e.stopPropagation()}
                 onCheckedChange={(c) => toggleCompleted(!!c)}
               />
@@ -150,6 +153,7 @@ export default function AgendaEvent({ event, overdue }: AgendaEventProps) {
           onDelete={eventHandlers.remove}
           onDuplicate={eventHandlers.duplicate}
           onDetach={eventHandlers.detach}
+          onShareOccurrence={eventHandlers.shareOccurrence}
           onReset={eventHandlers.reset}
         />
       </ContextMenuContent>

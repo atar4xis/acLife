@@ -1,6 +1,7 @@
 import { Settings } from "luxon";
 import type { CalendarEvent, EncryptedEvent } from "@/types/calendar/Event";
 import { decrypt, encrypt } from "../crypt";
+import { createSerialQueue } from "../serialQueue";
 import { decryptEvents } from "./crypt";
 
 export type CachedEvent = Required<EncryptedEvent>;
@@ -44,7 +45,13 @@ export const createEventCache = (name = "acLifeEventCache") => {
         req.result.createObjectStore(EVENTS);
         req.result.createObjectStore(BUCKETS);
       };
-      req.onsuccess = () => resolve(req.result);
+      req.onsuccess = () => {
+        req.result.onversionchange = () => {
+          req.result.close();
+          opening = undefined;
+        };
+        resolve(req.result);
+      };
       req.onerror = () => reject(req.error);
     }));
 
@@ -84,6 +91,70 @@ export const createEventCache = (name = "acLifeEventCache") => {
     return new Map(ids.map((id, i) => [id, entries[i]]));
   };
 
+  const applyQueue = createSerialQueue();
+
+  const applyNow = async (
+    upserts: CacheUpsert[],
+    deletes: string[],
+    masterKey: CryptoKey,
+  ) => {
+    const touched = [...new Set([...upserts.map((u) => u.id), ...deletes])];
+    const previous = (await getMany<CachedEvent>(EVENTS, touched)).filter(
+      (r) => r !== undefined,
+    );
+
+    const bucketIds = new Set([
+      ...previous.flatMap((r) => r.buckets),
+      ...upserts.flatMap((u) => u.buckets),
+    ]);
+    const index = await readIndex([...bucketIds], masterKey);
+    const lists = new Map(
+      [...index].map(([id, entries]) => [
+        id,
+        new Map(entries.map((e) => [e.id, e.ts])),
+      ]),
+    );
+
+    for (const r of previous) {
+      for (const b of r.buckets) lists.get(b)!.delete(r.id);
+    }
+    for (const u of upserts) {
+      for (const b of u.buckets) lists.get(b)!.set(u.id, u.updatedAt);
+    }
+
+    const encoded = await Promise.all(
+      [...lists].map(async ([id, list]) => ({
+        id,
+        blob: list.size
+          ? await encodeIndex(
+              [...list].map(([id, ts]) => ({ id, ts })),
+              masterKey,
+            )
+          : null,
+      })),
+    );
+
+    const db = await open();
+    const tx = db.transaction([EVENTS, BUCKETS], "readwrite");
+    const events = tx.objectStore(EVENTS);
+    const buckets = tx.objectStore(BUCKETS);
+    for (const id of deletes) events.delete(id);
+    for (const { id, data, updatedAt, buckets: ids } of upserts) {
+      events.put({ id, data, updatedAt, buckets: ids }, id);
+    }
+    for (const { id, blob } of encoded) {
+      if (blob) buckets.put(blob, id);
+      else buckets.delete(id);
+    }
+    await finished(tx);
+
+    resetDecoded(masterKey);
+    for (const id of deletes) decoded.delete(id);
+    for (const u of upserts) {
+      decoded.set(u.id, { ts: u.updatedAt, event: u.event });
+    }
+  };
+
   return {
     readIndex,
 
@@ -108,67 +179,8 @@ export const createEventCache = (name = "acLifeEventCache") => {
       return toEvents(all, masterKey);
     },
 
-    async apply(
-      upserts: CacheUpsert[],
-      deletes: string[],
-      masterKey: CryptoKey,
-    ) {
-      const touched = [...new Set([...upserts.map((u) => u.id), ...deletes])];
-      const previous = (await getMany<CachedEvent>(EVENTS, touched)).filter(
-        (r) => r !== undefined,
-      );
-
-      const bucketIds = new Set([
-        ...previous.flatMap((r) => r.buckets),
-        ...upserts.flatMap((u) => u.buckets),
-      ]);
-      const index = await readIndex([...bucketIds], masterKey);
-      const lists = new Map(
-        [...index].map(([id, entries]) => [
-          id,
-          new Map(entries.map((e) => [e.id, e.ts])),
-        ]),
-      );
-
-      for (const r of previous) {
-        for (const b of r.buckets) lists.get(b)!.delete(r.id);
-      }
-      for (const u of upserts) {
-        for (const b of u.buckets) lists.get(b)!.set(u.id, u.updatedAt);
-      }
-
-      const encoded = await Promise.all(
-        [...lists].map(async ([id, list]) => ({
-          id,
-          blob: list.size
-            ? await encodeIndex(
-                [...list].map(([id, ts]) => ({ id, ts })),
-                masterKey,
-              )
-            : null,
-        })),
-      );
-
-      const db = await open();
-      const tx = db.transaction([EVENTS, BUCKETS], "readwrite");
-      const events = tx.objectStore(EVENTS);
-      const buckets = tx.objectStore(BUCKETS);
-      for (const id of deletes) events.delete(id);
-      for (const { id, data, updatedAt, buckets: ids } of upserts) {
-        events.put({ id, data, updatedAt, buckets: ids }, id);
-      }
-      for (const { id, blob } of encoded) {
-        if (blob) buckets.put(blob, id);
-        else buckets.delete(id);
-      }
-      await finished(tx);
-
-      resetDecoded(masterKey);
-      for (const id of deletes) decoded.delete(id);
-      for (const u of upserts) {
-        decoded.set(u.id, { ts: u.updatedAt, event: u.event });
-      }
-    },
+    apply: (upserts: CacheUpsert[], deletes: string[], masterKey: CryptoKey) =>
+      applyQueue(() => applyNow(upserts, deletes, masterKey)),
 
     async clear() {
       const db = await open();

@@ -2,7 +2,13 @@ import { CLIENT_ID } from "@/lib/clientId";
 import type { EncryptedRecord } from "@/types/Sync";
 
 export type StreamMessageType =
-  "sync" | "settings" | "calendar" | "journal" | "push";
+  | "sync"
+  | "settings"
+  | "calendar"
+  | "journal"
+  | "push"
+  | "space-updated"
+  | "spaces";
 
 export type StreamChange =
   | { type: "deleted"; id: string }
@@ -17,6 +23,7 @@ export type PushEvent = {
 export type StreamMessage = {
   type: StreamMessageType;
   originClientId?: string;
+  space?: string;
   changes?: StreamChange[];
   push?: PushEvent;
 };

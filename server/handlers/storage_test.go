@@ -38,7 +38,7 @@ func stored(t *testing.T, owner string) int64 {
 	if err := database.DB.QueryRow("SELECT COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM calendar_events WHERE owner = ?", owner).Scan(&data); err != nil {
 		t.Fatalf("sum stored: %v", err)
 	}
-	if err := database.DB.QueryRow("SELECT COUNT(*) FROM calendar_event_buckets ceb JOIN calendar_events ce ON ce.id = ceb.event_id WHERE ce.owner = ?", owner).Scan(&bucketRows); err != nil {
+	if err := database.DB.QueryRow("SELECT COUNT(*) FROM calendar_event_buckets ceb JOIN calendar_events ce ON ce.owner = ceb.owner AND ce.id = ceb.event_id WHERE ce.owner = ?", owner).Scan(&bucketRows); err != nil {
 		t.Fatalf("count bucket rows: %v", err)
 	}
 	return data + bucketRows*constants.BucketRowBytes + jstored(t, owner)
@@ -52,7 +52,7 @@ func fp(sizes ...int) int64 {
 	return total
 }
 
-func addBucketRows(t *testing.T, eventID string, n int) {
+func addBucketRows(t *testing.T, owner, eventID string, n int) {
 	t.Helper()
 
 	for i := range n {
@@ -60,7 +60,7 @@ func addBucketRows(t *testing.T, eventID string, n int) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := database.DB.Exec("INSERT INTO calendar_event_buckets (event_id, bucket_id) VALUES (?, ?)", eventID, bucket); err != nil {
+		if _, err := database.DB.Exec("INSERT INTO calendar_event_buckets (owner, event_id, bucket_id) VALUES (?, ?, ?)", owner, eventID, bucket); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -136,7 +136,7 @@ func TestStorageCountsEventsThatPredateTheCounters(t *testing.T) {
 	user := testutil.NewUser(t)
 	legacy := testutil.NewUUID()
 	insertEvents(t, user.UUID, legacy, testutil.NewUUID(), testutil.NewUUID())
-	addBucketRows(t, legacy, 2)
+	addBucketRows(t, user.UUID, legacy, 2)
 	c := testutil.NewClient(t).As(user)
 
 	mustSave(t, c, added(evSized(testutil.NewUUID(), baseTS, 10, testutil.BucketID(1))))
@@ -155,15 +155,18 @@ func TestStorageIgnoresEventsOfOtherUsers(t *testing.T) {
 	mustSave(t, ic, added(evSized(testutil.NewUUID(), baseTS, 3, bucket)))
 	other := testutil.BucketID(2)
 
-	t.Run("overwriting another user's event", func(t *testing.T) {
+	t.Run("saving an id another user holds", func(t *testing.T) {
 		mustSave(t, ic, added(evSized(id, baseTS+1, 90, bucket, other)), updated(evSized(id, baseTS+2, 90, bucket, other)))
 		requireCounter(t, owner.UUID, fp(40))
-		requireCounter(t, intruder.UUID, fp(3))
+		requireCounter(t, intruder.UUID, fp(3)+90+2*constants.BucketRowBytes)
 	})
-	t.Run("deleting another user's event", func(t *testing.T) {
+	t.Run("deleting an id another user holds", func(t *testing.T) {
 		mustSave(t, ic, deleted(id))
 		requireCounter(t, owner.UUID, fp(40))
 		requireCounter(t, intruder.UUID, fp(3))
+		if n := count(t, "SELECT COUNT(*) FROM calendar_events WHERE id = ? AND owner = ?", id, owner.UUID); n != 1 {
+			t.Fatal("the owner's event was deleted")
+		}
 	})
 }
 
@@ -594,7 +597,7 @@ func TestGetQuota(t *testing.T) {
 		user := testutil.NewUser(t)
 		legacy := testutil.NewUUID()
 		insertEvents(t, user.UUID, legacy, testutil.NewUUID())
-		addBucketRows(t, legacy, 2)
+		addBucketRows(t, user.UUID, legacy, 2)
 		c := testutil.NewClient(t).As(user)
 
 		if got := getQuota(t, c); got.Used != 2*int64(len("legacy"))+2*constants.BucketRowBytes {
@@ -698,7 +701,7 @@ func TestReconcileStorageCountsBucketRows(t *testing.T) {
 	}
 	requireCounter(t, user.UUID, 10+4*constants.BucketRowBytes)
 
-	addBucketRows(t, id, 2)
+	addBucketRows(t, user.UUID, id, 2)
 	if fixed := handlers.ReconcileStorage(context.Background()); fixed != 1 {
 		t.Fatalf("fixed %d", fixed)
 	}

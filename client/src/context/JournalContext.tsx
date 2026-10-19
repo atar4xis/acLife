@@ -1,7 +1,9 @@
 import { t as translate } from "@/i18n";
 import { useJournalPersistence } from "@/hooks/journal/useJournalPersistence";
 import { useJournalSync } from "@/hooks/journal/useJournalSync";
+import JournalSharing from "@/components/journal/JournalSharing";
 import { useSettingsStore } from "@/context/SettingsStoreContext";
+import { useShares } from "@/context/ShareContext";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { EMPTY_ARRAY } from "@/lib/constants";
 import {
@@ -11,6 +13,7 @@ import {
   toOutline,
 } from "@/lib/journal/item";
 import { isNewTab } from "@/lib/journal/layout";
+import { isOwnItem, placeShared, haveSameItems } from "@/lib/journal/shared";
 import { createJournalState, journalReducer } from "@/reducers/journalReducer";
 import type { WithChildren } from "@/types/Props";
 import type {
@@ -30,7 +33,7 @@ import {
   useState,
 } from "react";
 
-type JournalContextValue = JournalState & {
+type JournalContextValue = Omit<JournalState, "removed"> & {
   drag: JournalDrag | null;
   acceptedDrag: JournalDrag | null;
   loadFailed: boolean;
@@ -68,6 +71,7 @@ type JournalActions = {
 const JournalContext = createContext<JournalContextValue | null>(null);
 const JournalActionsContext = createContext<JournalActions | null>(null);
 const JournalItemsContext = createContext<JournalItem[] | null>(null);
+const JournalOwnItemsContext = createContext<JournalItem[] | null>(null);
 const JournalSavingContext = createContext(false);
 
 export function JournalProvider({ children }: WithChildren) {
@@ -80,11 +84,35 @@ export function JournalProvider({ children }: WithChildren) {
   const [drag, setDrag] = useState<JournalDrag | null>(null);
   const dragRef = useRef<JournalDrag | null>(null);
 
+  // sync only sees the own items, shared ones come from their spaces
+  const latestOwnItems = useMemo(
+    () => state.items.filter(isOwnItem),
+    [state.items],
+  );
+  const [ownItems, setOwnItems] = useState(latestOwnItems);
+  if (!haveSameItems(ownItems, latestOwnItems)) setOwnItems(latestOwnItems);
   const { failed: loadFailed, loaded } = useJournalPersistence({
     state,
+    ownItems,
     dispatch,
   });
-  const saving = useJournalSync({ items: state.items, loaded, dispatch });
+  const saving = useJournalSync({ items: ownItems, loaded, dispatch });
+  const { joined, nameOf } = useShares();
+  const ownerNames = useMemo(
+    () =>
+      new Map(
+        joined.map((space) => [
+          space.owner,
+          nameOf(space.owner, space.ownerEmail),
+        ]),
+      ),
+    [joined, nameOf],
+  );
+  // shared items are grouped under one fake folder per owner for display only
+  const displayItems = useMemo(
+    () => placeShared(state.items, ownerNames),
+    [state.items, ownerNames],
+  );
 
   const actions = useMemo<JournalActions>(() => {
     const setDragging = (next: JournalDrag | null) => {
@@ -163,7 +191,7 @@ export function JournalProvider({ children }: WithChildren) {
   const settledItems = useDebouncedValue(state.items, MODIFIED_SORT_SETTLE_MS);
   const outlineItems = toOutline(
     outline,
-    state.items,
+    displayItems,
     sort.startsWith("modified-") && settledItems === state.items,
   );
   if (outlineItems !== outline) setOutline(outlineItems);
@@ -206,11 +234,19 @@ export function JournalProvider({ children }: WithChildren) {
   return (
     <JournalActionsContext.Provider value={actions}>
       <JournalItemsContext.Provider value={state.items}>
-        <JournalSavingContext.Provider value={saving}>
-          <JournalContext.Provider value={value}>
-            {children}
-          </JournalContext.Provider>
-        </JournalSavingContext.Provider>
+        <JournalOwnItemsContext.Provider value={ownItems}>
+          <JournalSavingContext.Provider value={saving}>
+            <JournalContext.Provider value={value}>
+              <JournalSharing
+                items={state.items}
+                removed={state.removed}
+                loaded={loaded}
+                dispatch={dispatch}
+              />
+              {children}
+            </JournalContext.Provider>
+          </JournalSavingContext.Provider>
+        </JournalOwnItemsContext.Provider>
       </JournalItemsContext.Provider>
     </JournalActionsContext.Provider>
   );
@@ -238,6 +274,14 @@ export function useJournalItems() {
   const items = useContext(JournalItemsContext);
   if (!items)
     throw new Error("useJournalItems must be used within a JournalProvider");
+  return items;
+}
+
+// eslint-disable-next-line
+export function useOwnJournalItems() {
+  const items = useContext(JournalOwnItemsContext);
+  if (!items)
+    throw new Error("useOwnJournalItems must be used within a JournalProvider");
   return items;
 }
 

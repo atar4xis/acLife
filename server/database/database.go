@@ -108,6 +108,11 @@ func In(query string, args ...any) (string, []any, error) {
 	return sqlx.In(query, args...)
 }
 
+func IsForeignKeyViolation(err error) bool {
+	myErr, ok := errors.AsType[*mysql.MySQLError](err)
+	return ok && myErr.Number == 1452
+}
+
 // IsDuplicateEntry checks if the error is a SQL unique constraint violation.
 func IsDuplicateEntry(err error) bool {
 	if err == nil {

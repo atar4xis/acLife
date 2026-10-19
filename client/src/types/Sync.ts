@@ -18,3 +18,12 @@ export type SyncDiff<T> = {
 export type RecordChange =
   | { type: "added" | "updated"; record: EncryptedRecord }
   | { type: "deleted"; id: string };
+
+export type SyncReply = {
+  parts: {
+    success: boolean;
+    code?: string;
+    message?: string;
+    data?: unknown;
+  }[];
+};

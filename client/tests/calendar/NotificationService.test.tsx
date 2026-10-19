@@ -349,6 +349,20 @@ describe("NotificationService", () => {
       });
     });
 
+    it("leaves events shared by others out of the upload and the sounds", async () => {
+      const shared = {
+        ...event("shared", 10, [all, sound]),
+        _shared: { space: "s", owner: "o", scope: "collection", permission: "read" },
+      } as CalendarEvent;
+      mocks.events = [event("mine", 10, [all]), shared];
+      render(<SettingsStoreProvider><NotificationService /></SettingsStoreProvider>);
+      await advance(10 * 60 * 1000);
+
+      const uploaded = mocks.post.mock.calls[0][1] as { events: { id: string }[] };
+      expect(uploaded.events.map((e) => e.id)).toEqual(["mine"]);
+      expect(mocks.play).not.toHaveBeenCalled();
+    });
+
     it("sends one upload at a time and only the latest of the queued ones", async () => {
       let finishFirst!: () => void;
       mocks.post.mockReturnValueOnce(

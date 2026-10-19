@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { withParts } from "../syncParts.ts";
 import { renderHook } from "@testing-library/react";
 import { DateTime } from "luxon";
 import type { User } from "../../src/types/User.ts";
@@ -8,7 +9,7 @@ import type { StreamChange } from "../../src/lib/stream.ts";
 const postMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../src/context/ApiContext.tsx", () => ({
-  useApi: () => ({ post: postMock }),
+  useApi: () => ({ post: withParts(postMock) }),
 }));
 
 vi.mock("../../src/context/StorageContext.tsx", () => ({
@@ -175,7 +176,7 @@ describe("applyChanges", () => {
     expect(events).toHaveLength(1);
   });
 
-  it("rejects when a change cannot be decrypted, leaving the cache alone", async () => {
+  it("rejects a change that cannot be decrypted, leaving the cache alone", async () => {
     const result = await setup(eventWith(1, "kept", 1000));
 
     await expect(
@@ -191,7 +192,7 @@ describe("applyChanges", () => {
         masterKey,
         bucketKey,
       ),
-    ).rejects.toBeDefined();
+    ).rejects.toThrow();
 
     expect((await cachedEvents()).map((e) => e.title)).toEqual(["kept"]);
   });
@@ -315,7 +316,7 @@ describe("applyChanges", () => {
         }),
     );
     const sync = result.current.syncBuckets([bucket], masterKey, bucketKey);
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"));
 
     const applied = result.current.applyChanges([change], masterKey, bucketKey,);
     rerender({ key: otherKey });

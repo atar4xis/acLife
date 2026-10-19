@@ -4,8 +4,6 @@ package utils
 import (
 	"context"
 	"crypto/rand"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -45,6 +43,10 @@ func SendInternalError(w http.ResponseWriter) {
 		Message: "An unexpected error occurred.",
 		Code:    "internal_error",
 	})
+}
+
+func SendError(w http.ResponseWriter, status int, code, message string) {
+	SendJSON(w, status, types.Reply[any]{Success: false, Message: message, Code: code})
 }
 
 // SendBadRequest sends a generic 400 JSON response.
@@ -121,28 +123,6 @@ var uuidPattern = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[
 // IsUUID reports whether s is a hyphenated uuid.
 func IsUUID(s string) bool {
 	return uuidPattern.MatchString(s)
-}
-
-func Base64ToUUID(b64 string) (string, error) {
-	bytes, err := base64.StdEncoding.DecodeString(b64)
-	if err != nil {
-		return "", err
-	}
-	if len(bytes) != 16 {
-		return "", fmt.Errorf("invalid UUID length")
-	}
-
-	hexStr := hex.EncodeToString(bytes)
-
-	uuid := fmt.Sprintf("%s-%s-%s-%s-%s",
-		hexStr[0:8],
-		hexStr[8:12],
-		hexStr[12:16],
-		hexStr[16:20],
-		hexStr[20:32],
-	)
-
-	return strings.ToLower(uuid), nil
 }
 
 // GetAllowedOrigins returns the list of allowed origins from the CORS_ALLOWED_ORIGINS environment variable.

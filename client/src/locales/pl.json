@@ -323,7 +323,8 @@
       "security": "Konto i bezpieczeństwo",
       "sync": "Synchronizacja",
       "application": "Aplikacja",
-      "journal": "Dziennik"
+      "journal": "Dziennik",
+      "sharing": "Udostępnianie"
     },
     "sections": {
       "theme": "Motyw",
@@ -352,7 +353,12 @@
       "journal-editor": "Edytor",
       "journal-customization": "Personalizacja",
       "note-defaults": "Domyślne ustawienia notatek",
-      "journal-import-export": "Import / eksport"
+      "journal-import-export": "Import / eksport",
+      "sharing-start": "Udostępnij",
+      "sharing-invites": "Zaproszenia",
+      "sharing-owned": "Udostępnione przez Ciebie",
+      "sharing-joined": "Udostępnione Tobie",
+      "sharing-contacts": "Kontakty"
     },
     "items": {
       "theme-mode": "Tryb motywu",
@@ -436,7 +442,15 @@
       "journal-foreground-value": "Wartość koloru tekstu",
       "journal-background-value": "Wartość koloru tła",
       "journal-import": "Format importu",
-      "journal-export": "Eksportuj"
+      "journal-export": "Eksportuj",
+      "sharing-calendar": "Udostępnij cały kalendarz",
+      "sharing-journal": "Udostępnij cały dziennik",
+      "sharing-code": "Twój kod bezpieczeństwa",
+      "sharing-invite-notifications": "Powiadomienia o zaproszeniach",
+      "sharing-invites-list": "Zaproszenia",
+      "sharing-owned-list": "Udostępnione przez Ciebie",
+      "sharing-joined-list": "Udostępnione Tobie",
+      "sharing-contacts-list": "Kontakty"
     },
     "colors": {
       "background": "Tło",
@@ -644,7 +658,7 @@
       },
       "status": {
         "idle": "Nie sprawdzono",
-        "checking": "Sprawdzanie…",
+        "checking": "Sprawdzanie...",
         "upToDate": "Najnowsza wersja",
         "available": "Dostępna aktualizacja ({{version}})",
         "downloading": "Pobieranie",
@@ -894,7 +908,13 @@
     "too_many_attempts_minutes_one": "Zbyt wiele prób. Spróbuj ponownie za {{count}} minutę.",
     "too_many_attempts_minutes_few": "Zbyt wiele prób. Spróbuj ponownie za {{count}} minuty.",
     "too_many_attempts_minutes_many": "Zbyt wiele prób. Spróbuj ponownie za {{count}} minut.",
-    "too_many_attempts_minutes_other": "Zbyt wiele prób. Spróbuj ponownie za {{count}} minuty."
+    "too_many_attempts_minutes_other": "Zbyt wiele prób. Spróbuj ponownie za {{count}} minuty.",
+    "keys_exist": "Klucze już istnieją.",
+    "share_not_found": "Nie znaleziono udostępnienia.",
+    "share_forbidden": "Nie masz uprawnień do tej czynności.",
+    "user_not_found": "Nie znaleziono użytkownika.",
+    "already_member": "Ta osoba ma już dostęp.",
+    "share_limit_reached": "Osiągnięto limit udostępniania."
   },
   "views": {
     "calendar": "Kalendarz",
@@ -1004,10 +1024,85 @@
         "unsupported": "Nieobsługiwany typ pliku",
         "tooLarge": "Zbyt duży"
       }
-    }
+    },
+    "sharedBy": "Udostępnia {{email}}"
   },
   "iconPicker": {
     "search": "Szukaj ikon...",
     "empty": "Nie znaleziono ikon"
+  },
+  "shares": {
+    "share": "Udostępnij...",
+    "shareOccurrence": "Udostępnij tylko to wydarzenie...",
+    "shareSeries": "Udostępnij całą serię...",
+    "occurrenceDetached": "To wydarzenie jest teraz niezależne od serii. Reszta serii pozostaje prywatna.",
+    "title": "Udostępnij „{{label}}”",
+    "descriptionItem": "Dodane osoby będą mogły otworzyć ten element i widzieć zmiany na bieżąco.",
+    "descriptionCollection": "Dodane osoby będą mieć dostęp do wszystkiego, co tu jest i co dodasz później, oraz widzieć zmiany na bieżąco.",
+    "email": "Adres e-mail",
+    "continue": "Dalej",
+    "permission": "Uprawnienia",
+    "canView": "Może wyświetlać",
+    "canEdit": "Może edytować",
+    "canViewLower": "może wyświetlać",
+    "canEditLower": "może edytować",
+    "userNotFound": "Nie znaleziono użytkownika.",
+    "enterOtherEmail": "Wpisz adres e-mail innej osoby.",
+    "alreadyMember": "Ta osoba ma już dostęp.",
+    "invited": "Zaproszenie wysłane.",
+    "sendInvite": "Wyślij zaproszenie",
+    "people": "Osoby",
+    "pending": "Zaproszono",
+    "permissionOf": "Uprawnienia osoby {{email}}",
+    "removePerson": "Usuń {{email}}",
+    "stopSharing": "Przestań udostępniać",
+    "codeIntro": "To kod bezpieczeństwa osoby {{email}}. Poproś ją o odczytanie na głos własnego kodu (Ustawienia > Udostępnianie > Kontakty). Sprawdź osobiście lub przez inny zaufany kanał komunikacji, czy oba kody są identyczne.",
+    "codeHint": "Weryfikacja jest opcjonalna. Może pomóc wykryć manipulacje po stronie serwera.",
+    "codeChanged": "Kod bezpieczeństwa osoby {{email}} zmienił się od ostatniego udostępniania. Może się tak zdarzyć, jeśli zresetowała konto.",
+    "codeChangedHint": "Jeśli to możliwe, potwierdź nowy kod z tą osobą przed kontynuowaniem. Kontynuuj tylko wtedy, gdy ufasz nowemu kodowi.",
+    "codeLabel": "Kod bezpieczeństwa osoby {{email}}",
+    "acceptTitle": "Zaakceptować to zaproszenie?",
+    "acceptDescription": "{{email}} zaprasza Cię do korzystania z udostępnionych treści.",
+    "accept": "Akceptuj",
+    "decline": "Odrzuć",
+    "inviteFrom": "{{email}} udostępnia Ci {{what}}",
+    "kind": {
+      "calendar": {
+        "collection": "kalendarz",
+        "item": "wydarzenie"
+      },
+      "journal": {
+        "collection": "dziennik lub folder",
+        "item": "notatkę"
+      }
+    },
+    "leave": "Opuść",
+    "shareAction": "Udostępnij",
+    "nickname": "Pseudonim",
+    "editNickname": "Ustaw pseudonim dla {{email}}",
+    "nothingShared": "Nic nie udostępniasz.",
+    "nothingReceived": "Nie udostępniono Ci żadnych treści.",
+    "noContacts": "Brak kontaktów.",
+    "contacts": "Kontakty",
+    "addContact": "Dodaj kontakt",
+    "newInvitation": "Nowe zaproszenie",
+    "inviteToast": "{{email}} udostępnia Ci {{what}}.",
+    "viewInvite": "Zobacz",
+    "noInvites": "Brak zaproszeń.",
+    "removeContact": "Usuń kontakt {{email}}",
+    "contactAdded": "Dodano kontakt.",
+    "codeChangedWarning": "Kod bezpieczeństwa osoby {{email}} się zmienił.",
+    "trustNewCode": "Zaufaj nowemu kodowi bezpieczeństwa",
+    "unavailable": "Aby korzystać z udostępniania, zaloguj się na konto z aktywną subskrypcją.",
+    "wholeCalendar": "Cały kalendarz",
+    "wholeJournal": "Cały dziennik",
+    "anEvent": "Wydarzenie",
+    "aNote": "Notatka",
+    "calendar": "Kalendarz",
+    "myCalendar": "Mój kalendarz",
+    "sharedByView": "Udostępnia {{email}} (tylko do odczytu)",
+    "sharedByEdit": "Udostępnia {{email}}",
+    "memberStorageFull": "Właściciel nie ma już wolnego miejsca na dane. Twoje zmiany nie zostały zapisane.",
+    "ownerStorageFull": "Wyczerpano Twój limit współdzielonego miejsca na dane. Zmiany nie zostały udostępnione."
   }
 }

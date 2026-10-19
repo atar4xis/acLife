@@ -30,7 +30,8 @@ vi.mock("../../src/context/UserContext.tsx", () => ({
 vi.mock("../../src/context/StorageContext.tsx", () => ({
   useStorage: () => ({
     ready: session.ready,
-    get: (k: string) => session.store.get(k) ?? null,
+    get: (k: string) =>
+      session.store.get(k) ?? (k === "sharedJournals" ? {} : null),
     set: (k: string, v: unknown) => session.store.set(k, v),
   }),
 }));

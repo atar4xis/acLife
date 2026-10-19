@@ -301,7 +301,7 @@
       "set": "PIN सेट करें"
     },
     "stayUnlocked": {
-      "failed": "“अनलॉक रखें” चालू करने में विफल।",
+      "failed": "\"अनलॉक रखें\" चालू करने में विफल।",
       "title": "अनलॉक रखें",
       "description": "आपकी मास्टर कुंजी इस डिवाइस पर संग्रहीत की जाएगी। आपके डिवाइस तक पहुँच रखने वाला कोई भी व्यक्ति आपका डेटा देख सकता है।",
       "enable": "चालू करें"
@@ -315,7 +315,8 @@
       "security": "खाता और सुरक्षा",
       "sync": "सिंक",
       "application": "एप्लिकेशन",
-      "journal": "जर्नल"
+      "journal": "जर्नल",
+      "sharing": "साझाकरण"
     },
     "sections": {
       "theme": "थीम",
@@ -344,7 +345,12 @@
       "journal-editor": "संपादक",
       "journal-customization": "अनुकूलन",
       "note-defaults": "नोट की डिफ़ॉल्ट सेटिंग्स",
-      "journal-import-export": "आयात / निर्यात"
+      "journal-import-export": "आयात / निर्यात",
+      "sharing-start": "साझा करें",
+      "sharing-invites": "आमंत्रण",
+      "sharing-owned": "आपने जो साझा किया",
+      "sharing-joined": "आपके साथ साझा की गई सामग्री",
+      "sharing-contacts": "संपर्क"
     },
     "items": {
       "theme-mode": "थीम मोड",
@@ -428,7 +434,15 @@
       "journal-foreground-value": "अग्रभूमि रंग का मान",
       "journal-background-value": "पृष्ठभूमि रंग का मान",
       "journal-import": "आयात प्रारूप",
-      "journal-export": "निर्यात करें"
+      "journal-export": "निर्यात करें",
+      "sharing-calendar": "अपना पूरा कैलेंडर साझा करें",
+      "sharing-journal": "अपना पूरा जर्नल साझा करें",
+      "sharing-code": "आपका सुरक्षा कोड",
+      "sharing-invite-notifications": "आमंत्रण सूचनाएँ",
+      "sharing-invites-list": "आमंत्रण",
+      "sharing-owned-list": "आपने जो साझा किया",
+      "sharing-joined-list": "आपके साथ साझा की गई सामग्री",
+      "sharing-contacts-list": "संपर्क"
     },
     "colors": {
       "background": "पृष्ठभूमि",
@@ -628,7 +642,7 @@
       },
       "status": {
         "idle": "जाँचा नहीं गया",
-        "checking": "जाँच हो रही है…",
+        "checking": "जाँच हो रही है...",
         "upToDate": "अद्यतित",
         "available": "अपडेट उपलब्ध है ({{version}})",
         "downloading": "डाउनलोड हो रहा है",
@@ -852,7 +866,13 @@
     "too_many_attempts_seconds_one": "बहुत अधिक प्रयास। {{count}} सेकंड बाद पुनः प्रयास करें।",
     "too_many_attempts_seconds_other": "बहुत अधिक प्रयास। {{count}} सेकंड बाद पुनः प्रयास करें।",
     "too_many_attempts_minutes_one": "बहुत अधिक प्रयास। {{count}} मिनट बाद पुनः प्रयास करें।",
-    "too_many_attempts_minutes_other": "बहुत अधिक प्रयास। {{count}} मिनट बाद पुनः प्रयास करें।"
+    "too_many_attempts_minutes_other": "बहुत अधिक प्रयास। {{count}} मिनट बाद पुनः प्रयास करें।",
+    "keys_exist": "कुंजियाँ पहले से मौजूद हैं।",
+    "share_not_found": "साझा आइटम नहीं मिला।",
+    "share_forbidden": "आपको यह करने की अनुमति नहीं है।",
+    "user_not_found": "उपयोगकर्ता नहीं मिला।",
+    "already_member": "इस व्यक्ति के पास पहले से पहुँच है।",
+    "share_limit_reached": "साझाकरण की सीमा पूरी हो गई।"
   },
   "views": {
     "calendar": "कैलेंडर",
@@ -960,10 +980,85 @@
         "unsupported": "असमर्थित फ़ाइल प्रकार",
         "tooLarge": "बहुत बड़ा"
       }
-    }
+    },
+    "sharedBy": "{{email}} द्वारा साझा"
   },
   "iconPicker": {
     "search": "आइकन खोजें...",
     "empty": "कोई आइकन नहीं मिला"
+  },
+  "shares": {
+    "share": "साझा करें...",
+    "shareOccurrence": "सिर्फ़ यह इवेंट साझा करें...",
+    "shareSeries": "पूरी श्रृंखला साझा करें...",
+    "occurrenceDetached": "यह इवेंट अब श्रृंखला से अलग हो गया है। श्रृंखला के बाकी इवेंट निजी रहेंगे।",
+    "title": "\"{{label}}\" साझा करें",
+    "descriptionItem": "आप जिन लोगों को जोड़ेंगे, वे इस आइटम को खोल सकेंगे और बदलाव तुरंत देख सकेंगे।",
+    "descriptionCollection": "आप जिन लोगों को जोड़ेंगे, वे यहाँ की मौजूदा और बाद में जोड़ी जाने वाली सारी सामग्री खोल सकेंगे और बदलाव तुरंत देख सकेंगे।",
+    "email": "ईमेल पता",
+    "continue": "जारी रखें",
+    "permission": "अनुमति",
+    "canView": "देख सकते हैं",
+    "canEdit": "संपादित कर सकते हैं",
+    "canViewLower": "देख सकते हैं",
+    "canEditLower": "संपादित कर सकते हैं",
+    "userNotFound": "उपयोगकर्ता नहीं मिला।",
+    "enterOtherEmail": "किसी और व्यक्ति का ईमेल दर्ज करें।",
+    "alreadyMember": "इस व्यक्ति के पास पहले से पहुँच है।",
+    "invited": "आमंत्रण भेज दिया गया।",
+    "sendInvite": "आमंत्रण भेजें",
+    "people": "लोग",
+    "pending": "आमंत्रित",
+    "permissionOf": "{{email}} के लिए अनुमति",
+    "removePerson": "{{email}} को हटाएँ",
+    "stopSharing": "साझा करना बंद करें",
+    "codeIntro": "यह {{email}} का सुरक्षा कोड है। उनसे उनका अपना कोड (सेटिंग > साझाकरण > संपर्क) पढ़कर सुनाने को कहें। आमने-सामने या किसी अन्य भरोसेमंद माध्यम से पुष्टि करें कि दोनों कोड एक जैसे हैं।",
+    "codeHint": "जाँच वैकल्पिक है। इससे सर्वर से छेड़छाड़ का पता लगाने में मदद मिल सकती है।",
+    "codeChanged": "पिछली बार साझा करने के बाद {{email}} का सुरक्षा कोड बदल गया है। अगर उन्होंने अपना खाता रीसेट किया हो तो ऐसा हो सकता है।",
+    "codeChangedHint": "हो सके तो आगे बढ़ने से पहले उनसे नए कोड की पुष्टि करें। केवल तभी आगे बढ़ें जब आपको नए कोड पर भरोसा हो।",
+    "codeLabel": "{{email}} का सुरक्षा कोड",
+    "acceptTitle": "यह आमंत्रण स्वीकार करें?",
+    "acceptDescription": "{{email}} ने आपको साझा सामग्री का उपयोग करने के लिए आमंत्रित किया है।",
+    "accept": "स्वीकार करें",
+    "decline": "अस्वीकार करें",
+    "inviteFrom": "{{email}} ने {{what}} आपके साथ साझा किया।",
+    "kind": {
+      "calendar": {
+        "collection": "एक कैलेंडर",
+        "item": "एक इवेंट"
+      },
+      "journal": {
+        "collection": "एक जर्नल या फ़ोल्डर",
+        "item": "एक नोट"
+      }
+    },
+    "leave": "छोड़ें",
+    "shareAction": "साझा करें",
+    "nickname": "निकनेम",
+    "editNickname": "{{email}} के लिए निकनेम सेट करें",
+    "nothingShared": "आप कुछ भी साझा नहीं कर रहे हैं।",
+    "nothingReceived": "आपके साथ कोई सामग्री साझा नहीं की गई है।",
+    "noContacts": "अभी कोई संपर्क नहीं।",
+    "contacts": "संपर्क",
+    "addContact": "संपर्क जोड़ें",
+    "newInvitation": "नया आमंत्रण",
+    "inviteToast": "{{email}} ने आपके साथ {{what}} साझा किया।",
+    "viewInvite": "देखें",
+    "noInvites": "कोई आमंत्रण नहीं।",
+    "removeContact": "संपर्क {{email}} हटाएँ",
+    "contactAdded": "संपर्क जोड़ा गया।",
+    "codeChangedWarning": "{{email}} का सुरक्षा कोड बदल गया है।",
+    "trustNewCode": "नए सुरक्षा कोड पर भरोसा करें",
+    "unavailable": "साझा करने के लिए ऐसे खाते में साइन इन करें जिसकी सदस्यता सक्रिय हो।",
+    "wholeCalendar": "पूरा कैलेंडर",
+    "wholeJournal": "पूरा जर्नल",
+    "anEvent": "इवेंट",
+    "aNote": "नोट",
+    "calendar": "कैलेंडर",
+    "myCalendar": "मेरा कैलेंडर",
+    "sharedByView": "{{email}} द्वारा साझा (केवल देखने के लिए)",
+    "sharedByEdit": "{{email}} द्वारा साझा",
+    "memberStorageFull": "स्वामी का स्टोरेज भर गया है। आपके बदलाव सहेजे नहीं गए।",
+    "ownerStorageFull": "आपका साझा स्टोरेज भर गया है। बदलाव साझा नहीं किए गए।"
   }
 }

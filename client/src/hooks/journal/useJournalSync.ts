@@ -2,7 +2,7 @@ import { useApi } from "@/context/ApiContext";
 import { useUser } from "@/context/UserContext";
 import { t } from "@/i18n";
 import { computeBucketHash } from "@/lib/bucketHash";
-import { CLIENT_ID } from "@/lib/clientId";
+import { withClient } from "@/lib/clientId";
 import {
   decryptItem,
   encryptItem,
@@ -12,15 +12,16 @@ import {
   CHUNK_ITEMS,
   diffBuckets,
   journalBucket,
-  journalHashTable,
+  journalLinesTable,
   journalLines,
   mergeRemote,
   pendingChanges,
 } from "@/lib/journal/sync";
-import { createSerialQueue } from "@/lib/serialQueue";
+import { createCoalescer, createSerialQueue } from "@/lib/serialQueue";
+import { syncPart } from "@/lib/syncBatch";
 import { isOwnMessage, onStream, type StreamMessage } from "@/lib/stream";
 import { isSubscriptionMissing } from "@/lib/subscription";
-import { base64ByteLength } from "@/lib/utils";
+import { base64ByteLength, identity } from "@/lib/utils";
 import type { EncryptedRecord, RecordChange } from "@/types/Sync";
 import type {
   JournalAction,
@@ -41,7 +42,100 @@ import { toast } from "sonner";
 const SAVE_DELAY_MS = 1000;
 const SYNC_BUCKETS = 16;
 
-const present = <T>(value: T | null): value is T => value !== null;
+const isPresent = <T>(value: T | null): value is T => value !== null;
+
+type ItemStamp = { id: string; ts: number };
+
+type PendingChanges = {
+  upserts: JournalItem[];
+  deletedIds: string[];
+  ids: Set<string>;
+};
+
+type SyncState = {
+  reset: (
+    items: JournalItem[],
+    savedTimestamps?: Record<string, number>,
+  ) => void;
+  pending: (items: JournalItem[]) => PendingChanges;
+  hashLines: (items: JournalItem[]) => ItemStamp[];
+  has: (id: string) => boolean;
+  markSynced: (item: JournalItem) => void;
+  noteRemoteTimestamp?: (item: JournalItem) => void;
+  dropIds: (ids: string[]) => void;
+  snapshot?: () => Record<string, number>;
+};
+
+// own items are compared by identity with the last acknowledged copy
+const itemSyncState = (acked: Map<string, JournalItem>): SyncState => ({
+  reset: (items) => {
+    acked.clear();
+    for (const item of items) acked.set(item.id, item);
+  },
+  pending: (items) => pendingChanges(items, acked),
+  hashLines: journalLines,
+  has: (id) => acked.has(id),
+  markSynced: (item) => void acked.set(item.id, item),
+  dropIds: (ids) => ids.forEach((id) => acked.delete(id)),
+});
+
+// mirrored spaces only track the last known timestamp per id, persisted across restarts
+const timestampSyncState = (known: Map<string, number>): SyncState => ({
+  reset: (_, savedTimestamps = {}) => {
+    known.clear();
+    for (const [id, ts] of Object.entries(savedTimestamps)) known.set(id, ts);
+  },
+  pending: (items) => {
+    const upserts = items.filter(
+      (item) => item.updatedAt > (known.get(item.id) ?? -Infinity),
+    );
+    const presentIds = new Set(items.map((item) => item.id));
+    const deletedIds = Array.from(known.keys()).filter(
+      (id) => !presentIds.has(id),
+    );
+    return {
+      upserts,
+      deletedIds,
+      ids: new Set([...upserts.map((item) => item.id), ...deletedIds]),
+    };
+  },
+  hashLines: () => Array.from(known, ([id, ts]) => ({ id, ts })),
+  has: (id) => known.has(id),
+  markSynced: (item) => {
+    known.set(item.id, item.updatedAt);
+  },
+  noteRemoteTimestamp: (item) => {
+    known.set(item.id, Math.max(item.updatedAt, known.get(item.id) ?? 0));
+  },
+  dropIds: (ids) => {
+    ids.forEach((id) => known.delete(id));
+  },
+  snapshot: () => Object.fromEntries(known),
+});
+
+type RecordSyncTarget = {
+  items: JournalItem[];
+  loaded: boolean;
+  writable: boolean;
+  key: CryptoKey | null;
+  savePath: string;
+  streamType: "journal" | "space-updated";
+  space?: string;
+  cacheRestored?: boolean;
+  storageFullKey?: string;
+  timestampStore?: {
+    savedTimestamps: Record<string, number> | undefined;
+    save: (known: Record<string, number>) => void;
+  };
+  decorate: (item: JournalItem) => JournalItem;
+  admit: (incoming: JournalItem[]) => JournalItem[];
+  apply: (upserts: JournalItem[], deletedIds: string[]) => void;
+};
+
+export const applyRemoteTo =
+  (dispatch: Dispatch<JournalAction>) =>
+  (upserts: JournalItem[], deletedIds: string[]) =>
+    flushSync(() => dispatch({ type: "applyRemote", upserts, deletedIds }));
 
 export const useJournalSync = ({
   items,
@@ -52,24 +146,59 @@ export const useJournalSync = ({
   loaded: boolean;
   dispatch: Dispatch<JournalAction>;
 }) => {
-  const { user, masterKey } = useUser();
+  const { masterKey } = useUser();
+  return useRecordSync({
+    items,
+    loaded,
+    writable: true,
+    key: masterKey,
+    savePath: "journal/save",
+    streamType: "journal",
+    decorate: identity,
+    admit: identity,
+    apply: applyRemoteTo(dispatch),
+  });
+};
+
+export const useRecordSync = (target: RecordSyncTarget) => {
+  const { items, loaded, key } = target;
+  const { user } = useUser();
   const { post, serverMeta } = useApi();
   const active =
     loaded &&
-    !!masterKey &&
+    !!key &&
+    (target.cacheRestored ?? true) &&
+    (!target.timestampStore ||
+      target.timestampStore.savedTimestamps !== undefined) &&
     user?.type === "online" &&
     !isSubscriptionMissing(user, serverMeta);
   const [queue] = useState(createSerialQueue);
-  const [acked] = useState(() => new Map<string, JournalItem>());
+  const [coalesce] = useState(() => createCoalescer(queue));
+  const [syncState] = useState(() =>
+    target.timestampStore
+      ? timestampSyncState(new Map())
+      : itemSyncState(new Map()),
+  );
+  const persistSyncState = useEffectEvent(() => {
+    const snapshot = syncState.snapshot?.();
+    if (snapshot) target.timestampStore?.save(snapshot);
+  });
   const [saving, setSaving] = useState(false);
   const generation = useRef(0);
 
   const latestItems = useEffectEvent(() => items);
+  const decorate = useEffectEvent((item: JournalItem) => target.decorate(item));
+  const admit = useEffectEvent((incoming: JournalItem[]) =>
+    target.admit(incoming),
+  );
+  const applyRemote = useEffectEvent((upserts: JournalItem[], ids: string[]) =>
+    target.apply(upserts, ids),
+  );
 
   const send = useEffectEvent(
     async (
       upserts: JournalItem[],
-      removed: string[],
+      deletedIds: string[],
       key: CryptoKey,
       quiet: boolean,
     ) => {
@@ -90,107 +219,131 @@ export const useJournalSync = ({
         sendable.map(({ item, record }) => [record.id, item]),
       );
       const changes: RecordChange[] = [
-        ...removed.map((id): RecordChange => ({ type: "deleted", id })),
+        ...deletedIds.map((id): RecordChange => ({ type: "deleted", id })),
         ...sendable.map(({ item, record }): RecordChange => ({
-          type: acked.has(item.id) ? "updated" : "added",
+          type: syncState.has(item.id) ? "updated" : "added",
           record,
         })),
       ];
 
       for (let from = 0; from < changes.length; from += CHUNK_ITEMS) {
         const chunk = changes.slice(from, from + CHUNK_ITEMS);
-        const res = await post("journal/save?c=" + CLIENT_ID, chunk);
+        const res = await post(withClient(target.savePath), chunk);
         if (gen !== generation.current) return false;
         if (!res.success) {
           if (res.code === "storage_limit_reached" && !quiet)
-            toast.error(t("journal.storageFull"), {
-              id: "journal-storage-full",
+            toast.error(t(target.storageFullKey ?? "journal.storageFull"), {
+              id: target.space
+                ? `journal-storage-full-${target.space}`
+                : "journal-storage-full",
             });
           return false;
         }
         for (const change of chunk) {
-          if (change.type === "deleted") acked.delete(change.id);
-          else acked.set(change.record.id, byId.get(change.record.id)!);
+          if (change.type === "deleted") syncState.dropIds([change.id]);
+          else syncState.markSynced(byId.get(change.record.id)!);
         }
       }
-      return changes.length > 0;
+      if (changes.length === 0) return false;
+
+      persistSyncState();
+      return true;
     },
   );
 
   const pushNow = useEffectEvent(async () => {
-    if (!masterKey || !active) return false;
-    const { upserts, removed } = pendingChanges(latestItems(), acked);
+    if (!key || !active || !target.writable) return false;
+    const { upserts, deletedIds } = syncState.pending(latestItems());
     setSaving(true);
     try {
-      return await send(upserts, removed, masterKey, false);
+      return await send(upserts, deletedIds, key, false);
     } finally {
       setSaving(false);
     }
   });
 
   const applyMerged = useEffectEvent(
-    (incoming: JournalItem[], deleted: string[]) => {
+    (received: JournalItem[], deleted: string[]) => {
+      const incoming = admit(received);
       const current = latestItems();
+      const pending = syncState.pending(current).ids;
       const { upserts, deletedIds } = mergeRemote(
         current,
         { incoming, deleted },
-        pendingChanges(current, acked).ids,
+        pending,
       );
+      syncState.dropIds(deleted);
+      for (const item of incoming)
+        if (!pending.has(item.id)) syncState.noteRemoteTimestamp?.(item);
+      for (const item of upserts) syncState.markSynced(item);
+      if (incoming.length > 0 || deleted.length > 0) persistSyncState();
       if (upserts.length === 0 && deletedIds.length === 0) return;
 
-      for (const item of upserts) acked.set(item.id, item);
-      for (const id of deletedIds) acked.delete(id);
-      flushSync(() => dispatch({ type: "applyRemote", upserts, deletedIds }));
+      applyRemote(upserts, deletedIds);
     },
   );
 
   const syncNow = useEffectEvent(async () => {
-    if (!masterKey) return;
+    if (!key) return;
     const gen = generation.current;
-    const start = latestItems();
+    const hashLines = syncState.hashLines(latestItems());
 
-    const hashed = await post<JournalHashResponse>("journal/sync", {
-      hash: await computeBucketHash(journalLines(start)),
-    });
+    const hashed = await syncPart<JournalHashResponse>(
+      post,
+      "journal/sync",
+      target.space,
+      { hash: await computeBucketHash(hashLines) },
+    );
     if (!hashed.success || !hashed.data || hashed.data.match) return;
 
     const buckets = diffBuckets(
-      await journalHashTable(start),
+      await journalLinesTable(hashLines),
       hashed.data.table ?? "",
     );
-    const known = new Map(start.map((item) => [item.id, item.updatedAt]));
+    const cached = new Map(hashLines.map(({ id, ts }) => [id, ts]));
 
     for (let from = 0; from < buckets.length; from += SYNC_BUCKETS) {
       const requested = buckets.slice(from, from + SYNC_BUCKETS);
       let batch = requested;
       while (batch.length > 0) {
-        const res = await post<JournalSyncResponse>("journal/sync", {
-          buckets: batch,
-          records: Array.from(known)
-            .filter(([id]) => batch.includes(journalBucket(id)))
-            .map(([id, ts]) => ({ id, ts })),
-        });
+        const res = await syncPart<JournalSyncResponse>(
+          post,
+          "journal/sync",
+          target.space,
+          {
+            buckets: batch,
+            records: Array.from(cached)
+              .filter(([id]) => batch.includes(journalBucket(id)))
+              .map(([id, ts]) => ({ id, ts })),
+          },
+        );
         if (!res.success || !res.data) return;
 
         const { added, updated, deleted, remaining } = res.data;
         const incoming = (
           await Promise.all(
-            [...added, ...updated].map((record) =>
-              decryptItem(record, masterKey),
-            ),
+            [...added, ...updated].map((record) => decryptItem(record, key)),
           )
-        ).filter(present);
+        )
+          .filter(isPresent)
+          .map(decorate);
         if (gen !== generation.current) return;
 
         applyMerged(incoming, deleted);
-        for (const item of incoming) known.set(item.id, item.updatedAt);
-        for (const id of deleted) known.delete(id);
+        for (const item of incoming) cached.set(item.id, item.updatedAt);
+        for (const id of deleted) cached.delete(id);
 
-        if (incoming.length + deleted.length === 0 && remaining.length === 0) {
+        // a mismatch with nothing to pull means the server copy is stale, so re-save ours
+        if (
+          !target.timestampStore &&
+          incoming.length + deleted.length === 0 &&
+          remaining.length === 0
+        ) {
           const newer = latestItems().filter((item) =>
             requested.includes(journalBucket(item.id)),
           );
-          if (newer.length > 0) await send(newer, [], masterKey, true);
+          if (newer.length > 0 && target.writable)
+            await send(newer, [], key, true);
         }
         batch = remaining;
       }
@@ -198,15 +351,17 @@ export const useJournalSync = ({
   });
 
   const applyStream = useEffectEvent(async (message: StreamMessage) => {
-    if (!masterKey) return;
+    if (!key) return;
     if (!message.changes) return syncNow();
 
     const gen = generation.current;
     const changes = message.changes;
     const upserts = changes.filter((change) => change.type !== "deleted");
     const incoming = (
-      await Promise.all(upserts.map((change) => decryptItem(change, masterKey)))
-    ).filter(present);
+      await Promise.all(upserts.map((change) => decryptItem(change, key)))
+    )
+      .filter(isPresent)
+      .map(decorate);
     if (gen !== generation.current) return;
 
     applyMerged(
@@ -223,20 +378,27 @@ export const useJournalSync = ({
       if (await pushNow()) await syncNow();
     }),
   );
-  const scheduleSync = useEffectEvent(() => queue(() => syncNow()));
+  const scheduleSync = useEffectEvent(() =>
+    coalesce(async () => {
+      await syncNow();
+      if (target.timestampStore && (await pushNow())) await syncNow();
+    }),
+  );
   const scheduleStream = useEffectEvent((message: StreamMessage) => {
-    if (!isOwnMessage(message)) queue(() => applyStream(message));
+    // space messages carry the space id, the own journal ignores them
+    const forThis = !target.space || message.space === target.space;
+    if (forThis && !isOwnMessage(message)) queue(() => applyStream(message));
   });
 
+  const savedTimestamps = target.timestampStore?.savedTimestamps;
   useEffect(() => {
     generation.current++;
-    acked.clear();
-    if (loaded) for (const item of latestItems()) acked.set(item.id, item);
-  }, [loaded, masterKey, acked]);
+    syncState.reset(loaded ? latestItems() : [], savedTimestamps);
+  }, [loaded, key, syncState, savedTimestamps, target.cacheRestored]);
 
   useEffect(() => {
     if (active) scheduleSync();
-  }, [active, masterKey]);
+  }, [active, key, savedTimestamps]);
 
   useEffect(() => {
     if (!active) return;
@@ -251,7 +413,7 @@ export const useJournalSync = ({
       if (document.visibilityState === "hidden") schedulePush();
     };
     document.addEventListener("visibilitychange", onVisibility);
-    const stopJournal = onStream("journal", (message) =>
+    const stopJournal = onStream(target.streamType, (message) =>
       scheduleStream(message),
     );
     const stopSync = onStream("sync", (message) => {
@@ -263,7 +425,7 @@ export const useJournalSync = ({
       stopJournal();
       stopSync();
     };
-  }, [active]);
+  }, [active, target.streamType]);
 
   useEffect(() => () => void schedulePush(), []);
 

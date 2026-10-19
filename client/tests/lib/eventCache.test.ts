@@ -177,4 +177,19 @@ describe("event cache", () => {
     expect(await cache.allEvents(masterKey)).toEqual([]);
     expect(await indexOf(cache, a.buckets)).toEqual({ [a.buckets[0]]: [] });
   });
+
+  it("keeps every entry when applies overlap in one bucket", async () => {
+    const cache = createEventCache();
+    const a = await upsertOf(eventAt(1, "a"));
+    const b = await upsertOf(eventAt(2, "b"));
+
+    await Promise.all([
+      cache.apply([a], [], masterKey),
+      cache.apply([b], [], masterKey),
+    ]);
+
+    const [bucket] = a.buckets;
+    const ids = (await indexOf(cache, [bucket]))[bucket].map((e) => e.id);
+    expect(ids.toSorted()).toEqual([a.id, b.id]);
+  });
 });

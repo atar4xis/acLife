@@ -115,13 +115,14 @@ import {
   getEventPixelPosition,
   sameNotifications,
 } from "@/lib/calendar/event";
+import { canDeleteEvent, canEditEvent } from "@/lib/calendar/shared";
 import { weekLabel } from "@/lib/calendar/buckets";
 import { useUser } from "@/context/UserContext";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ModeSwitcher from "./ModeSwitcher";
 import type { GridSelectionRef, GridTouchRef } from "@/types/calendar/Cell";
-import { clamp, cn } from "@/lib/utils";
+import { clamp, cn, withoutRuntimeFields } from "@/lib/utils";
 import RecurringUpdateDialog from "./RecurringUpdateDialog";
 import { resolveDefaultName } from "@/lib/calendar/defaultNames";
 import { fmt, t as translate } from "@/i18n";
@@ -177,12 +178,8 @@ const eventUnchanged = (a: CalendarEvent, b: CalendarEvent) =>
   repeatEqual(a.repeat, b.repeat);
 
 const serializeEventForDiff = (ev: CalendarEvent) => {
-  const clean = Object.fromEntries(
-    Object.entries(ev).filter(([key]) => !key.startsWith("_")),
-  );
-
   return JSON.stringify({
-    ...clean,
+    ...withoutRuntimeFields(ev),
     timestamp: undefined,
     start: ev.start.toMillis(),
     end: ev.end.toMillis(),
@@ -267,7 +264,7 @@ export default memo(function AppCalendar({
   setMode,
   saveEvents,
   syncEvents,
-  syncBuckets,
+  syncExpanded,
   saveDebounceMs = 100,
 }: CalendarProps) {
   const { t, i18n } = useTranslation();
@@ -347,7 +344,7 @@ export default memo(function AppCalendar({
     masterKey,
     bucketKey,
     currentDate,
-    syncBuckets,
+    syncExpanded,
     onExpandedSearchEvents,
   );
 
@@ -397,6 +394,7 @@ export default memo(function AppCalendar({
   const calendarEventsRef = useRef(calendarEvents);
   const selectedEventsRef = useRef(selection.get());
   const [canKeepChanges, setCanKeepChanges] = useState(false);
+  const [canSplit, setCanSplit] = useState(true);
 
   const askUpdateScope = useCallback(
     (event: CalendarEvent, original: CalendarEvent | null) => {
@@ -404,6 +402,7 @@ export default memo(function AppCalendar({
         calendarEventsRef.current.find((e) => e.id === event._parent) ?? event;
       evPendingRef.current = { event, original };
       setCanKeepChanges(!!event._parent && !!futureOverrides(parent, event));
+      setCanSplit(canDeleteEvent(parent));
       setUpdateRepeatDialogOpen(true);
     },
     [],
@@ -509,6 +508,18 @@ export default memo(function AppCalendar({
       if (user?.type === "offline") return; // offline users save all events locally
 
       const key = change.event?.id ?? change.id!;
+      const targetEvent =
+        change.event ?? calendarEventsRef.current.find((e) => e.id === key);
+      if (targetEvent?._shared) {
+        const allowed =
+          change.type === "deleted"
+            ? canDeleteEvent(targetEvent)
+            : canEditEvent(targetEvent);
+        if (!allowed) return;
+        if (change.type === "deleted")
+          change = { ...change, space: targetEvent._shared.space };
+      }
+
       const prev = pendingChanges.get(key) ?? [];
 
       if (change.event) change.event.timestamp = Date.now();
@@ -1085,6 +1096,7 @@ export default memo(function AppCalendar({
       if (!container) return;
 
       e.preventDefault();
+      if (!canEditEvent(event)) return;
       if (e.ctrlKey) {
         beginSelectionBox(e, event);
         return;
@@ -1293,10 +1305,35 @@ export default memo(function AppCalendar({
     ].toSorted((a, b) => Number(isChainParent(a)) - Number(isChainParent(b)));
   }, []);
 
+  const moveToCalendar = useCallback(
+    (originalEvent: CalendarEvent, event: CalendarEvent) => {
+      if (!canDeleteEvent(originalEvent)) return;
+
+      pushHistory();
+      dispatch({ type: "delete", id: originalEvent.id });
+      updateChange({
+        id: originalEvent.id,
+        type: "deleted",
+        space: originalEvent._shared?.space,
+      });
+      dispatch({ type: "add", event });
+      updateChange({ type: "added", event });
+      save();
+    },
+    [dispatch, updateChange, save, pushHistory],
+  );
+
   const onEventEdit = useCallback(
     (originalEvent: CalendarEvent, event: CalendarEvent) => {
+      // a different space is a different calendar, so delete here and add there
+      if (originalEvent._shared?.space !== event._shared?.space) {
+        moveToCalendar(originalEvent, event);
+        return;
+      }
+
       // nothing changed, so there's nothing to save
-      if (eventUnchanged(originalEvent, event)) return;
+      if (eventUnchanged(originalEvent, event) || !canEditEvent(originalEvent))
+        return;
 
       if (settings.addColorsAutomatically && event.color) {
         const presets = addColorPreset(settings.eventColorPresets, event.color);
@@ -1487,13 +1524,15 @@ export default memo(function AppCalendar({
       pushHistory,
       settings,
       askUpdateScope,
+      moveToCalendar,
     ],
   );
 
   const onEventMove = useCallback(
     (originalEvent: CalendarEvent, event: CalendarEvent) => {
       // nothing changed, so there's nothing to save
-      if (eventUnchanged(originalEvent, event)) return;
+      if (eventUnchanged(originalEvent, event) || !canEditEvent(originalEvent))
+        return;
 
       pushHistory();
 
@@ -1513,12 +1552,15 @@ export default memo(function AppCalendar({
   );
 
   const deleteSelectionBatch = useCallback(
-    (batch: CalendarEvent[]) => {
+    (selected: CalendarEvent[]) => {
+      const deletable = selected.filter(canDeleteEvent);
+      if (deletable.length === 0) return;
+
       pushHistory();
 
       let working = calendarEventsRef.current;
 
-      const parentsLast = batch.toSorted(
+      const parentsLast = deletable.toSorted(
         (a, b) => Number(isChainParent(a)) - Number(isChainParent(b)),
       );
 
@@ -1556,6 +1598,8 @@ export default memo(function AppCalendar({
 
   const onEventDelete = useCallback(
     (event: CalendarEvent, ignoreSelection = false) => {
+      if (!canDeleteEvent(event)) return;
+
       const batch = ignoreSelection ? null : getBatch(event);
 
       if (batch) {
@@ -1622,6 +1666,30 @@ export default memo(function AppCalendar({
     [dispatch, updateChange, setEditingEvent, save, pushHistory],
   );
 
+  const onEventShareOccurrence = useCallback(
+    (event: CalendarEvent) => {
+      pushHistory();
+
+      // the occurrence becomes its own event so it can be shared apart from the series
+      let sharedId = "";
+      detachSingleOccurrence(
+        event,
+        event.start,
+        calendarEventsRef.current,
+        dispatch,
+        (change) => {
+          if (change.type === "added") sharedId = change.event!.id;
+          updateChange(change);
+        },
+      );
+      save();
+      toast.info(t("shares.occurrenceDetached"));
+
+      return sharedId;
+    },
+    [dispatch, updateChange, save, pushHistory, t],
+  );
+
   const onEventDuplicate = useCallback(
     (event: CalendarEvent) => {
       const batch = getBatch(event) ?? [event];
@@ -1651,6 +1719,7 @@ export default memo(function AppCalendar({
 
         delete newEvent._parent;
         delete newEvent._instanceId;
+        delete newEvent._shared;
         delete newEvent.repeat;
 
         dispatch({
@@ -1689,6 +1758,7 @@ export default memo(function AppCalendar({
       remove: onEventDelete,
       duplicate: onEventDuplicate,
       detach: onEventDetach,
+      shareOccurrence: onEventShareOccurrence,
       reset: onEventReset,
     });
   }, [
@@ -1697,6 +1767,7 @@ export default memo(function AppCalendar({
     onEventDelete,
     onEventDuplicate,
     onEventDetach,
+    onEventShareOccurrence,
     onEventReset,
     setEventHandlers,
   ]);
@@ -1774,6 +1845,7 @@ export default memo(function AppCalendar({
 
       delete newEvent._parent;
       delete newEvent._instanceId;
+      delete newEvent._shared;
       delete newEvent.repeat;
 
       pasted.push(newEvent);
@@ -2503,7 +2575,7 @@ export default memo(function AppCalendar({
   ]);
 
   const openEvent = (event: CalendarEvent, day: number) => {
-    if (stateTargets(viewing, event, day)) {
+    if (stateTargets(viewing, event, day) && canEditEvent(event)) {
       setViewingEvent(null);
       setEditingEvent(event, day);
     } else {
@@ -2705,6 +2777,7 @@ export default memo(function AppCalendar({
         onEventDelete={onEventDelete}
         onDuplicate={onEventDuplicate}
         onDetach={onEventDetach}
+        onShareOccurrence={onEventShareOccurrence}
         onReset={onEventReset}
         setEditingEvent={setEditingEvent}
         setViewingEvent={setViewingEvent}
@@ -2722,6 +2795,7 @@ export default memo(function AppCalendar({
       onEventDelete,
       onEventDuplicate,
       onEventDetach,
+      onEventShareOccurrence,
       onEventReset,
       setEditingEvent,
       setViewingEvent,
@@ -3194,6 +3268,7 @@ export default memo(function AppCalendar({
         setOpen={setUpdateRepeatDialogOpen}
         onFocusReturned={onDialogFocusReturned}
         canKeepChanges={canKeepChanges}
+        canSplit={canSplit}
         onSubmit={(option: string, keepChanges: boolean) => {
           const pending = evPendingRef.current;
 

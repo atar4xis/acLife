@@ -205,3 +205,13 @@ func TestRunTx(t *testing.T) {
 		}
 	})
 }
+
+func TestIsForeignKeyViolation(t *testing.T) {
+	violation := fmt.Errorf("insert: %w", &mysql.MySQLError{Number: 1452, Message: "Cannot add or update a child row"})
+	if !database.IsForeignKeyViolation(violation) {
+		t.Fatal("a wrapped 1452 error was not recognized")
+	}
+	if database.IsForeignKeyViolation(&mysql.MySQLError{Number: 1062}) || database.IsForeignKeyViolation(errors.New("plain")) || database.IsForeignKeyViolation(nil) {
+		t.Fatal("an unrelated error was recognized as a foreign key violation")
+	}
+}

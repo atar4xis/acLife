@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
+import { isOwnEvent } from "@/lib/calendar/shared";
 import { toast } from "sonner";
 import {
   isPermissionGranted,
@@ -44,7 +45,9 @@ async function notifyNative(options: Options) {
 export default function NotificationService() {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const events = useEventList();
+  const allEvents = useEventList();
+  // user's own events for things like notification scheduling
+  const events = useMemo(() => allEvents.filter(isOwnEvent), [allEvents]);
   const { user } = useUser();
   const { post, serverMeta } = useApi();
   const storage = useStorage();

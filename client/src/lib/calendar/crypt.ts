@@ -7,35 +7,59 @@ import type {
 import type { APIResponse } from "@/types/API";
 import { DateTime } from "luxon";
 import { encrypt, decrypt } from "../crypt";
-import { arrayBufferToBase64, uint8ArrayFromBase64 } from "../utils";
+import {
+  arrayBufferToBase64,
+  uint8ArrayFromBase64,
+  withoutRuntimeFields,
+} from "../utils";
 import { computeEventBuckets } from "./buckets";
 
 // mirrors the server's constants.MaxEventLen (bytes of ciphertext)
 export const MAX_ENCRYPTED_EVENT_BYTES = 10000;
+
+const decryptEvent = async (ev: EncryptedEvent, masterKey: CryptoKey) => {
+  const raw = withoutRuntimeFields(
+    JSON.parse(
+      new TextDecoder().decode(
+        await decrypt(uint8ArrayFromBase64(ev.data), masterKey),
+      ),
+    ) as RawCalendarEvent,
+  );
+
+  if (raw.id?.toLowerCase() !== ev.id.toLowerCase()) {
+    console.warn("Ignoring an event stored under a different id");
+    return null;
+  }
+
+  return {
+    ...ev,
+    data: cookEvent(raw),
+  } as DecryptedEvent;
+};
+
+const decryptEventOrSkip = (ev: EncryptedEvent, masterKey: CryptoKey) =>
+  decryptEvent(ev, masterKey).catch(() => {
+    console.warn("Ignoring an event that cannot be decrypted");
+    return null;
+  });
 
 export const decryptEvents = async (
   events: EncryptedEvent[],
   masterKey: CryptoKey,
 ) => {
   const decrypted = await Promise.all(
-    events.map(async (ev) => {
-      const raw = JSON.parse(
-        new TextDecoder().decode(
-          await decrypt(uint8ArrayFromBase64(ev.data), masterKey),
-        ),
-      ) as RawCalendarEvent;
+    events.map((ev) => decryptEvent(ev, masterKey)),
+  );
 
-      if (raw.id?.toLowerCase() !== ev.id.toLowerCase()) {
-        console.warn("Ignoring an event stored under a different id");
-        return null;
-      }
+  return decrypted.filter((ev) => ev !== null);
+};
 
-      return {
-        ...ev,
-        // data contains an entire CalendarEvent object after decryption
-        data: cookEvent(raw),
-      } as DecryptedEvent;
-    }),
+export const decryptSpaceEvents: typeof decryptEvents = async (
+  events,
+  spaceKey,
+) => {
+  const decrypted = await Promise.all(
+    events.map((ev) => decryptEventOrSkip(ev, spaceKey)),
   );
 
   return decrypted.filter((ev) => ev !== null);
@@ -49,9 +73,10 @@ export const encryptEvents = async (
   return Promise.all(
     events.map(async (ev) => {
       const [data, buckets] = await Promise.all([
-        encrypt(new TextEncoder().encode(JSON.stringify(ev)), masterKey).then(
-          arrayBufferToBase64,
-        ),
+        encrypt(
+          new TextEncoder().encode(JSON.stringify(withoutRuntimeFields(ev))),
+          masterKey,
+        ).then(arrayBufferToBase64),
         computeEventBuckets(ev, bucketKey),
       ]);
 

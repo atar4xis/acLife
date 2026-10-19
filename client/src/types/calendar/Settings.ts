@@ -38,6 +38,7 @@ export interface CalendarSettings {
   miniCalendarBoldDayNumbers: boolean;
   miniCalendarAdaptiveNumbers: boolean;
   miniCalendarDropdowns: boolean;
+  inviteNotifications: boolean;
   eventColorPresets: string[];
   addColorsAutomatically: boolean;
   detachRecurringOnEdit: boolean;
