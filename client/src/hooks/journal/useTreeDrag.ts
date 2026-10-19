@@ -1,21 +1,28 @@
 import { useSidebar } from "@/components/ui/sidebar";
 import { useJournal } from "@/context/JournalContext";
-import { canMoveItem } from "@/lib/journal/item";
+import { canMoveItem, topLevelItems } from "@/lib/journal/item";
 import { touchDrag } from "@/lib/touchDrag";
 import type { JournalItem } from "@/types/Journal";
 import { useMemo, useState } from "react";
 
-export const useTreeDrag = () => {
+export const useTreeDrag = (selectedIds: ReadonlySet<string>) => {
   const journal = useJournal();
   const { isMobile, setOpenMobile } = useSidebar();
   const [dropTarget, setDropTarget] = useState<string | null>();
 
   const { dragProps, rootProps } = useMemo(() => {
     const dragged = journal.drag && journal.itemsById.get(journal.drag.id);
+    const draggedOnly = dragged ? [dragged] : [];
+    const dragsSelection = !!dragged && selectedIds.has(dragged.id);
+    const moving = dragsSelection
+      ? topLevelItems(journal.items, selectedIds)
+      : draggedOnly;
+    const movable = (parentId: string | null) =>
+      moving.filter((item) => canMoveItem(journal.items, item, parentId));
     const canMoveTo = (parentId: string | null) =>
-      !!dragged &&
-      !journal.drag?.fromPane &&
-      canMoveItem(journal.items, dragged, parentId);
+      !journal.drag?.fromPane && movable(parentId).length > 0;
+    const moveDragged = (parentId: string | null) =>
+      movable(parentId).forEach((item) => journal.moveItem(item.id, parentId));
 
     const endDrag = () => {
       journal.endDrag();
@@ -29,6 +36,11 @@ export const useTreeDrag = () => {
       return {
         draggable: true,
         onDragStart: (e) => {
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            return;
+          }
+
           e.dataTransfer.effectAllowed = "move";
           e.dataTransfer.setData("text/plain", item.name);
           journal.startDrag({ id: item.id });
@@ -50,10 +62,10 @@ export const useTreeDrag = () => {
           setDropTarget(parentId);
         },
         onDrop: (e) => {
-          if (!dragged || !canMoveTo(parentId)) return;
+          if (!canMoveTo(parentId)) return;
           e.preventDefault();
           e.stopPropagation();
-          journal.moveItem(dragged.id, parentId);
+          moveDragged(parentId);
           endDrag();
         },
       };
@@ -70,15 +82,15 @@ export const useTreeDrag = () => {
           setDropTarget(undefined);
       },
       onDrop: (e) => {
-        if (!dragged || !canMoveTo(null)) return;
+        if (!canMoveTo(null)) return;
         e.preventDefault();
-        journal.moveItem(dragged.id, null);
+        moveDragged(null);
         endDrag();
       },
     };
 
     return { dragProps, rootProps };
-  }, [journal, isMobile, setOpenMobile]);
+  }, [journal, selectedIds, isMobile, setOpenMobile]);
 
   return { dropTarget, dragProps, rootProps };
 };

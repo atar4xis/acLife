@@ -24,12 +24,14 @@ export default memo(function JournalTree({
   searching,
   renamingId,
   dropTarget,
+  selectedIds,
   actions,
 }: {
   nodes: JournalTreeNode[];
   searching: boolean;
   renamingId: string | null;
   dropTarget: string | null | undefined;
+  selectedIds: ReadonlySet<string>;
   actions: TreeActions;
 }) {
   const { t } = useTranslation();
@@ -96,6 +98,7 @@ export default memo(function JournalTree({
       activeId,
       expanded,
       tabStopId,
+      selectedIds,
       actions: treeActions,
       onFocusRow: setFocusedId,
       onKeyDown,
@@ -108,6 +111,7 @@ export default memo(function JournalTree({
       activeId,
       expanded,
       tabStopId,
+      selectedIds,
       treeActions,
       onKeyDown,
     ],

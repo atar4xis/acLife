@@ -11,6 +11,7 @@ import {
   moveTargets,
   noteName,
   toOutline,
+  topLevelItems,
   visibleRows,
 } from "../../src/lib/journal/item.ts";
 import { defaultJournalSettings } from "../../src/lib/settingsDefaults.ts";
@@ -121,6 +122,15 @@ describe("journal tree", () => {
       "inner",
       "z-folder",
     ]);
+  });
+
+  it("keeps only selected items whose ancestors are not selected", () => {
+    const picked = topLevelItems(
+      items,
+      new Set(["z-folder", "inner", "a-note"]),
+    );
+
+    expect(picked.map((found) => found.id)).toEqual(["a-note", "z-folder"]);
   });
 
   it("shows folders of a parent cycle at the root and terminates", () => {

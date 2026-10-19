@@ -10,15 +10,17 @@ const sidebar = vi.hoisted(() => ({
 vi.mock("../../src/components/ui/sidebar.tsx", () => ({
   useSidebar: () => sidebar,
 }));
+const journal = vi.hoisted(() => ({
+  drag: null as { id: string } | null,
+  itemsById: new Map<string, JournalItem>(),
+  items: [] as JournalItem[],
+  startDrag: vi.fn(),
+  endDrag: vi.fn(),
+  moveItem: vi.fn(),
+}));
+
 vi.mock("../../src/context/JournalContext.tsx", () => ({
-  useJournal: () => ({
-    drag: null,
-    itemsById: new Map(),
-    items: [],
-    startDrag: vi.fn(),
-    endDrag: vi.fn(),
-    moveItem: vi.fn(),
-  }),
+  useJournal: () => journal,
 }));
 
 import { useTreeDrag } from "../../src/hooks/journal/useTreeDrag";
@@ -38,8 +40,10 @@ const item: JournalItem = {
   updatedAt: 0,
 };
 
+const noSelection = new Set<string>();
+
 function Row() {
-  const { dragProps } = useTreeDrag();
+  const { dragProps } = useTreeDrag(noSelection);
   return <button {...dragProps(item)}>row</button>;
 }
 
@@ -53,6 +57,66 @@ const dragOver = (element: Element) => {
   act(() => vi.advanceTimersByTime(400));
   fireEvent.pointerMove(window, { pointerType: "touch", clientX: 10, clientY: 10 });
 };
+
+const folder: JournalItem = { ...item, id: "f", type: "folder", name: "F" };
+const noteA: JournalItem = { ...item, id: "n1", parentId: "x" };
+const noteB: JournalItem = { ...item, id: "n2", parentId: "x" };
+
+function Tree({ selectedIds }: { selectedIds: ReadonlySet<string> }) {
+  const { dragProps, rootProps } = useTreeDrag(selectedIds);
+  return (
+    <div data-testid="root" {...rootProps}>
+      <button {...dragProps(folder)}>folder</button>
+    </div>
+  );
+}
+
+describe("useTreeDrag drops", () => {
+  beforeEach(() => {
+    journal.drag = null;
+    journal.itemsById = new Map();
+    journal.items = [];
+    journal.moveItem.mockReset();
+    sidebar.isMobile = false;
+  });
+
+  it("ignores drags that did not start from a row", () => {
+    const onError = vi.fn();
+    window.addEventListener("error", onError);
+    render(<Tree selectedIds={noSelection} />);
+
+    const notPrevented = fireEvent.dragOver(screen.getByTestId("root"));
+    window.removeEventListener("error", onError);
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(notPrevented).toBe(true);
+  });
+
+  it("moves the whole selection when a selected row is dragged", () => {
+    journal.items = [folder, noteA, noteB];
+    journal.itemsById = new Map(journal.items.map((found) => [found.id, found]));
+    journal.drag = { id: "n1" };
+    render(<Tree selectedIds={new Set(["n1", "n2"])} />);
+
+    fireEvent.drop(screen.getByText("folder"));
+
+    expect(journal.moveItem.mock.calls).toEqual([
+      ["n1", "f"],
+      ["n2", "f"],
+    ]);
+  });
+
+  it("moves only the dragged row when it is not selected", () => {
+    journal.items = [folder, noteA, noteB];
+    journal.itemsById = new Map(journal.items.map((found) => [found.id, found]));
+    journal.drag = { id: "n1" };
+    render(<Tree selectedIds={new Set(["n2"])} />);
+
+    fireEvent.drop(screen.getByText("folder"));
+
+    expect(journal.moveItem.mock.calls).toEqual([["n1", "f"]]);
+  });
+});
 
 describe("useTreeDrag touch drag", () => {
   beforeEach(() => {

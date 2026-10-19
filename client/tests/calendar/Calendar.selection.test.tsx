@@ -535,7 +535,27 @@ describe("Calendar", () => {
     expect(getSelectionBox()).toBeNull();
   });
 
-  it("box selection adds to an existing ctrl + click selection", async () => {
+  it("box selection adds to an existing selection while shift is held", async () => {
+    renderCalendar({
+      mode: "week",
+      events: [buildPlainEvent(), buildSecondEvent()],
+    });
+
+    await ctrlClickEvent("Retro");
+
+    await dragSelectionBox({
+      startX: dayCenterX(2) - DAY_WIDTH / 4,
+      startY: timeToClientY(8),
+      endX: dayCenterX(2) + DAY_WIDTH / 4,
+      endY: timeToClientY(11),
+      shift: true,
+    });
+
+    expect(isSelected(await getEventBlock("Planning"))).toBe(true);
+    expect(isSelected(await getEventBlock("Retro"))).toBe(true);
+  });
+
+  it("box selection replaces an existing selection without shift", async () => {
     renderCalendar({
       mode: "week",
       events: [buildPlainEvent(), buildSecondEvent()],
@@ -551,7 +571,7 @@ describe("Calendar", () => {
     });
 
     expect(isSelected(await getEventBlock("Planning"))).toBe(true);
-    expect(isSelected(await getEventBlock("Retro"))).toBe(true);
+    expect(isSelected(await getEventBlock("Retro"))).toBe(false);
   });
 
   it("moves every event caught by the box", async () => {

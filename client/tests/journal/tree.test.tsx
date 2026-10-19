@@ -257,4 +257,60 @@ describe("journal tree", () => {
     act(() => journal.renameItem(before[0].id, "Renamed"));
     expect(journal.items).not.toBe(before);
   });
+  describe("selection", () => {
+    const ctrlClick = (name: string) => {
+      fireEvent.pointerDown(treeItem(name), {
+        pointerId: 1,
+        ctrlKey: true,
+        clientX: 5,
+        clientY: 5,
+      });
+      fireEvent.pointerUp(window, { pointerId: 1 });
+    };
+
+    const setup = async () => {
+      const user = userEvent.setup();
+      renderJournal();
+      await createNote(user, "Alpha");
+      await createNote(user, "Beta");
+      return user;
+    };
+
+    it("toggles a row with ctrl + click without opening it", async () => {
+      await setup();
+
+      ctrlClick("Alpha");
+      expect(treeItem("Alpha").getAttribute("aria-selected")).toBe("true");
+
+      ctrlClick("Alpha");
+      expect(treeItem("Alpha").getAttribute("aria-selected")).toBe("false");
+    });
+
+    it("clears the selection with escape", async () => {
+      const user = await setup();
+      ctrlClick("Alpha");
+
+      await user.keyboard("{Escape}");
+
+      expect(treeItem("Alpha").getAttribute("aria-selected")).toBe("false");
+    });
+
+    it("keeps the selection on other keys", async () => {
+      const user = await setup();
+      ctrlClick("Alpha");
+
+      await user.keyboard("a");
+
+      expect(treeItem("Alpha").getAttribute("aria-selected")).toBe("true");
+    });
+
+    it("clears the selection when pressing the tree background", async () => {
+      await setup();
+      ctrlClick("Alpha");
+
+      fireEvent.pointerDown(screen.getByRole("tree"), { pointerId: 1 });
+
+      expect(treeItem("Alpha").getAttribute("aria-selected")).toBe("false");
+    });
+  });
 });

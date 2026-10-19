@@ -67,6 +67,8 @@ import {
   resizeAllDay,
 } from "@/lib/calendar/eventBars";
 import { getDayRects, getEventRects } from "@/lib/calendar/dom";
+import { edgeScrollSpeed } from "@/lib/selectionBox";
+import { useSelectionBox } from "@/hooks/useSelectionBox";
 import {
   GRID_HEADER_HEIGHT,
   NO_BOTTOM_BORDER,
@@ -77,10 +79,7 @@ import {
   type GRID_CONFIG,
 } from "@/lib/calendar/gridLayout";
 import {
-  SELECT_DRAG_THRESHOLD,
-  edgeScrollSpeed,
   resolveSelection,
-  getBoxedKeys,
   getEventsByKey,
   getDraggedTimes,
   KEYBOARD_DRAG_ID,
@@ -98,6 +97,7 @@ import { ALL_DAY_SLOT, createGridFocusStore } from "@/lib/calendar/gridFocus";
 import useGridKeyboard from "@/hooks/useGridKeyboard";
 import { useKeyboardMode } from "@/hooks/useGridFocus";
 import { SpokenMessage, SlotIndicator } from "./GridFocus";
+import SelectionBox from "@/components/ui/selection-box";
 import GridLayout from "./GridLayout";
 import ScrollContainer from "@/components/ui/scroll-container";
 import ScrollThumb from "@/components/ui/scroll-thumb";
@@ -121,7 +121,7 @@ import { useUser } from "@/context/UserContext";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ModeSwitcher from "./ModeSwitcher";
-import type { GridSelectionRef, GridTouchRef } from "@/types/calendar/Cell";
+import type { GridTouchRef } from "@/types/calendar/Cell";
 import { clamp, cn, withoutRuntimeFields } from "@/lib/utils";
 import RecurringUpdateDialog from "./RecurringUpdateDialog";
 import { resolveDefaultName } from "@/lib/calendar/defaultNames";
@@ -384,7 +384,6 @@ export default memo(function AppCalendar({
   const dragRef = useRef<EventDragRef>(null);
   const gridTouchRef = useRef<GridTouchRef | null>(null);
   const eventMapRef = useRef<Map<string, CalendarEvent[]> | null>(null);
-  const selectionBoxRef = useRef<GridSelectionRef | null>(null);
   const hourHeightRef = useRef(hourHeight);
 
   const evPendingRef = useRef<{
@@ -953,123 +952,27 @@ export default memo(function AppCalendar({
 
   pointerUpRef.current = onGlobalPointerUp;
 
-  const updateSelection = useCallback(
-    (state: NonNullable<typeof selectionBoxRef.current>) => {
-      const container = gridRef.current;
-      if (!container) return;
+  const selectionBox = useSelectionBox<{
+    base: CalendarEvent[];
+    toggle?: CalendarEvent;
+  }>({
+    containerRef: gridRef,
+    getRects: (_, offsetX, offsetY) => getEventRects(offsetX, offsetY),
+    onBox: (keys, { base }) =>
+      selectEvents([...base, ...getEventsByKey(eventMapRef.current, keys)]),
+    onClick: ({ toggle }) => toggle && toggleSelection(toggle),
+  });
 
-      state.x1 = state.px + container.scrollLeft;
-      state.y1 = state.py + container.scrollTop;
-
-      state.moved ||=
-        Math.abs(state.x1 - state.x0) > SELECT_DRAG_THRESHOLD ||
-        Math.abs(state.y1 - state.y0) > SELECT_DRAG_THRESHOLD;
-
-      if (state.moved) {
-        const boxed = getEventsByKey(eventMapRef.current, getBoxedKeys(state));
-        selectEvents([...state.base, ...boxed]);
-      }
-
-      forceRender((tick) => tick + 1);
-    },
-    [selectEvents],
-  );
-
-  const onSelectionPointerMove = useCallback(
-    (e: PointerEvent) => {
-      const state = selectionBoxRef.current;
-      if (!state || e.pointerId !== state.pointerId) return;
-
-      state.px = e.clientX;
-      state.py = e.clientY;
-      updateSelection(state);
-    },
-    [updateSelection],
-  );
-
-  const onSelectionPointerUp = useCallback(
-    (e: PointerEvent) => {
-      const state = selectionBoxRef.current;
-      if (!state || e.pointerId !== state.pointerId) return;
-
-      if (!state.moved && state.toggle) toggleSelection(state.toggle);
-
-      selectionBoxRef.current = null;
-      forceRender((tick) => tick + 1);
-
-      window.removeEventListener("pointermove", onSelectionPointerMove);
-      window.removeEventListener("pointerup", onSelectionPointerUp);
-    },
-    [onSelectionPointerMove, toggleSelection],
-  );
+  const { begin: beginBox } = selectionBox;
 
   const beginSelectionBox = useCallback(
-    (e: React.PointerEvent, toggle?: CalendarEvent) => {
-      const container = gridRef.current;
-      if (!container) return;
-
-      const offsetX = container.scrollLeft;
-      const offsetY = container.scrollTop;
-
-      selectionBoxRef.current = {
-        pointerId: e.pointerId,
-        x0: e.clientX + offsetX,
-        y0: e.clientY + offsetY,
-        x1: e.clientX + offsetX,
-        y1: e.clientY + offsetY,
-        px: e.clientX,
-        py: e.clientY,
-        moved: false,
+    (e: React.PointerEvent, toggle?: CalendarEvent) =>
+      beginBox(e, {
         toggle,
-        base: Array.from(selectedEventsRef.current.values()),
-        rects: getEventRects(offsetX, offsetY),
-      };
-
-      window.addEventListener("pointermove", onSelectionPointerMove);
-      window.addEventListener("pointerup", onSelectionPointerUp);
-
-      const scrollNearEdge = () => {
-        const state = selectionBoxRef.current;
-        if (!state) return;
-
-        const rect = container.getBoundingClientRect();
-        const left = container.scrollLeft;
-        const top = container.scrollTop;
-        container.scrollLeft = clamp(
-          left +
-            edgeScrollSpeed(
-              state.px,
-              Math.max(rect.left, 0),
-              Math.min(rect.right, window.innerWidth),
-            ),
-          0,
-          container.scrollWidth - container.clientWidth,
-        );
-        container.scrollTop = clamp(
-          top +
-            edgeScrollSpeed(
-              state.py,
-              Math.max(rect.top, 0),
-              Math.min(rect.bottom, window.innerHeight),
-            ),
-          0,
-          container.scrollHeight - container.clientHeight,
-        );
-        if (container.scrollLeft !== left || container.scrollTop !== top) {
-          // sticky blocks (all day strip) move relative to the content on scroll
-          state.rects = getEventRects(
-            container.scrollLeft,
-            container.scrollTop,
-          );
-          updateSelection(state);
-        }
-        requestAnimationFrame(scrollNearEdge);
-      };
-      requestAnimationFrame(scrollNearEdge);
-    },
-    [onSelectionPointerMove, onSelectionPointerUp, updateSelection],
+        base: e.shiftKey ? Array.from(selectedEventsRef.current.values()) : [],
+      }),
+    [beginBox],
   );
-
   const getDragSelection = useCallback(
     (selected: Map<string, CalendarEvent>, key: string) =>
       selected.size > 1 && selected.has(key)
@@ -2616,19 +2519,6 @@ export default memo(function AppCalendar({
       onEventEdit(event, { ...event, completed: !event.completed }),
   });
 
-  const selectionBox = (() => {
-    const state = selectionBoxRef.current;
-    const container = gridRef.current;
-    if (!state || !container) return null;
-
-    return {
-      left: Math.min(state.x0, state.x1) - container.scrollLeft,
-      top: Math.min(state.y0, state.y1) - container.scrollTop,
-      width: Math.abs(state.x1 - state.x0),
-      height: Math.abs(state.y1 - state.y0),
-    };
-  })();
-
   // build map of event styles
   const stylesMap = useMemo(() => {
     const map = new Map<string, Record<string, EventStyle>>();
@@ -3240,13 +3130,7 @@ export default memo(function AppCalendar({
             />
           )}
 
-          {selectionBox && (
-            <div
-              aria-hidden="true"
-              className="selection-box fixed z-20 pointer-events-none border border-primary bg-primary/20"
-              style={selectionBox}
-            />
-          )}
+          <SelectionBox box={selectionBox.box} />
         </GridLayout>
 
         <ScrollThumb gridRef={gridRef} />

@@ -251,10 +251,12 @@ export const startSelectionBox = ({
   x,
   y,
   from,
+  shift,
 }: {
   x: number;
   y: number;
   from?: Element;
+  shift?: boolean;
 }) => {
   act(() => {
     fireEvent.pointerDown(from ?? getDayCell(0), {
@@ -262,6 +264,7 @@ export const startSelectionBox = ({
       pointerId: 1,
       pointerType: "mouse",
       ctrlKey: true,
+      shiftKey: shift,
       clientX: x,
       clientY: y,
     });
@@ -292,14 +295,16 @@ export const dragSelectionBox = async ({
   endX,
   endY,
   from,
+  shift,
 }: {
   startX: number;
   startY: number;
   endX: number;
   endY: number;
   from?: Element;
+  shift?: boolean;
 }) => {
-  startSelectionBox({ x: startX, y: startY, from });
+  startSelectionBox({ x: startX, y: startY, from, shift });
   moveSelectionBox({ x: endX, y: endY });
   endSelectionBox({ x: endX, y: endY });
 };

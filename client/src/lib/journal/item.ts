@@ -139,6 +139,19 @@ export const canMoveItem = (
   !(parentId && descendantIds(items, item.id).includes(parentId)) &&
   canMoveInto(item, items.find((found) => found.id === parentId) ?? null);
 
+export const topLevelItems = (
+  items: JournalItem[],
+  ids: ReadonlySet<string>,
+) => {
+  const nested = new Set(
+    [...ids].flatMap((id) =>
+      descendantIds(items, id).filter((found) => found !== id),
+    ),
+  );
+
+  return items.filter((item) => ids.has(item.id) && !nested.has(item.id));
+};
+
 export type MoveTarget = { folder: JournalItem | null; depth: number };
 
 export const folderTargets = (

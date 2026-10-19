@@ -2,6 +2,7 @@ import CustomizeDialog from "@/components/journal/CustomizeDialog";
 import JournalToolbar from "@/components/journal/JournalToolbar";
 import JournalTree from "@/components/journal/JournalTree";
 import type { TreeActions } from "@/components/journal/TreeNodes";
+import SelectionBox from "@/components/ui/selection-box";
 import {
   SidebarContent,
   SidebarGroup,
@@ -9,17 +10,20 @@ import {
 } from "@/components/ui/sidebar";
 import { useJournal, useJournalItems } from "@/context/JournalContext";
 import { useTreeDrag } from "@/hooks/journal/useTreeDrag";
+import { useSelectionBox } from "@/hooks/useSelectionBox";
 import { buildTree, filterTree } from "@/lib/journal/item";
 import { focusRow } from "@/lib/journal/focus";
+import { getKeyedRects } from "@/lib/selectionBox";
 import { cn } from "@/lib/utils";
 import type { JournalItem, JournalTreeNode } from "@/types/Journal";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 type TreePaneProps = {
   searching: boolean;
   renamingId: string | null;
   dropTarget: string | null | undefined;
+  selectedIds: ReadonlySet<string>;
   actions: TreeActions;
 };
 
@@ -57,7 +61,11 @@ function SearchResults({ query, ...props }: TreePaneProps & { query: string }) {
 export default function JournalSidebar() {
   const journal = useJournal();
   const { isMobile, setOpenMobile } = useSidebar();
-  const { dropTarget, dragProps, rootProps } = useTreeDrag();
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const { dropTarget, dragProps, rootProps } = useTreeDrag(selectedIds);
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -69,6 +77,62 @@ export default function JournalSidebar() {
     () => buildTree(journal.items, journal.sort),
     [journal.items, journal.sort],
   );
+
+  const clearSelection = useCallback(
+    () => setSelectedIds((prev) => (prev.size ? new Set() : prev)),
+    [],
+  );
+
+  const selectionBox = useSelectionBox<{
+    base: ReadonlySet<string>;
+    toggle?: string;
+  }>({
+    containerRef: contentRef,
+    getRects: (container, offsetX, offsetY) =>
+      getKeyedRects(
+        container,
+        "[data-item-id]",
+        "data-item-id",
+        offsetX,
+        offsetY,
+      ),
+    onBox: (keys, { base }) => setSelectedIds(new Set([...base, ...keys])),
+    onClick: ({ toggle }) => {
+      if (!toggle) return;
+
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (!next.delete(toggle)) next.add(toggle);
+        return next;
+      });
+    },
+  });
+
+  const onTreePointerDown = (e: React.PointerEvent<HTMLElement>) => {
+    const row = (e.target as Element).closest<HTMLElement>("[data-item-id]");
+    if (!e.ctrlKey && !e.metaKey) {
+      if (!row) clearSelection();
+      return;
+    }
+
+    e.preventDefault();
+    selectionBox.begin(e, {
+      base: e.shiftKey ? selectedIds : new Set(),
+      toggle: row?.dataset.itemId,
+    });
+  };
+
+  const hasSelection = selectedIds.size > 0;
+
+  useEffect(() => {
+    if (!hasSelection) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !e.defaultPrevented) clearSelection();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [hasSelection, clearSelection]);
 
   const create = useCallback(
     (type: JournalItem["type"]) => {
@@ -93,6 +157,7 @@ export default function JournalSidebar() {
       onRename: (id) => setTimeout(() => setRenamingId(id)),
       onCustomize: (item) => setTimeout(() => setCustomizingId(item.id)),
       onOpen: (item, newTab) => {
+        clearSelection();
         setFolderId(item.parentId);
         journal.openNote(item.id, newTab);
         if (isMobile) setOpenMobile(false);
@@ -100,17 +165,18 @@ export default function JournalSidebar() {
       onDelete: (item) => journal.removeItem(item.id),
       onMove: (item, parentId) => journal.moveItem(item.id, parentId),
       onToggle: (item) => {
+        clearSelection();
         setFolderId(item.id);
         journal.toggleFolder(item.id);
       },
     }),
-    [dragProps, journal, isMobile, setOpenMobile],
+    [dragProps, journal, isMobile, setOpenMobile, clearSelection],
   );
 
   if (journal.loadFailed) return <SidebarContent />;
 
   return (
-    <SidebarContent>
+    <SidebarContent ref={contentRef}>
       <SidebarGroup>
         <JournalToolbar
           query={query}
@@ -125,11 +191,13 @@ export default function JournalSidebar() {
       <SidebarGroup
         className={cn("flex-1", dropTarget === null && "ring-primary ring-1")}
         {...rootProps}
+        onPointerDown={onTreePointerDown}
       >
         {searching ? (
           <SearchResults
             query={query}
             searching
+            selectedIds={selectedIds}
             renamingId={renamingId}
             dropTarget={dropTarget}
             actions={treeActions}
@@ -138,12 +206,14 @@ export default function JournalSidebar() {
           <TreePane
             nodes={tree}
             searching={false}
+            selectedIds={selectedIds}
             renamingId={renamingId}
             dropTarget={dropTarget}
             actions={treeActions}
           />
         )}
       </SidebarGroup>
+      <SelectionBox box={selectionBox.box} />
       {customizingId && journal.itemsById.has(customizingId) && (
         <CustomizeDialog
           key={customizingId}

@@ -38,6 +38,7 @@ type TreeView = {
   activeId: string | null | undefined;
   expanded: ReadonlySet<string>;
   tabStopId: string;
+  selectedIds: ReadonlySet<string>;
   actions: TreeActions;
   onFocusRow: (id: string) => void;
   onKeyDown: React.KeyboardEventHandler<HTMLElement>;
@@ -57,6 +58,7 @@ const TreeRow = memo(function TreeRow({
   const isFolder = item.type === "folder";
   const open = isFolderOpen(item, view.expanded, searching);
   const active = item.id === view.activeId;
+  const selected = view.selectedIds.has(item.id);
   const refocus = (e: Event) => {
     e.preventDefault();
     focusRow(item.id);
@@ -81,7 +83,7 @@ const TreeRow = memo(function TreeRow({
         data-item-id={item.id}
         aria-level={depth + 1}
         aria-expanded={isFolder ? open : undefined}
-        aria-selected={active}
+        aria-selected={active || selected}
         tabIndex={item.id === view.tabStopId ? 0 : -1}
         {...actions.dragProps(item)}
         className={cn(
@@ -92,6 +94,7 @@ const TreeRow = memo(function TreeRow({
           item.background &&
             !active &&
             "bg-(--item-bg) hover:bg-(--item-bg-strong)",
+          selected && "bg-primary/25 hover:bg-primary/25",
           dropTarget === item.id && "ring-primary ring-1",
         )}
         style={
@@ -104,11 +107,12 @@ const TreeRow = memo(function TreeRow({
           } as React.CSSProperties
         }
         onFocus={() => view.onFocusRow(item.id)}
-        onClick={(e) =>
-          isFolder
-            ? actions.onToggle(item)
-            : actions.onOpen(item, e.ctrlKey || e.metaKey)
-        }
+        onClick={(e) => {
+          if (e.ctrlKey || e.metaKey) return;
+
+          if (isFolder) actions.onToggle(item);
+          else actions.onOpen(item, false);
+        }}
         onContextMenu={(e) => coarse && e.preventDefault()}
         onMouseDown={(e) => e.button === 1 && e.preventDefault()}
         onAuxClick={(e) =>
@@ -175,6 +179,7 @@ export function TreeNodes({
   return (
     <ul
       role={depth === 0 ? "tree" : "group"}
+      aria-multiselectable={depth === 0 || undefined}
       aria-label={depth === 0 ? t("journal.notes") : undefined}
       onKeyDown={depth === 0 ? view.onKeyDown : undefined}
     >
