@@ -360,6 +360,7 @@ export default function SharingPage({
                           email: contact.email,
                         })}
                         size="icon-sm"
+                        className="text-destructive hover:text-destructive"
                         onClick={() => removeContact(contact.uuid)}
                       >
                         <X />

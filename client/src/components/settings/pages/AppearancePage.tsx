@@ -120,10 +120,12 @@ function stripes(colors: ThemeColors) {
 function IconAction({
   label,
   onClick,
+  className,
   children,
 }: {
   label: string;
   onClick: () => void;
+  className?: string;
   children: ReactNode;
 }) {
   return (
@@ -133,7 +135,7 @@ function IconAction({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-7"
+          className={cn("size-7", className)}
           aria-label={label}
           onClick={onClick}
         >
@@ -425,6 +427,7 @@ const PresetsList = memo(function PresetsList() {
                       <Download />
                     </IconAction>
                     <IconAction
+                      className="text-destructive hover:text-destructive"
                       label={t("settings.themes.delete")}
                       onClick={() => deletePreset(item.id)}
                     >

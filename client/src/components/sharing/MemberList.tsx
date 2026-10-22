@@ -28,6 +28,7 @@ export default function MemberList({
               email: nameOf(member.user, member.email),
             })}
             size="icon-sm"
+            className="text-destructive hover:text-destructive"
             onClick={() => removeMember(space.id, member.user)}
           >
             <Trash2 />
