@@ -132,6 +132,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ModeSwitcher from "./ModeSwitcher";
 import type { GridTouchRef } from "@/types/calendar/Cell";
+import { HISTORY_LIMIT, recordHistory, undoRedoAction } from "@/lib/history";
 import { clamp, cn, isModKey, withoutRuntimeFields } from "@/lib/utils";
 import RecurringUpdateDialog from "./RecurringUpdateDialog";
 import { resolveDefaultName } from "@/lib/calendar/defaultNames";
@@ -259,8 +260,6 @@ const releaseTouchBlock = () => {
   touchBlockTarget.current = null;
   window.removeEventListener("touchmove", blockTouchMove);
 };
-
-const HISTORY_LIMIT = 40;
 
 const NO_DRAG = { exclude: EMPTY_ARRAY, append: EMPTY_ARRAY };
 
@@ -606,10 +605,10 @@ export default memo(function AppCalendar({
   }, [saveEvents, saveIfChanged, user?.type, saveDebounceMs]);
 
   const pushHistory = useCallback(() => {
-    const history = historyRef.current;
-    history.past.push(calendarEventsRef.current);
-    if (history.past.length > HISTORY_LIMIT) history.past.shift();
-    history.future = [];
+    historyRef.current = recordHistory(
+      historyRef.current,
+      calendarEventsRef.current,
+    );
     syncHistory();
   }, [syncHistory]);
 
@@ -2200,6 +2199,8 @@ export default memo(function AppCalendar({
     const onKeyDown = (e: KeyboardEvent) => {
       if (!shortcutsApply(e.target)) return;
 
+      const historyAction = undoRedoAction(e);
+
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         move(rtl ? 1 : -1);
@@ -2216,15 +2217,10 @@ export default memo(function AppCalendar({
           e.preventDefault();
           deleteSelectionBatch(Array.from(selectedEventsRef.current.values()));
         }
-      } else if (isModKey(e) && e.key.toLowerCase() === "z" && e.shiftKey) {
+      } else if (historyAction) {
         e.preventDefault();
-        redo();
-      } else if (isModKey(e) && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        undo();
-      } else if (isModKey(e) && e.key.toLowerCase() === "y") {
-        e.preventDefault();
-        redo();
+        if (historyAction === "redo") redo();
+        else undo();
       } else if (isModKey(e) && e.key.toLowerCase() === "c") {
         if (selectedEventsRef.current.size > 0) {
           e.preventDefault();

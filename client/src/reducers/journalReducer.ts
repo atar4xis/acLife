@@ -1,4 +1,6 @@
 import { cloneItems, DEFAULT_JOURNAL, descendantIds } from "@/lib/journal/item";
+import { recordHistory } from "@/lib/history";
+import { moveItemsToSnapshot } from "@/lib/journal/history";
 import {
   canCreateIn,
   canDeleteItem,
@@ -19,7 +21,23 @@ import {
   setSource,
   splitTab,
 } from "@/lib/journal/layout";
-import type { JournalAction, JournalItem, JournalState } from "@/types/Journal";
+import type {
+  JournalAction,
+  JournalHistory,
+  JournalItem,
+  JournalState,
+} from "@/types/Journal";
+
+const EMPTY_HISTORY: JournalHistory = { past: [], future: [] };
+
+const UNDOABLE_ACTIONS = new Set<JournalAction["type"]>([
+  "addItem",
+  "renameItem",
+  "customizeItem",
+  "moveItem",
+  "removeItem",
+  "pasteItems",
+]);
 
 export const createJournalState = (): JournalState => ({
   ...DEFAULT_JOURNAL,
@@ -27,6 +45,7 @@ export const createJournalState = (): JournalState => ({
   expanded: new Set(),
   splitSizes: {},
   removed: [],
+  history: EMPTY_HISTORY,
 });
 
 const updateItem = (
@@ -55,13 +74,67 @@ const closeItems = (state: JournalState, removed: ReadonlySet<string>) => ({
   workspace: closeNotes(state.workspace, Array.from(removed)),
 });
 
+const stepHistory = (
+  state: JournalState,
+  step: "undo" | "redo",
+  now: number,
+): JournalState => {
+  const { past, future } = state.history;
+  const undoing = step === "undo";
+  const entry = (undoing ? past : future).at(-1);
+  if (!entry) return state;
+
+  const [fromSnapshot, toSnapshot] = undoing
+    ? [entry.after, entry.before]
+    : [entry.before, entry.after];
+  const { items, removedIds } = moveItemsToSnapshot(
+    state.items,
+    fromSnapshot,
+    toSnapshot,
+    now,
+  );
+  const history = undoing
+    ? { past: past.slice(0, -1), future: [...future, entry] }
+    : { past: [...past, entry], future: future.slice(0, -1) };
+
+  return {
+    ...state,
+    items,
+    history,
+    ...(removedIds.length > 0 && {
+      removed: removedIds,
+      ...closeItems(state, new Set(removedIds)),
+    }),
+  };
+};
+
 export function journalReducer(
+  state: JournalState,
+  action: JournalAction,
+): JournalState {
+  const next = reduceAction(state, action);
+  if (!UNDOABLE_ACTIONS.has(action.type) || next.items === state.items)
+    return next;
+
+  return {
+    ...next,
+    history: recordHistory(state.history, {
+      before: state.items,
+      after: next.items,
+    }),
+  };
+}
+
+function reduceAction(
   state: JournalState,
   action: JournalAction,
 ): JournalState {
   switch (action.type) {
     case "hydrate":
-      return { ...state, ...action.state };
+      return { ...state, ...action.state, history: EMPTY_HISTORY };
+    case "undo":
+    case "redo":
+      return stepHistory(state, action.type, action.now);
     case "addItem": {
       const found = state.items.find((item) => item.id === action.parentId);
       const parent = found && canCreateIn(found) ? found : undefined;

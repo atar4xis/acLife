@@ -11,11 +11,13 @@ export default function UndoRedoButtons({
   canRedo,
   onUndo,
   onRedo,
+  className,
 }: {
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  className?: string;
 }) {
   const { t } = useTranslation();
   const [faded, setFaded] = useState(false);
@@ -56,6 +58,7 @@ export default function UndoRedoButtons({
       className={cn(
         "fixed bottom-4 inset-e-4 z-10 flex gap-2",
         faded ? "opacity-80" : "opacity-100",
+        className,
       )}
     >
       <Button

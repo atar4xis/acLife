@@ -555,3 +555,64 @@ describe("pasteItems", () => {
     expect(state.items.at(-1)!.parentId).toBeNull();
   });
 });
+
+describe("undo/redo", () => {
+  const undo: JournalAction = { type: "undo", now: 100 };
+  const redo: JournalAction = { type: "redo", now: 200 };
+
+  it("undoes and redoes a creation", () => {
+    const created = run(add("a"), open("a"));
+    const undone = journalReducer(created, undo);
+    expect(undone.items).toEqual([]);
+    expect(undone.removed).toEqual(["a"]);
+    expect(panes(undone)[0].tabs).toEqual([]);
+
+    const redone = journalReducer(undone, redo);
+    expect(redone.items.map((i) => i.id)).toEqual(["a"]);
+  });
+
+  it("undoes a rename and a move", () => {
+    const state = run(
+      add("f", "folder"),
+      add("a"),
+      { type: "renameItem", id: "a", name: "b", now: 5 },
+      { type: "moveItem", id: "a", parentId: "f", now: 6 },
+    );
+    const first = journalReducer(state, undo);
+    expect(item(first, "a")).toMatchObject({ name: "b", parentId: null });
+
+    const second = journalReducer(first, undo);
+    expect(item(second, "a").name).toBe("a");
+    expect(second.history.future).toHaveLength(2);
+  });
+
+  it("restores a deleted folder with its children and bumps updatedAt", () => {
+    const state = run(add("f", "folder"), add("a", "note", "f"), {
+      type: "removeItem",
+      id: "f",
+    });
+    const undone = journalReducer(state, undo);
+    expect(undone.items.map((i) => i.id).toSorted()).toEqual(["a", "f"]);
+    expect(item(undone, "a")).toMatchObject({ parentId: "f", updatedAt: 100 });
+  });
+
+  it("keeps the current content when undoing a rename", () => {
+    const state = run(add("a"), {
+      type: "renameItem",
+      id: "a",
+      name: "b",
+      now: 2,
+    }, { type: "setContent", id: "a", content: "text", now: 3 });
+    expect(item(journalReducer(state, undo), "a")).toMatchObject({
+      name: "a",
+      content: "text",
+    });
+  });
+
+  it("clears redo after a new action and ignores empty history", () => {
+    const undone = journalReducer(run(add("a")), undo);
+    expect(journalReducer(undone, add("b")).history.future).toEqual([]);
+    const empty = createJournalState();
+    expect(journalReducer(empty, undo)).toBe(empty);
+  });
+});

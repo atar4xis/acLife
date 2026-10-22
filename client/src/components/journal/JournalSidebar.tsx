@@ -1,3 +1,4 @@
+import UndoRedoButtons from "@/components/calendar/UndoRedoButtons";
 import CustomizeDialog from "@/components/journal/CustomizeDialog";
 import JournalToolbar from "@/components/journal/JournalToolbar";
 import JournalTree from "@/components/journal/JournalTree";
@@ -21,8 +22,10 @@ import { useTreeDrag } from "@/hooks/journal/useTreeDrag";
 import { useSelectionBox } from "@/hooks/useSelectionBox";
 import { buildTree, filterTree } from "@/lib/journal/item";
 import { focusRow } from "@/lib/journal/focus";
+import { undoRedoAction } from "@/lib/history";
+import { shortcutsApply } from "@/lib/calendar/shortcutScope";
 import { getKeyedRects } from "@/lib/selectionBox";
-import { cn } from "@/lib/utils";
+import { cn, isModKey } from "@/lib/utils";
 import type { JournalItem, JournalTreeNode } from "@/types/Journal";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -121,7 +124,7 @@ export default function JournalSidebar() {
 
   const onTreePointerDown = (e: React.PointerEvent<HTMLElement>) => {
     const row = (e.target as Element).closest<HTMLElement>("[data-item-id]");
-    if (!e.ctrlKey && !e.metaKey) {
+    if (!isModKey(e)) {
       if (!row) clearSelection();
       return;
     }
@@ -144,6 +147,24 @@ export default function JournalSidebar() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [hasSelection, clearSelection]);
+
+  const { undo, redo } = journal;
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const historyAction = undoRedoAction(e);
+      if (!historyAction || e.defaultPrevented) return;
+
+      const focusInTree = (e.target as Element).closest?.("[role=tree]");
+      if (!focusInTree && !shortcutsApply(e.target)) return;
+
+      e.preventDefault();
+      if (historyAction === "redo") redo();
+      else undo();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [undo, redo]);
 
   const createIn = useCallback(
     (type: JournalItem["type"], parentId: string | null) => {
@@ -210,67 +231,78 @@ export default function JournalSidebar() {
   if (journal.loadFailed) return <SidebarContent />;
 
   return (
-    <SidebarContent ref={contentRef} className="flex-1">
-      <SidebarGroup>
-        <JournalToolbar
-          query={query}
-          setQuery={setQuery}
-          searching={searching}
-          searchOpen={searchOpen}
-          setSearchOpen={setSearchOpen}
-          create={create}
-        />
-      </SidebarGroup>
+    <>
+      <SidebarContent ref={contentRef} className="flex-1">
+        <SidebarGroup>
+          <JournalToolbar
+            query={query}
+            setQuery={setQuery}
+            searching={searching}
+            searchOpen={searchOpen}
+            setSearchOpen={setSearchOpen}
+            create={create}
+          />
+        </SidebarGroup>
 
-      <ContextMenu>
-        <ContextMenuTrigger asChild disabled={coarse}>
-          <SidebarGroup
-            className={cn(
-              "flex-1",
-              dropTarget === null && "ring-primary ring-1",
-            )}
-            {...rootProps}
-            onPointerDown={onTreePointerDown}
-          >
-            {searching ? (
-              <SearchResults
-                query={query}
-                searching
-                selectedIds={selectedIds}
-                renamingId={renamingId}
-                dropTarget={dropTarget}
-                actions={treeActions}
-              />
-            ) : (
-              <TreePane
-                nodes={tree}
-                searching={false}
-                selectedIds={selectedIds}
-                renamingId={renamingId}
-                dropTarget={dropTarget}
-                actions={treeActions}
-              />
-            )}
-          </SidebarGroup>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem
-            disabled={clipboard.length === 0}
-            onSelect={() => journal.pasteItems(clipboard, null)}
-          >
-            <ClipboardPaste />
-            {t("common.paste")}
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-      <SelectionBox box={selectionBox.box} />
-      {customizingId && journal.itemsById.has(customizingId) && (
-        <CustomizeDialog
-          key={customizingId}
-          item={journal.itemsById.get(customizingId)!}
-          onClose={() => setCustomizingId(null)}
+        <ContextMenu>
+          <ContextMenuTrigger asChild disabled={coarse}>
+            <SidebarGroup
+              className={cn(
+                "flex-1",
+                dropTarget === null && "ring-primary ring-1",
+              )}
+              {...rootProps}
+              onPointerDown={onTreePointerDown}
+            >
+              {searching ? (
+                <SearchResults
+                  query={query}
+                  searching
+                  selectedIds={selectedIds}
+                  renamingId={renamingId}
+                  dropTarget={dropTarget}
+                  actions={treeActions}
+                />
+              ) : (
+                <TreePane
+                  nodes={tree}
+                  searching={false}
+                  selectedIds={selectedIds}
+                  renamingId={renamingId}
+                  dropTarget={dropTarget}
+                  actions={treeActions}
+                />
+              )}
+            </SidebarGroup>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem
+              disabled={clipboard.length === 0}
+              onSelect={() => journal.pasteItems(clipboard, null)}
+            >
+              <ClipboardPaste />
+              {t("common.paste")}
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+        <SelectionBox box={selectionBox.box} />
+        {customizingId && journal.itemsById.has(customizingId) && (
+          <CustomizeDialog
+            key={customizingId}
+            item={journal.itemsById.get(customizingId)!}
+            onClose={() => setCustomizingId(null)}
+          />
+        )}
+      </SidebarContent>
+      {isMobile && (
+        <UndoRedoButtons
+          className="absolute"
+          canUndo={journal.canUndo}
+          canRedo={journal.canRedo}
+          onUndo={undo}
+          onRedo={redo}
         />
       )}
-    </SidebarContent>
+    </>
   );
 }

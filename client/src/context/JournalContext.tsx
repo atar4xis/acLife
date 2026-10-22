@@ -33,7 +33,9 @@ import {
   useState,
 } from "react";
 
-type JournalContextValue = Omit<JournalState, "removed"> & {
+type JournalContextValue = Omit<JournalState, "removed" | "history"> & {
+  canUndo: boolean;
+  canRedo: boolean;
   drag: JournalDrag | null;
   acceptedDrag: JournalDrag | null;
   loadFailed: boolean;
@@ -42,6 +44,8 @@ type JournalContextValue = Omit<JournalState, "removed"> & {
 };
 
 type JournalActions = {
+  undo: () => void;
+  redo: () => void;
   setSplitSizes: (key: string, sizes: number[]) => void;
   setReading: (paneId: string, reading: boolean) => void;
   setSource: (paneId: string, source: boolean) => void;
@@ -122,6 +126,8 @@ export function JournalProvider({ children }: WithChildren) {
     };
 
     return {
+      undo: () => dispatch({ type: "undo", now: Date.now() }),
+      redo: () => dispatch({ type: "redo", now: Date.now() }),
       setSort: (sort) => dispatch({ type: "setSort", sort }),
       importItems: (upserts) => dispatch({ type: "importItems", upserts }),
       pasteItems: (ids, parentId) =>
@@ -189,7 +195,9 @@ export function JournalProvider({ children }: WithChildren) {
     };
   }, [settingsStore]);
 
-  const { sort, workspace, expanded, splitSizes } = state;
+  const { sort, workspace, expanded, splitSizes, history } = state;
+  const canUndo = history.past.length > 0;
+  const canRedo = history.future.length > 0;
   const [outline, setOutline] = useState<JournalItem[]>(EMPTY_ARRAY);
   const settledItems = useDebouncedValue(state.items, MODIFIED_SORT_SETTLE_MS);
   const outlineItems = toOutline(
@@ -209,6 +217,8 @@ export function JournalProvider({ children }: WithChildren) {
       : null;
   const value = useMemo<JournalContextValue>(
     () => ({
+      canUndo,
+      canRedo,
       items: outlineItems,
       sort,
       workspace,
@@ -221,6 +231,8 @@ export function JournalProvider({ children }: WithChildren) {
       itemsById,
     }),
     [
+      canUndo,
+      canRedo,
       outlineItems,
       sort,
       workspace,

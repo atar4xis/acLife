@@ -1,3 +1,4 @@
+import type { History } from "@/lib/history";
 import type { SharedInfo } from "@/types/Share";
 import type { EncryptedRecord, SyncDiff } from "@/types/Sync";
 
@@ -93,11 +94,16 @@ export type JournalLayoutState = {
   expanded: string[];
 };
 
+export type HistoryEntry = { before: JournalItem[]; after: JournalItem[] };
+
+export type JournalHistory = History<HistoryEntry>;
+
 export type JournalState = JournalData & {
   workspace: Workspace;
   expanded: ReadonlySet<string>;
   splitSizes: Record<string, number[]>;
   removed: string[];
+  history: JournalHistory;
 };
 
 export type JournalAction =
@@ -122,6 +128,8 @@ export type JournalAction =
   | { type: "setContent"; id: string; content: string; now: number }
   | { type: "moveItem"; id: string; parentId: string | null; now: number }
   | { type: "removeItem"; id: string }
+  | { type: "undo"; now: number }
+  | { type: "redo"; now: number }
   | { type: "pasteItems"; ids: string[]; parentId: string | null; now: number }
   | { type: "applyRemote"; upserts: JournalItem[]; deletedIds: string[] }
   | { type: "importItems"; upserts: JournalItem[] }
