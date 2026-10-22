@@ -21,7 +21,7 @@ import { createCoalescer, createSerialQueue } from "@/lib/serialQueue";
 import { syncPart } from "@/lib/syncBatch";
 import { isOwnMessage, onStream, type StreamMessage } from "@/lib/stream";
 import { isSubscriptionMissing } from "@/lib/subscription";
-import { base64ByteLength, identity } from "@/lib/utils";
+import { base64ByteLength, identity, sleep } from "@/lib/utils";
 import type { EncryptedRecord, RecordChange } from "@/types/Sync";
 import type {
   JournalAction,
@@ -40,6 +40,7 @@ import { flushSync } from "react-dom";
 import { toast } from "sonner";
 
 const SAVE_DELAY_MS = 1000;
+const CHUNK_INTERVAL_MS = 100;
 const SYNC_BUCKETS = 16;
 
 const isPresent = <T>(value: T | null): value is T => value !== null;
@@ -227,6 +228,7 @@ export const useRecordSync = (target: RecordSyncTarget) => {
       ];
 
       for (let from = 0; from < changes.length; from += CHUNK_ITEMS) {
+        if (from > 0) await sleep(CHUNK_INTERVAL_MS);
         const chunk = changes.slice(from, from + CHUNK_ITEMS);
         const res = await post(withClient(target.savePath), chunk);
         if (gen !== generation.current) return false;

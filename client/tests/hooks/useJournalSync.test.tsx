@@ -391,6 +391,13 @@ describe("useJournalSync saving", () => {
 
     for (const item of many) await act(() => current.dispatch({ type: "setContent", id: item.id, content: "x", now: 6000 }));
     await debounce();
+    await until(() => server.saves().length === 1);
+    await act(async () => void vi.advanceTimersByTime(99));
+    expect(server.saves()).toHaveLength(1);
+
+    await act(async () => void vi.advanceTimersByTime(1));
+    await until(() => server.saves().length === 2);
+    await act(async () => void vi.advanceTimersByTime(100));
     await until(() => server.saves().length === 3);
 
     expect(server.saves().map((s) => s.body.length)).toEqual([20, 20, 5]);
