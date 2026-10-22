@@ -1,13 +1,3 @@
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { TreeNodes, type TreeActions } from "@/components/journal/TreeNodes";
 import { useJournal } from "@/context/JournalContext";
 import { useCoarsePointer } from "@/hooks/useCoarsePointer";
@@ -17,7 +7,6 @@ import { panesOf } from "@/lib/journal/layout";
 import { treeKeyDown } from "@/lib/journal/treeKeyboard";
 import type { JournalItem, JournalTreeNode } from "@/types/Journal";
 import { memo, useCallback, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 
 export default memo(function JournalTree({
   nodes,
@@ -34,12 +23,7 @@ export default memo(function JournalTree({
   selectedIds: ReadonlySet<string>;
   actions: TreeActions;
 }) {
-  const { t } = useTranslation();
-  const { workspace, expanded, items, itemsById } = useJournal();
-  const [confirming, setConfirming] = useState<{
-    item: JournalItem;
-    next?: string;
-  } | null>(null);
+  const { workspace, expanded, itemsById } = useJournal();
   const coarse = useCoarsePointer();
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const activeId = panesOf(workspace.layout).find(
@@ -62,22 +46,10 @@ export default memo(function JournalTree({
         .slice(index + 1)
         .find((row) => row.depth <= rows[index].depth);
       const next = (after ?? rows[index - 1])?.item.id;
-      const targets = selectedIds.has(item.id)
-        ? items.filter((i) => selectedIds.has(i.id))
-        : [item];
-      const hasChildren = targets.some(
-        (target) =>
-          target.type === "folder" &&
-          items.some((i) => i.parentId === target.id),
-      );
-      if (hasChildren) {
-        setConfirming({ item, next });
-        return;
-      }
       onDelete(item);
       if (next) focusRow(next);
     },
-    [rows, onDelete, items, selectedIds],
+    [rows, onDelete],
   );
 
   const treeActions = useMemo<TreeActions>(
@@ -142,33 +114,6 @@ export default memo(function JournalTree({
   return (
     <>
       <TreeNodes nodes={nodes} depth={0} view={view} />
-      <AlertDialog
-        open={!!confirming}
-        onOpenChange={(open) => !open && setConfirming(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("journal.deleteFolderTitle", { name: confirming?.item.name })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("journal.deleteFolderDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (!confirming) return;
-                onDelete(confirming.item);
-                if (confirming.next) focusRow(confirming.next);
-              }}
-            >
-              {t("journal.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 });

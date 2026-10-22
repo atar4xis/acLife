@@ -894,8 +894,6 @@
     "noMatches": "Aucun résultat",
     "rename": "Renommer",
     "delete": "Supprimer",
-    "deleteFolderTitle": "Supprimer « {{name}} » ?",
-    "deleteFolderDescription": "Ce dossier et tout son contenu seront supprimés sur tous vos appareils.",
     "tabs": "Notes ouvertes",
     "closeTab": "Fermer {{name}}",
     "selectNote": "Sélectionnez ou <create>créez</create> une note pour commencer à écrire.",

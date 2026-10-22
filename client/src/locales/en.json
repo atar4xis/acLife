@@ -898,8 +898,6 @@
     "noMatches": "No matches",
     "rename": "Rename",
     "delete": "Delete",
-    "deleteFolderTitle": "Delete \"{{name}}\"?",
-    "deleteFolderDescription": "This folder and everything in it will be deleted on all your devices.",
     "tabs": "Open notes",
     "closeTab": "Close {{name}}",
     "selectNote": "Select or <create>create</create> a note to start writing.",

@@ -872,8 +872,6 @@
     "noMatches": "一致するノートがありません",
     "rename": "名前を変更",
     "delete": "削除",
-    "deleteFolderTitle": "「{{name}}」を削除しますか？",
-    "deleteFolderDescription": "このフォルダとその中身は、すべてのデバイスから削除されます。",
     "tabs": "開いているノート",
     "closeTab": "{{name}}を閉じる",
     "selectNote": "ノートを選択するか、<create>作成</create>して書き始めましょう。",

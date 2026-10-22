@@ -942,8 +942,6 @@
     "noMatches": "Brak wyników",
     "rename": "Zmień nazwę",
     "delete": "Usuń",
-    "deleteFolderTitle": "Usunąć „{{name}}”?",
-    "deleteFolderDescription": "Ten folder i cała jego zawartość zostaną usunięte na wszystkich Twoich urządzeniach.",
     "tabs": "Otwarte notatki",
     "closeTab": "Zamknij {{name}}",
     "selectNote": "Wybierz lub <create>utwórz</create> notatkę, aby zacząć pisać.",

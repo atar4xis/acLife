@@ -73,7 +73,7 @@ describe("journal tree", () => {
     expect(within(menu).getAllByRole("menuitemradio")).toHaveLength(6);
     expect(within(menu).getAllByRole("separator")).toHaveLength(2);
   });
-  it("deletes a folder with its notes after confirmation", async () => {
+  it("deletes a folder with its notes without confirmation", async () => {
     const user = userEvent.setup();
     renderJournal();
 
@@ -86,18 +86,6 @@ describe("journal tree", () => {
 
     fireEvent.contextMenu(treeItem("Docs"));
     await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
-    const dialog = await screen.findByRole("alertdialog");
-    expect(within(dialog).getByText('Delete "Docs"?')).toBeTruthy();
-    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
-    expect(treeItem("Docs")).toBeTruthy();
-
-    fireEvent.contextMenu(treeItem("Docs"));
-    await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
-    await user.click(
-      within(await screen.findByRole("alertdialog")).getByRole("button", {
-        name: "Delete",
-      }),
-    );
 
     expect(screen.queryByRole("treeitem", { name: "Docs" })).toBeNull();
     expect(screen.queryByLabelText("Close Inside")).toBeNull();

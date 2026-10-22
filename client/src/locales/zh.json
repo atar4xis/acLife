@@ -872,8 +872,6 @@
     "noMatches": "没有匹配项",
     "rename": "重命名",
     "delete": "删除",
-    "deleteFolderTitle": "删除“{{name}}”？",
-    "deleteFolderDescription": "此文件夹及其所有内容将在你的所有设备上被删除。",
     "tabs": "已打开的笔记",
     "closeTab": "关闭 {{name}}",
     "selectNote": "选择或<create>新建</create>一条笔记，开始记录。",

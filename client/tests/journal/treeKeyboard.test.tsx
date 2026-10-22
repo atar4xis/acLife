@@ -318,11 +318,6 @@ describe("journal tree keyboard", () => {
 
     focus("Docs");
     await user.keyboard("{Delete}");
-    await user.click(
-      within(await screen.findByRole("alertdialog")).getByRole("button", {
-        name: "Delete",
-      }),
-    );
     await waitFor(() => expect(focused()).toBe(treeItem("Plain")));
     expect(screen.queryByRole("treeitem", { name: "Docs" })).toBeNull();
     expect(screen.queryByRole("treeitem", { name: "Inner" })).toBeNull();

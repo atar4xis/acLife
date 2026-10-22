@@ -981,8 +981,6 @@
     "noMatches": "لا توجد نتائج",
     "rename": "إعادة تسمية",
     "delete": "حذف",
-    "deleteFolderTitle": "حذف \"{{name}}\"؟",
-    "deleteFolderDescription": "سيتم حذف هذا المجلد وكل ما فيه على جميع أجهزتك.",
     "tabs": "الملاحظات المفتوحة",
     "closeTab": "إغلاق {{name}}",
     "selectNote": "اختر ملاحظة أو <create>أنشئ</create> واحدة لبدء الكتابة.",

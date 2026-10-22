@@ -900,8 +900,6 @@
     "noMatches": "कोई परिणाम नहीं",
     "rename": "नाम बदलें",
     "delete": "हटाएँ",
-    "deleteFolderTitle": "\"{{name}}\" हटाएँ?",
-    "deleteFolderDescription": "यह फ़ोल्डर और इसकी सभी सामग्री आपके सभी उपकरणों से हटा दिए जाएँगे।",
     "tabs": "खुले नोट",
     "closeTab": "{{name}} बंद करें",
     "selectNote": "लिखना शुरू करने के लिए कोई नोट चुनें या नया नोट <create>बनाएँ</create>।",
