@@ -1,4 +1,4 @@
-import { DEFAULT_JOURNAL, descendantIds } from "@/lib/journal/item";
+import { cloneItems, DEFAULT_JOURNAL, descendantIds } from "@/lib/journal/item";
 import {
   canCreateIn,
   canDeleteItem,
@@ -155,6 +155,21 @@ export function journalReducer(
           removed: action.deletedIds,
           ...closeItems(state, removed),
         }),
+      };
+    }
+    case "pasteItems": {
+      const found = state.items.find((item) => item.id === action.parentId);
+      const parent = found && canCreateIn(found) ? found : undefined;
+      const clones = cloneItems(
+        state.items,
+        new Set(action.ids),
+        parent,
+        action.now,
+      );
+      return {
+        ...state,
+        items: [...state.items, ...clones],
+        expanded: expand(state, parent?.id ?? null),
       };
     }
     case "importItems": {

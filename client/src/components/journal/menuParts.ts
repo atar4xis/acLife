@@ -26,7 +26,7 @@ export type MenuParts = {
   Item: React.ComponentType<
     Pick<
       React.ComponentProps<typeof ContextMenuItem>,
-      "onSelect" | "style" | "children"
+      "onSelect" | "style" | "children" | "disabled"
     >
   >;
   Sub: React.ComponentType<

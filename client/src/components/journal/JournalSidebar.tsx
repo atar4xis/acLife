@@ -2,6 +2,14 @@ import CustomizeDialog from "@/components/journal/CustomizeDialog";
 import JournalToolbar from "@/components/journal/JournalToolbar";
 import JournalTree from "@/components/journal/JournalTree";
 import type { TreeActions } from "@/components/journal/TreeNodes";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
+import { ClipboardPaste } from "lucide-react";
 import SelectionBox from "@/components/ui/selection-box";
 import {
   SidebarContent,
@@ -60,8 +68,11 @@ function SearchResults({ query, ...props }: TreePaneProps & { query: string }) {
 
 export default function JournalSidebar() {
   const journal = useJournal();
+  const { t } = useTranslation();
+  const coarse = useCoarsePointer();
   const { isMobile, setOpenMobile } = useSidebar();
   const contentRef = useRef<HTMLDivElement>(null);
+  const [clipboard, setClipboard] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
     new Set(),
   );
@@ -168,6 +179,15 @@ export default function JournalSidebar() {
         if (isMobile) setOpenMobile(false);
       },
       onDelete: (item) => journal.removeItem(item.id),
+      onCopy: (item) => {
+        setClipboard(selectedIds.has(item.id) ? [...selectedIds] : [item.id]);
+      },
+      canPaste: clipboard.length > 0,
+      onPaste: (item) =>
+        journal.pasteItems(
+          clipboard,
+          item.type === "folder" ? item.id : item.parentId,
+        ),
       onMove: (item, parentId) => journal.moveItem(item.id, parentId),
       onToggle: (item) => {
         clearSelection();
@@ -175,13 +195,22 @@ export default function JournalSidebar() {
         journal.toggleFolder(item.id);
       },
     }),
-    [dragProps, journal, isMobile, setOpenMobile, clearSelection, createIn],
+    [
+      dragProps,
+      journal,
+      isMobile,
+      setOpenMobile,
+      clearSelection,
+      createIn,
+      selectedIds,
+      clipboard,
+    ],
   );
 
   if (journal.loadFailed) return <SidebarContent />;
 
   return (
-    <SidebarContent ref={contentRef}>
+    <SidebarContent ref={contentRef} className="flex-1">
       <SidebarGroup>
         <JournalToolbar
           query={query}
@@ -193,31 +222,47 @@ export default function JournalSidebar() {
         />
       </SidebarGroup>
 
-      <SidebarGroup
-        className={cn("flex-1", dropTarget === null && "ring-primary ring-1")}
-        {...rootProps}
-        onPointerDown={onTreePointerDown}
-      >
-        {searching ? (
-          <SearchResults
-            query={query}
-            searching
-            selectedIds={selectedIds}
-            renamingId={renamingId}
-            dropTarget={dropTarget}
-            actions={treeActions}
-          />
-        ) : (
-          <TreePane
-            nodes={tree}
-            searching={false}
-            selectedIds={selectedIds}
-            renamingId={renamingId}
-            dropTarget={dropTarget}
-            actions={treeActions}
-          />
-        )}
-      </SidebarGroup>
+      <ContextMenu>
+        <ContextMenuTrigger asChild disabled={coarse}>
+          <SidebarGroup
+            className={cn(
+              "flex-1",
+              dropTarget === null && "ring-primary ring-1",
+            )}
+            {...rootProps}
+            onPointerDown={onTreePointerDown}
+          >
+            {searching ? (
+              <SearchResults
+                query={query}
+                searching
+                selectedIds={selectedIds}
+                renamingId={renamingId}
+                dropTarget={dropTarget}
+                actions={treeActions}
+              />
+            ) : (
+              <TreePane
+                nodes={tree}
+                searching={false}
+                selectedIds={selectedIds}
+                renamingId={renamingId}
+                dropTarget={dropTarget}
+                actions={treeActions}
+              />
+            )}
+          </SidebarGroup>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            disabled={clipboard.length === 0}
+            onSelect={() => journal.pasteItems(clipboard, null)}
+          >
+            <ClipboardPaste />
+            {t("common.paste")}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
       <SelectionBox box={selectionBox.box} />
       {customizingId && journal.itemsById.has(customizingId) && (
         <CustomizeDialog

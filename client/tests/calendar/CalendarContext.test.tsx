@@ -155,6 +155,9 @@ describe("calendar context slices", () => {
       detach: vi.fn(),
       shareOccurrence: vi.fn(),
       reset: vi.fn(),
+      copy: vi.fn(),
+      paste: vi.fn(),
+      canPaste: vi.fn(),
     });
 
     setEventHandlers(handlers(first));

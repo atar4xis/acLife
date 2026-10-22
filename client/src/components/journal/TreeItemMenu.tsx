@@ -15,7 +15,9 @@ import {
 import type { JournalItem } from "@/types/Journal";
 import {
   Clipboard,
+  ClipboardPaste,
   Columns2,
+  Files,
   FilePlus,
   FolderInput,
   FolderPlus,
@@ -33,6 +35,9 @@ export type TreeItemMenuActions = {
   onCustomize: (item: JournalItem) => void;
   onDelete: (item: JournalItem) => void;
   onMove: (item: JournalItem, parentId: string | null) => void;
+  onCopy: (item: JournalItem) => void;
+  onPaste: (item: JournalItem) => void;
+  canPaste: boolean;
 };
 
 export default function TreeItemMenu({
@@ -46,13 +51,16 @@ export default function TreeItemMenu({
 }) {
   const { t } = useTranslation();
   const developerMode = useCalendarSettings((s) => s.developerMode);
-  const { items, sort, workspace, expanded } = useJournal();
+  const { items, itemsById, sort, workspace, expanded } = useJournal();
   const { enabled: canShare, openShare } = useShares();
   const targets = moveTargets(items, sort, item);
   const drag = { id: item.id };
   const options = moveOptions(workspace, drag, workspace.focused);
   const canSplit =
     item.type === "note" && options.zones.length + options.panes.length > 0;
+
+  const pasteTarget =
+    item.type === "folder" ? item : itemsById.get(item.parentId ?? "");
 
   const sections = [
     item.type === "folder" && canCreateIn(item) && (
@@ -104,6 +112,23 @@ export default function TreeItemMenu({
         )}
       </>
     ) : null,
+    !item._virtual && (
+      <>
+        <Item onSelect={() => actions.onCopy(item)}>
+          <Files />
+          {t("common.copy")}
+        </Item>
+        {(!pasteTarget || canCreateIn(pasteTarget)) && (
+          <Item
+            disabled={!actions.canPaste}
+            onSelect={() => actions.onPaste(item)}
+          >
+            <ClipboardPaste />
+            {t("common.paste")}
+          </Item>
+        )}
+      </>
+    ),
     targets.length > 0 || canSplit ? (
       <>
         {targets.length > 0 && (

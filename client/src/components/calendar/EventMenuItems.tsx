@@ -9,6 +9,8 @@ import {
 } from "../ui/context-menu";
 import {
   Clipboard,
+  ClipboardPaste,
+  Files,
   CopyIcon,
   PencilLine,
   RotateCcw,
@@ -18,6 +20,7 @@ import {
 } from "lucide-react";
 import { MoveMenuItems } from "./MoveMenuItems";
 import { useTranslation } from "react-i18next";
+import { useCalendarActions } from "@/context/CalendarContext";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useShares } from "@/context/ShareContext";
 import { canDeleteEvent, canEditEvent } from "@/lib/calendar/shared";
@@ -31,7 +34,20 @@ type EventMenuItemsProps = {
   onDetach: (event: CalendarEvent) => void;
   onShareOccurrence: (event: CalendarEvent) => string;
   onReset: (event: CalendarEvent) => void;
+  pasteable?: boolean;
 };
+
+export function PasteMenuItem() {
+  const { t } = useTranslation();
+  const { paste, canPaste } = useCalendarActions().eventHandlers;
+
+  return (
+    <ContextMenuItem disabled={!canPaste()} onClick={paste}>
+      <ClipboardPaste />
+      {t("common.paste")}
+    </ContextMenuItem>
+  );
+}
 
 export function EventMenuItems({
   event,
@@ -42,8 +58,10 @@ export function EventMenuItems({
   onDetach,
   onShareOccurrence,
   onReset,
+  pasteable,
 }: EventMenuItemsProps) {
   const { t } = useTranslation();
+  const { copy } = useCalendarActions().eventHandlers;
   const developerMode = useCalendarSettings((s) => s.developerMode);
   const editable = canEditEvent(event);
   const { enabled: canShare, openShare } = useShares();
@@ -105,6 +123,13 @@ export function EventMenuItems({
           {event._parent ? t("block.copyParentId") : t("block.copyId")}
         </ContextMenuItem>
       )}
+
+      <ContextMenuItem onClick={() => copy(event)}>
+        <Files />
+        {t("common.copy")}
+      </ContextMenuItem>
+
+      {pasteable && <PasteMenuItem />}
 
       <ContextMenuItem onClick={() => onDuplicate(event)}>
         <CopyIcon />

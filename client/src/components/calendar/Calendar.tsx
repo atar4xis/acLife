@@ -9,6 +9,12 @@ import {
 } from "react";
 import { DateTime } from "luxon";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
+} from "../ui/context-menu";
+import { PasteMenuItem } from "./EventMenuItems";
+import {
   ArrowLeft,
   ArrowRight,
   ChevronDown,
@@ -1653,28 +1659,6 @@ export default memo(function AppCalendar({
     ],
   );
 
-  // expose the handlers via context so other components can use them
-  useEffect(() => {
-    setEventHandlers({
-      edit: onEventEdit,
-      move: onEventMove,
-      remove: onEventDelete,
-      duplicate: onEventDuplicate,
-      detach: onEventDetach,
-      shareOccurrence: onEventShareOccurrence,
-      reset: onEventReset,
-    });
-  }, [
-    onEventEdit,
-    onEventMove,
-    onEventDelete,
-    onEventDuplicate,
-    onEventDetach,
-    onEventShareOccurrence,
-    onEventReset,
-    setEventHandlers,
-  ]);
-
   const copySelection = useCallback(() => {
     if (selectedEventsRef.current.size === 0) return;
     const selected = Array.from(selectedEventsRef.current.values());
@@ -1682,6 +1666,14 @@ export default memo(function AppCalendar({
       toast.warning(t("calendar.copyLimit", { count: MAX_CLIPBOARD_EVENTS }));
     clipboardRef.current = selected.slice(0, MAX_CLIPBOARD_EVENTS);
   }, [t]);
+
+  const copyEvent = useCallback(
+    (event: CalendarEvent) => {
+      if (selectedEventsRef.current.has(eventKey(event))) copySelection();
+      else clipboardRef.current = [event];
+    },
+    [copySelection],
+  );
 
   const pasteAtPointer = useCallback(() => {
     const clipboard = clipboardRef.current;
@@ -1773,6 +1765,33 @@ export default memo(function AppCalendar({
     save,
     selectEvents,
     pushHistory,
+  ]);
+
+  // expose the handlers via context so other components can use them
+  useEffect(() => {
+    setEventHandlers({
+      edit: onEventEdit,
+      move: onEventMove,
+      remove: onEventDelete,
+      duplicate: onEventDuplicate,
+      detach: onEventDetach,
+      shareOccurrence: onEventShareOccurrence,
+      reset: onEventReset,
+      copy: copyEvent,
+      paste: pasteAtPointer,
+      canPaste: () => clipboardRef.current.length > 0,
+    });
+  }, [
+    onEventEdit,
+    onEventMove,
+    onEventDelete,
+    onEventDuplicate,
+    onEventDetach,
+    onEventShareOccurrence,
+    onEventReset,
+    copyEvent,
+    pasteAtPointer,
+    setEventHandlers,
   ]);
 
   /* -------------------------------------------------------------------------- */
@@ -3093,48 +3112,67 @@ export default memo(function AppCalendar({
         </Popover>
       </nav>
 
-      <div dir="ltr" className="@container flex-1 overflow-hidden relative">
-        <GridLayout
-          ref={gridRef}
-          role="grid"
-          aria-label={t("calendar.grid")}
-          {...gridKeyboardProps}
-          data-keyboard-mode={keyboardMode ? "" : undefined}
-          className="group/grid outline-none touch-pan-y grid h-full overflow-auto hide-scrollbar"
-          mode={mode as keyof typeof GRID_CONFIG}
-          days={visibleDays}
-          timezones={settings.timezones}
-          tzColWidth={tzColWidth}
-          headerBottom={headerBottom}
-          labelsRight={labelsRight}
-          hourHeight={hourHeight}
-          stripHeight={stripHeight}
-          lineOpacity={settings.lineOpacity}
-          now={now}
-          allDayRow={allDayRow}
-          onHeaderClick={createAllDayEvent}
-          onCellTap={startNewEvent}
-          renderDay={renderDay}
-          onTouchStart={gridTouchStart}
-          onTouchMove={gridTouchMove}
-          onTouchEnd={gridTouchEnd}
-          onPointerMove={(e) => {
+      <ContextMenu>
+        <ContextMenuTrigger
+          asChild
+          disabled={isMobile}
+          onContextMenu={(e) => {
             gridPointerRef.current = { x: e.clientX, y: e.clientY };
           }}
         >
-          {isDragging && (
-            <DragOverlay
-              move={move}
-              dragRef={dragRef}
-              anchored={dragRef.current?.pointerId === KEYBOARD_DRAG_ID}
-            />
-          )}
+          <div dir="ltr" className="@container flex-1 overflow-hidden relative">
+            <GridLayout
+              ref={gridRef}
+              role="grid"
+              aria-label={t("calendar.grid")}
+              {...gridKeyboardProps}
+              data-keyboard-mode={keyboardMode ? "" : undefined}
+              className="group/grid outline-none touch-pan-y grid h-full overflow-auto hide-scrollbar"
+              mode={mode as keyof typeof GRID_CONFIG}
+              days={visibleDays}
+              timezones={settings.timezones}
+              tzColWidth={tzColWidth}
+              headerBottom={headerBottom}
+              labelsRight={labelsRight}
+              hourHeight={hourHeight}
+              stripHeight={stripHeight}
+              lineOpacity={settings.lineOpacity}
+              now={now}
+              allDayRow={allDayRow}
+              onHeaderClick={createAllDayEvent}
+              onCellTap={startNewEvent}
+              renderDay={renderDay}
+              onTouchStart={gridTouchStart}
+              onTouchMove={gridTouchMove}
+              onTouchEnd={gridTouchEnd}
+              onPointerMove={(e) => {
+                if (!e.currentTarget.contains(e.target as Node)) return;
+                gridPointerRef.current = { x: e.clientX, y: e.clientY };
+              }}
+            >
+              {isDragging && (
+                <DragOverlay
+                  move={move}
+                  dragRef={dragRef}
+                  anchored={dragRef.current?.pointerId === KEYBOARD_DRAG_ID}
+                />
+              )}
 
-          <SelectionBox box={selectionBox.box} />
-        </GridLayout>
+              <SelectionBox box={selectionBox.box} />
+            </GridLayout>
 
-        <ScrollThumb gridRef={gridRef} />
-      </div>
+            <ScrollThumb gridRef={gridRef} />
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            gridRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          <PasteMenuItem />
+        </ContextMenuContent>
+      </ContextMenu>
 
       {isMobile && (
         <UndoRedoButtons

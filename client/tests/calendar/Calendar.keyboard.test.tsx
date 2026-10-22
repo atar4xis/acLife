@@ -650,13 +650,16 @@ describe("Calendar grid keyboard: context menu", () => {
     expect(fireEvent.contextMenu(document.body)).toBe(true);
   });
 
-  it("leaves the key alone when the focus is on an empty slot", async () => {
+  it("opens the grid menu when the focus is on an empty slot", async () => {
     renderCalendar({ events: [buildPlainEvent()] });
     await screen.findByText("Planning");
     focusGrid();
 
-    expect(openMenuKey({ key: "ContextMenu" })).toBe(true);
-    expect(screen.queryByRole("menu")).toBeNull();
+    expect(openMenuKey({ key: "ContextMenu" })).toBe(false);
+    const menu = await screen.findByRole("menu");
+    expect(
+      within(menu).getByRole("menuitem", { name: "Paste" }),
+    ).toBeInTheDocument();
   });
 
   it("gives the focus back to the event when the menu closes", async () => {
@@ -684,13 +687,17 @@ describe("Calendar grid keyboard: context menu", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps the browser's own menu off the grid in keyboard mode only", async () => {
+  it("opens the grid menu on right-click outside keyboard mode only", async () => {
     renderCalendar();
     await screen.findByText("Wed 18");
-    expect(fireEvent.contextMenu(grid())).toBe(true);
+    fireEvent.contextMenu(grid());
+    expect(await screen.findByRole("menu")).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
     focusGrid();
 
     expect(fireEvent.contextMenu(grid())).toBe(false);
+    expect(screen.queryByRole("menu")).toBeNull();
   });
 });
 
@@ -1467,6 +1474,9 @@ describe("Calendar grid keyboard: keyboard mode", () => {
     await screen.findByText("Wed 18");
     focusGrid();
     await user.pointer({ target: grid(), keys: "[MouseRight]" });
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
 
     expect(inKeyboardMode()).toBe(false);
     expect(await nextDay()).toBeInTheDocument();

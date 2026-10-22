@@ -152,6 +152,33 @@ export const topLevelItems = (
   return items.filter((item) => ids.has(item.id) && !nested.has(item.id));
 };
 
+export const cloneItems = (
+  items: JournalItem[],
+  ids: ReadonlySet<string>,
+  parent: JournalItem | undefined,
+  now: number,
+): JournalItem[] => {
+  const roots = topLevelItems(items, ids);
+  const rootIds = new Set(roots.map((root) => root.id));
+  const included = new Set(
+    roots.flatMap((root) => descendantIds(items, root.id)),
+  );
+  const newIds = new Map([...included].map((id) => [id, crypto.randomUUID()]));
+
+  return items
+    .filter((item) => included.has(item.id))
+    .map((item) => ({
+      ...item,
+      id: newIds.get(item.id)!,
+      parentId: rootIds.has(item.id)
+        ? (parent?.id ?? null)
+        : newIds.get(item.parentId!)!,
+      createdAt: now,
+      updatedAt: now,
+      _shared: parent?._shared,
+    }));
+};
+
 export type MoveTarget = { folder: JournalItem | null; depth: number };
 
 export const folderTargets = (

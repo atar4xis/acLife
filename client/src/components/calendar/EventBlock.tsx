@@ -579,6 +579,7 @@ export default memo(
               onDetach={onDetach}
               onShareOccurrence={onShareOccurrence}
               onReset={onReset}
+              pasteable
             />
           </ContextMenuContent>
         </ContextMenu>

@@ -91,6 +91,8 @@
     "times_other": "لـ {{count}} مرة"
   },
   "common": {
+    "copy": "نسخ",
+    "paste": "لصق",
     "undo": "تراجع",
     "redo": "إعادة",
     "settings": "الإعدادات",

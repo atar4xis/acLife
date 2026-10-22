@@ -70,6 +70,8 @@
     "times_other": "{{count}}回"
   },
   "common": {
+    "copy": "コピー",
+    "paste": "貼り付け",
     "undo": "元に戻す",
     "redo": "やり直す",
     "settings": "設定",

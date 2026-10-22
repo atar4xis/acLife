@@ -74,6 +74,8 @@
     "times_other": "pour {{count}} occurrences"
   },
   "common": {
+    "copy": "Copier",
+    "paste": "Coller",
     "undo": "Annuler",
     "redo": "Rétablir",
     "settings": "Paramètres",

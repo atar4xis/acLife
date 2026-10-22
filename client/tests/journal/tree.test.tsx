@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seedSettings } from "../settingsStorage.ts";
@@ -232,6 +232,39 @@ describe("journal tree", () => {
     await user.click(within(menu).getByRole("menuitem", { name: "Copy ID" }));
     expect(writeText).toHaveBeenCalledWith(
       expect.stringMatching(/^[0-9a-f-]{36}$/),
+    );
+  });
+  it("pastes a copied note from the empty tree area, disabled until something is copied", async () => {
+    const user = userEvent.setup();
+    renderJournal();
+    await createNote(user, "Source");
+    const emptyArea = treeItem("Source").closest("[data-sidebar=group]")!;
+
+    fireEvent.contextMenu(emptyArea);
+    const emptyMenu = await screen.findByRole("menu");
+    expect(
+      within(emptyMenu)
+        .getByRole("menuitem", { name: "Paste" })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
+    await user.keyboard("{Escape}");
+
+    fireEvent.contextMenu(treeItem("Source"));
+    const itemMenu = await screen.findByRole("menu");
+    expect(
+      within(itemMenu)
+        .getByRole("menuitem", { name: "Paste" })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
+    await user.click(within(itemMenu).getByRole("menuitem", { name: "Copy" }));
+
+    fireEvent.contextMenu(emptyArea);
+    await user.click(await screen.findByRole("menuitem", { name: "Paste" }));
+
+    await waitFor(() =>
+      expect(
+        journal.items.filter((item) => item.name === "Source"),
+      ).toHaveLength(2),
     );
   });
   it("gives every toolbar button a tooltip", async () => {

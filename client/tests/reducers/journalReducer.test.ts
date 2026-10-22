@@ -513,3 +513,45 @@ describe("importItems", () => {
     expect(item(state, "a")).toMatchObject({ content: "replaced", updatedAt: 11 });
   });
 });
+
+describe("pasteItems", () => {
+  const paste = (
+    ids: string[],
+    parentId: string | null,
+    now = 50,
+  ): JournalAction => ({ type: "pasteItems", ids, parentId, now });
+
+  it("copies a folder with its subtree under new ids", () => {
+    const base = run(
+      add("dir", "folder"),
+      add("child", "note", "dir"),
+      add("target", "folder"),
+      { type: "setContent", id: "child", content: "text", now: 2 },
+    );
+    const state = journalReducer(base, paste(["dir"], "target"));
+    const copies = state.items.filter((i) => !base.items.includes(i));
+
+    const root = copies.find((i) => i.name === "dir")!;
+    const nested = copies.find((i) => i.name === "child")!;
+    expect(copies).toHaveLength(2);
+    expect(root).toMatchObject({ parentId: "target", createdAt: 50 });
+    expect(root.id).not.toBe("dir");
+    expect(nested).toMatchObject({ parentId: root.id, content: "text" });
+    expect(item(state, "dir").parentId).toBeNull();
+    expect(state.expanded.has("target")).toBe(true);
+  });
+
+  it("copies only the top-level items of a selection", () => {
+    const base = run(add("dir", "folder"), add("child", "note", "dir"));
+    const state = journalReducer(base, paste(["child", "dir"], null));
+
+    expect(state.items).toHaveLength(4);
+  });
+
+  it("pastes into the root when the parent is unknown", () => {
+    const base = run(add("a"));
+    const state = journalReducer(base, paste(["a"], "missing"));
+
+    expect(state.items.at(-1)!.parentId).toBeNull();
+  });
+});

@@ -84,6 +84,8 @@
     "times_other": "{{count}} razy"
   },
   "common": {
+    "copy": "Kopiuj",
+    "paste": "Wklej",
     "undo": "Cofnij",
     "redo": "Ponów",
     "settings": "Ustawienia",

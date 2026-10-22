@@ -30,6 +30,9 @@ type EventHandlers = {
   detach: (event: CalendarEvent) => void;
   shareOccurrence: (event: CalendarEvent) => string;
   reset: (event: CalendarEvent) => void;
+  copy: (event: CalendarEvent) => void;
+  paste: () => void;
+  canPaste: () => boolean;
 };
 
 const HANDLER_KEYS = [
@@ -40,6 +43,9 @@ const HANDLER_KEYS = [
   "detach",
   "shareOccurrence",
   "reset",
+  "copy",
+  "paste",
+  "canPaste",
 ] as const;
 
 type CalendarActions = {

@@ -9,6 +9,7 @@ import {
   ALL_DAY_SLOT,
   MINUTES_PER_DAY,
   eventDomId,
+  slotDomId,
   clampSlot,
   slotWithinDay,
   adjacentEvent,
@@ -379,9 +380,9 @@ export default function useGridKeyboard(params: Params) {
     return () => window.removeEventListener("contextmenu", blockNative, true);
   }, []);
 
-  // the menu listens on the event block, but keyboard focus stays on the grid
-  const openContextMenu = useCallback((event: CalendarEvent, day: number) => {
-    const block = document.getElementById(eventDomId(event, day));
+  // the menu listens on the grid or event block, but keyboard focus stays on the grid
+  const openContextMenu = useCallback((id: string) => {
+    const block = document.getElementById(id);
     if (!block) return;
 
     const rect = block.getBoundingClientRect();
@@ -627,12 +628,13 @@ export default function useGridKeyboard(params: Params) {
       };
       const { focused } = ctx;
 
-      if (
-        focused &&
-        (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey))
-      ) {
+      if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) {
         ctx.handled();
-        openContextMenu(focused, focus.day);
+        openContextMenu(
+          focused
+            ? eventDomId(focused, focus.day)
+            : slotDomId(focus.day, focus.minutes),
+        );
         return;
       }
 

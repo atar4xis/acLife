@@ -122,6 +122,7 @@ export type JournalAction =
   | { type: "setContent"; id: string; content: string; now: number }
   | { type: "moveItem"; id: string; parentId: string | null; now: number }
   | { type: "removeItem"; id: string }
+  | { type: "pasteItems"; ids: string[]; parentId: string | null; now: number }
   | { type: "applyRemote"; upserts: JournalItem[]; deletedIds: string[] }
   | { type: "importItems"; upserts: JournalItem[] }
   | { type: "setSharedSpaces"; spaces: SharedInfo[] }

@@ -72,6 +72,8 @@
     "times_other": "durante {{count}} repeticiones"
   },
   "common": {
+    "copy": "Copiar",
+    "paste": "Pegar",
     "undo": "Deshacer",
     "redo": "Rehacer",
     "settings": "Ajustes",

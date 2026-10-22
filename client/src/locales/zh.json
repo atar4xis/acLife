@@ -70,6 +70,8 @@
     "times_other": "共{{count}}次"
   },
   "common": {
+    "copy": "复制",
+    "paste": "粘贴",
     "undo": "撤销",
     "redo": "重做",
     "settings": "设置",
