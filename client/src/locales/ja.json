@@ -188,6 +188,8 @@
     "week": "週"
   },
   "block": {
+    "newEvent": "新しい予定",
+    "newTask": "新しいタスク",
     "edit": "編集",
     "copyParentId": "元の予定のIDをコピー",
     "copyId": "IDをコピー",

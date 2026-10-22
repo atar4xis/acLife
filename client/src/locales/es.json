@@ -192,6 +192,8 @@
     "week": "Semana"
   },
   "block": {
+    "newEvent": "Nuevo evento",
+    "newTask": "Nueva tarea",
     "edit": "Editar",
     "copyParentId": "Copiar ID del evento principal",
     "copyId": "Copiar ID",

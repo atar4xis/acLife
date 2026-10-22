@@ -188,6 +188,8 @@
     "week": "周"
   },
   "block": {
+    "newEvent": "新建日程",
+    "newTask": "新建任务",
     "edit": "编辑",
     "copyParentId": "复制原始日程 ID",
     "copyId": "复制 ID",
@@ -791,7 +793,7 @@
     "hours_other": "{{count}}小时",
     "minutes": "{{count}}分钟",
     "eventsCount_other": "{{count}}个日程",
-    "newEvent": "新日程",
+    "newEvent": "新建日程",
     "expandAllDay": "展开全天日程",
     "collapseAllDay": "收起全天日程",
     "syncing": "正在同步日程...",
@@ -808,7 +810,7 @@
     "eventGone": "该日程已不存在。",
     "copyLimit": "仅复制了前 {{count}} 个日程。",
     "dayLimit": "一天最多可有 {{count}} 个日程。",
-    "newTask": "新任务"
+    "newTask": "新建任务"
   },
   "serverErrors": {
     "verification_email_sent": "验证邮件已发送。",

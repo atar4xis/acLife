@@ -208,6 +208,8 @@
     "week": "Tydzień"
   },
   "block": {
+    "newEvent": "Nowe wydarzenie",
+    "newTask": "Nowe zadanie",
     "edit": "Edytuj",
     "copyParentId": "Kopiuj ID wydarzenia nadrzędnego",
     "copyId": "Kopiuj ID",

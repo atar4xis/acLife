@@ -27,6 +27,9 @@ import {
   renderCalendar,
   setupCalendarTests,
   timeToClientY,
+  TIME_GUTTER_WIDTH,
+  DAY_WIDTH,
+  GRID_HEADER_HEIGHT,
 } from "./helpers";
 import { spoken, activeElement, focusGrid, grid } from "./gridKeyboardHelpers";
 import { slotDomId } from "../../src/lib/calendar/gridFocus.ts";
@@ -660,6 +663,20 @@ describe("Calendar grid keyboard: context menu", () => {
     expect(
       within(menu).getByRole("menuitem", { name: "Paste" }),
     ).toBeInTheDocument();
+  });
+
+  it("creates a task from the grid menu where it was opened", async () => {
+    const save = vi.fn();
+    const { user } = renderCalendar({ saveEvents: save });
+    await screen.findByText("Wed 18");
+    fireEvent.contextMenu(grid(), {
+      clientX: TIME_GUTTER_WIDTH + DAY_WIDTH / 2,
+      clientY: GRID_HEADER_HEIGHT + 100,
+    });
+    await user.click(await screen.findByRole("menuitem", { name: "New task" }));
+    await advanceSave();
+
+    expect(getLastSavedEvents(save)[0]).toMatchObject({ isTask: true });
   });
 
   it("gives the focus back to the event when the menu closes", async () => {

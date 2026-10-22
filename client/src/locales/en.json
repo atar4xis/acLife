@@ -198,6 +198,8 @@
     "week": "Week"
   },
   "block": {
+    "newEvent": "New event",
+    "newTask": "New task",
     "edit": "Edit",
     "copyParentId": "Copy parent event ID",
     "copyId": "Copy ID",

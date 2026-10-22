@@ -11,14 +11,18 @@ import { DateTime } from "luxon";
 import {
   ContextMenu,
   ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "../ui/context-menu";
 import { PasteMenuItem } from "./EventMenuItems";
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarPlus,
   ChevronDown,
   ChevronUp,
+  ListPlus,
   SearchIcon,
   X,
 } from "lucide-react";
@@ -1675,11 +1679,10 @@ export default memo(function AppCalendar({
     [copySelection],
   );
 
-  const pasteAtPointer = useCallback(() => {
-    const clipboard = clipboardRef.current;
+  const slotAtPointer = useCallback(() => {
     const pointer = gridPointerRef.current;
     const container = gridRef.current;
-    if (clipboard.length === 0 || !pointer || !container) return;
+    if (!pointer || !container) return;
 
     const targetRect = getDayRects().find(
       (d) => pointer.x >= d.rect.left && pointer.x <= d.rect.right,
@@ -1693,8 +1696,26 @@ export default memo(function AppCalendar({
       yToMinutes(y - rect.top - getGridHeaderOffset(), hourHeight),
       settings.snapMinutes,
     );
-    const anchorTime = dayDate.plus({ minutes });
-    const overAllDay = isOverAllDay(pointer.y, rect);
+
+    return {
+      dayDate,
+      anchorTime: dayDate.plus({ minutes }),
+      overAllDay: isOverAllDay(pointer.y, rect),
+    };
+  }, [
+    visibleDays,
+    hourHeight,
+    getGridHeaderOffset,
+    isOverAllDay,
+    settings.snapMinutes,
+  ]);
+
+  const pasteAtPointer = useCallback(() => {
+    const clipboard = clipboardRef.current;
+    const slot = slotAtPointer();
+    if (clipboard.length === 0 || !slot) return;
+
+    const { dayDate, anchorTime, overAllDay } = slot;
 
     const anchorStart = clipboard.reduce(
       (min, ev) => (ev.start < min ? ev.start : min),
@@ -1755,46 +1776,13 @@ export default memo(function AppCalendar({
     save();
   }, [
     t,
-    visibleDays,
-    hourHeight,
-    getGridHeaderOffset,
-    isOverAllDay,
-    settings.snapMinutes,
+    slotAtPointer,
     dispatch,
     updateChange,
     save,
     selectEvents,
     pushHistory,
   ]);
-
-  // expose the handlers via context so other components can use them
-  useEffect(() => {
-    setEventHandlers({
-      edit: onEventEdit,
-      move: onEventMove,
-      remove: onEventDelete,
-      duplicate: onEventDuplicate,
-      detach: onEventDetach,
-      shareOccurrence: onEventShareOccurrence,
-      reset: onEventReset,
-      copy: copyEvent,
-      paste: pasteAtPointer,
-      canPaste: () => clipboardRef.current.length > 0,
-    });
-  }, [
-    onEventEdit,
-    onEventMove,
-    onEventDelete,
-    onEventDuplicate,
-    onEventDetach,
-    onEventShareOccurrence,
-    onEventReset,
-    copyEvent,
-    pasteAtPointer,
-    setEventHandlers,
-  ]);
-
-  /* -------------------------------------------------------------------------- */
 
   const addNewEvent = useCallback(
     (start: DateTime, isTask: boolean, allDayEnd?: DateTime) => {
@@ -1846,6 +1834,57 @@ export default memo(function AppCalendar({
       addNewEvent(date.startOf("day"), false, date.endOf("day")),
     [addNewEvent],
   );
+
+  const createAtPointer = useCallback(
+    (isTask: boolean) => {
+      const slot = slotAtPointer();
+      if (!slot) return;
+
+      clearSelection();
+
+      const created = slot.overAllDay
+        ? addNewEvent(
+            slot.dayDate.startOf("day"),
+            isTask,
+            slot.dayDate.endOf("day"),
+          )
+        : addNewEvent(slot.anchorTime, isTask);
+      if (!created) return;
+
+      selectEvents([created]);
+      save();
+    },
+    [slotAtPointer, clearSelection, addNewEvent, selectEvents, save],
+  );
+
+  // expose the handlers via context so other components can use them
+  useEffect(() => {
+    setEventHandlers({
+      edit: onEventEdit,
+      move: onEventMove,
+      remove: onEventDelete,
+      duplicate: onEventDuplicate,
+      detach: onEventDetach,
+      shareOccurrence: onEventShareOccurrence,
+      reset: onEventReset,
+      copy: copyEvent,
+      paste: pasteAtPointer,
+      canPaste: () => clipboardRef.current.length > 0,
+    });
+  }, [
+    onEventEdit,
+    onEventMove,
+    onEventDelete,
+    onEventDuplicate,
+    onEventDetach,
+    onEventShareOccurrence,
+    onEventReset,
+    copyEvent,
+    pasteAtPointer,
+    setEventHandlers,
+  ]);
+
+  /* -------------------------------------------------------------------------- */
 
   const createEventAtSlot = useCallback(
     (dayIndex: number, minutes: number) => {
@@ -3170,6 +3209,15 @@ export default memo(function AppCalendar({
             gridRef.current?.focus({ preventScroll: true });
           }}
         >
+          <ContextMenuItem onClick={() => createAtPointer(false)}>
+            <CalendarPlus />
+            {t("block.newEvent")}
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => createAtPointer(true)}>
+            <ListPlus />
+            {t("block.newTask")}
+          </ContextMenuItem>
+          <ContextMenuSeparator />
           <PasteMenuItem />
         </ContextMenuContent>
       </ContextMenu>
