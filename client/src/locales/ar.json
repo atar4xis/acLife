@@ -596,6 +596,7 @@
       "left": "يسار",
       "right": "يمين",
       "auto": "تلقائي",
+      "default": "افتراضي",
       "customSound": "مخصص",
       "customSoundReplace": "اختيار ملف آخر",
       "customSoundInvalid": "اختر ملفًا صوتيًا أصغر من 64 كيلوبايت.",

@@ -3,7 +3,7 @@ import type { StoreKey, StoreSettings } from "@/lib/settingsDefaults";
 // settings that can be synced to the server, mapped to whether they sync by default
 export const syncByDefault = {
   language: false,
-  defaultView: true,
+  defaultView: false,
   weekStartsOn: true,
   timeFormat: true,
   dateFormat: true,

@@ -545,6 +545,7 @@
       "left": "左侧",
       "right": "右侧",
       "auto": "自动",
+      "default": "默认",
       "customSound": "自定义",
       "customSoundReplace": "选择其他文件",
       "customSoundInvalid": "请选择小于 64 KB 的音频文件。",

@@ -66,14 +66,14 @@ describe("useSettingsSync", () => {
       success: true,
       data: {
         version: 3,
-        data: blob({ defaultView: { value: "day", updatedAt: 10 } }),
+        data: blob({ dayHeaderPosition: { value: "bottom", updatedAt: 10 } }),
       },
     });
 
     const { result } = setup();
 
     await waitFor(() =>
-      expect(result.current.getSnapshot().defaultView).toBe("day"),
+      expect(result.current.getSnapshot().dayHeaderPosition).toBe("bottom"),
     );
     expect(post).not.toHaveBeenCalled();
   });
@@ -87,7 +87,7 @@ describe("useSettingsSync", () => {
     post.mockResolvedValue({ success: true });
 
     const { result } = setup();
-    result.current.setSetting("defaultView", "day");
+    result.current.setSetting("dayHeaderPosition", "bottom");
 
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1), {
       timeout: 4000,
@@ -124,7 +124,7 @@ describe("useSettingsSync", () => {
       .mockResolvedValueOnce({ success: true });
 
     const { result } = setup();
-    result.current.setSetting("defaultView", "day");
+    result.current.setSetting("dayHeaderPosition", "bottom");
 
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2), {
       timeout: 4000,
@@ -140,18 +140,18 @@ describe("useSettingsSync", () => {
     post.mockResolvedValue({ success: true });
 
     const { result } = setup();
-    result.current.setSetting("defaultView", "day");
+    result.current.setSetting("dayHeaderPosition", "bottom");
 
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     const sent = uint8ArrayFromBase64(post.mock.calls[0][1].data);
     expect(sent.slice(0, 2)).toEqual(new Uint8Array([0x1f, 0x8b]));
     expect(JSON.parse(new TextDecoder().decode(sent.slice(2)))).toMatchObject({
-      defaultView: { value: "day" },
+      dayHeaderPosition: { value: "bottom" },
     });
   });
 
   it("applies a gzipped remote blob", async () => {
-    const payload = { defaultView: { value: "day", updatedAt: Date.now() } };
+    const payload = { dayHeaderPosition: { value: "bottom", updatedAt: Date.now() } };
     get.mockResolvedValue({
       success: true,
       data: {
@@ -168,7 +168,7 @@ describe("useSettingsSync", () => {
     const { result } = setup();
 
     await waitFor(() =>
-      expect(result.current.getSnapshot().defaultView).toBe("day"),
+      expect(result.current.getSnapshot().dayHeaderPosition).toBe("bottom"),
     );
   });
 
@@ -185,7 +185,7 @@ describe("useSettingsSync", () => {
       .mockResolvedValueOnce({ success: true });
 
     const { result } = setup();
-    result.current.setSetting("defaultView", "day");
+    result.current.setSetting("dayHeaderPosition", "bottom");
 
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2), {
       timeout: 4000,
@@ -222,12 +222,12 @@ describe("useSettingsSync", () => {
       success: true,
       data: {
         version: 3,
-        data: blob({ defaultView: { value: "day", updatedAt: 10 } }),
+        data: blob({ dayHeaderPosition: { value: "bottom", updatedAt: 10 } }),
       },
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    expect(store.getSnapshot().defaultView).not.toBe("day");
+    expect(store.getSnapshot().dayHeaderPosition).not.toBe("bottom");
   });
 
   describe("settings stream events", () => {
@@ -286,7 +286,7 @@ describe("useSettingsSync", () => {
     post.mockResolvedValue({ success: false });
 
     const { result } = setup();
-    result.current.setSetting("defaultView", "day");
+    result.current.setSetting("dayHeaderPosition", "bottom");
 
     await waitFor(() => expect(logged).toHaveBeenCalled());
     expect(post).toHaveBeenCalledTimes(1);
@@ -305,7 +305,7 @@ describe("useSettingsSync", () => {
     });
 
     const { result } = setup();
-    result.current.setSetting("defaultView", "day");
+    result.current.setSetting("dayHeaderPosition", "bottom");
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("Failed to sync settings."),

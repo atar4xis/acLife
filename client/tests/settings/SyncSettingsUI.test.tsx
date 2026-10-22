@@ -38,21 +38,21 @@ describe("SyncToggle", () => {
   it("renders nothing without an online account", () => {
     userMock.user = { type: "offline" };
     const { container, rerender } = renderInProvider(
-      <SyncToggle settingKey="defaultView" />,
+      <SyncToggle settingKey="dayHeaderPosition" />,
     );
     expect(container).toBeEmptyDOMElement();
 
     userMock.user = null;
     rerender(
       <SettingsStoreProvider>
-        <SyncToggle settingKey="defaultView" />
+        <SyncToggle settingKey="dayHeaderPosition" />
       </SettingsStoreProvider>,
     );
     expect(container).toBeEmptyDOMElement();
   });
 
   it("shows a setting that syncs by default as synced", () => {
-    renderInProvider(<SyncToggle settingKey="defaultView" />);
+    renderInProvider(<SyncToggle settingKey="dayHeaderPosition" />);
 
     expect(
       screen.getByRole("button", { name: "Sync this setting" }),
@@ -69,12 +69,12 @@ describe("SyncToggle", () => {
 
   it("stores an opt-out and removes it again when toggled back", async () => {
     const user = userEvent.setup();
-    renderInProvider(<SyncToggle settingKey="defaultView" />);
+    renderInProvider(<SyncToggle settingKey="dayHeaderPosition" />);
     const button = screen.getByRole("button", { name: "Sync this setting" });
 
     await user.click(button);
     expect(button).toHaveAttribute("aria-pressed", "false");
-    expect(storedOverrides()).toEqual({ defaultView: false });
+    expect(storedOverrides()).toEqual({ dayHeaderPosition: false });
 
     await user.click(button);
     expect(button).toHaveAttribute("aria-pressed", "true");
@@ -93,7 +93,7 @@ describe("SyncToggle", () => {
 
 describe("SettingsLabel sync icon", () => {
   it("appears for syncable settings", () => {
-    renderInProvider(<SettingsLabel settingKey="defaultView" />);
+    renderInProvider(<SettingsLabel settingKey="dayHeaderPosition" />);
 
     expect(
       screen.getByRole("button", { name: "Sync this setting" }),
@@ -110,7 +110,7 @@ describe("SettingsLabel sync icon", () => {
 
   it("is absent for offline accounts", () => {
     userMock.user = { type: "offline" };
-    renderInProvider(<SettingsLabel settingKey="defaultView" />);
+    renderInProvider(<SettingsLabel settingKey="dayHeaderPosition" />);
 
     expect(
       screen.queryByRole("button", { name: "Sync this setting" }),

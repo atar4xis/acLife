@@ -103,7 +103,7 @@ function normalizeSettings(stored: Record<string, unknown>): StoreSettings {
 
   parsed.defaultView = oneOf(
     parsed.defaultView,
-    ["day", "week"],
+    ["default", "day", "week"],
     defaultCalendarSettings.defaultView,
   );
   parsed.dayHeaderPosition = oneOf(

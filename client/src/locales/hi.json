@@ -561,6 +561,7 @@
       "left": "बाएँ",
       "right": "दाएँ",
       "auto": "स्वचालित",
+      "default": "डिफ़ॉल्ट",
       "customSound": "कस्टम",
       "customSoundReplace": "दूसरी फ़ाइल चुनें",
       "customSoundInvalid": "64 KB से छोटी ऑडियो फ़ाइल चुनें।",

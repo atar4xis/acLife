@@ -232,6 +232,9 @@ export default function CalendarPage({
               setSetting("defaultView", value as typeof defaultView)
             }
           >
+            <SelectItem value="default">
+              {t("settings.calendar.default")}
+            </SelectItem>
             <SelectItem value="day">{t("view.day")}</SelectItem>
             <SelectItem value="week">{t("view.week")}</SelectItem>
           </SettingsSelect>

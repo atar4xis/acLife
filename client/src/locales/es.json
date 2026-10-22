@@ -553,6 +553,7 @@
       "left": "Izquierda",
       "right": "Derecha",
       "auto": "Automático",
+      "default": "Predeterminado",
       "customSound": "Personalizado",
       "customSoundReplace": "Elegir otro archivo",
       "customSoundInvalid": "Elige un archivo de audio de menos de 64 KB.",

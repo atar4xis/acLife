@@ -46,7 +46,11 @@ export default function AppShell() {
   }));
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<ViewMode>(
-    window.innerWidth < 768 ? "day" : settings.defaultView,
+    settings.defaultView === "default"
+      ? window.innerWidth < 768
+        ? "day"
+        : "week"
+      : settings.defaultView,
   );
   const [calEvents, setCalEvents] = useState<CalendarEvent[] | null>(null);
   const [offline, setOffline] = useState(false);

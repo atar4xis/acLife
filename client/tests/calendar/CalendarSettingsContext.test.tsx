@@ -21,7 +21,7 @@ describe("useCalendarSettings", () => {
   it("provides default settings when localStorage is empty", () => {
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
-    expect(result.current.defaultView).toBe("week");
+    expect(result.current.defaultView).toBe("default");
     expect(result.current.weekStartsOn).toBe("inherit");
     expect(result.current.snapMinutes).toBe(5);
     expect(result.current.defaultEventName).toBe("new event");
@@ -38,7 +38,7 @@ describe("useCalendarSettings", () => {
     expect(result.current.weekStartsOn).toBe(7);
     expect(result.current.snapMinutes).toBe(15);
     // untouched fields still fall back to defaults
-    expect(result.current.defaultView).toBe("week");
+    expect(result.current.defaultView).toBe("default");
   });
 
   it("falls back to the default resync interval when stored value is falsy", () => {
@@ -70,7 +70,7 @@ describe("useCalendarSettings", () => {
 
     const { result } = renderHook(() => useCalendarSettings(), { wrapper });
 
-    expect(result.current.defaultView).toBe("week");
+    expect(result.current.defaultView).toBe("default");
     expect(result.current.weekStartsOn).toBe("inherit");
   });
 

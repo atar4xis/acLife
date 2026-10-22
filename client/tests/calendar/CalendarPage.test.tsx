@@ -84,7 +84,7 @@ describe("CalendarPage", () => {
   it("renders the current default view selection", () => {
     renderCalendarPage();
 
-    expect(screen.getByText("Week")).toBeInTheDocument();
+    expect(screen.getByText("Default")).toBeInTheDocument();
   });
 
   it("renders the current snap minutes and default event duration", () => {

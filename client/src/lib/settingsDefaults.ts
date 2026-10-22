@@ -24,7 +24,7 @@ export const defaultColorPresets = [
 
 export const defaultCalendarSettings: CalendarSettings = {
   language: "system",
-  defaultView: "week",
+  defaultView: "default",
   weekStartsOn: "inherit",
   timeFormat: "",
   dateFormat: "",

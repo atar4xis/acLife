@@ -51,9 +51,9 @@ describe("settings store", () => {
     vi.spyOn(Date, "now").mockReturnValue(1000);
     const store = createSettingsStore();
 
-    store.setSettings({ snapMinutes: 15, defaultView: "week" });
+    store.setSettings({ snapMinutes: 15, dayHeaderPosition: "top" });
 
-    // defaultView already was "week", so it is not a change
+    // dayHeaderPosition already was "top", so it is not a change
     expect(store.getMeta().updatedAt).toEqual({ snapMinutes: 1000 });
   });
 
@@ -64,11 +64,11 @@ describe("settings store", () => {
     now.mockReturnValue(1000);
     store.setSetting("snapMinutes", 15);
     now.mockReturnValue(2000);
-    store.setSetting("defaultView", "day");
+    store.setSetting("dayHeaderPosition", "bottom");
 
     expect(store.getMeta().updatedAt).toEqual({
       snapMinutes: 1000,
-      defaultView: 2000,
+      dayHeaderPosition: 2000,
     });
   });
 
@@ -89,7 +89,7 @@ describe("settings store", () => {
     const listener = vi.fn();
     store.subscribe(listener);
 
-    store.setSettings({ snapMinutes: 15, defaultView: "day" });
+    store.setSettings({ snapMinutes: 15, dayHeaderPosition: "bottom" });
 
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -107,21 +107,21 @@ describe("settings store", () => {
   it("stores sync choices that differ from the default", () => {
     const store = createSettingsStore();
 
-    store.setSyncOverrides({ snapMinutes: true, defaultView: false });
+    store.setSyncOverrides({ snapMinutes: true, dayHeaderPosition: false });
 
     expect(readSettingsMeta().syncOverrides).toEqual({
       snapMinutes: true,
-      defaultView: false,
+      dayHeaderPosition: false,
     });
   });
 
   it("drops a sync choice once it matches the default again", () => {
     const store = createSettingsStore();
-    store.setSyncOverrides({ snapMinutes: true, defaultView: false });
+    store.setSyncOverrides({ snapMinutes: true, dayHeaderPosition: false });
 
     store.setSyncOverrides({ snapMinutes: false });
 
-    expect(readSettingsMeta().syncOverrides).toEqual({ defaultView: false });
+    expect(readSettingsMeta().syncOverrides).toEqual({ dayHeaderPosition: false });
   });
 
   it("does not write when a sync choice is unchanged", () => {
@@ -129,7 +129,7 @@ describe("settings store", () => {
     const listener = vi.fn();
     store.subscribe(listener);
 
-    store.setSyncOverrides({ snapMinutes: false, defaultView: true });
+    store.setSyncOverrides({ snapMinutes: false, dayHeaderPosition: true });
 
     expect(listener).not.toHaveBeenCalled();
     expect(localStorage.getItem(SETTINGS_STORAGE_KEY)).toBeNull();
@@ -140,7 +140,7 @@ describe("settings store", () => {
     const listener = vi.fn();
     store.subscribe(listener);
 
-    store.setSyncOverrides({ snapMinutes: true, defaultView: false });
+    store.setSyncOverrides({ snapMinutes: true, dayHeaderPosition: false });
 
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -498,7 +498,7 @@ describe("sync rules", () => {
     expect(isSynced(key, { [key]: true } as never)).toBe(false);
   });
 
-  it.each(["defaultView", "presets", "eventColorPresets", "weekStartsOn"])(
+  it.each(["dayHeaderPosition", "presets", "eventColorPresets", "weekStartsOn"])(
     "syncs %s by default",
     (key) => {
       expect(isSynced(key, {})).toBe(true);
@@ -520,22 +520,22 @@ describe("sync rules", () => {
 
   it("lets a user override change the default in both directions", () => {
     expect(isSynced("snapMinutes", { snapMinutes: true })).toBe(true);
-    expect(isSynced("defaultView", { defaultView: false })).toBe(false);
+    expect(isSynced("dayHeaderPosition", { dayHeaderPosition: false })).toBe(false);
   });
 });
 
 describe("effective sync", () => {
   it("syncs a setting only when the master switch and the setting are both on", () => {
-    expect(isSyncActive("defaultView", { enabled: true, overrides: {} })).toBe(
+    expect(isSyncActive("dayHeaderPosition", { enabled: true, overrides: {} })).toBe(
       true,
     );
-    expect(isSyncActive("defaultView", { enabled: false, overrides: {} })).toBe(
+    expect(isSyncActive("dayHeaderPosition", { enabled: false, overrides: {} })).toBe(
       false,
     );
     expect(
-      isSyncActive("defaultView", {
+      isSyncActive("dayHeaderPosition", {
         enabled: true,
-        overrides: { defaultView: false },
+        overrides: { dayHeaderPosition: false },
       }),
     ).toBe(false);
     expect(

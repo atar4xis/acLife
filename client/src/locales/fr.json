@@ -555,6 +555,7 @@
       "left": "Gauche",
       "right": "Droite",
       "auto": "Automatique",
+      "default": "Par défaut",
       "customSound": "Personnalisé",
       "customSoundReplace": "Choisir un autre fichier",
       "customSoundInvalid": "Choisissez un fichier audio de moins de 64 Ko.",

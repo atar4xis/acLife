@@ -545,6 +545,7 @@
       "left": "左",
       "right": "右",
       "auto": "自動",
+      "default": "既定",
       "customSound": "カスタム",
       "customSoundReplace": "別のファイルを選択",
       "customSoundInvalid": "64 KB未満のオーディオファイルを選択してください。",

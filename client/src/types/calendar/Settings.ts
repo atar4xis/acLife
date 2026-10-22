@@ -12,7 +12,7 @@ export type EventClickAction = "none" | "edit" | "details";
 
 export interface CalendarSettings {
   language: string;
-  defaultView: ViewMode;
+  defaultView: ViewMode | "default";
   weekStartsOn: WeekStartsOn;
   timeFormat: string;
   dateFormat: string;

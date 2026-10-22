@@ -577,6 +577,7 @@
       "left": "Lewo",
       "right": "Prawo",
       "auto": "Automatycznie",
+      "default": "Domyślnie",
       "customSound": "Własny",
       "customSoundReplace": "Wybierz inny plik",
       "customSoundInvalid": "Wybierz plik audio mniejszy niż 64 KB.",

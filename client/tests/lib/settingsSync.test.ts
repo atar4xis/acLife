@@ -8,7 +8,7 @@ import {
   parseSyncPayload,
 } from "@/lib/settingsSync";
 
-const on = { enabled: true, overrides: {} };
+const on = { enabled: true, overrides: { defaultView: true } };
 
 describe("settings sync helpers", () => {
   it("collects only changed, synced settings", () => {
