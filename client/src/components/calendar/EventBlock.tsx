@@ -594,6 +594,7 @@ export default memo(
               setViewingEvent(null);
               setEditingEvent(event, day);
             }}
+            onDelete={handleDelete}
             onCancel={() => setViewingEvent(null)}
           />
         ) : null}

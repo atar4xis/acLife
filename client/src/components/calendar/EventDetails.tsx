@@ -11,6 +11,7 @@ import {
   ClockIcon,
   PencilIcon,
   RepeatIcon,
+  Trash2Icon,
   UsersIcon,
   XIcon,
 } from "lucide-react";
@@ -24,7 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { fmt } from "@/i18n";
 import { useTranslation } from "react-i18next";
-import { canEditEvent } from "@/lib/calendar/shared";
+import { canDeleteEvent, canEditEvent } from "@/lib/calendar/shared";
 import { useShares } from "@/context/ShareContext";
 
 export default function EventDetails({
@@ -33,6 +34,7 @@ export default function EventDetails({
   timeLabel,
   onToggleCompleted,
   onEdit,
+  onDelete,
   onCancel,
 }: {
   event: CalendarEvent;
@@ -40,6 +42,7 @@ export default function EventDetails({
   timeLabel: string;
   onToggleCompleted: (completed: boolean) => void;
   onEdit: () => void;
+  onDelete: () => void;
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
@@ -126,6 +129,16 @@ export default function EventDetails({
           {t(event.isTask ? "details.taskTitle" : "details.title")}
         </h3>
         <div className="flex items-center gap-1">
+          {canDeleteEvent(event) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t("common.delete")}
+              onClick={onDelete}
+            >
+              <Trash2Icon />
+            </Button>
+          )}
           {canEditEvent(event) && (
             <Button
               variant="ghost"
