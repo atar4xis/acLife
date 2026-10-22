@@ -134,16 +134,20 @@ export default function JournalSidebar() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [hasSelection, clearSelection]);
 
-  const create = useCallback(
-    (type: JournalItem["type"]) => {
-      const parentId =
-        folderId && journal.itemsById.has(folderId) ? folderId : null;
+  const createIn = useCallback(
+    (type: JournalItem["type"], parentId: string | null) => {
       const id = journal.addItem(type, parentId);
       if (type === "note") journal.openNote(id, true);
       else setRenamingId(id);
     },
-    [journal, folderId],
+    [journal],
   );
+
+  const create = (type: JournalItem["type"]) =>
+    createIn(
+      type,
+      folderId && journal.itemsById.has(folderId) ? folderId : null,
+    );
 
   const treeActions = useMemo<TreeActions>(
     () => ({
@@ -155,6 +159,7 @@ export default function JournalSidebar() {
           journal.renameItem(item.id, name.trim());
       },
       onRename: (id) => setTimeout(() => setRenamingId(id)),
+      onCreate: (type, parentId) => setTimeout(() => createIn(type, parentId)),
       onCustomize: (item) => setTimeout(() => setCustomizingId(item.id)),
       onOpen: (item, newTab) => {
         clearSelection();
@@ -170,7 +175,7 @@ export default function JournalSidebar() {
         journal.toggleFolder(item.id);
       },
     }),
-    [dragProps, journal, isMobile, setOpenMobile, clearSelection],
+    [dragProps, journal, isMobile, setOpenMobile, clearSelection, createIn],
   );
 
   if (journal.loadFailed) return <SidebarContent />;
