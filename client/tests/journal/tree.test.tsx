@@ -309,6 +309,35 @@ describe("journal tree", () => {
       return user;
     };
 
+    it("copies every selected item from the menu", async () => {
+      const user = await setup();
+      ctrlClick("Alpha");
+      ctrlClick("Beta");
+      fireEvent.contextMenu(treeItem("Alpha"));
+      await user.click(await screen.findByRole("menuitem", { name: "Copy" }));
+      fireEvent.contextMenu(treeItem("Alpha").closest("[data-sidebar=group]")!);
+      await user.click(await screen.findByRole("menuitem", { name: "Paste" }));
+      await waitFor(() => expect(journal.items).toHaveLength(4));
+    });
+    it("deletes every selected item with the Delete key", async () => {
+      const user = await setup();
+      ctrlClick("Alpha");
+      ctrlClick("Beta");
+
+      await user.keyboard("{Delete}");
+
+      await waitFor(() => expect(journal.items).toHaveLength(0));
+    });
+    it("copies and pastes the selection with ctrl + c and ctrl + v", async () => {
+      const user = await setup();
+      ctrlClick("Alpha");
+      ctrlClick("Beta");
+
+      await user.keyboard("{Control>}c{/Control}");
+      await user.keyboard("{Control>}v{/Control}");
+
+      await waitFor(() => expect(journal.items).toHaveLength(4));
+    });
     it("toggles a row with ctrl + click without opening it", async () => {
       await setup();
 

@@ -128,6 +128,7 @@ export type JournalAction =
   | { type: "setContent"; id: string; content: string; now: number }
   | { type: "moveItem"; id: string; parentId: string | null; now: number }
   | { type: "removeItem"; id: string }
+  | { type: "removeItems"; ids: string[] }
   | { type: "undo"; now: number }
   | { type: "redo"; now: number }
   | { type: "pasteItems"; ids: string[]; parentId: string | null; now: number }

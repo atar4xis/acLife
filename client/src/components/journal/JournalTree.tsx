@@ -35,7 +35,7 @@ export default memo(function JournalTree({
   actions: TreeActions;
 }) {
   const { t } = useTranslation();
-  const { workspace, expanded, items } = useJournal();
+  const { workspace, expanded, items, itemsById } = useJournal();
   const [confirming, setConfirming] = useState<{
     item: JournalItem;
     next?: string;
@@ -53,7 +53,7 @@ export default memo(function JournalTree({
     rows.some((row) => row.item.id === id),
   )!;
 
-  const { onDelete, onToggle, onRename } = actions;
+  const { onDelete, onToggle, onRename, onCopy, onPaste, canPaste } = actions;
 
   const deleteItem = useCallback(
     (item: JournalItem) => {
@@ -62,14 +62,22 @@ export default memo(function JournalTree({
         .slice(index + 1)
         .find((row) => row.depth <= rows[index].depth);
       const next = (after ?? rows[index - 1])?.item.id;
-      if (item.type === "folder" && items.some((i) => i.parentId === item.id)) {
+      const targets = selectedIds.has(item.id)
+        ? items.filter((i) => selectedIds.has(i.id))
+        : [item];
+      const hasChildren = targets.some(
+        (target) =>
+          target.type === "folder" &&
+          items.some((i) => i.parentId === target.id),
+      );
+      if (hasChildren) {
         setConfirming({ item, next });
         return;
       }
       onDelete(item);
       if (next) focusRow(next);
     },
-    [rows, onDelete, items],
+    [rows, onDelete, items, selectedIds],
   );
 
   const treeActions = useMemo<TreeActions>(
@@ -85,8 +93,22 @@ export default memo(function JournalTree({
         onToggle,
         onRename,
         onDelete: deleteItem,
+        onCopy,
+        onPaste,
+        canPaste,
+        itemsById,
       }),
-    [rows, searching, onToggle, onRename, deleteItem],
+    [
+      rows,
+      searching,
+      onToggle,
+      onRename,
+      deleteItem,
+      onCopy,
+      onPaste,
+      canPaste,
+      itemsById,
+    ],
   );
 
   const view = useMemo(

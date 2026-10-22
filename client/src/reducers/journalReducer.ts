@@ -36,6 +36,7 @@ const UNDOABLE_ACTIONS = new Set<JournalAction["type"]>([
   "customizeItem",
   "moveItem",
   "removeItem",
+  "removeItems",
   "pasteItems",
 ]);
 
@@ -192,8 +193,12 @@ function reduceAction(
         expanded: expand(state, action.parentId),
       };
     }
-    case "removeItem": {
-      const removed = new Set(descendantIds(state.items, action.id));
+    case "removeItem":
+    case "removeItems": {
+      const ids = action.type === "removeItem" ? [action.id] : action.ids;
+      const removed = new Set(
+        ids.flatMap((id) => descendantIds(state.items, id)),
+      );
       // don't delete if the subtree holds an item the user may not delete
       const protectedItem = state.items.find(
         (item) => removed.has(item.id) && !canDeleteItem(item),

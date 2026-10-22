@@ -57,6 +57,7 @@ type JournalActions = {
   renameItem: (id: string, name: string) => void;
   customizeItem: (id: string, name: string, style: ItemStyle) => void;
   removeItem: (id: string) => void;
+  removeItems: (ids: string[]) => void;
   setContent: (id: string, content: string) => void;
   moveItem: (id: string, parentId: string | null) => void;
   openNote: (id: string, newTab?: boolean) => void;
@@ -163,6 +164,7 @@ export function JournalProvider({ children }: WithChildren) {
       customizeItem: (id, name, style) =>
         dispatch({ type: "customizeItem", id, name, style, now: Date.now() }),
       removeItem: (id) => dispatch({ type: "removeItem", id }),
+      removeItems: (ids) => dispatch({ type: "removeItems", ids }),
       setContent: (id, content) =>
         dispatch({ type: "setContent", id, content, now: Date.now() }),
       moveItem: (id, parentId) =>

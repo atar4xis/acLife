@@ -514,6 +514,21 @@ describe("importItems", () => {
   });
 });
 
+describe("removeItems", () => {
+  it("removes several items with their subtrees in one history entry", () => {
+    const base = run(
+      add("dir", "folder"),
+      add("child", "note", "dir"),
+      add("a"),
+      add("keep"),
+    );
+    const state = journalReducer(base, { type: "removeItems", ids: ["dir", "a"] });
+
+    expect(state.items.map((i) => i.id)).toEqual(["keep"]);
+    expect(state.history.past.length).toBe(base.history.past.length + 1);
+  });
+});
+
 describe("pasteItems", () => {
   const paste = (
     ids: string[],

@@ -1,7 +1,7 @@
 import { isModKey } from "@/lib/utils";
 import { openContextMenu } from "@/lib/journal/focus";
 import type { TreeRow } from "@/lib/journal/item";
-import { canDeleteItem, canEditItem } from "@/lib/journal/shared";
+import { canCreateIn, canDeleteItem, canEditItem } from "@/lib/journal/shared";
 import type { JournalItem } from "@/types/Journal";
 
 type TreeKeyContext = {
@@ -10,17 +10,49 @@ type TreeKeyContext = {
   onToggle: (item: JournalItem) => void;
   onRename: (id: string) => void;
   onDelete: (item: JournalItem) => void;
+  onCopy: (item: JournalItem) => void;
+  onPaste: (item: JournalItem) => void;
+  canPaste: boolean;
+  itemsById: ReadonlyMap<string, JournalItem>;
 };
 
 export const treeKeyDown = (
   e: React.KeyboardEvent<HTMLElement>,
-  { rows, searching, onToggle, onRename, onDelete }: TreeKeyContext,
+  {
+    rows,
+    searching,
+    onToggle,
+    onRename,
+    onDelete,
+    onCopy,
+    onPaste,
+    canPaste,
+    itemsById,
+  }: TreeKeyContext,
 ) => {
   const target = e.target as HTMLElement;
   const index = rows.findIndex((row) => row.item.id === target.dataset.itemId);
-  if (index === -1 || isModKey(e) || e.altKey) return;
+  if (index === -1 || e.altKey) return;
 
   const row = rows[index];
+  if (isModKey(e)) {
+    const key = e.key.toLowerCase();
+    if (e.shiftKey || (key !== "c" && key !== "v")) return;
+
+    if (key === "c") {
+      onCopy(row.item);
+    } else {
+      const pasteTarget =
+        row.item.type === "folder"
+          ? row.item
+          : itemsById.get(row.item.parentId ?? "");
+      if (!canPaste || (pasteTarget && !canCreateIn(pasteTarget))) return;
+      onPaste(row.item);
+    }
+    e.preventDefault();
+    return;
+  }
+
   const focus = (to: TreeRow | undefined) =>
     Array.from(e.currentTarget.querySelectorAll<HTMLElement>("[data-item-id]"))
       .find((element) => element.dataset.itemId === to?.item.id)

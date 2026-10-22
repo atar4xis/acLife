@@ -123,6 +123,8 @@ export default function JournalSidebar() {
   });
 
   const onTreePointerDown = (e: React.PointerEvent<HTMLElement>) => {
+    if (!e.currentTarget.contains(e.target as Node)) return;
+
     const row = (e.target as Element).closest<HTMLElement>("[data-item-id]");
     if (!isModKey(e)) {
       if (!row) clearSelection();
@@ -130,6 +132,7 @@ export default function JournalSidebar() {
     }
 
     e.preventDefault();
+    row?.focus();
     selectionBox.begin(e, {
       base: e.shiftKey ? selectedIds : new Set(),
       toggle: row?.dataset.itemId,
@@ -199,7 +202,12 @@ export default function JournalSidebar() {
         journal.openNote(item.id, newTab);
         if (isMobile) setOpenMobile(false);
       },
-      onDelete: (item) => journal.removeItem(item.id),
+      onDelete: (item) => {
+        journal.removeItems(
+          selectedIds.has(item.id) ? [...selectedIds] : [item.id],
+        );
+        clearSelection();
+      },
       onCopy: (item) => {
         setClipboard(selectedIds.has(item.id) ? [...selectedIds] : [item.id]);
       },
