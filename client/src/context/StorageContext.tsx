@@ -116,6 +116,7 @@ const defaults: StorageData = {
   unlockKeys: null,
   pinWrappedKeys: null,
   pinFailures: 0,
+  sessionSeconds: 0,
 };
 
 export const { StorageProvider, useStorage } =

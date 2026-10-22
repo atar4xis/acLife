@@ -39,11 +39,14 @@ describe("srpLogin", () => {
       })
       .mockResolvedValueOnce({ success: true, data: { M2: b64(7) } });
 
-    expect(await srpLogin(post, "a@b.c", "pw")).toEqual({ success: true });
+    expect(await srpLogin(post, "a@b.c", "pw", 86400)).toEqual({
+      success: true,
+    });
     expect(post).toHaveBeenLastCalledWith("auth/login/verify", {
       email: "a@b.c",
       M1: b64(4, 5, 6),
       session_id: "s1",
+      sessionSeconds: 86400,
     });
   });
 

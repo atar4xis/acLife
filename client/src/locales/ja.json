@@ -171,8 +171,6 @@
     "backward": "前の日時へ...",
     "next": "次へ...",
     "previous": "前へ...",
-    "minutes_other": "{{count}}分",
-    "hours_other": "{{count}}時間",
     "unit": {
       "days": "日",
       "weeks": "週",
@@ -242,7 +240,8 @@
     "verificationLinkSent": "確認用のリンクを<strong>{{email}}</strong>に送信しました。",
     "resendCooldown": "メールを再送信（{{seconds}}秒）",
     "resend": "メールを再送信",
-    "backToLogin": "ログインに戻る"
+    "backToLogin": "ログインに戻る",
+    "rememberMe": "ログイン状態を保持する"
   },
   "unlock": {
     "title": "データを復号",
@@ -434,7 +433,8 @@
       "sharing-invites-list": "招待",
       "sharing-owned-list": "自分が共有したアイテム",
       "sharing-joined-list": "共有されたアイテム",
-      "sharing-contacts-list": "連絡先"
+      "sharing-contacts-list": "連絡先",
+      "account-session-length": "セッションの有効期間"
     },
     "colors": {
       "background": "背景",
@@ -520,7 +520,6 @@
       "literal": "文字をそのまま表示するには、シングルクォートで囲みます(例: 'に')。"
     },
     "minutesShort": "{{count}}分",
-    "days_other": "{{count}}日",
     "calendar": {
       "languageSystem": "システムの既定",
       "actionNone": "何もしない",
@@ -584,7 +583,14 @@
       "autoLock": {
         "disabled": "無効",
         "focus": "アプリがフォーカスを失ったとき"
-      }
+      },
+      "sessionLength": {
+        "default": "デフォルト（{{length}}）",
+        "defaultUnknown": "デフォルト",
+        "infinite": "期限なし"
+      },
+      "sessionLengthFailed": "セッションの有効期間を変更できませんでした。",
+      "neverExpires": "期限なし"
     },
     "usage": {
       "summary": "{{limit}}中{{used}}を使用",

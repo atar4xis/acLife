@@ -71,8 +71,8 @@ describe("applyLanguage", () => {
     applyLanguage("es");
 
     expect(monthlyOptions(monday.set({ day: 22 }))[0].label).toBe("el día 22");
-    expect(t("move.minutes", { count: 1 })).toBe("1 minuto");
-    expect(t("move.minutes", { count: 5 })).toBe("5 minutos");
+    expect(t("calendar.eventsCount", { count: 1 })).toBe("1 evento");
+    expect(t("calendar.eventsCount", { count: 5 })).toBe("5 eventos");
   });
 });
 
@@ -121,18 +121,18 @@ describe("time zone names", () => {
 });
 
 describe.each([
-  ["fr", "lundi 5 octobre 2026", "le 22", "1 minute", "5 minutes", "Annuler"],
-  ["pl", "poniedziałek, 5 października 2026", "22. dnia miesiąca", "1 minuta", "5 minut", "Anuluj"],
-  ["ja", "2026年10月5日 月曜日", "22日", "1分", "5分", "キャンセル"],
-])("%s", (code, fullDay, ordinal, oneMinute, fiveMinutes, cancel) => {
+  ["fr", "lundi 5 octobre 2026", "le 22", "1 événement", "5 événements", "Annuler"],
+  ["pl", "poniedziałek, 5 października 2026", "22. dnia miesiąca", "1 wydarzenie", "5 wydarzeń", "Anuluj"],
+  ["ja", "2026年10月5日 月曜日", "22日", "1件の予定", "5件の予定", "キャンセル"],
+])("%s", (code, fullDay, ordinal, oneEvent, fiveEvents, cancel) => {
   it("translates, formats dates and applies plural and ordinal rules", () => {
     applyLanguage(code);
 
     expect(t("common.cancel")).toBe(cancel);
     expect(describeFullDay(monday)).toBe(fullDay);
     expect(monthlyOptions(monday.set({ day: 22 }))[0].label).toBe(ordinal);
-    expect(t("move.minutes", { count: 1 })).toBe(oneMinute);
-    expect(t("move.minutes", { count: 5 })).toBe(fiveMinutes);
+    expect(t("calendar.eventsCount", { count: 1 })).toBe(oneEvent);
+    expect(t("calendar.eventsCount", { count: 5 })).toBe(fiveEvents);
   });
 });
 
@@ -140,9 +140,9 @@ describe("language specifics", () => {
   it("uses Polish few and many plural forms", () => {
     applyLanguage("pl");
 
-    expect(t("move.minutes", { count: 2 })).toBe("2 minuty");
-    expect(t("move.minutes", { count: 12 })).toBe("12 minut");
-    expect(t("move.minutes", { count: 22 })).toBe("22 minuty");
+    expect(t("calendar.eventsCount", { count: 2 })).toBe("2 wydarzenia");
+    expect(t("calendar.eventsCount", { count: 12 })).toBe("12 wydarzeń");
+    expect(t("calendar.eventsCount", { count: 22 })).toBe("22 wydarzenia");
   });
 
   it("uses the French ordinal for the first", () => {

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2, RefreshCw, TriangleAlert } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { useApi } from "@/context/ApiContext";
+import { useStorage } from "@/context/StorageContext";
 import { useSessions } from "@/hooks/useSessions";
 import {
   SecuritySettingsProvider,
@@ -17,7 +18,7 @@ import {
 import { unlockAccount } from "@/lib/unlockAccount";
 import { postWithPassword } from "@/lib/srpLogin";
 import { validatePassword } from "@/lib/validators";
-import { bytesToBase64 } from "@/lib/utils";
+import { bytesToBase64, formatDuration } from "@/lib/utils";
 import type { AutoLockOption, UnlockMethod } from "@/types/Storage";
 import { Button } from "@/components/ui/button";
 import {
@@ -283,6 +284,10 @@ function ChangePasswordDialog({
   );
 }
 
+const NEVER_EXPIRES_YEARS = 5;
+
+const SESSION_LENGTHS = [1800, 86400, 7 * 86400, 14 * 86400, 28 * 86400];
+
 function AccountSection({
   sectionRefs,
   onPasswordChanged,
@@ -290,13 +295,25 @@ function AccountSection({
   sectionRefs: SectionRefs;
   onPasswordChanged: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, masterKey, checkLogin } = useUser();
   const { post, serverMeta } = useApi();
+  const storage = useStorage();
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
   if (!user || user.type !== "online") return null;
+
+  const changeSessionLength = async (value: string) => {
+    const sessionSeconds = +value;
+    const res = await post<never>("user/sessions/length", { sessionSeconds });
+    if (!res.success) {
+      toast.error(res.message || t("settings.security.sessionLengthFailed"));
+      return;
+    }
+
+    storage.set("sessionSeconds", sessionSeconds);
+  };
 
   const handleEmailChange = async (
     newEmail: string,
@@ -392,6 +409,36 @@ function AccountSection({
           </Button>
         </Field>
 
+        <Field orientation="responsive">
+          <FieldTitle id="session-length-label">
+            {settingLabel("account-session-length")}
+          </FieldTitle>
+          <SettingsSelect
+            labelledBy="session-length-label"
+            value={String(storage.get("sessionSeconds"))}
+            onValueChange={changeSessionLength}
+          >
+            <SelectItem value="0">
+              {serverMeta?.sessionSeconds === undefined
+                ? t("settings.security.sessionLength.defaultUnknown")
+                : t("settings.security.sessionLength.default", {
+                    length: formatDuration(
+                      serverMeta.sessionSeconds,
+                      i18n.language,
+                    ),
+                  })}
+            </SelectItem>
+            {SESSION_LENGTHS.map((seconds) => (
+              <SelectItem key={seconds} value={String(seconds)}>
+                {formatDuration(seconds, i18n.language)}
+              </SelectItem>
+            ))}
+            <SelectItem value="-1">
+              {t("settings.security.sessionLength.infinite")}
+            </SelectItem>
+          </SettingsSelect>
+        </Field>
+
         <UsageField />
       </Section>
 
@@ -485,9 +532,12 @@ function SessionsSection({
                     when: DateTime.fromISO(s.createdAt).toRelative(),
                   })}
                   {" - "}
-                  {t("settings.security.expires", {
-                    when: DateTime.fromISO(s.expiresAt).toRelative(),
-                  })}
+                  {DateTime.fromISO(s.expiresAt).diffNow("years").years >
+                  NEVER_EXPIRES_YEARS
+                    ? t("settings.security.neverExpires")
+                    : t("settings.security.expires", {
+                        when: DateTime.fromISO(s.expiresAt).toRelative(),
+                      })}
                 </FieldDescription>
               </div>
               {!s.current && (
@@ -509,7 +559,7 @@ function SessionsSection({
 }
 
 function SecurityPageContent({ sectionRefs }: { sectionRefs: SectionRefs }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { unlockMethod, autoLock, setUnlockMethod, setAutoLock } =
     useSecuritySettings();
   const sessions = useSessions();
@@ -580,21 +630,23 @@ function SecurityPageContent({ sectionRefs }: { sectionRefs: SectionRefs }) {
               {t("settings.security.autoLock.focus")}
             </SelectItem>
             <SelectItem value="5m">
-              {t("move.minutes", { count: 5 })}
+              {formatDuration(300, i18n.language)}
             </SelectItem>
             <SelectItem value="10m">
-              {t("move.minutes", { count: 10 })}
+              {formatDuration(600, i18n.language)}
             </SelectItem>
             <SelectItem value="15m">
-              {t("move.minutes", { count: 15 })}
+              {formatDuration(900, i18n.language)}
             </SelectItem>
             <SelectItem value="30m">
-              {t("move.minutes", { count: 30 })}
+              {formatDuration(1800, i18n.language)}
             </SelectItem>
             <SelectItem value="45m">
-              {t("move.minutes", { count: 45 })}
+              {formatDuration(2700, i18n.language)}
             </SelectItem>
-            <SelectItem value="1h">{t("move.hours", { count: 1 })}</SelectItem>
+            <SelectItem value="1h">
+              {formatDuration(3600, i18n.language)}
+            </SelectItem>
           </SettingsSelect>
         </Field>
       </Section>

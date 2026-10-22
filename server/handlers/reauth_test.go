@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"acLife/constants"
 	"acLife/database"
@@ -169,6 +170,66 @@ func TestLoginWithThePassword(t *testing.T) {
 	if status, reply := login(t, c, user, testutil.Password); status != http.StatusOK {
 		t.Fatalf("got %d %+v", status, reply)
 	}
+}
+
+func TestLoginSessionLength(t *testing.T) {
+	testutil.RequireDB(t)
+	user := testutil.NewUser(t)
+
+	cases := []struct {
+		name    string
+		seconds int64
+		want    time.Duration
+	}{
+		{"default", 0, constants.AccessTokenExpiry},
+		{"chosen", 86400, 24 * time.Hour},
+		{"infinite", constants.SessionLengthInfinite, constants.MaxSessionLength},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := testutil.NewClient(t)
+			status, proof := testutil.Proof(t, c, "/auth/login/start", map[string]any{"email": user.Email}, user.Email, testutil.Password)
+			if status != http.StatusOK {
+				t.Fatalf("login start: %d", status)
+			}
+
+			body := withProof(map[string]any{"email": user.Email, "sessionSeconds": tc.seconds}, proof)
+			resp, _ := c.Do("POST", "/auth/login/verify", body)
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("got %d", resp.StatusCode)
+			}
+
+			var maxAge int
+			for _, cookie := range resp.Cookies() {
+				if cookie.Name == "acl_session" {
+					maxAge = cookie.MaxAge
+				}
+			}
+			if maxAge != int(tc.want.Seconds()) {
+				t.Fatalf("cookie max age %d, want %d", maxAge, int(tc.want.Seconds()))
+			}
+
+			remaining := count(t, "SELECT TIMESTAMPDIFF(SECOND, NOW(), expires_at) FROM account_sessions WHERE owner = ? ORDER BY id DESC LIMIT 1", user.UUID)
+			if diff := int(tc.want.Seconds()) - remaining; diff < 0 || diff > 60 {
+				t.Fatalf("stored expiry in %ds, want about %d", remaining, int(tc.want.Seconds()))
+			}
+		})
+	}
+
+	t.Run("rejects out of range lengths", func(t *testing.T) {
+		for _, seconds := range []int64{-2, 1 << 40} {
+			c := testutil.NewClient(t)
+			status, proof := testutil.Proof(t, c, "/auth/login/start", map[string]any{"email": user.Email}, user.Email, testutil.Password)
+			if status != http.StatusOK {
+				t.Fatalf("login start: %d", status)
+			}
+
+			body := withProof(map[string]any{"email": user.Email, "sessionSeconds": seconds}, proof)
+			if status, _ := testutil.Call[any](c, "POST", "/auth/login/verify", body); status != http.StatusBadRequest {
+				t.Fatalf("%d: got %d", seconds, status)
+			}
+		}
+	})
 }
 
 func TestAddressLocksAfterRepeatedFailedProofs(t *testing.T) {

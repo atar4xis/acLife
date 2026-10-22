@@ -573,12 +573,25 @@ func LoginStart(w http.ResponseWriter, r *http.Request) {
 	startSRP(w, r, "LoginStart", types.SRPSession{Email: req.Email, UserUUID: userUUID}, salt, verifier, req.A)
 }
 
+func sessionLengthOf(seconds int64) (time.Duration, bool) {
+	switch {
+	case seconds == 0:
+		return constants.AccessTokenExpiry, true
+	case seconds == constants.SessionLengthInfinite:
+		return constants.MaxSessionLength, true
+	case seconds < 0 || seconds > int64(constants.MaxSessionLength.Seconds()):
+		return 0, false
+	}
+	return time.Duration(seconds) * time.Second, true
+}
+
 // LoginVerify is the second step of the SRP login procedure.
 func LoginVerify(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Email     string `json:"email"`
-		M1        []byte `json:"M1"`
-		SessionID string `json:"session_id"`
+		Email          string `json:"email"`
+		M1             []byte `json:"M1"`
+		SessionID      string `json:"session_id"`
+		SessionSeconds int64  `json:"sessionSeconds"`
 	}
 
 	if err := utils.ParseJSON(r.Body, &req); err != nil {
@@ -586,7 +599,8 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(req.Email) == 0 || len(req.M1) == 0 || len(req.SessionID) == 0 {
+	sessionLength, validLength := sessionLengthOf(req.SessionSeconds)
+	if len(req.Email) == 0 || len(req.M1) == 0 || len(req.SessionID) == 0 || !validLength {
 		utils.SendBadRequest(w)
 		return
 	}
@@ -652,7 +666,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 
 	// Login successful, generate access token
 	accessToken := utils.RandomToken(32)
-	expires := time.Now().Add(constants.AccessTokenExpiry)
+	expires := time.Now().Add(sessionLength)
 
 	// Insert new session to DB
 	_, err = database.Exec(r.Context(), `
@@ -666,7 +680,7 @@ func LoginVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save token in session
-	if err := session.Set(w, r, "access_token", accessToken); err != nil {
+	if err := session.Set(w, r, "access_token", accessToken, sessionLength); err != nil {
 		utils.LogError("LoginVerify", "session.Set", err)
 		utils.SendInternalError(w)
 		return

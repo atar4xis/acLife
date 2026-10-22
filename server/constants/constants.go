@@ -14,6 +14,10 @@ import (
 
 const Day = 24 * time.Hour
 
+const MaxSessionLength = 10 * 365 * Day
+
+const SessionLengthInfinite = -1
+
 const (
 	Version = "0.0.1"
 
@@ -204,6 +208,7 @@ func Configure() {
 			RetentionPeriod: 0,
 		},
 		VapidPublicKey: os.Getenv("VAPID_PUBLIC_KEY"), // for push service
+		SessionSeconds: int64(AccessTokenExpiry.Seconds()),
 	}
 }
 

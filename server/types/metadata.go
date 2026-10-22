@@ -29,4 +29,5 @@ type ServerMetadata struct {
 	Policies       *Policies    `json:"policies,omitempty"`
 	Registration   Registration `json:"registration"`
 	VapidPublicKey string       `json:"vapidPublicKey"`
+	SessionSeconds int64        `json:"sessionSeconds"`
 }

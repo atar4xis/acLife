@@ -54,4 +54,5 @@ export interface StorageData {
   pinWrappedKeys: WrappedKeyPair | null;
   pinFailures: number;
   autoLock: AutoLockOption;
+  sessionSeconds: number;
 }

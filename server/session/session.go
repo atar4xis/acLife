@@ -4,6 +4,7 @@ package session
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"acLife/constants"
 
@@ -23,7 +24,7 @@ func NewStore(key []byte, domain string) *sessions.CookieStore {
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
 	}
-	store.MaxAge(int(constants.AccessTokenExpiry.Seconds()))
+	store.MaxAge(int(constants.MaxSessionLength.Seconds()))
 	return store
 }
 
@@ -39,12 +40,13 @@ func GetSession(r *http.Request) (*sessions.Session, error) {
 	return sess, nil
 }
 
-// Set a value and save the session
-func Set(w http.ResponseWriter, r *http.Request, key string, value any) error {
+// Set a value and save the session; the cookie lives for maxAge
+func Set(w http.ResponseWriter, r *http.Request, key string, value any, maxAge time.Duration) error {
 	sess, err := GetSession(r)
 	if err != nil {
 		return err
 	}
+	sess.Options.MaxAge = int(maxAge.Seconds())
 	sess.Values[key] = value
 	return sess.Save(r, w)
 }

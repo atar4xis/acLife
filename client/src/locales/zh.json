@@ -171,8 +171,6 @@
     "backward": "提前...",
     "next": "下一个...",
     "previous": "上一个...",
-    "minutes_other": "{{count}}分钟",
-    "hours_other": "{{count}}小时",
     "unit": {
       "days": "天",
       "weeks": "周",
@@ -242,7 +240,8 @@
     "verificationLinkSent": "验证链接已发送至<strong>{{email}}</strong>。",
     "resendCooldown": "重新发送邮件（{{seconds}}秒）",
     "resend": "重新发送邮件",
-    "backToLogin": "返回登录"
+    "backToLogin": "返回登录",
+    "rememberMe": "记住我"
   },
   "unlock": {
     "title": "解密数据",
@@ -434,7 +433,8 @@
       "sharing-invites-list": "邀请",
       "sharing-owned-list": "你共享的",
       "sharing-joined-list": "与你共享的",
-      "sharing-contacts-list": "联系人"
+      "sharing-contacts-list": "联系人",
+      "account-session-length": "会话时长"
     },
     "colors": {
       "background": "背景",
@@ -520,7 +520,6 @@
       "literal": "用单引号包裹文字可按原样显示，例如 '于'。"
     },
     "minutesShort": "{{count}}分钟",
-    "days_other": "{{count}}天",
     "calendar": {
       "languageSystem": "系统默认",
       "actionNone": "不执行任何操作",
@@ -584,7 +583,14 @@
       "autoLock": {
         "disabled": "已禁用",
         "focus": "应用失去焦点时"
-      }
+      },
+      "sessionLength": {
+        "default": "默认（{{length}}）",
+        "defaultUnknown": "默认",
+        "infinite": "永不过期"
+      },
+      "sessionLengthFailed": "无法更改会话时长。",
+      "neverExpires": "永不过期"
     },
     "usage": {
       "summary": "已使用 {{used}}，共 {{limit}}",

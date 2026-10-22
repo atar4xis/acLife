@@ -34,6 +34,7 @@ import NotificationsField, {
 } from "@/components/calendar/NotificationsField";
 import DeferredContent from "../DeferredContent";
 import { useTranslation } from "react-i18next";
+import { formatDuration } from "@/lib/utils";
 
 const DefaultEventNameField = memo(function DefaultEventNameField() {
   useTranslation();
@@ -111,7 +112,7 @@ export default function CalendarPage({
 }: {
   sectionRefs: SectionRefs;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     defaultView,
     notificationSound,
@@ -538,7 +539,7 @@ export default function CalendarPage({
             settingKey="agendaRangeDays"
             min={1}
             max={14}
-            format={(v) => t("settings.days", { count: v })}
+            format={(v) => formatDuration(v * 86400, i18n.language)}
             disabled={!agendaEnabled}
           />
 
@@ -559,7 +560,7 @@ export default function CalendarPage({
               settingKey="overdueDays"
               min={1}
               max={28}
-              format={(v) => t("settings.days", { count: v })}
+              format={(v) => formatDuration(v * 86400, i18n.language)}
               disabled={!agendaEnabled}
             />
           )}

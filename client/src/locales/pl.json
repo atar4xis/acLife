@@ -185,14 +185,6 @@
     "backward": "Na wcześniej...",
     "next": "Następny...",
     "previous": "Poprzedni...",
-    "minutes_one": "{{count}} minuta",
-    "minutes_few": "{{count}} minuty",
-    "minutes_many": "{{count}} minut",
-    "minutes_other": "{{count}} minuty",
-    "hours_one": "{{count}} godzina",
-    "hours_few": "{{count}} godziny",
-    "hours_many": "{{count}} godzin",
-    "hours_other": "{{count}} godziny",
     "unit": {
       "days": "Dzień",
       "weeks": "Tydzień",
@@ -262,7 +254,8 @@
     "verificationLinkSent": "Link weryfikacyjny został wysłany na adres <strong>{{email}}</strong>.",
     "resendCooldown": "Wyślij ponownie ({{seconds}} s)",
     "resend": "Wyślij e-mail ponownie",
-    "backToLogin": "Wróć do logowania"
+    "backToLogin": "Wróć do logowania",
+    "rememberMe": "Zapamiętaj mnie"
   },
   "unlock": {
     "title": "Odszyfruj dane",
@@ -454,7 +447,8 @@
       "sharing-invites-list": "Zaproszenia",
       "sharing-owned-list": "Udostępnione przez Ciebie",
       "sharing-joined-list": "Udostępnione Tobie",
-      "sharing-contacts-list": "Kontakty"
+      "sharing-contacts-list": "Kontakty",
+      "account-session-length": "Czas trwania sesji"
     },
     "colors": {
       "background": "Tło",
@@ -543,10 +537,6 @@
       "literal": "Ujmij tekst w apostrofy, aby wyświetlić go bez zmian, np. 'o'."
     },
     "minutesShort": "{{count}} min",
-    "days_one": "{{count}} dzień",
-    "days_few": "{{count}} dni",
-    "days_many": "{{count}} dni",
-    "days_other": "{{count}} dnia",
     "calendar": {
       "languageSystem": "Domyślny język systemowy",
       "actionNone": "Nie rób nic",
@@ -616,7 +606,14 @@
       "autoLock": {
         "disabled": "Wyłączona",
         "focus": "Gdy aplikacja traci fokus"
-      }
+      },
+      "sessionLength": {
+        "default": "Domyślny ({{length}})",
+        "defaultUnknown": "Domyślny",
+        "infinite": "Nigdy nie wygasa"
+      },
+      "sessionLengthFailed": "Nie udało się zmienić czasu trwania sesji.",
+      "neverExpires": "Nigdy nie wygasa"
     },
     "usage": {
       "summary": "Wykorzystano {{used}} z {{limit}}",

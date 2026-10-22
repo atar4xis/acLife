@@ -144,7 +144,9 @@ beforeEach(() => {
   userMock.checkLogin.mockReset().mockResolvedValue(undefined);
 
   storageMock.missing = false;
-  storageMock.get.mockReset().mockReturnValue("");
+  storageMock.get
+    .mockReset()
+    .mockImplementation((key: string) => (key === "sessionSeconds" ? 0 : ""));
   storageMock.set.mockReset();
 
   cryptMock.generateMasterKeyEnvelope.mockReset().mockResolvedValue({
@@ -451,9 +453,70 @@ describe("LoginDialog", () => {
       email: "user@example.com",
       M1: btoa(String.fromCharCode(4, 5, 6)),
       session_id: "session-1",
+      sessionSeconds: 0,
     });
     expect(srpMock.initialize).toHaveBeenCalled();
     expect(srpClientMock.setB).toHaveBeenCalled();
+  });
+
+  it("asks for a never expiring session when remember me is checked", async () => {
+    apiMock.serverMeta = defaultServerMeta;
+    apiMock.post
+      .mockResolvedValueOnce({ success: true, data: btoa("abc") })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { B: btoa("def"), session_id: "session-1" },
+      })
+      .mockResolvedValueOnce({ success: true, data: { M2: btoa("ghi") } });
+
+    const user = userEvent.setup();
+    renderLoginDialog();
+
+    await user.type(screen.getByLabelText(/email address/i), "user@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "StrongPassword123!");
+    await user.click(screen.getByRole("checkbox", { name: /remember me/i }));
+    await user.click(screen.getByRole("button", { name: /continue/i }));
+
+    await waitFor(() => expect(userMock.checkLogin).toHaveBeenCalled());
+    expect(apiMock.post).toHaveBeenNthCalledWith(
+      3,
+      "auth/login/verify",
+      expect.objectContaining({ sessionSeconds: -1 }),
+    );
+    expect(storageMock.set).toHaveBeenCalledWith("sessionSeconds", -1);
+  });
+
+  it("shows remember me checked from the stored length and sends the default when unchecked", async () => {
+    storageMock.get.mockImplementation((key: string) =>
+      key === "sessionSeconds" ? -1 : "",
+    );
+    apiMock.serverMeta = defaultServerMeta;
+    apiMock.post
+      .mockResolvedValueOnce({ success: true, data: btoa("abc") })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { B: btoa("def"), session_id: "session-1" },
+      })
+      .mockResolvedValueOnce({ success: true, data: { M2: btoa("ghi") } });
+
+    const user = userEvent.setup();
+    renderLoginDialog();
+
+    const remember = screen.getByRole("checkbox", { name: /remember me/i });
+    expect(remember).toBeChecked();
+
+    await user.type(screen.getByLabelText(/email address/i), "user@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "StrongPassword123!");
+    await user.click(remember);
+    await user.click(screen.getByRole("button", { name: /continue/i }));
+
+    await waitFor(() => expect(userMock.checkLogin).toHaveBeenCalled());
+    expect(apiMock.post).toHaveBeenNthCalledWith(
+      3,
+      "auth/login/verify",
+      expect.objectContaining({ sessionSeconds: 0 }),
+    );
+    expect(storageMock.set).toHaveBeenCalledWith("sessionSeconds", 0);
   });
 });
 

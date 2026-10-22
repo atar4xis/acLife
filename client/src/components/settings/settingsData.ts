@@ -98,6 +98,7 @@ export const settingsCategories: SettingsCategory[] = [
         items: [
           { id: "account-email" },
           { id: "account-password" },
+          { id: "account-session-length" },
           { id: "account-usage" },
         ],
       },

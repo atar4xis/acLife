@@ -203,12 +203,16 @@ export function LoginForm({
     setLoading(true);
 
     try {
-      const login = await srpLogin(post, email, password);
+      const sessionSeconds = data.has("remember")
+        ? -1
+        : Math.max(storage.get("sessionSeconds"), 0);
+      const login = await srpLogin(post, email, password, sessionSeconds);
       if (!login.success) {
         setError(login.message);
         return;
       }
 
+      storage.set("sessionSeconds", sessionSeconds);
       await checkLogin(password);
     } finally {
       setLoading(false);
@@ -254,6 +258,18 @@ export function LoginForm({
                     required
                   />
                 </Field>
+              )}
+
+              {creating ? null : (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="remember"
+                    name="remember"
+                    defaultChecked={storage.get("sessionSeconds") === -1}
+                    disabled={disabled}
+                  />
+                  <Label htmlFor="remember">{t("login.rememberMe")}</Label>
+                </div>
               )}
 
               {creating ? (

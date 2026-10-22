@@ -173,10 +173,6 @@
     "backward": "Más temprano...",
     "next": "Siguiente...",
     "previous": "Anterior...",
-    "minutes_one": "{{count}} minuto",
-    "minutes_other": "{{count}} minutos",
-    "hours_one": "{{count}} hora",
-    "hours_other": "{{count}} horas",
     "unit": {
       "days": "Día",
       "weeks": "Semana",
@@ -246,7 +242,8 @@
     "verificationLinkSent": "Se ha enviado un enlace de verificación a <strong>{{email}}</strong>.",
     "resendCooldown": "Reenviar correo ({{seconds}} s)",
     "resend": "Reenviar correo",
-    "backToLogin": "Volver al inicio de sesión"
+    "backToLogin": "Volver al inicio de sesión",
+    "rememberMe": "Recordarme"
   },
   "unlock": {
     "title": "Descifrar datos",
@@ -438,7 +435,8 @@
       "sharing-invites-list": "Invitaciones",
       "sharing-owned-list": "Compartido por ti",
       "sharing-joined-list": "Compartido contigo",
-      "sharing-contacts-list": "Contactos"
+      "sharing-contacts-list": "Contactos",
+      "account-session-length": "Duración de la sesión"
     },
     "colors": {
       "background": "Fondo",
@@ -525,8 +523,6 @@
       "literal": "Escribe el texto entre comillas simples para mostrarlo tal cual, p. ej. 'de'."
     },
     "minutesShort": "{{count}} min",
-    "days_one": "{{count}} día",
-    "days_other": "{{count}} días",
     "calendar": {
       "languageSystem": "Predeterminado del sistema",
       "actionNone": "No hacer nada",
@@ -592,7 +588,14 @@
       "autoLock": {
         "disabled": "Desactivado",
         "focus": "Cuando la aplicación pierde el foco"
-      }
+      },
+      "sessionLength": {
+        "default": "Predeterminada ({{length}})",
+        "defaultUnknown": "Predeterminada",
+        "infinite": "No caduca"
+      },
+      "sessionLengthFailed": "No se pudo cambiar la duración de la sesión.",
+      "neverExpires": "No caduca"
     },
     "usage": {
       "summary": "{{used}} de {{limit}} usados",

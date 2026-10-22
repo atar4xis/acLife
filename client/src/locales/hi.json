@@ -181,10 +181,6 @@
     "backward": "पहले के समय पर...",
     "next": "अगला...",
     "previous": "पिछला...",
-    "minutes_one": "{{count}} मिनट",
-    "minutes_other": "{{count}} मिनट",
-    "hours_one": "{{count}} घंटा",
-    "hours_other": "{{count}} घंटे",
     "unit": {
       "days": "दिन",
       "weeks": "सप्ताह",
@@ -254,7 +250,8 @@
     "verificationLinkSent": "<strong>{{email}}</strong> पर एक सत्यापन लिंक भेजा गया है।",
     "resendCooldown": "ईमेल दोबारा भेजें ({{seconds}} सेकंड)",
     "resend": "ईमेल दोबारा भेजें",
-    "backToLogin": "लॉग इन पर वापस जाएँ"
+    "backToLogin": "लॉग इन पर वापस जाएँ",
+    "rememberMe": "मुझे याद रखें"
   },
   "unlock": {
     "title": "डेटा डिक्रिप्ट करें",
@@ -446,7 +443,8 @@
       "sharing-invites-list": "आमंत्रण",
       "sharing-owned-list": "आपने जो साझा किया",
       "sharing-joined-list": "आपके साथ साझा की गई सामग्री",
-      "sharing-contacts-list": "संपर्क"
+      "sharing-contacts-list": "संपर्क",
+      "account-session-length": "सत्र की अवधि"
     },
     "colors": {
       "background": "पृष्ठभूमि",
@@ -533,8 +531,6 @@
       "literal": "टेक्स्ट को जैसा लिखा है वैसा दिखाने के लिए उसे सिंगल कोट्स में रखें, जैसे 'पर'।"
     },
     "minutesShort": "{{count}} मि.",
-    "days_one": "{{count}} दिन",
-    "days_other": "{{count}} दिन",
     "calendar": {
       "languageSystem": "सिस्टम डिफ़ॉल्ट",
       "actionNone": "कुछ न करें",
@@ -600,7 +596,14 @@
       "autoLock": {
         "disabled": "बंद",
         "focus": "ऐप से फ़ोकस हटने पर"
-      }
+      },
+      "sessionLength": {
+        "default": "डिफ़ॉल्ट ({{length}})",
+        "defaultUnknown": "डिफ़ॉल्ट",
+        "infinite": "कभी समाप्त नहीं होता"
+      },
+      "sessionLengthFailed": "सत्र की अवधि नहीं बदली जा सकी।",
+      "neverExpires": "कभी समाप्त नहीं होता"
     },
     "usage": {
       "summary": "{{limit}} में से {{used}} उपयोग किया गया",

@@ -52,6 +52,7 @@ export async function srpLogin(
   post: ApiPost,
   email: string,
   password: string,
+  sessionSeconds = 0,
 ): Promise<SrpLoginResult> {
   const started = await startSrp(
     post,
@@ -67,6 +68,7 @@ export async function srpLogin(
     email,
     M1: bytesToBase64(client.M1),
     session_id: sessionId,
+    sessionSeconds,
   });
   if (!res.success || !res.data) return failure(res);
 

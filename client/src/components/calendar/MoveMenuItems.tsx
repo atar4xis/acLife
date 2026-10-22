@@ -14,6 +14,7 @@ import {
   MOVE_UNIT_STEPS,
 } from "@/lib/calendar/moveHelpers";
 import { fmt } from "@/i18n";
+import { formatDuration } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
 /* shared shape between shadcn's DropdownMenu* and ContextMenu* primitives,
@@ -35,7 +36,7 @@ export function MoveMenuItems({
   onMove: (originalEvent: CalendarEvent, event: CalendarEvent) => void;
   menu: MoveMenuKit;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const calendarEvents = useEventList();
   const { selection } = useCalendarActions();
   const selectedEvents = useSelectedEvents(selection);
@@ -107,7 +108,7 @@ export function MoveMenuItems({
                     key={`fwd-min-${minutes}`}
                     onClick={() => moveBy("forward", "minutes", minutes)}
                   >
-                    {t("move.minutes", { count: minutes })}
+                    {formatDuration(minutes * 60, i18n.language)}
                   </Item>
                 ))}
                 {MOVE_HOUR_STEPS.map((hours) => (
@@ -115,7 +116,7 @@ export function MoveMenuItems({
                     key={`fwd-hour-${hours}`}
                     onClick={() => moveBy("forward", "hours", hours)}
                   >
-                    {t("move.hours", { count: hours })}
+                    {formatDuration(hours * 3600, i18n.language)}
                   </Item>
                 ))}
               </SubContent>
@@ -129,7 +130,7 @@ export function MoveMenuItems({
                     key={`bwd-min-${minutes}`}
                     onClick={() => moveBy("backward", "minutes", minutes)}
                   >
-                    {t("move.minutes", { count: minutes })}
+                    {formatDuration(minutes * 60, i18n.language)}
                   </Item>
                 ))}
                 {MOVE_HOUR_STEPS.map((hours) => (
@@ -137,7 +138,7 @@ export function MoveMenuItems({
                     key={`bwd-hour-${hours}`}
                     onClick={() => moveBy("backward", "hours", hours)}
                   >
-                    {t("move.hours", { count: hours })}
+                    {formatDuration(hours * 3600, i18n.language)}
                   </Item>
                 ))}
               </SubContent>

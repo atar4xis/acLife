@@ -179,10 +179,6 @@
     "backward": "Earlier...",
     "next": "Next...",
     "previous": "Previous...",
-    "minutes_one": "{{count}} minute",
-    "minutes_other": "{{count}} minutes",
-    "hours_one": "{{count}} hour",
-    "hours_other": "{{count}} hours",
     "unit": {
       "days": "Day",
       "weeks": "Week",
@@ -252,7 +248,8 @@
     "verificationLinkSent": "A verification link has been sent to <strong>{{email}}</strong>.",
     "resendCooldown": "Resend email ({{seconds}}s)",
     "resend": "Resend email",
-    "backToLogin": "Back to login"
+    "backToLogin": "Back to login",
+    "rememberMe": "Remember me"
   },
   "unlock": {
     "title": "Decrypt data",
@@ -444,7 +441,8 @@
       "sharing-invites-list": "Invitations",
       "sharing-owned-list": "Shared by you",
       "sharing-joined-list": "Shared with you",
-      "sharing-contacts-list": "Contacts"
+      "sharing-contacts-list": "Contacts",
+      "account-session-length": "Session length"
     },
     "colors": {
       "background": "Background",
@@ -531,8 +529,6 @@
       "literal": "Wrap text in single quotes to show it as written, e.g. 'at'."
     },
     "minutesShort": "{{count}} min",
-    "days_one": "{{count}} day",
-    "days_other": "{{count}} days",
     "calendar": {
       "languageSystem": "System default",
       "actionNone": "Do nothing",
@@ -598,7 +594,14 @@
       "autoLock": {
         "disabled": "Disabled",
         "focus": "When the app loses focus"
-      }
+      },
+      "sessionLength": {
+        "default": "Default ({{length}})",
+        "defaultUnknown": "Default",
+        "infinite": "Never expires"
+      },
+      "sessionLengthFailed": "Failed to change the session length.",
+      "neverExpires": "Never expires"
     },
     "usage": {
       "summary": "{{used}} of {{limit}} used",

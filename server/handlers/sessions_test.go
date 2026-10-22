@@ -149,3 +149,39 @@ func TestRevokedSessionStopsWorking(t *testing.T) {
 		t.Fatalf("got %d", status)
 	}
 }
+
+func TestSetSessionLength(t *testing.T) {
+	testutil.RequireDB(t)
+
+	srv := testutil.NewClient(t)
+	user := testutil.NewUser(t)
+	testutil.NewSession(t, user, time.Now().Add(time.Hour))
+	testutil.NewSession(t, user, time.Now().Add(time.Hour))
+	current := srv.As(user)
+
+	t.Run("restarts only the current session", func(t *testing.T) {
+		resp, _ := current.Do("POST", "/user/sessions/length", map[string]int64{"sessionSeconds": 86400})
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("got %d", resp.StatusCode)
+		}
+		if cookies := resp.Cookies(); len(cookies) != 1 || cookies[0].MaxAge != 86400 {
+			t.Fatalf("cookies %+v", cookies)
+		}
+
+		for _, s := range listSessions(t, current) {
+			remaining := time.Until(s.ExpiresAt)
+			if s.Current != (remaining > 23*time.Hour) {
+				t.Fatalf("session current=%v expires in %v", s.Current, remaining)
+			}
+		}
+	})
+
+	t.Run("rejects out of range lengths", func(t *testing.T) {
+		for _, seconds := range []int64{-2, 1 << 40} {
+			status, _ := testutil.Call[any](current, "POST", "/user/sessions/length", map[string]int64{"sessionSeconds": seconds})
+			if status != http.StatusBadRequest {
+				t.Fatalf("%d: got %d", seconds, status)
+			}
+		}
+	})
+}

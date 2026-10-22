@@ -192,18 +192,6 @@
     "backward": "إلى وقت أبكر...",
     "next": "التالي...",
     "previous": "السابق...",
-    "minutes_zero": "{{count}} دقيقة",
-    "minutes_one": "{{count}} دقيقة",
-    "minutes_two": "دقيقتان",
-    "minutes_few": "{{count}} دقائق",
-    "minutes_many": "{{count}} دقيقة",
-    "minutes_other": "{{count}} دقيقة",
-    "hours_zero": "{{count}} ساعة",
-    "hours_one": "{{count}} ساعة",
-    "hours_two": "ساعتان",
-    "hours_few": "{{count}} ساعات",
-    "hours_many": "{{count}} ساعة",
-    "hours_other": "{{count}} ساعة",
     "unit": {
       "days": "يوم",
       "weeks": "أسبوع",
@@ -273,7 +261,8 @@
     "verificationLinkSent": "تم إرسال رابط التحقق إلى <strong>{{email}}</strong>.",
     "resendCooldown": "إعادة إرسال الرسالة ({{seconds}} ث)",
     "resend": "إعادة إرسال الرسالة",
-    "backToLogin": "العودة إلى تسجيل الدخول"
+    "backToLogin": "العودة إلى تسجيل الدخول",
+    "rememberMe": "تذكرني"
   },
   "unlock": {
     "title": "فك تشفير البيانات",
@@ -465,7 +454,8 @@
       "sharing-invites-list": "الدعوات",
       "sharing-owned-list": "ما شاركته",
       "sharing-joined-list": "ما تمت مشاركته معك",
-      "sharing-contacts-list": "جهات الاتصال"
+      "sharing-contacts-list": "جهات الاتصال",
+      "account-session-length": "مدة الجلسة"
     },
     "colors": {
       "background": "الخلفية",
@@ -556,12 +546,6 @@
       "literal": "ضع النص بين علامتي اقتباس مفردتين لعرضه كما كُتب، مثل 'في'."
     },
     "minutesShort": "{{count}} د",
-    "days_zero": "{{count}} يوم",
-    "days_one": "{{count}} يوم",
-    "days_two": "يومان",
-    "days_few": "{{count}} أيام",
-    "days_many": "{{count}} يومًا",
-    "days_other": "{{count}} يوم",
     "calendar": {
       "languageSystem": "افتراضي النظام",
       "actionNone": "عدم فعل أي شيء",
@@ -635,7 +619,14 @@
       "autoLock": {
         "disabled": "معطّل",
         "focus": "عند فقدان التطبيق للتركيز"
-      }
+      },
+      "sessionLength": {
+        "default": "الافتراضي ({{length}})",
+        "defaultUnknown": "الافتراضي",
+        "infinite": "لا تنتهي صلاحيتها أبدًا"
+      },
+      "sessionLengthFailed": "تعذر تغيير مدة الجلسة.",
+      "neverExpires": "لا تنتهي صلاحيتها أبدًا"
     },
     "usage": {
       "summary": "تم استخدام {{used}} من {{limit}}",

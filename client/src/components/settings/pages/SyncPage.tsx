@@ -53,6 +53,7 @@ import SettingsLabel from "../SettingsLabel";
 import SettingsSelect from "../SettingsSelect";
 import SyncToggle from "../SyncToggle";
 import { useTranslation } from "react-i18next";
+import { formatDuration } from "@/lib/utils";
 
 function SyncGroup({ label, keys }: { label: string; keys: SyncableKey[] }) {
   const { enabled, isSynced, resetSynced } = useSyncSettings();
@@ -111,7 +112,7 @@ export default function SyncPage({
 }: {
   sectionRefs: SectionRefs;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const settings = useCalendarSettings((s) => ({
     resyncIntervalMinutes: s.resyncIntervalMinutes,
     setSetting: s.setSetting,
@@ -257,7 +258,7 @@ export default function SyncPage({
           >
             {RESYNC_INTERVAL_OPTIONS.map((minutes) => (
               <SelectItem key={minutes} value={String(minutes)}>
-                {t("move.minutes", { count: minutes })}
+                {formatDuration(minutes * 60, i18n.language)}
               </SelectItem>
             ))}
           </SettingsSelect>

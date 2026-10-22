@@ -11,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"acLife/constants"
 	"acLife/database"
@@ -707,4 +708,43 @@ func PushTest(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSON(w, http.StatusOK, types.Reply[any]{
 		Success: true,
 	})
+}
+
+func SetSessionLength(w http.ResponseWriter, r *http.Request) {
+	user := session.GetLoggedInUser(r)
+	utils.Assert(user != nil) // ensured by AuthMiddleware
+
+	var req struct {
+		SessionSeconds int64 `json:"sessionSeconds"`
+	}
+	if err := utils.ParseJSON(r.Body, &req); err != nil {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	length, valid := sessionLengthOf(req.SessionSeconds)
+	if !valid {
+		utils.SendBadRequest(w)
+		return
+	}
+
+	token := session.Get[string](r, "access_token")
+	if _, err := database.Exec(r.Context(),
+		"UPDATE account_sessions SET expires_at = ? WHERE access_token = ?",
+		time.Now().Add(length), token,
+	); err != nil {
+		utils.LogError("SetSessionLength", "database.Exec", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	if err := session.Set(w, r, "access_token", token, length); err != nil {
+		utils.LogError("SetSessionLength", "session.Set", err)
+		utils.SendInternalError(w)
+		return
+	}
+
+	stream.CloseSession(token)
+
+	utils.SendJSON(w, http.StatusOK, types.Reply[any]{Success: true})
 }

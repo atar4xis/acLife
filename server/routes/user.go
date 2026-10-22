@@ -41,6 +41,7 @@ func User(r *mux.Router) {
 	sr.HandleFunc("/email", handlers.UpdateEmail).Methods("POST")
 	sr.HandleFunc("/password", handlers.UpdatePassword).Methods("POST")
 	sr.HandleFunc("/sessions", handlers.ListSessions).Methods("GET")
+	sr.HandleFunc("/sessions/length", handlers.SetSessionLength).Methods("POST")
 	sr.HandleFunc("/sessions/{id}", handlers.RevokeSession).Methods("DELETE")
 	sr.HandleFunc("/push/subscribe", handlers.PushSubscribe).Methods("POST")
 	sr.HandleFunc("/push/unsubscribe", handlers.PushUnsubscribe).Methods("POST")

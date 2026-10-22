@@ -103,11 +103,23 @@ export function validateServerMeta(
   )
     return false;
 
+  if (
+    data.sessionSeconds !== undefined &&
+    typeof data.sessionSeconds !== "number"
+  )
+    return false;
+
   // check for extra keys in top-level data
   const topKeys = Object.keys(data);
   if (
     !topKeys.every((k) =>
-      ["url", "policies", "registration", "vapidPublicKey"].includes(k),
+      [
+        "url",
+        "policies",
+        "registration",
+        "vapidPublicKey",
+        "sessionSeconds",
+      ].includes(k),
     )
   )
     return false;

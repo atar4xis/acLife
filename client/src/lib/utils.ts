@@ -272,3 +272,20 @@ export const withoutRuntimeFields = <T extends object>(value: T) =>
   Object.fromEntries(
     Object.entries(value).filter(([key]) => !key.startsWith("_")),
   ) as WithoutRuntimeFields<T>;
+
+const DURATION_UNITS: [string, number][] = [
+  ["day", 86400],
+  ["hour", 3600],
+  ["minute", 60],
+  ["second", 1],
+];
+
+export function formatDuration(seconds: number, language: string): string {
+  const [unit, size] = DURATION_UNITS.find(([, size]) => seconds % size === 0)!;
+
+  return new Intl.NumberFormat(language, {
+    style: "unit",
+    unit,
+    unitDisplay: "long",
+  }).format(seconds / size);
+}
