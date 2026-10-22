@@ -1,6 +1,10 @@
 import { DateTime } from "luxon";
 import type { CalendarEvent, EventDragRef } from "@/types/calendar/Event";
-import { eventKey } from "@/lib/calendar/event";
+import {
+  completionKey,
+  eventKey,
+  resolveInstanceCompleted,
+} from "@/lib/calendar/event";
 
 export type BarSlots = (CalendarEvent | undefined)[];
 
@@ -50,10 +54,15 @@ export function layoutBars(
   const ordered = Array.from(spans, ([key, days]) => ({
     key,
     days,
+    completed: Number(
+      !!days[0].event.isTask &&
+        resolveInstanceCompleted(days[0].event, completionKey(days[0].event)),
+    ),
     multiDay: Number(isMultiDay(days[0].event)),
     start: days[0].event.start.toMillis(),
   })).toSorted(
     (a, b) =>
+      a.completed - b.completed ||
       b.multiDay - a.multiDay ||
       a.start - b.start ||
       Number(a.key > b.key) - Number(a.key < b.key),
