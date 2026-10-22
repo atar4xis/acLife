@@ -18,6 +18,7 @@ import {
   Trash2,
   Unlink,
 } from "lucide-react";
+import { Fragment } from "react";
 import { MoveMenuItems } from "./MoveMenuItems";
 import { useTranslation } from "react-i18next";
 import { useCalendarActions } from "@/context/CalendarContext";
@@ -68,62 +69,14 @@ export function EventMenuItems({
   const shareable = canShare && !event._shared;
   const recurring = !!event._parent || !!event.repeat;
 
-  return (
+  const sections = [
+    editable && (
+      <ContextMenuItem onClick={onEdit}>
+        <PencilLine />
+        {t("block.edit")}
+      </ContextMenuItem>
+    ),
     <>
-      <ContextMenuLabel className="max-w-64 truncate">
-        {event.title}
-      </ContextMenuLabel>
-
-      {editable && (
-        <ContextMenuItem onClick={onEdit}>
-          <PencilLine />
-          {t("block.edit")}
-        </ContextMenuItem>
-      )}
-
-      {shareable && recurring && (
-        <ContextMenuItem
-          onClick={() =>
-            openShare({
-              kind: "calendar",
-              scope: "item",
-              target: () => onShareOccurrence(event),
-              label: event.title,
-            })
-          }
-        >
-          <Share2 />
-          {t("shares.shareOccurrence")}
-        </ContextMenuItem>
-      )}
-
-      {shareable && (
-        <ContextMenuItem
-          onClick={() =>
-            openShare({
-              kind: "calendar",
-              scope: "item",
-              target: event.id,
-              label: event.title,
-            })
-          }
-        >
-          <Share2 />
-          {t(recurring ? "shares.shareSeries" : "shares.share")}
-        </ContextMenuItem>
-      )}
-
-      {developerMode && (
-        <ContextMenuItem
-          onClick={() =>
-            navigator.clipboard.writeText(event._parent || event.id)
-          }
-        >
-          <Clipboard />
-          {event._parent ? t("block.copyParentId") : t("block.copyId")}
-        </ContextMenuItem>
-      )}
-
       <ContextMenuItem onClick={() => copy(event)}>
         <Files />
         {t("common.copy")}
@@ -135,40 +88,103 @@ export function EventMenuItems({
         <CopyIcon />
         {t("block.duplicate")}
       </ContextMenuItem>
+    </>,
+    ((canDeleteEvent(event) && event._parent) ||
+      (editable && event._resettable)) && (
+      <>
+        {canDeleteEvent(event) && event._parent && (
+          <ContextMenuItem onClick={() => onDetach(event)}>
+            <Unlink />
+            {t("block.detach")}
+          </ContextMenuItem>
+        )}
 
-      {canDeleteEvent(event) && event._parent && (
-        <ContextMenuItem onClick={() => onDetach(event)}>
-          <Unlink />
-          {t("block.detach")}
-        </ContextMenuItem>
-      )}
+        {editable && event._resettable && (
+          <ContextMenuItem onClick={() => onReset(event)}>
+            <RotateCcw />
+            {t("block.reset")}
+          </ContextMenuItem>
+        )}
+      </>
+    ),
+    editable && (
+      <MoveMenuItems
+        event={event}
+        onMove={onMove}
+        menu={{
+          Sub: ContextMenuSub,
+          SubTrigger: ContextMenuSubTrigger,
+          SubContent: ContextMenuSubContent,
+          Item: ContextMenuItem,
+          Separator: ContextMenuSeparator,
+        }}
+      />
+    ),
+    (shareable || developerMode) && (
+      <>
+        {shareable && recurring && (
+          <ContextMenuItem
+            onClick={() =>
+              openShare({
+                kind: "calendar",
+                scope: "item",
+                target: () => onShareOccurrence(event),
+                label: event.title,
+              })
+            }
+          >
+            <Share2 />
+            {t("shares.shareOccurrence")}
+          </ContextMenuItem>
+        )}
 
-      {editable && event._resettable && (
-        <ContextMenuItem onClick={() => onReset(event)}>
-          <RotateCcw />
-          {t("block.reset")}
-        </ContextMenuItem>
-      )}
+        {shareable && (
+          <ContextMenuItem
+            onClick={() =>
+              openShare({
+                kind: "calendar",
+                scope: "item",
+                target: event.id,
+                label: event.title,
+              })
+            }
+          >
+            <Share2 />
+            {t(recurring ? "shares.shareSeries" : "shares.share")}
+          </ContextMenuItem>
+        )}
 
-      {editable && (
-        <MoveMenuItems
-          event={event}
-          onMove={onMove}
-          menu={{
-            Sub: ContextMenuSub,
-            SubTrigger: ContextMenuSubTrigger,
-            SubContent: ContextMenuSubContent,
-            Item: ContextMenuItem,
-            Separator: ContextMenuSeparator,
-          }}
-        />
-      )}
+        {developerMode && (
+          <ContextMenuItem
+            onClick={() =>
+              navigator.clipboard.writeText(event._parent || event.id)
+            }
+          >
+            <Clipboard />
+            {event._parent ? t("block.copyParentId") : t("block.copyId")}
+          </ContextMenuItem>
+        )}
+      </>
+    ),
+    canDeleteEvent(event) && (
+      <ContextMenuItem onClick={() => onDelete(event)}>
+        <Trash2 /> {t("common.delete")}
+      </ContextMenuItem>
+    ),
+  ].filter(Boolean);
 
-      {canDeleteEvent(event) && (
-        <ContextMenuItem onClick={() => onDelete(event)}>
-          <Trash2 /> {t("common.delete")}
-        </ContextMenuItem>
-      )}
+  return (
+    <>
+      <ContextMenuLabel className="max-w-64 truncate">
+        {event.title}
+      </ContextMenuLabel>
+
+      {sections.map((section, index) => (
+        <Fragment key={index}>
+          {index > 0 && <ContextMenuSeparator />}
+          {section}
+        </Fragment>
+      ))}
     </>
   );
 }
