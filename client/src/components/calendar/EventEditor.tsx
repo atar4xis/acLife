@@ -35,7 +35,7 @@ import {
   EVENT_COLOR_FALLBACK,
   useCalendarSettings,
 } from "@/context/CalendarSettingsContext";
-import { cn } from "@/lib/utils";
+import { cn, isModKey } from "@/lib/utils";
 import ScrollThumb from "@/components/ui/scroll-thumb";
 import {
   DEFAULT_DESCRIPTION_SIZE,
@@ -330,8 +330,8 @@ export default function EventEditor({
       // close the editor with escape
       if (e.key === "Escape") onCancel();
 
-      // save the event with ctrl + s
-      if (e.key === "s" && e.ctrlKey) {
+      // save the event with ctrl/cmd + s
+      if (e.key === "s" && isModKey(e)) {
         e.preventDefault();
         handleSave();
       }

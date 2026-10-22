@@ -4,6 +4,7 @@ import type { CalendarEvent } from "@/types/calendar/Event";
 import { describeSlot, describeWhen } from "@/lib/calendar/a11y";
 import { getWeekDays, isSameDate } from "@/lib/calendar/date";
 import { eventKey } from "@/lib/calendar/event";
+import { isModKey } from "@/lib/utils";
 import { canEditEvent } from "@/lib/calendar/shared";
 import {
   ALL_DAY_SLOT,
@@ -287,7 +288,7 @@ export default function useGridKeyboard(params: Params) {
         return;
       }
 
-      if (e.key === "Enter" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      if (e.key === "Enter" && !isModKey(e) && !e.altKey) {
         swallow();
         const result = p.confirmMove();
         moving.current = null;
@@ -315,7 +316,7 @@ export default function useGridKeyboard(params: Params) {
       const step = moveStepForKey(e, p.snapMins, p.rtl);
 
       if (!step) {
-        if (!e.ctrlKey && !e.altKey && !e.metaKey) swallow();
+        if (!isModKey(e) && !e.altKey) swallow();
         else e.stopPropagation();
         return;
       }
@@ -600,7 +601,7 @@ export default function useGridKeyboard(params: Params) {
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       const p = paramsRef.current;
       if (e.target !== e.currentTarget || !p.store.getKeyboardMode()) return;
-      if ((e.altKey || e.metaKey) && !moving.current) return;
+      if (e.altKey && !moving.current) return;
 
       const focus = p.store.getFocus() ?? initialFocus();
       const date = p.visibleDays[focus.day]?.date;
@@ -638,8 +639,8 @@ export default function useGridKeyboard(params: Params) {
         return;
       }
 
-      if (e.ctrlKey) {
-        const plainCtrl = !e.shiftKey && !e.altKey && !e.metaKey;
+      if (isModKey(e)) {
+        const plainCtrl = !e.shiftKey && !e.altKey;
         if (e.key === "Home") {
           ctx.handled();
           goToNow(ctx);

@@ -35,7 +35,7 @@ import {
   RuleWidget,
   TableWidget,
 } from "@/lib/journal/previewWidgets";
-import { cn } from "@/lib/utils";
+import { cn, isModKey } from "@/lib/utils";
 import { openExternal } from "@/lib/nativeUpdater";
 import { isValidUrl } from "@/lib/validators";
 
@@ -673,7 +673,7 @@ const tables = StateField.define<DecorationSet>({
 
 const openLinks = EditorView.domEventHandlers({
   click(event, view) {
-    if (!event.ctrlKey && !event.metaKey) return false;
+    if (!isModKey(event)) return false;
     const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
     if (pos === null) return false;
 

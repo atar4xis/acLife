@@ -1,3 +1,4 @@
+import { isModKey } from "@/lib/utils";
 import { openContextMenu } from "@/lib/journal/focus";
 import type { TreeRow } from "@/lib/journal/item";
 import { canDeleteItem, canEditItem } from "@/lib/journal/shared";
@@ -17,7 +18,7 @@ export const treeKeyDown = (
 ) => {
   const target = e.target as HTMLElement;
   const index = rows.findIndex((row) => row.item.id === target.dataset.itemId);
-  if (index === -1 || e.ctrlKey || e.altKey || e.metaKey) return;
+  if (index === -1 || isModKey(e) || e.altKey) return;
 
   const row = rows[index];
   const focus = (to: TreeRow | undefined) =>

@@ -476,6 +476,26 @@ describe("keyboard move: confirming", () => {
     expect(saved.end.toISO()).toBe(day.plus({ hours: 10 }).toISO());
   });
 
+  it("is undone with Cmd+Z too", async () => {
+    const saveEvents = vi.fn();
+    const { user } = renderCalendar({
+      mode: "week",
+      events: [buildPlainEvent()],
+      saveEvents,
+    });
+    await pickUp(user);
+    await user.keyboard(
+      "{ArrowRight}{PageDown}{Shift>}{ArrowDown}{/Shift}{Enter}",
+    );
+    await advanceSave();
+    await user.keyboard("{Meta>}z{/Meta}");
+    await advanceSave();
+
+    const saved = getLastSavedEvents(saveEvents)[0];
+    expect(saved.start.toISO()).toBe(day.plus({ hours: 9 }).toISO());
+    expect(saved.end.toISO()).toBe(day.plus({ hours: 10 }).toISO());
+  });
+
   it("does not save or announce a move when nothing changed", async () => {
     const saveEvents = vi.fn();
     const { user } = renderCalendar({

@@ -132,7 +132,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ModeSwitcher from "./ModeSwitcher";
 import type { GridTouchRef } from "@/types/calendar/Cell";
-import { clamp, cn, withoutRuntimeFields } from "@/lib/utils";
+import { clamp, cn, isModKey, withoutRuntimeFields } from "@/lib/utils";
 import RecurringUpdateDialog from "./RecurringUpdateDialog";
 import { resolveDefaultName } from "@/lib/calendar/defaultNames";
 import { fmt, t as translate } from "@/i18n";
@@ -1010,7 +1010,7 @@ export default memo(function AppCalendar({
 
       e.preventDefault();
       if (!canEditEvent(event)) return;
-      if (e.ctrlKey) {
+      if (isModKey(e)) {
         beginSelectionBox(e, event);
         return;
       }
@@ -1909,7 +1909,7 @@ export default memo(function AppCalendar({
 
       e.preventDefault();
 
-      if (e.ctrlKey) {
+      if (isModKey(e)) {
         beginSelectionBox(e);
         return;
       }
@@ -2216,27 +2216,27 @@ export default memo(function AppCalendar({
           e.preventDefault();
           deleteSelectionBatch(Array.from(selectedEventsRef.current.values()));
         }
-      } else if (e.ctrlKey && e.key.toLowerCase() === "z" && e.shiftKey) {
+      } else if (isModKey(e) && e.key.toLowerCase() === "z" && e.shiftKey) {
         e.preventDefault();
         redo();
-      } else if (e.ctrlKey && e.key.toLowerCase() === "z") {
+      } else if (isModKey(e) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         undo();
-      } else if (e.ctrlKey && e.key.toLowerCase() === "y") {
+      } else if (isModKey(e) && e.key.toLowerCase() === "y") {
         e.preventDefault();
         redo();
-      } else if (e.ctrlKey && e.key.toLowerCase() === "c") {
+      } else if (isModKey(e) && e.key.toLowerCase() === "c") {
         if (selectedEventsRef.current.size > 0) {
           e.preventDefault();
           copySelection();
         }
-      } else if (e.ctrlKey && e.key.toLowerCase() === "x") {
+      } else if (isModKey(e) && e.key.toLowerCase() === "x") {
         if (selectedEventsRef.current.size > 0) {
           e.preventDefault();
           copySelection();
           deleteSelectionBatch(Array.from(selectedEventsRef.current.values()));
         }
-      } else if (e.ctrlKey && e.key.toLowerCase() === "v") {
+      } else if (isModKey(e) && e.key.toLowerCase() === "v") {
         if (clipboardRef.current.length > 0) {
           e.preventDefault();
           pasteAtPointer();
@@ -2259,13 +2259,13 @@ export default memo(function AppCalendar({
     pasteAtPointer,
   ]);
 
-  // zoom in with ctrl + mouse wheel
+  // zoom in with ctrl/cmd + mouse wheel
   useEffect(() => {
     const container = gridRef.current;
     if (!container || !active) return;
 
     const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey) return;
+      if (!isModKey(e)) return;
       e.preventDefault();
 
       const delta = e.deltaY > 0 ? -10 : 10;
@@ -2648,7 +2648,7 @@ export default memo(function AppCalendar({
     (e: React.PointerEvent, from: number) => {
       if (e.target !== e.currentTarget || e.button !== 0) return;
 
-      if (e.ctrlKey) {
+      if (isModKey(e)) {
         beginSelectionBox(e);
         return;
       }

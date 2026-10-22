@@ -21,7 +21,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebarSwipe } from "@/hooks/use-sidebar-swipe";
 import { useSidebarResize } from "@/hooks/use-sidebar-resize";
 import { mergeButtonRefs } from "@/lib/merge-button-refs";
-import { cn } from "@/lib/utils";
+import { cn, isModKey } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
@@ -126,10 +126,7 @@ const SidebarProvider = React.forwardRef<
     // Adds a keyboard shortcut to toggle the sidebar.
     React.useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
-        if (
-          event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-          (event.metaKey || event.ctrlKey)
-        ) {
+        if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && isModKey(event)) {
           event.preventDefault();
           toggleSidebar();
         }

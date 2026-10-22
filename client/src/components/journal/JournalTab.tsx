@@ -15,7 +15,7 @@ import {
 } from "@/lib/journal/focus";
 import { neighborTab } from "@/lib/journal/layout";
 import { touchDrag } from "@/lib/touchDrag";
-import { cn } from "@/lib/utils";
+import { cn, isModKey } from "@/lib/utils";
 import type { PaneNode } from "@/types/Journal";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -52,7 +52,7 @@ export default function JournalTab({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (isModKey(e) || e.altKey) return;
 
     const { tabs } = pane;
     if (e.key === "ArrowLeft") {

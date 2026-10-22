@@ -354,6 +354,11 @@ describe("moveStepForKey", () => {
       { shiftKey: true, ctrlKey: true },
       { type: "resize_start", days: 0, minutes: 5 },
     ],
+    [
+      "ArrowDown",
+      { shiftKey: true, metaKey: true },
+      { type: "resize_start", days: 0, minutes: 5 },
+    ],
   ])("maps %s with %j", (name, mods, step) => {
     expect(key(name, mods)).toEqual(step);
   });
@@ -364,7 +369,7 @@ describe("moveStepForKey", () => {
     ["ArrowUp", { metaKey: true }],
     ["ArrowUp", { shiftKey: true, altKey: true }],
     ["ArrowUp", { shiftKey: true, ctrlKey: true, altKey: true }],
-    ["ArrowUp", { shiftKey: true, ctrlKey: true, metaKey: true }],
+    ["ArrowUp", { shiftKey: true, metaKey: true, altKey: true }],
     ["PageUp", { shiftKey: true }],
     ["PageDown", { ctrlKey: true }],
     ["ArrowLeft", { shiftKey: true }],

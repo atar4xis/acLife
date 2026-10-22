@@ -368,7 +368,7 @@ describe("Calendar grid keyboard: movement", () => {
     },
   );
 
-  it("leaves Alt, Meta and Ctrl+Shift arrow combinations alone", async () => {
+  it("leaves Alt and Ctrl+Shift arrow combinations alone", async () => {
     const { user } = renderCalendar();
     await screen.findByText("Wed 18");
     focusGrid();
@@ -376,7 +376,6 @@ describe("Calendar grid keyboard: movement", () => {
 
     await user.keyboard("{Control>}{Shift>}{ArrowDown}{/Shift}{/Control}");
     await user.keyboard("{Alt>}{ArrowDown}{/Alt}");
-    await user.keyboard("{Meta>}{ArrowDown}{/Meta}");
 
     expect(spoken()).toBe(before);
   });

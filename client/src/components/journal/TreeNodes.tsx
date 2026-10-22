@@ -17,7 +17,7 @@ import {
 import IconButton from "@/components/ui/icon-button";
 import { isFolderOpen } from "@/lib/journal/item";
 import { focusRow } from "@/lib/journal/focus";
-import { cn } from "@/lib/utils";
+import { cn, isModKey } from "@/lib/utils";
 import type { JournalItem, JournalTreeNode } from "@/types/Journal";
 import { EllipsisVertical } from "lucide-react";
 import { memo } from "react";
@@ -108,7 +108,7 @@ const TreeRow = memo(function TreeRow({
         }
         onFocus={() => view.onFocusRow(item.id)}
         onClick={(e) => {
-          if (e.ctrlKey || e.metaKey) return;
+          if (isModKey(e)) return;
 
           if (isFolder) actions.onToggle(item);
           else actions.onOpen(item, false);

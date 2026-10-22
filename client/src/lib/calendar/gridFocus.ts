@@ -1,6 +1,6 @@
 import type { DateTime } from "luxon";
 import type { CalendarEvent } from "@/types/calendar/Event";
-import { clamp } from "@/lib/utils";
+import { clamp, isModKey } from "@/lib/utils";
 import { eventKey } from "./event";
 
 export type GridFocus = {
@@ -98,12 +98,12 @@ export function moveStepForKey(
   rtl?: boolean,
 ): MoveStep | null {
   const key = mirrorKey(e.key, rtl);
-  const plain = !e.ctrlKey && !e.altKey && !e.metaKey;
+  const plain = !isModKey(e) && !e.altKey;
   const vertical = key === "ArrowUp" ? -1 : key === "ArrowDown" ? 1 : 0;
 
   if (vertical) {
     const minutes = vertical * snapMins;
-    if (e.shiftKey && e.ctrlKey && !e.altKey && !e.metaKey)
+    if (e.shiftKey && isModKey(e) && !e.altKey)
       return { type: "resize_start", days: 0, minutes };
     if (!plain) return null;
     return { type: e.shiftKey ? "resize_end" : "move", days: 0, minutes };

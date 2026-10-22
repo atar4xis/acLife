@@ -1,4 +1,4 @@
-import { cn, isColorDark, shallowEqual } from "@/lib/utils";
+import { cn, isColorDark, isModKey, shallowEqual } from "@/lib/utils";
 import { eventKey } from "@/lib/calendar/event";
 import {
   EVENT_COLOR_FALLBACK,
@@ -251,7 +251,7 @@ export default memo(
     const handleClick = (e: React.MouseEvent) => {
       const pressed = mouseDownRef.current;
       mouseDownRef.current = false;
-      if (!pressed || e.ctrlKey) return;
+      if (!pressed || isModKey(e)) return;
       window.clearTimeout(clickTimerRef.current);
       clickTimerRef.current = window.setTimeout(
         () => runAction(settings.click),

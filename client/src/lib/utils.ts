@@ -2,6 +2,9 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { isTauri } from "./nativeUpdater";
 
+export const isModKey = (e: Pick<KeyboardEvent, "ctrlKey" | "metaKey">) =>
+  e.ctrlKey || e.metaKey;
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

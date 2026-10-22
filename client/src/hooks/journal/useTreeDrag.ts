@@ -1,3 +1,4 @@
+import { isModKey } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useJournal } from "@/context/JournalContext";
 import { canMoveItem, topLevelItems } from "@/lib/journal/item";
@@ -36,7 +37,7 @@ export const useTreeDrag = (selectedIds: ReadonlySet<string>) => {
       return {
         draggable: true,
         onDragStart: (e) => {
-          if (e.ctrlKey || e.metaKey) {
+          if (isModKey(e)) {
             e.preventDefault();
             return;
           }
