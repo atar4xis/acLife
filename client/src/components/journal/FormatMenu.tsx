@@ -34,8 +34,9 @@ import {
 import { activeFormats, disabledFormats } from "@/lib/journal/activeFormats";
 import { formatCommands, HEADING_LEVELS } from "@/lib/journal/formatKeymap";
 
-function MenuItems({ view }: { view: EditorView }) {
+function MenuItems({ viewRef }: { viewRef: RefObject<EditorView | null> }) {
   const { t } = useTranslation();
+  const view = viewRef.current!;
   const hasSelection = !view.state.selection.main.empty;
   const disabled = disabledFormats(activeFormats(view.state));
 
@@ -118,7 +119,7 @@ export default function FormatMenu({
         viewRef.current?.focus();
       }}
     >
-      <MenuItems view={viewRef.current!} />
+      <MenuItems viewRef={viewRef} />
     </ContextMenuContent>
   );
 }
