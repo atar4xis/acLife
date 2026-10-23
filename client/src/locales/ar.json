@@ -434,6 +434,7 @@
       "journal-show-title": "إظهار عنوان الملاحظة",
       "journal-line-numbers": "إظهار أرقام الأسطر",
       "journal-status-bar": "إظهار شريط الحالة",
+      "journal-floating-toolbar": "إظهار شريط الأدوات العائم على الكمبيوتر",
       "journal-note-name": "الاسم",
       "journal-note-folder": "الموقع",
       "journal-note-icon": "أيقونة الملاحظة",
@@ -957,6 +958,30 @@
   },
   "journal": {
     "newNote": "ملاحظة جديدة",
+    "edit": {
+      "cut": "قص",
+      "copy": "نسخ",
+      "paste": "لصق",
+      "selectAll": "تحديد الكل",
+      "undo": "تراجع",
+      "redo": "إعادة"
+    },
+    "format": {
+      "menu": "تنسيق",
+      "toolbar": "التنسيق",
+      "bold": "غامق",
+      "italic": "مائل",
+      "strikethrough": "يتوسطه خط",
+      "code": "كود مضمّن",
+      "link": "رابط",
+      "heading": "عنوان",
+      "headingLevel": "عنوان {{level}}",
+      "bulletList": "قائمة نقطية",
+      "numberedList": "قائمة مرقمة",
+      "taskList": "قائمة مهام",
+      "quote": "اقتباس",
+      "codeBlock": "كتلة كود"
+    },
     "copyCode": "نسخ الكود",
     "newFolder": "مجلد جديد",
     "sortOrder": "تغيير ترتيب الفرز",

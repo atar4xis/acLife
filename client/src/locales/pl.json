@@ -427,6 +427,7 @@
       "journal-show-title": "Pokaż tytuł notatki",
       "journal-line-numbers": "Pokaż numery wierszy",
       "journal-status-bar": "Pokaż pasek stanu",
+      "journal-floating-toolbar": "Pokaż pływający pasek narzędzi na komputerze",
       "journal-note-name": "Nazwa",
       "journal-note-folder": "Lokalizacja",
       "journal-note-icon": "Ikona notatki",
@@ -924,6 +925,30 @@
   },
   "journal": {
     "newNote": "Nowa notatka",
+    "edit": {
+      "cut": "Wytnij",
+      "copy": "Kopiuj",
+      "paste": "Wklej",
+      "selectAll": "Zaznacz wszystko",
+      "undo": "Cofnij",
+      "redo": "Ponów"
+    },
+    "format": {
+      "menu": "Format",
+      "toolbar": "Formatowanie",
+      "bold": "Pogrubienie",
+      "italic": "Kursywa",
+      "strikethrough": "Przekreślenie",
+      "code": "Kod w tekście",
+      "link": "Link",
+      "heading": "Nagłówek",
+      "headingLevel": "Nagłówek {{level}}",
+      "bulletList": "Lista punktowana",
+      "numberedList": "Lista numerowana",
+      "taskList": "Lista zadań",
+      "quote": "Cytat",
+      "codeBlock": "Blok kodu"
+    },
     "copyCode": "Kopiuj kod",
     "newFolder": "Nowy folder",
     "sortOrder": "Zmień kolejność sortowania",

@@ -6,6 +6,13 @@ import { configure } from "@testing-library/react";
 import "../src/i18n";
 import { afterEach, beforeEach, vi } from "vitest";
 
+Range.prototype.getClientRects = () =>
+  ({
+    length: 0,
+    item: () => null,
+    [Symbol.iterator]: [][Symbol.iterator],
+  }) as unknown as DOMRectList;
+
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),

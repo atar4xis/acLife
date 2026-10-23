@@ -17,16 +17,73 @@ import {
 import { GFM } from "@lezer/markdown";
 import {
   type Ref,
+  type RefObject,
   useEffect,
   useEffectEvent,
   useImperativeHandle,
   useRef,
+  useState,
 } from "react";
+import FormatMenu from "@/components/journal/FormatMenu";
+import FormatToolbar, {
+  type ToolbarState,
+} from "@/components/journal/FormatToolbar";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
+import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { activeFormats } from "@/lib/journal/activeFormats";
+import { formatKeymap } from "@/lib/journal/formatKeymap";
 import { MAX_JOURNAL_CONTENT_LENGTH } from "@/lib/journal/item";
 import type { JournalEditorHandle } from "@/lib/journal/scrollAnchor";
 import { livePreview, sourceMode } from "@/lib/journal/livePreview";
 import { footnotes, singleTilde } from "@/lib/journal/markdownParser";
 import { journalTheme } from "@/lib/journal/previewTheme";
+
+const sameToolbar = (a: ToolbarState | null, b: ToolbarState | null) =>
+  a === b ||
+  (!!a &&
+    !!b &&
+    a.center === b.center &&
+    a.top === b.top &&
+    a.bottom === b.bottom &&
+    a.formats.join() === b.formats.join());
+
+type Coords = ReturnType<EditorView["coordsAtPos"]>;
+
+type Measured = { start: Coords; end: Coords; formats: string[] } | null;
+
+const toolbarMeasure = (
+  wrapper: RefObject<HTMLDivElement | null>,
+  setToolbar: (
+    update: (previous: ToolbarState | null) => ToolbarState | null,
+  ) => void,
+) => ({
+  read: (view: EditorView): Measured => {
+    const { from, to, empty } = view.state.selection.main;
+    if (empty) return null;
+    return {
+      start: view.coordsAtPos(from),
+      end: view.coordsAtPos(to),
+      formats: activeFormats(view.state),
+    };
+  },
+  write: (measured: Measured) => {
+    if (!measured?.start || !measured.end) return setToolbar(() => null);
+
+    const { start, end, formats } = measured;
+    const wrapperRect = wrapper.current!.getBoundingClientRect();
+    const isSingleLine = start.top === end.top;
+    const center = isSingleLine
+      ? (start.left + end.left) / 2
+      : wrapperRect.left + wrapperRect.width / 2;
+    const next = {
+      center: center - wrapperRect.left,
+      top: end.top - wrapperRect.top,
+      bottom: end.bottom - wrapperRect.top,
+      formats,
+    };
+    setToolbar((previous) => (sameToolbar(previous, next) ? previous : next));
+  },
+});
 
 const external = Annotation.define<boolean>();
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
@@ -35,6 +92,7 @@ export default function JournalEditor({
   value,
   source = false,
   lineNumbers = false,
+  floatingToolbar = false,
   onCursor,
   placeholder,
   label,
@@ -44,6 +102,7 @@ export default function JournalEditor({
   value: string;
   source?: boolean;
   lineNumbers?: boolean;
+  floatingToolbar?: boolean;
   onCursor?: (line: number, column: number) => void;
   placeholder: string;
   label: string;
@@ -59,6 +118,13 @@ export default function JournalEditor({
     const line = state.doc.lineAt(head);
     onCursor?.(line.number, head - line.from + 1);
   });
+  const [toolbar, setToolbar] = useState<ToolbarState | null>(null);
+  const coarsePointer = useCoarsePointer();
+  const showToolbar = coarsePointer || floatingToolbar;
+  const measureToolbar = useEffectEvent((editor: EditorView) => {
+    if (showToolbar) editor.requestMeasure(toolbarMeasure(wrapper, setToolbar));
+  });
+  const wrapper = useRef<HTMLDivElement>(null);
   const pending = useRef<string[]>([]);
   const sourceSlot = useRef(new Compartment());
   const initialSource = useEffectEvent(() => source);
@@ -121,6 +187,7 @@ export default function JournalEditor({
           keymap.of([
             { key: "Tab", run: (v) => !tabReleased && indentMore(v) },
             { key: "Shift-Tab", run: (v) => !tabReleased && indentLess(v) },
+            ...formatKeymap,
             ...defaultKeymap,
             ...historyKeymap,
           ]),
@@ -137,6 +204,12 @@ export default function JournalEditor({
           EditorView.updateListener.of((update) => {
             if (update.selectionSet || update.docChanged)
               emitCursor(update.state);
+            if (
+              update.selectionSet ||
+              update.docChanged ||
+              update.geometryChanged
+            )
+              measureToolbar(update.view);
             if (
               update.docChanged &&
               !update.transactions.some((tr) => tr.annotation(external))
@@ -208,5 +281,17 @@ export default function JournalEditor({
     });
   }, [value]);
 
-  return <div ref={host} className="flex flex-1 flex-col" />;
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild disabled={coarsePointer}>
+        <div ref={wrapper} className="relative flex flex-1 flex-col">
+          <div ref={host} className="flex flex-1 flex-col" />
+          {showToolbar && toolbar && (
+            <FormatToolbar viewRef={view} toolbar={toolbar} />
+          )}
+        </div>
+      </ContextMenuTrigger>
+      <FormatMenu viewRef={view} />
+    </ContextMenu>
+  );
 }

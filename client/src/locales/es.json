@@ -415,6 +415,7 @@
       "journal-show-title": "Mostrar el título de la nota",
       "journal-line-numbers": "Mostrar números de línea",
       "journal-status-bar": "Mostrar barra de estado",
+      "journal-floating-toolbar": "Mostrar la barra de herramientas flotante en el ordenador",
       "journal-note-name": "Nombre",
       "journal-note-folder": "Ubicación",
       "journal-note-icon": "Icono de nota",
@@ -880,6 +881,30 @@
   },
   "journal": {
     "newNote": "Nueva nota",
+    "edit": {
+      "cut": "Cortar",
+      "copy": "Copiar",
+      "paste": "Pegar",
+      "selectAll": "Seleccionar todo",
+      "undo": "Deshacer",
+      "redo": "Rehacer"
+    },
+    "format": {
+      "menu": "Formato",
+      "toolbar": "Formato",
+      "bold": "Negrita",
+      "italic": "Cursiva",
+      "strikethrough": "Tachado",
+      "code": "Código en línea",
+      "link": "Enlace",
+      "heading": "Encabezado",
+      "headingLevel": "Encabezado {{level}}",
+      "bulletList": "Lista con viñetas",
+      "numberedList": "Lista numerada",
+      "taskList": "Lista de tareas",
+      "quote": "Cita",
+      "codeBlock": "Bloque de código"
+    },
     "copyCode": "Copiar código",
     "newFolder": "Nueva carpeta",
     "sortOrder": "Cambiar orden",

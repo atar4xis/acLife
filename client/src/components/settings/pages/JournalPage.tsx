@@ -178,6 +178,10 @@ export default function JournalPage({
         <SettingsSwitch settingKey="journalShowTitle" className="min-h-9" />
         <SettingsSwitch settingKey="journalLineNumbers" className="min-h-9" />
         <SettingsSwitch settingKey="journalStatusBar" className="min-h-9" />
+        <SettingsSwitch
+          settingKey="journalFloatingToolbar"
+          className="min-h-9"
+        />
       </Section>
 
       <Separator />

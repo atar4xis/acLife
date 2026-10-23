@@ -460,6 +460,7 @@ describe("sync rules", () => {
         "journalNoteName",
         "journalShowTitle",
         "journalStatusBar",
+        "journalFloatingToolbar",
         "language",
         "lineOpacity",
         "notificationSound",

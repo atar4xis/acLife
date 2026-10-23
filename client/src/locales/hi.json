@@ -423,6 +423,7 @@
       "journal-show-title": "नोट का शीर्षक दिखाएँ",
       "journal-line-numbers": "पंक्ति संख्याएँ दिखाएँ",
       "journal-status-bar": "स्टेटस बार दिखाएँ",
+      "journal-floating-toolbar": "डेस्कटॉप पर फ़्लोटिंग टूलबार दिखाएँ",
       "journal-note-name": "नाम",
       "journal-note-folder": "स्थान",
       "journal-note-icon": "नोट आइकन",
@@ -888,6 +889,30 @@
   },
   "journal": {
     "newNote": "नया नोट",
+    "edit": {
+      "cut": "काटें",
+      "copy": "कॉपी करें",
+      "paste": "चिपकाएँ",
+      "selectAll": "सभी चुनें",
+      "undo": "पूर्ववत करें",
+      "redo": "फिर से करें"
+    },
+    "format": {
+      "menu": "फ़ॉर्मेट",
+      "toolbar": "फ़ॉर्मेटिंग",
+      "bold": "बोल्ड",
+      "italic": "इटैलिक",
+      "strikethrough": "स्ट्राइकथ्रू",
+      "code": "इनलाइन कोड",
+      "link": "लिंक",
+      "heading": "शीर्षक",
+      "headingLevel": "शीर्षक {{level}}",
+      "bulletList": "बुलेट सूची",
+      "numberedList": "क्रमांकित सूची",
+      "taskList": "कार्य सूची",
+      "quote": "उद्धरण",
+      "codeBlock": "कोड ब्लॉक"
+    },
     "copyCode": "कोड कॉपी करें",
     "newFolder": "नया फ़ोल्डर",
     "sortOrder": "क्रम बदलें",

@@ -73,6 +73,7 @@ export const defaultJournalSettings: JournalSettings = {
   journalShowTitle: true,
   journalLineNumbers: false,
   journalStatusBar: true,
+  journalFloatingToolbar: false,
   journalNoteName: "{D MMM YYYY}",
   journalNoteFolder: "",
   journalNoteIcon: "FileText",

@@ -40,6 +40,7 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
     showTitle: s.journalShowTitle,
     lineNumbers: s.journalLineNumbers,
     statusBar: s.journalStatusBar,
+    floatingToolbar: s.journalFloatingToolbar,
   }));
   const cursor = useRef<Cursor>({ line: 1, column: 1 });
   const statusBar = useRef<StatusBarHandle>(null);
@@ -137,6 +138,7 @@ export default function JournalPane({ pane }: { pane: PaneNode }) {
                   value={note.content}
                   source={!!pane.source}
                   lineNumbers={settings.lineNumbers}
+                  floatingToolbar={settings.floatingToolbar}
                   onCursor={(line, column) => {
                     cursor.current = { line, column };
                     statusBar.current?.setCursor(cursor.current);

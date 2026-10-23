@@ -413,6 +413,7 @@
       "journal-show-title": "显示笔记标题",
       "journal-line-numbers": "显示行号",
       "journal-status-bar": "显示状态栏",
+      "journal-floating-toolbar": "在桌面端显示浮动工具栏",
       "journal-note-name": "名称",
       "journal-note-folder": "位置",
       "journal-note-icon": "笔记图标",
@@ -863,6 +864,30 @@
   },
   "journal": {
     "newNote": "新建笔记",
+    "edit": {
+      "cut": "剪切",
+      "copy": "复制",
+      "paste": "粘贴",
+      "selectAll": "全选",
+      "undo": "撤销",
+      "redo": "重做"
+    },
+    "format": {
+      "menu": "格式",
+      "toolbar": "格式",
+      "bold": "粗体",
+      "italic": "斜体",
+      "strikethrough": "删除线",
+      "code": "行内代码",
+      "link": "链接",
+      "heading": "标题",
+      "headingLevel": "标题 {{level}}",
+      "bulletList": "项目符号列表",
+      "numberedList": "编号列表",
+      "taskList": "任务列表",
+      "quote": "引用",
+      "codeBlock": "代码块"
+    },
     "copyCode": "复制代码",
     "newFolder": "新建文件夹",
     "sortOrder": "更改排序方式",

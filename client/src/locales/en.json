@@ -421,6 +421,7 @@
       "journal-show-title": "Show note title",
       "journal-line-numbers": "Show line numbers",
       "journal-status-bar": "Show status bar",
+      "journal-floating-toolbar": "Show floating toolbar on desktop",
       "journal-note-name": "Name",
       "journal-note-folder": "Location",
       "journal-note-icon": "Note icon",
@@ -886,6 +887,30 @@
   },
   "journal": {
     "newNote": "New note",
+    "edit": {
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select all",
+      "undo": "Undo",
+      "redo": "Redo"
+    },
+    "format": {
+      "menu": "Format",
+      "toolbar": "Formatting",
+      "bold": "Bold",
+      "italic": "Italic",
+      "strikethrough": "Strikethrough",
+      "code": "Inline code",
+      "link": "Link",
+      "heading": "Heading",
+      "headingLevel": "Heading {{level}}",
+      "bulletList": "Bulleted list",
+      "numberedList": "Numbered list",
+      "taskList": "Task list",
+      "quote": "Quote",
+      "codeBlock": "Code block"
+    },
     "copyCode": "Copy code",
     "newFolder": "New folder",
     "sortOrder": "Change sort order",

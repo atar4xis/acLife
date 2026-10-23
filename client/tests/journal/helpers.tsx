@@ -57,12 +57,6 @@ export const key = await crypto.subtle.generateKey(
 );
 export const store = session.store;
 
-Range.prototype.getClientRects = () =>
-  ({
-    length: 0,
-    item: () => null,
-    [Symbol.iterator]: [][Symbol.iterator],
-  }) as unknown as DOMRectList;
 Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 export const resetJournal = async () => {

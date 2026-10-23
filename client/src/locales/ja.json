@@ -413,6 +413,7 @@
       "journal-show-title": "ノートのタイトルを表示",
       "journal-line-numbers": "行番号を表示",
       "journal-status-bar": "ステータスバーを表示",
+      "journal-floating-toolbar": "デスクトップでフローティングツールバーを表示",
       "journal-note-name": "名前",
       "journal-note-folder": "場所",
       "journal-note-icon": "ノートのアイコン",
@@ -863,6 +864,30 @@
   },
   "journal": {
     "newNote": "新規ノート",
+    "edit": {
+      "cut": "切り取り",
+      "copy": "コピー",
+      "paste": "貼り付け",
+      "selectAll": "すべて選択",
+      "undo": "元に戻す",
+      "redo": "やり直し"
+    },
+    "format": {
+      "menu": "書式",
+      "toolbar": "書式",
+      "bold": "太字",
+      "italic": "斜体",
+      "strikethrough": "取り消し線",
+      "code": "インラインコード",
+      "link": "リンク",
+      "heading": "見出し",
+      "headingLevel": "見出し {{level}}",
+      "bulletList": "箇条書き",
+      "numberedList": "番号付きリスト",
+      "taskList": "タスクリスト",
+      "quote": "引用",
+      "codeBlock": "コードブロック"
+    },
     "copyCode": "コードをコピー",
     "newFolder": "新規フォルダ",
     "sortOrder": "並び順を変更",

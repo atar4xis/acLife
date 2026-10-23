@@ -338,6 +338,10 @@ export const settingsCategories: SettingsCategory[] = [
           { id: "journal-show-title", settingKey: "journalShowTitle" },
           { id: "journal-line-numbers", settingKey: "journalLineNumbers" },
           { id: "journal-status-bar", settingKey: "journalStatusBar" },
+          {
+            id: "journal-floating-toolbar",
+            settingKey: "journalFloatingToolbar",
+          },
         ],
       },
       {

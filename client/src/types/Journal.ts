@@ -27,6 +27,7 @@ export interface JournalSettings {
   journalShowTitle: boolean;
   journalLineNumbers: boolean;
   journalStatusBar: boolean;
+  journalFloatingToolbar: boolean;
   journalNoteName: string;
   journalNoteFolder: string;
   journalNoteIcon: string;
