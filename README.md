@@ -10,7 +10,7 @@ Events, notes and settings are encrypted on your device before they are uploaded
 
 ## Project status
 
-acLife is in alpha and under active development. Expect bugs and breaking changes between major versions.
+acLife is in beta and under active development. Expect bugs and breaking changes between major versions.
 
 The app has been in active use for several months without data loss or major issues, but that can't be guaranteed. Back up your data every now and then.
 
